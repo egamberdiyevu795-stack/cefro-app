@@ -3,17 +3,22 @@ import { CEFR_LEVELS } from "@/domain/cefr";
 import { SPEAKING_CRITERIA } from "./criteria";
 
 /**
- * Speaking evaluation result — schema version 1.
+ * Speaking evaluation result schemas.
  *
  * This is the contract between the AI evaluator and the rest of CEFRO.
- * AI output is validated against it before it is stored, and the UI
- * renders only what it defines.
+ * AI output is validated against the current schema before it is stored,
+ * and the UI renders only what it defines.
  *
- * Evolving the schema: add a new `EvaluationResultV2` next to this one and
- * bump `EVALUATION_SCHEMA_VERSION`. Stored evaluations keep their
- * `schema_version`, so old rows can still be parsed with the old schema.
+ * Evolving the schema: add a new version next to the existing ones, bump
+ * `EVALUATION_SCHEMA_VERSION`, and teach `parseStoredEvaluation`
+ * (./stored.ts) to upgrade older rows for display. Stored evaluations keep
+ * their original `schema_version` and JSON.
+ *
+ * Note: the Anthropic SDK turns enum/min/max constraints into description
+ * hints when it builds the JSON Schema for structured outputs, so they are
+ * NOT enforced by the API. Zod validation here is the real guard.
  */
-export const EVALUATION_SCHEMA_VERSION = 1;
+export const EVALUATION_SCHEMA_VERSION = 2;
 
 const cefrLevel = z.enum(CEFR_LEVELS);
 const criterion = z.enum(SPEAKING_CRITERIA);
@@ -96,8 +101,86 @@ export const evaluationResultV1Schema = z.object({
   reliability_note: z.string().nullable(),
 });
 
-export type EvaluationResult = z.infer<typeof evaluationResultV1Schema>;
+export type EvaluationResultV1 = z.infer<typeof evaluationResultV1Schema>;
+
+// ── Version 2 ──────────────────────────────────────────────────────────
+// Adds: evidence_basis per issue (traceability), task_coverage per task
+// point, an explicit link from each retry focus to the issue it addresses,
+// tighter limits (fewer, higher-value issues) and field descriptions that
+// are sent to the model as guidance.
+
+const evidenceBasis = z
+  .enum(["transcript_quote", "speech_metric", "task_requirement"])
+  .describe(
+    "What the weakness is based on: exact words from the transcript, a number from speech_metrics, or a task point the student did not address.",
+  );
+
+const strengthV2 = z.object({
+  title: z.string().min(1).describe("Short, specific label, e.g. 'Clear opinion in the first sentence'."),
+  detail: z.string().min(1).describe("One sentence explaining why this helps the answer."),
+  evidence_quote: z.string().describe("Exact words copied from the transcript."),
+});
+
+const issueV2 = z.object({
+  criterion,
+  severity: z.enum(["high", "medium", "low"]),
+  evidence_basis: evidenceBasis,
+  problem: z
+    .string()
+    .min(1)
+    .describe("What exactly is wrong in THIS answer, naming the word, form or habit. Never generic."),
+  evidence_quotes: z
+    .array(z.string())
+    .describe("Exact words copied from the transcript. Required for transcript_quote; may be empty otherwise."),
+  why_it_matters: z.string().min(1).describe("One or two sentences: the effect on this answer or on the examiner."),
+  how_to_fix: z.string().min(1).describe("A concrete strategy the student can apply in their next 2-minute answer."),
+  improved_example: z.object({
+    original: z
+      .string()
+      .describe("A sentence copied exactly from the transcript (empty only when the issue is about something missing)."),
+    improved: z
+      .string()
+      .min(1)
+      .describe("The same idea, corrected at a realistic B2 level. Keep the student's meaning and most of their words."),
+  }),
+});
+
+const taskCoverage = z.object({
+  prompt_index: z.number().int().min(0).describe("0-based index of the task point."),
+  status: z.enum(["covered", "partly_covered", "not_covered"]),
+  note: z.string().min(1).describe("One short sentence, referring to what the student said."),
+});
+
+const retryFocusV2 = z.object({
+  objective: z.string().min(1).describe("One concrete instruction for the next attempt, tied to an issue."),
+  success_check: z.string().min(1).describe("How the student can tell they did it."),
+  criterion,
+  addresses_issue: z.number().int().min(0).describe("0-based index into issues of the weakness this focus fixes."),
+});
+
+export const evaluationResultV2Schema = z.object({
+  overall_level: cefrLevel,
+  overall_summary: z.string().min(1).describe("Two sentences at most, in simple English."),
+  criteria: z.object({
+    fluency_coherence: criterionAssessment,
+    grammar: criterionAssessment,
+    vocabulary: criterionAssessment,
+    pronunciation: criterionAssessment,
+    task_achievement: criterionAssessment,
+  }),
+  task_coverage: z.array(taskCoverage),
+  strengths: z.array(strengthV2).min(1).max(3),
+  issues: z.array(issueV2).min(1).max(4).describe("Most important first. Usually 2-3."),
+  retry_focus: z.array(retryFocusV2).min(1).max(2),
+  retry_review: retryReview.nullable(),
+  reliability_note: z.string().nullable(),
+});
+
+/** The current evaluation result shape. */
+export type EvaluationResult = z.infer<typeof evaluationResultV2Schema>;
+export const evaluationResultSchema = evaluationResultV2Schema;
 export type EvaluationIssue = EvaluationResult["issues"][number];
 export type EvaluationStrength = EvaluationResult["strengths"][number];
 export type RetryFocusItem = EvaluationResult["retry_focus"][number];
 export type CriterionAssessment = EvaluationResult["criteria"]["grammar"];
+export type TaskCoverageItem = EvaluationResult["task_coverage"][number];

@@ -38,9 +38,12 @@ export const FAILURE_CODES = [
   "transcription_empty",
   "evaluation_failed",
   "evaluation_invalid_output",
+  "evaluation_quality_rejected",
+  "evaluation_refused",
   "provider_not_configured",
   "provider_timeout",
   "provider_rate_limited",
+  "audio_unsupported",
   "audio_unavailable",
   "processing_stalled",
   "unknown",
@@ -61,6 +64,7 @@ export interface EvaluationMeta {
   provider: string;
   model: string;
   createdAt: string;
+  latencyMs: number | null;
   /** True for the local development evaluator — the UI must flag it clearly. */
   isDevelopmentProvider: boolean;
 }

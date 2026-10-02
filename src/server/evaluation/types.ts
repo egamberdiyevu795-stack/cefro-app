@@ -46,7 +46,10 @@ export interface ModelEvaluationOutput {
  */
 export interface EvaluationModel {
   readonly provider: string;
+  /** The model requested; the model that actually answered is in ModelEvaluationOutput. */
   readonly model: string;
   readonly isDevelopmentProvider: boolean;
+  /** Request settings that can affect results (effort, token limit…). Stored with each evaluation. */
+  readonly config: Record<string, string | number | boolean>;
   evaluate(prompt: EvaluationPrompt, input: EvaluationInput): Promise<ModelEvaluationOutput>;
 }

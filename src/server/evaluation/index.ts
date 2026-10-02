@@ -26,6 +26,9 @@ export function getEvaluationModel(): EvaluationModel {
       return new AnthropicEvaluationModel({
         apiKey: env.ANTHROPIC_API_KEY,
         model: env.ANTHROPIC_EVALUATION_MODEL,
+        effort: env.ANTHROPIC_EVALUATION_EFFORT,
+        maxTokens: env.ANTHROPIC_EVALUATION_MAX_TOKENS,
+        serverFallbacks: env.ANTHROPIC_SERVER_FALLBACKS,
         timeoutMs: env.EVALUATION_TIMEOUT_MS,
       });
   }

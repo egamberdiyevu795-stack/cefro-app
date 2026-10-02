@@ -6,7 +6,9 @@ first vertical slice:
 **B2 Part 2 task → preparation → recording → speech-to-text → AI evaluation →
 personalised feedback → retry → attempt comparison.**
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how it is built and why.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how it is built and why, and
+[`docs/AI_EVALUATION_QUALITY.md`](docs/AI_EVALUATION_QUALITY.md) for how AI feedback
+quality is checked and validated.
 
 ## Quick start
 
@@ -44,8 +46,9 @@ EVALUATION_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-All variables are documented in [`.env.example`](.env.example). They are read
-server-side only.
+All variables (including model, effort and timeouts) are documented in
+[`.env.example`](.env.example). They are read server-side only. Before relying on
+real feedback, run the validation steps in `docs/AI_EVALUATION_QUALITY.md` §6.
 
 ## Scripts
 
@@ -56,6 +59,10 @@ server-side only.
 | `npm run start`       | Serve the production build                           |
 | `npm run check`       | Lint + typecheck + tests (run before pushing)        |
 | `npm test`            | Unit and integration tests (Vitest)                  |
+| `npm run test:e2e`    | Browser tests (Playwright, mock providers, fake mic) |
+| `npm run eval:live`   | Run the evaluation sample set on the REAL evaluator (costs money) |
+| `npm run eval:transcription` | Transcribe real recordings in `local-samples/` |
+| `npm run stats`       | Latency, token and quality-gate summary          |
 | `npm run db:generate` | Generate a SQL migration after editing the DB schema |
 
 ## Deployment notes

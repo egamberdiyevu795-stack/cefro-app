@@ -1,6 +1,7 @@
 import "server-only";
 import { CEFR_LEVELS, type CefrLevel } from "@/domain/cefr";
-import type { EvaluationResult, RetryFocusItem } from "@/domain/evaluation/schema";
+import type { RetryFocusItem } from "@/domain/evaluation/schema";
+import { parseStoredEvaluation } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView, FailureCode } from "@/domain/speaking/attempt";
 import { FAILURE_CODES, IN_PROGRESS_STATUSES } from "@/domain/speaking/attempt";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
@@ -32,6 +33,8 @@ export function toAttemptView(
   },
 ): AttemptView {
   const { recording, transcript, evaluation } = related;
+  // Older evaluations are upgraded for display only; their stored versions are reported unchanged.
+  const parsedEvaluation = evaluation ? parseStoredEvaluation(evaluation.schemaVersion, evaluation.result) : null;
   return {
     id: attempt.id,
     taskId: attempt.taskId,
@@ -51,9 +54,9 @@ export function toAttemptView(
       : null,
     metrics: (attempt.metrics as SpeechMetrics | null) ?? null,
     evaluation:
-      evaluation && attempt.status === "completed"
+      evaluation && attempt.status === "completed" && parsedEvaluation
         ? {
-            result: evaluation.result as EvaluationResult,
+            result: parsedEvaluation,
             meta: {
               evaluatorVersion: evaluation.evaluatorVersion,
               rubricVersion: evaluation.rubricVersion,
@@ -61,6 +64,7 @@ export function toAttemptView(
               provider: evaluation.provider,
               model: evaluation.model,
               createdAt: evaluation.createdAt,
+              latencyMs: evaluation.latencyMs,
               isDevelopmentProvider: DEVELOPMENT_PROVIDERS.has(evaluation.provider),
             },
           }

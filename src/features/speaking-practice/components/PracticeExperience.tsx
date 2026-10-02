@@ -317,7 +317,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
         content = (
           <FeedbackReport
             attempt={resultAttempt}
-            targetLevel={task.level}
+            task={task}
             onRetry={() => dispatch({ type: "retryRequested", attempt: resultAttempt })}
             onCompare={resultAttempt.previousAttemptId ? () => void compare(resultAttempt) : null}
             onBack={backToBrief}

@@ -1,5 +1,6 @@
 import "server-only";
 import type { EvaluationResult } from "@/domain/evaluation/schema";
+import { parseStoredEvaluation } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import { getSpeakingTask } from "@/content/speaking";
 import { trackServerEvent } from "@/server/analytics/track";
@@ -8,7 +9,10 @@ import { newId } from "@/server/ids";
 import { logger } from "@/server/logging/logger";
 import { getAudioStorage } from "@/server/storage";
 import * as repo from "./attempt-repository";
+import { containerForMime, sniffAudioContainer } from "./audio-format";
 import { toAttemptSummary, toAttemptView } from "./attempt-views";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
 export const ACCEPTED_AUDIO_TYPES = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-m4a"];
@@ -41,6 +45,9 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
   if (input.audio.byteLength > MAX_AUDIO_BYTES) {
     throw new HttpError(413, "audio_too_large", "The recording is too large.");
   }
+  if (sniffAudioContainer(input.audio) !== containerForMime(baseMime)) {
+    throw new HttpError(415, "unsupported_audio", "This file doesn't look like a valid recording.");
+  }
 
   // Retry: the previous attempt must be the user's own, for the same task, and evaluated.
   let retryFocus: EvaluationResult["retry_focus"] | null = null;
@@ -50,12 +57,15 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
       throw new HttpError(400, "invalid_previous_attempt", "The previous attempt could not be found.");
     }
     const previousEvaluation = repo.findLatestEvaluation(previous.id);
-    retryFocus = previousEvaluation ? (previousEvaluation.result as EvaluationResult).retry_focus : null;
+    retryFocus = previousEvaluation
+      ? (parseStoredEvaluation(previousEvaluation.schemaVersion, previousEvaluation.result)?.retry_focus ?? null)
+      : null;
   }
 
   const attemptId = newId();
   const storage = getAudioStorage();
-  const extension = baseMime.split("/")[1] ?? "bin";
+  // Extension comes from the validated container, never from client input.
+  const extension = containerForMime(baseMime) ?? "bin";
   const storageKey = `speaking/${input.userId}/${attemptId}.${extension}`;
 
   try {
@@ -100,7 +110,7 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
 
 /** Load an attempt the user owns. Other users' attempts are reported as not found. */
 export function getOwnedAttempt(userId: string, attemptId: string): repo.AttemptRow {
-  const attempt = repo.findAttempt(attemptId);
+  const attempt = UUID_PATTERN.test(attemptId) ? repo.findAttempt(attemptId) : undefined;
   if (!attempt || attempt.userId !== userId) {
     throw new HttpError(404, "attempt_not_found", "This attempt could not be found.");
   }

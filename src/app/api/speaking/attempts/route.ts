@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { createAttempt } from "@/server/attempts/attempt-service";
+import { MAX_AUDIO_BYTES, createAttempt } from "@/server/attempts/attempt-service";
 import { claimAttempt, runClaimedAttempt } from "@/server/attempts/attempt-processing";
 import { HttpError } from "@/server/errors";
 import { withErrorHandling } from "@/server/http";
@@ -21,6 +21,11 @@ const fieldsSchema = z.object({
  * background; the client polls GET /api/speaking/attempts/:id for progress.
  */
 export const POST = withErrorHandling(async (request: Request) => {
+  // Reject oversized uploads before buffering the body (the form adds a little overhead).
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (declaredLength > MAX_AUDIO_BYTES + 64 * 1024) {
+    throw new HttpError(413, "audio_too_large", "The recording is too large.");
+  }
   const userId = await getOrCreateCurrentUserId();
 
   let form: FormData;

@@ -67,6 +67,8 @@ export const speakingAttempts = sqliteTable(
     /** Number of times processing has been started (initial run + manual retries). */
     processingRuns: integer("processing_runs").notNull().default(0),
     processingStartedAt: text("processing_started_at"),
+    /** Wall-clock duration of the latest processing run (success or failure). */
+    processingDurationMs: integer("processing_duration_ms"),
     completedAt: text("completed_at"),
     /** Deterministic speech metrics (see domain/speaking/metrics.ts). */
     metrics: text("metrics", { mode: "json" }),
@@ -132,7 +134,14 @@ export const evaluations = sqliteTable(
     schemaVersion: integer("schema_version").notNull(),
     promptHash: text("prompt_hash").notNull(),
     provider: text("provider").notNull(),
+    /** Model that actually answered, as reported by the provider. */
     model: text("model").notNull(),
+    /** Request settings that can affect results (requested model, effort, token limit…). */
+    modelConfig: text("model_config", { mode: "json" }),
+    /** Model calls used (2 = first draft was rejected and regenerated). Null for evaluations made before this was recorded. */
+    modelCalls: integer("model_calls"),
+    /** Quality gate report: warnings repaired in the accepted draft and why earlier drafts were rejected. */
+    qualityReport: text("quality_report", { mode: "json" }),
     overallLevel: text("overall_level").notNull(),
     result: text("result", { mode: "json" }).notNull(),
     latencyMs: integer("latency_ms"),

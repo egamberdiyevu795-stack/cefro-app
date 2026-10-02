@@ -1,5 +1,6 @@
 import "server-only";
-import type { EvaluationResult, RetryFocusItem } from "@/domain/evaluation/schema";
+import type { RetryFocusItem } from "@/domain/evaluation/schema";
+import { parseStoredEvaluation } from "@/domain/evaluation/stored";
 import type { FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
 import { computeSpeechMetrics, type SpeechMetrics } from "@/domain/speaking/metrics";
 import { getSpeakingTask } from "@/content/speaking";
@@ -45,6 +46,9 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
   if (!attempt) return;
   const context = { userId: attempt.userId, taskId: attempt.taskId, attemptId };
   let stage: ProcessingStage = "transcription";
+  const runStartedAt = Date.now();
+  let stageStartedAt = runStartedAt;
+  let transcriptionMs: number | null = null;
 
   try {
     const task = getSpeakingTask(attempt.taskId);
@@ -61,9 +65,10 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
       trackServerEvent({ name: "transcription_started", ...context, properties: { provider: provider.name } });
 
       const audio = await readAudio(recording.storageKey);
-      const startedAt = Date.now();
+      stageStartedAt = Date.now();
       const output = await provider.transcribe({ audio, mimeType: recording.mimeType, language: "en" });
-      const latencyMs = Date.now() - startedAt;
+      const latencyMs = Date.now() - stageStartedAt;
+      transcriptionMs = latencyMs;
 
       metrics = computeSpeechMetrics(output.text, recording.durationMs, task.speakingSeconds);
       if (metrics.wordCount < MIN_TRANSCRIPT_WORDS) {
@@ -89,6 +94,7 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
 
     // ── Evaluation ──────────────────────────────────────────────────
     stage = "evaluation";
+    stageStartedAt = Date.now();
     repo.setAttemptStatus(attemptId, "evaluating");
     const model = getEvaluationModel();
     trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
@@ -110,6 +116,8 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
       model,
     );
 
+    const processingDurationMs = Date.now() - runStartedAt;
+    const qualityWarnings = evaluation.quality.violations.map((v) => v.code);
     repo.saveEvaluationAndComplete({
       attemptId,
       transcriptId: transcript.id,
@@ -119,11 +127,30 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
       promptHash: evaluation.promptHash,
       provider: evaluation.provider,
       model: evaluation.model,
+      modelConfig: { requestedModel: model.model, ...evaluation.modelConfig },
+      modelCalls: evaluation.modelCalls,
+      qualityReport: {
+        warnings: evaluation.quality.violations,
+        rejectedDrafts: evaluation.quality.rejectedDrafts,
+      },
       overallLevel: evaluation.result.overall_level,
       result: evaluation.result,
       latencyMs: evaluation.latencyMs,
       inputTokens: evaluation.inputTokens,
       outputTokens: evaluation.outputTokens,
+    }, processingDurationMs);
+
+    // One structured line per processed attempt: the basis for cost/latency analysis.
+    logger.info("Attempt processed", {
+      ...context,
+      transcriptionMs,
+      evaluationMs: evaluation.latencyMs,
+      processingDurationMs,
+      modelCalls: evaluation.modelCalls,
+      inputTokens: evaluation.inputTokens,
+      outputTokens: evaluation.outputTokens,
+      evaluationModel: evaluation.model,
+      qualityWarnings,
     });
 
     trackServerEvent({
@@ -136,6 +163,11 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
         rubricVersion: evaluation.rubricVersion,
         overallLevel: evaluation.result.overall_level,
         latencyMs: evaluation.latencyMs,
+        processingDurationMs,
+        modelCalls: evaluation.modelCalls,
+        inputTokens: evaluation.inputTokens,
+        outputTokens: evaluation.outputTokens,
+        qualityWarningCount: qualityWarnings.length,
       },
     });
     if (attempt.previousAttemptId) {
@@ -151,12 +183,13 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
     }
   } catch (error) {
     const code = toFailureCode(error, stage);
-    logger.error("Attempt processing failed", { ...context, stage, code, error });
-    repo.markAttemptFailed(attemptId, stage, code);
+    const processingDurationMs = Date.now() - runStartedAt;
+    logger.error("Attempt processing failed", { ...context, stage, code, processingDurationMs, error });
+    repo.markAttemptFailed(attemptId, stage, code, processingDurationMs);
     trackServerEvent({
       name: stage === "transcription" ? "transcription_failed" : "evaluation_failed",
       ...context,
-      properties: { code },
+      properties: { code, stageMs: Date.now() - stageStartedAt, processingDurationMs },
     });
   }
 }
@@ -178,7 +211,8 @@ function loadPreviousAttemptContext(attempt: repo.AttemptRow) {
   const previousTranscript = previous && repo.findLatestTranscript(previous.id);
   const previousEvaluation = previous && repo.findLatestEvaluation(previous.id);
   if (!previous || !previousTranscript || !previousEvaluation) return null;
-  const evaluation = previousEvaluation.result as EvaluationResult;
+  const evaluation = parseStoredEvaluation(previousEvaluation.schemaVersion, previousEvaluation.result);
+  if (!evaluation) return null;
   return {
     attemptNumber: previous.attemptNumber,
     transcript: previousTranscript.text,

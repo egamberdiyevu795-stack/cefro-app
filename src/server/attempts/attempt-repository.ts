@@ -172,10 +172,11 @@ export function markAttemptFailed(
   attemptId: string,
   stage: ProcessingStage | null,
   code: FailureCode,
+  processingDurationMs: number,
 ): void {
   getDb()
     .update(speakingAttempts)
-    .set({ status: "failed", failureStage: stage, failureCode: code, updatedAt: nowIso() })
+    .set({ status: "failed", failureStage: stage, failureCode: code, processingDurationMs, updatedAt: nowIso() })
     .where(eq(speakingAttempts.id, attemptId))
     .run();
 }
@@ -215,6 +216,7 @@ export function saveTranscript(input: {
 
 export function saveEvaluationAndComplete(
   input: Omit<typeof evaluations.$inferInsert, "id" | "createdAt">,
+  processingDurationMs: number,
 ): EvaluationRow {
   const db = getDb();
   return db.transaction((tx) => {
@@ -225,7 +227,7 @@ export function saveEvaluationAndComplete(
       .returning()
       .get();
     tx.update(speakingAttempts)
-      .set({ status: "completed", completedAt: now, updatedAt: now })
+      .set({ status: "completed", completedAt: now, processingDurationMs, updatedAt: now })
       .where(eq(speakingAttempts.id, input.attemptId))
       .run();
     return row;

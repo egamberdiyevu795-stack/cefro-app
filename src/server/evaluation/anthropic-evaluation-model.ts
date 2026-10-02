@@ -1,24 +1,52 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { evaluationResultV1Schema } from "@/domain/evaluation/schema";
+import { evaluationResultSchema } from "@/domain/evaluation/schema";
 import { ProviderError } from "@/server/errors";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
+
+export type AnthropicEffort = "low" | "medium" | "high" | "xhigh" | "max";
+
+export interface AnthropicEvaluationOptions {
+  apiKey: string;
+  model: string;
+  effort: AnthropicEffort;
+  maxTokens: number;
+  timeoutMs: number;
+  /** Server-side refusal fallback (beta). Disable if the account does not have the beta. */
+  serverFallbacks: boolean;
+  /** SDK retries for 408/409/429/5xx and connection errors. */
+  maxRetries?: number;
+  /** Test seam: replaces the HTTP client. */
+  fetch?: typeof fetch;
+}
 
 /**
  * Claude-backed evaluation model.
  *
- * Uses structured outputs so the response is JSON matching the evaluation
- * schema. The result is still re-validated by the evaluation service before
- * it is stored — we never trust model output blindly.
+ * Uses structured outputs so the response is JSON shaped like the evaluation
+ * schema. Constraints such as enums and ranges are only hints to the API, so
+ * the evaluation service re-validates everything before it is stored.
  */
 export class AnthropicEvaluationModel implements EvaluationModel {
   readonly provider = "anthropic";
   readonly isDevelopmentProvider = false;
+  readonly config: Record<string, string | number | boolean>;
   private readonly client: Anthropic;
 
-  constructor(private readonly options: { apiKey: string; model: string; timeoutMs: number }) {
-    this.client = new Anthropic({ apiKey: options.apiKey, timeout: options.timeoutMs, maxRetries: 2 });
+  constructor(private readonly options: AnthropicEvaluationOptions) {
+    this.client = new Anthropic({
+      apiKey: options.apiKey,
+      timeout: options.timeoutMs,
+      maxRetries: options.maxRetries ?? 2,
+      ...(options.fetch ? { fetch: options.fetch } : {}),
+    });
+    this.config = {
+      effort: options.effort,
+      maxTokens: options.maxTokens,
+      serverFallbacks: options.serverFallbacks,
+      thinking: "adaptive",
+    };
   }
 
   get model(): string {
@@ -26,20 +54,20 @@ export class AnthropicEvaluationModel implements EvaluationModel {
   }
 
   async evaluate(prompt: EvaluationPrompt, _input: EvaluationInput): Promise<ModelEvaluationOutput> {
-    void _input; // v1 is transcript-only; the prompt already contains everything needed.
+    void _input; // v2 is transcript-only; the prompt already contains everything needed.
     let response;
     try {
       response = await this.client.beta.messages.parse({
         model: this.options.model,
-        max_tokens: 16000,
+        max_tokens: this.options.maxTokens,
         // If the primary model declines, the API retries on a fallback model in the same call.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        ...(this.options.serverFallbacks
+          ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+          : {}),
         thinking: { type: "adaptive" },
         output_config: {
-          // Assessment quality matters more than latency here.
-          effort: "high",
-          format: betaZodOutputFormat(evaluationResultV1Schema),
+          effort: this.options.effort,
+          format: betaZodOutputFormat(evaluationResultSchema),
         },
         system: prompt.system,
         messages: [{ role: "user", content: prompt.user }],
@@ -49,7 +77,7 @@ export class AnthropicEvaluationModel implements EvaluationModel {
     }
 
     if (response.stop_reason === "refusal") {
-      throw new ProviderError("evaluation_failed", "Evaluation model refused the request", {
+      throw new ProviderError("evaluation_refused", "Evaluation model declined the request", {
         cause: response.stop_details,
       });
     }
@@ -70,13 +98,13 @@ export class AnthropicEvaluationModel implements EvaluationModel {
       output,
       provider: this.provider,
       model: response.model,
-      inputTokens: response.usage.input_tokens ?? null,
-      outputTokens: response.usage.output_tokens ?? null,
+      inputTokens: response.usage?.input_tokens ?? null,
+      outputTokens: response.usage?.output_tokens ?? null,
     };
   }
 }
 
-function mapAnthropicError(error: unknown): ProviderError {
+export function mapAnthropicError(error: unknown): ProviderError {
   if (error instanceof ProviderError) return error;
   if (error instanceof Anthropic.APIConnectionTimeoutError) {
     return new ProviderError("provider_timeout", "Anthropic request timed out", { cause: error });
@@ -89,6 +117,16 @@ function mapAnthropicError(error: unknown): ProviderError {
   }
   if (error instanceof Anthropic.RateLimitError) {
     return new ProviderError("provider_rate_limited", "Anthropic rate limit", { cause: error });
+  }
+  if (error instanceof Anthropic.BadRequestError) {
+    // Usually configuration (unknown model, beta not enabled) — retrying won't help.
+    return new ProviderError("evaluation_failed", `Anthropic rejected the request: ${error.message}`, {
+      cause: error,
+      retryable: false,
+    });
+  }
+  if (error instanceof Anthropic.APIConnectionError) {
+    return new ProviderError("evaluation_failed", "Network error calling Anthropic", { cause: error });
   }
   if (error instanceof Anthropic.APIError) {
     return new ProviderError("evaluation_failed", `Anthropic API error ${error.status ?? ""}`, { cause: error });

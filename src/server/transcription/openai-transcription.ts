@@ -1,16 +1,21 @@
 import "server-only";
+import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { ProviderError } from "@/server/errors";
 import type { TranscriptionInput, TranscriptionOutput, TranscriptionProvider } from "./types";
 
 /**
- * Learners' mistakes and hesitations are exactly what we need to assess,
- * so ask for a verbatim transcript instead of a cleaned-up one.
+ * Learners' mistakes and hesitations are the evidence we assess, so we ask
+ * for a verbatim transcript instead of a cleaned-up one.
+ *
+ * The prompt deliberately contains NO sample utterance: speech-to-text
+ * models can echo prompt text when the audio is silent, and an echoed
+ * sample sentence would look like a real (short) answer.
  */
-const VERBATIM_PROMPT =
-  "The speaker is an English learner answering a speaking exam question. " +
-  "Transcribe verbatim: keep grammatical mistakes, repetitions, self-corrections " +
-  "and hesitations such as um, uh, er. Do not correct or paraphrase. " +
-  "Umm, so I think, uh, I think that...";
+export const VERBATIM_TRANSCRIPTION_PROMPT =
+  "Verbatim transcript of an English learner answering a speaking exam question. " +
+  "Write exactly what the speaker says. Keep grammar mistakes, wrong verb forms, missing words, " +
+  "repetitions, false starts, self-corrections and hesitation sounds such as um, uh and er. " +
+  "Never correct grammar or vocabulary, and do not add words that were not spoken.";
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "audio/webm": "webm",
@@ -21,18 +26,20 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "audio/x-m4a": "m4a",
 };
 
+export interface OpenAITranscriptionOptions {
+  apiKey: string;
+  model: string;
+  baseUrl: string;
+  timeoutMs: number;
+  /** Test seam: replaces the HTTP client. */
+  fetch?: typeof fetch;
+}
+
 /** OpenAI speech-to-text via the REST API (no SDK dependency needed for one endpoint). */
 export class OpenAITranscriptionProvider implements TranscriptionProvider {
   readonly name = "openai";
 
-  constructor(
-    private readonly options: {
-      apiKey: string;
-      model: string;
-      baseUrl: string;
-      timeoutMs: number;
-    },
-  ) {}
+  constructor(private readonly options: OpenAITranscriptionOptions) {}
 
   get model(): string {
     return this.options.model;
@@ -43,19 +50,17 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
     const extension = EXTENSION_BY_MIME[baseMime] ?? "webm";
 
     const form = new FormData();
-    form.append(
-      "file",
-      new Blob([new Uint8Array(input.audio)], { type: baseMime }),
-      `recording.${extension}`,
-    );
+    form.append("file", new Blob([new Uint8Array(input.audio)], { type: baseMime }), `recording.${extension}`);
     form.append("model", this.options.model);
     form.append("language", input.language);
     form.append("response_format", "json");
-    form.append("prompt", VERBATIM_PROMPT);
+    form.append("temperature", "0");
+    form.append("prompt", VERBATIM_TRANSCRIPTION_PROMPT);
 
+    const doFetch = this.options.fetch ?? fetch;
     let response: Response;
     try {
-      response = await fetch(`${this.options.baseUrl}/audio/transcriptions`, {
+      response = await doFetch(`${this.options.baseUrl}/audio/transcriptions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${this.options.apiKey}` },
         body: form,
@@ -65,29 +70,49 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
       if (error instanceof DOMException && error.name === "TimeoutError") {
         throw new ProviderError("provider_timeout", "OpenAI transcription timed out", { cause: error });
       }
-      throw new ProviderError("transcription_failed", "Network error calling OpenAI transcription", {
-        cause: error,
-      });
+      throw new ProviderError("transcription_failed", "Network error calling OpenAI transcription", { cause: error });
     }
 
     if (!response.ok) {
+      // The error body never contains our key, but keep only a short excerpt in logs.
       const body = await response.text().catch(() => "");
-      const detail = `OpenAI transcription HTTP ${response.status}: ${body.slice(0, 500)}`;
+      const detail = `OpenAI transcription HTTP ${response.status}: ${body.slice(0, 300)}`;
       if (response.status === 401 || response.status === 403) {
         throw new ProviderError("provider_not_configured", detail, { retryable: false });
       }
       if (response.status === 429) throw new ProviderError("provider_rate_limited", detail);
+      if (response.status === 400 || response.status === 413 || response.status === 415) {
+        // Corrupt, unsupported or too-large audio: retrying the same file won't help.
+        throw new ProviderError("audio_unsupported", detail, { retryable: false });
+      }
       throw new ProviderError("transcription_failed", detail);
     }
 
     const payload: unknown = await response.json().catch(() => null);
     const text =
       payload && typeof payload === "object" && "text" in payload && typeof payload.text === "string"
-        ? payload.text
+        ? payload.text.trim()
         : null;
     if (text === null) {
       throw new ProviderError("transcription_failed", "OpenAI transcription returned an unexpected payload");
     }
-    return { text: text.trim(), language: input.language };
+    if (looksLikePromptEcho(text, VERBATIM_TRANSCRIPTION_PROMPT)) {
+      throw new ProviderError("transcription_empty", "Transcript echoes the transcription prompt (likely silence)", {
+        retryable: false,
+      });
+    }
+    return { text, language: input.language };
   }
+}
+
+/**
+ * True when a (short) transcript consists almost entirely of words from the
+ * prompt — the typical hallucination on silent or near-silent audio.
+ */
+export function looksLikePromptEcho(transcript: string, prompt: string): boolean {
+  const words = evidenceTokens(transcript);
+  if (words.length === 0 || words.length > 40) return false;
+  const promptWords = new Set(evidenceTokens(prompt));
+  const fromPrompt = words.filter((word) => promptWords.has(word)).length;
+  return words.length >= 4 && fromPrompt / words.length >= 0.8;
 }

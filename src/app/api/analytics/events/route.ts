@@ -14,7 +14,10 @@ const bodySchema = z.object({
         name: z.enum(CLIENT_EVENT_NAMES),
         taskId: z.string().max(200).nullish(),
         attemptId: z.string().uuid().nullish(),
-        properties: z.record(z.string().max(64), propertyValue).optional(),
+        properties: z
+          .record(z.string().max(64), propertyValue)
+          .refine((props) => Object.keys(props).length <= 20, "Too many properties")
+          .optional(),
         occurredAt: z.iso.datetime(),
       }),
     )

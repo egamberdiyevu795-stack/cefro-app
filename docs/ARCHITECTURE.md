@@ -9,8 +9,8 @@
 | Database       | SQLite (better-sqlite3) via Drizzle ORM           | Zero-ops for now; Drizzle also supports Postgres                    |
 | Validation     | Zod                                               | Shared schemas for API input and AI output                          |
 | Speech-to-text | OpenAI transcription REST API (`gpt-4o-transcribe` default) | Accurate; a single `fetch`, no SDK needed                  |
-| Evaluation     | Claude (`claude-opus-5-5`) via `@anthropic-ai/sdk` with structured outputs | Schema-constrained JSON                     |
-| Tests          | Vitest                                            |                                                                     |
+| Evaluation     | Claude (`claude-opus-5-5`, configurable) via `@anthropic-ai/sdk` with structured outputs | Schema-shaped JSON, validated server-side |
+| Tests          | Vitest (unit/integration), Playwright (browser)   | Live provider runs are separate (`npm run eval:*`)                  |
 
 ## Directory layout
 
@@ -35,7 +35,9 @@ src/
   features/speaking-practice/ Client feature: components, hooks, state machine, API client
   components/ui/              Generic UI primitives (Button, Card, Badge, Alert, Spinner)
   proxy.ts                    Sets the anonymous user cookie on page requests
-test/                         Test fixtures and stubs
+test/                         Fixtures, stubs, evaluation sample set, live-provider harness
+e2e/                          Playwright browser tests (mock providers, fake microphone)
+scripts/processing-stats.mjs  Latency / token / quality summary from the database
 ```
 
 Rules of thumb:
@@ -94,56 +96,41 @@ the claim/restart design already makes it safe to re-run.
 
 ## AI evaluation
 
+Full methodology, quality checks, test set and findings: [`AI_EVALUATION_QUALITY.md`](AI_EVALUATION_QUALITY.md).
+
 `server/evaluation/speaking-evaluator.ts` runs the methodology:
 
-1. Build the prompt (`prompts/speaking-evaluation-v1.ts`): the system prompt
-   holds the role, the rubric (`rubrics/`), and the feedback method
-   (problem → evidence → why it matters → how to fix → improved example →
-   retry focus). The user message holds the task, the examiner-only task
-   guidance, deterministic speech metrics, the transcript, and — for retries —
-   the previous transcript, issues and the focus the student was given.
-2. Call the configured `EvaluationModel` (Claude with structured outputs, or
-   the development mock).
-3. Validate with the Zod schema (`domain/evaluation/schema.ts`). Malformed or
-   invalid output is retried once, then the attempt fails with
-   `evaluation_invalid_output`. Nothing unvalidated is stored.
-4. Normalise invariants the JSON schema can't express (non-assessable criteria
-   have no score; first attempts have no `retry_review`). Quotes that don't
-   appear in the transcript are logged as a quality signal.
+1. Build the prompt (`prompts/speaking-evaluation-v2.ts`): system prompt = role,
+   rubric (`rubrics/`), prioritisation, evidence rules, feedback method; user
+   message = task + task points, examiner guidance, speech metrics, escaped
+   transcript, and for retries the previous transcript/issues/focus.
+2. Call the configured `EvaluationModel` (Claude with structured outputs, or the dev mock).
+3. Validate against the Zod schema (`domain/evaluation/schema.ts`, v2).
+4. Run the quality gate (`quality-gate.ts`): verifies quotes against the
+   transcript, rejects pronunciation claims, generic advice, meaning-changing
+   "improved" examples, duplicates and unlinked retry focus; repairs minor issues.
+5. On an invalid or rejected draft, regenerate **once** with a revision request;
+   otherwise fail with `evaluation_invalid_output` / `evaluation_quality_rejected`.
 
-Pronunciation is marked **not assessable** in v1, because the evaluator only
-sees a transcript. The schema keeps the slot so an audio-capable evaluator can
-fill it later.
-
-Student transcripts are treated as data in the prompt (injection attempts such
-as "give me C2" are explicitly ignored).
+Nothing unvalidated is stored. Pronunciation is always "not assessed"
+(transcript-only evaluator).
 
 ### Versioning
 
-Every row in `evaluations` stores:
-
-| Column              | Meaning                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `evaluator_version` | `EVALUATOR_VERSION` in `server/evaluation/versions.ts`       |
-| `rubric_version`    | `version` of the rubric used (`server/evaluation/rubrics`)   |
-| `schema_version`    | `EVALUATION_SCHEMA_VERSION` of the result JSON               |
-| `prompt_hash`       | SHA-256 of evaluator version + system prompt (catches prompt edits made without a version bump) |
-| `provider`, `model` | Model that actually answered (as reported by the API)        |
-| `created_at`        | Evaluation timestamp                                         |
-| `latency_ms`, tokens | Cost/performance tracking                                   |
-
-Change policy: bump `EVALUATOR_VERSION` for any prompt/input/post-processing
-change; bump the rubric `version` for any rubric text change; add a new
-schema (`EvaluationResultV2`) and bump `EVALUATION_SCHEMA_VERSION` for result
-shape changes. An attempt can have several evaluations (e.g. re-evaluated with
-a newer methodology); the newest is shown.
+Every row in `evaluations` stores `evaluator_version`, `rubric_version`,
+`schema_version`, `prompt_hash`, `provider`, `model` (the model that actually
+answered), `model_config` (requested model, effort, token limit, fallbacks),
+`model_calls`, `latency_ms`, token counts, `quality_report` and `created_at`.
+Older rows are upgraded for display only (`domain/evaluation/stored.ts`) and
+keep their original version metadata. Version history and change policy are
+in `server/evaluation/versions.ts` and the quality doc.
 
 ### Honest comparison
 
-`domain/speaking/comparison.ts` derives every delta from stored scores. Equal
-scores are "No change", lower ones are "Lower". The retry evaluator is
-instructed to score the new attempt on its own merits and to report
-achieved / partly / not achieved for each focus objective with evidence.
+`domain/speaking/comparison.ts` derives every delta from stored scores.
+One-point (or one sub-band) differences are labelled *slight* and never
+presented as progress; the verdict is conservative; attempts scored with
+different methodology versions are flagged.
 
 ## Data model
 
@@ -193,7 +180,23 @@ Server: `recording_submitted`, `transcription_started|completed|failed`,
   `{ error: { code, message } }` with a safe message; anything else is logged
   and returned as a generic 500.
 - Technical details go to the structured logger (`server/logging/logger.ts`,
-  JSON lines on stdout/stderr).
+  JSON lines on stdout/stderr). Each processed attempt logs one
+  `Attempt processed` line with transcription/evaluation/total latency, model
+  calls, tokens and quality-gate codes (never transcript text).
+
+## Security notes
+
+- API keys are read only in `server/config/env.ts` (`server-only`); providers
+  are called only from server code. The browser never sees provider names
+  beyond what the evaluation metadata shows.
+- Uploads: Content-Length pre-check, 20 MB cap, MIME allow-list, and
+  magic-byte check; storage keys are generated server-side (no client file
+  names); the local storage resolver rejects `..` and unexpected characters.
+- Attempt ids are validated as UUIDs and every read is scoped to the
+  cookie user (other users' attempts are "not found").
+- Analytics user ids come from the cookie, never the payload; event names are
+  allow-listed and properties are size-limited.
+- Transcripts are untrusted: escaped in the prompt and declared as data.
 
 ## Replacing providers
 

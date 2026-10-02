@@ -21,6 +21,13 @@ const envSchema = z.object({
   EVALUATION_PROVIDER: z.enum(["anthropic", "mock"]).default("anthropic"),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_EVALUATION_MODEL: z.string().default("claude-opus-5-5"),
+  ANTHROPIC_EVALUATION_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("high"),
+  ANTHROPIC_EVALUATION_MAX_TOKENS: z.coerce.number().int().min(4000).max(128_000).default(16_000),
+  /** Server-side refusal fallback (beta). Set to "false" if your account rejects the beta header. */
+  ANTHROPIC_SERVER_FALLBACKS: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
 
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),

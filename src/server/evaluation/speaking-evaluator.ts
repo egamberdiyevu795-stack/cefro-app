@@ -1,9 +1,10 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { evaluationResultV1Schema, type EvaluationResult } from "@/domain/evaluation/schema";
+import { evaluationResultSchema, type EvaluationResult } from "@/domain/evaluation/schema";
 import { ProviderError } from "@/server/errors";
 import { logger } from "@/server/logging/logger";
-import { buildSpeakingEvaluationPrompt } from "./prompts/speaking-evaluation-v1";
+import { buildRevisionRequest, buildSpeakingEvaluationPrompt } from "./prompts/speaking-evaluation-v2";
+import { applyQualityGate, type QualityReport, type QualityViolation } from "./quality-gate";
 import type { EvaluationInput, EvaluationModel } from "./types";
 import { EVALUATION_SCHEMA_VERSION, EVALUATOR_VERSION } from "./versions";
 
@@ -15,18 +16,24 @@ export interface SpeakingEvaluation {
   promptHash: string;
   provider: string;
   model: string;
+  modelConfig: Record<string, string | number | boolean>;
   isDevelopmentProvider: boolean;
   latencyMs: number;
+  /** 1 normally; 2 when the first draft was invalid or rejected by the quality gate. */
+  modelCalls: number;
   inputTokens: number | null;
   outputTokens: number | null;
+  /** Quality gate outcome for the accepted draft, plus why earlier drafts were rejected. */
+  quality: QualityReport & { rejectedDrafts: QualityViolation[][] };
 }
 
-/** Invalid/malformed output gets one more try before the attempt is marked failed. */
-const MAX_INVALID_OUTPUT_ATTEMPTS = 2;
+/** One draft, plus one controlled regeneration if it is invalid or fails the quality gate. */
+const MAX_MODEL_CALLS = 2;
 
 /**
- * Runs the speaking evaluation methodology: build prompt → call model →
- * validate against the schema → normalise → attach version metadata.
+ * Runs the speaking evaluation methodology:
+ * build prompt → call model → validate schema → quality gate → (regenerate once) → attach versions.
+ * Throws ProviderError when no acceptable evaluation could be produced.
  */
 export async function evaluateSpeaking(
   input: EvaluationInput,
@@ -35,50 +42,80 @@ export async function evaluateSpeaking(
   const prompt = buildSpeakingEvaluationPrompt(input);
   const promptHash = sha256(`${EVALUATOR_VERSION}\n${prompt.system}`);
   const startedAt = Date.now();
+  const rejectedDrafts: QualityViolation[][] = [];
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+  let lastError: ProviderError | undefined;
 
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= MAX_INVALID_OUTPUT_ATTEMPTS; attempt++) {
+  for (let call = 1; call <= MAX_MODEL_CALLS; call++) {
+    const previousRejection = rejectedDrafts.at(-1);
+    const request = previousRejection
+      ? { system: prompt.system, user: `${prompt.user}\n\n${buildRevisionRequest(previousRejection)}` }
+      : prompt;
+
+    // Provider failures (timeouts, rate limits, refusals…) are not retried here;
+    // the SDK already retries transient HTTP errors.
+    const raw = await model.evaluate(request, input);
+    inputTokens = sumNullable(inputTokens, raw.inputTokens);
+    outputTokens = sumNullable(outputTokens, raw.outputTokens);
+
+    let validated: EvaluationResult;
     try {
-      const raw = await model.evaluate(prompt, input);
-      const result = validateEvaluationOutput(raw.output);
-      warnOnUnverifiedQuotes(result, input.transcript);
+      validated = validateEvaluationOutput(raw.output);
+    } catch (error) {
+      lastError = error as ProviderError;
+      rejectedDrafts.push([{ code: "schema_invalid", severity: "reject", path: "(schema)", message: lastError.message }]);
+      logger.warn("Evaluation draft failed schema validation", { call, reason: lastError.message });
+      continue;
+    }
+
+    const { result, report } = applyQualityGate(validated, {
+      transcript: input.transcript,
+      taskPromptCount: input.task.prompts.length,
+      hasPreviousAttempt: input.previousAttempt !== null,
+    });
+    logQualityReport(report, call);
+
+    if (report.passed) {
       return {
-        result: normalise(result, input),
+        result: normalise(result),
         evaluatorVersion: EVALUATOR_VERSION,
         rubricVersion: input.rubric.version,
         schemaVersion: EVALUATION_SCHEMA_VERSION,
         promptHash,
         provider: raw.provider,
         model: raw.model,
+        modelConfig: model.config,
         isDevelopmentProvider: model.isDevelopmentProvider,
         latencyMs: Date.now() - startedAt,
-        inputTokens: raw.inputTokens,
-        outputTokens: raw.outputTokens,
+        modelCalls: call,
+        inputTokens,
+        outputTokens,
+        quality: { ...report, rejectedDrafts },
       };
-    } catch (error) {
-      lastError = error;
-      const retryable =
-        error instanceof ProviderError && error.failureCode === "evaluation_invalid_output";
-      logger.warn("Evaluation attempt failed", { attempt, retryable, error });
-      if (!retryable) throw error;
     }
+
+    rejectedDrafts.push(report.violations.filter((v) => v.severity === "reject"));
+    lastError = new ProviderError(
+      "evaluation_quality_rejected",
+      `Evaluation rejected by quality gate: ${rejectedDrafts.at(-1)!.map((v) => v.code).join(", ")}`,
+    );
   }
-  throw lastError;
+
+  throw lastError ?? new ProviderError("evaluation_failed", "No evaluation produced");
 }
 
-/** Parse and validate unknown model output (object or JSON string). */
+/** Parse and validate unknown model output (object or JSON string) against the current schema. */
 export function validateEvaluationOutput(output: unknown): EvaluationResult {
   let value = output;
   if (typeof value === "string") {
     try {
       value = JSON.parse(value);
     } catch (error) {
-      throw new ProviderError("evaluation_invalid_output", "Evaluation output is not valid JSON", {
-        cause: error,
-      });
+      throw new ProviderError("evaluation_invalid_output", "Evaluation output is not valid JSON", { cause: error });
     }
   }
-  const parsed = evaluationResultV1Schema.safeParse(value);
+  const parsed = evaluationResultSchema.safeParse(value);
   if (!parsed.success) {
     throw new ProviderError(
       "evaluation_invalid_output",
@@ -91,40 +128,30 @@ export function validateEvaluationOutput(output: unknown): EvaluationResult {
   return parsed.data;
 }
 
-/** Enforce invariants the JSON schema cannot express. */
-function normalise(result: EvaluationResult, input: EvaluationInput): EvaluationResult {
+/** Transcript-only evaluation: non-assessable criteria (always pronunciation) carry no score. */
+function normalise(result: EvaluationResult): EvaluationResult {
   const criteria = { ...result.criteria };
   for (const key of Object.keys(criteria) as (keyof typeof criteria)[]) {
     const c = criteria[key];
-    if (!c.assessable || c.score === null) {
+    if (key === "pronunciation" || !c.assessable || c.score === null) {
       criteria[key] = { ...c, assessable: false, score: null, level: null };
     }
   }
-  return {
-    ...result,
-    criteria,
-    // A first attempt has nothing to review.
-    retry_review: input.previousAttempt ? result.retry_review : null,
-  };
+  return { ...result, criteria };
 }
 
-function warnOnUnverifiedQuotes(result: EvaluationResult, transcript: string) {
-  const haystack = squash(transcript);
-  const quotes = [
-    ...result.strengths.map((s) => s.evidence_quote),
-    ...result.issues.flatMap((i) => i.evidence_quotes),
-  ].filter((q) => q.trim().length > 0);
-  const unverified = quotes.filter((quote) => !haystack.includes(squash(quote)));
-  if (unverified.length > 0) {
-    logger.warn("Evaluation contains quotes not found verbatim in transcript", {
-      unverifiedCount: unverified.length,
-      totalQuotes: quotes.length,
-    });
-  }
+function logQualityReport(report: QualityReport, call: number) {
+  if (report.violations.length === 0) return;
+  // Codes and paths only — never transcript text.
+  logger.warn("Evaluation quality gate findings", {
+    call,
+    passed: report.passed,
+    violations: report.violations.map((v) => `${v.severity}:${v.code}@${v.path}`),
+  });
 }
 
-function squash(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9']+/g, " ").trim();
+function sumNullable(a: number | null, b: number | null): number | null {
+  return a === null && b === null ? null : (a ?? 0) + (b ?? 0);
 }
 
 function sha256(text: string): string {

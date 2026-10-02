@@ -43,3 +43,9 @@ next-env.d.ts
 
 # CEFRO local data (SQLite database + locally stored audio)
 /data/
+
+# Live-validation material: model output reports and real recordings (never commit student audio)
+/eval-reports/
+/local-samples/
+/test-results/
+/playwright-report/

@@ -56,8 +56,23 @@ export function describeFailure(failure: AttemptFailure | null): FailureCopy {
         canRetryProcessing: true,
         suggestReRecord: false,
       };
+    case "audio_unsupported":
+      return {
+        title: "We couldn't read your recording",
+        message: "The audio file seems to be damaged or in a format we can't use. Please record your answer again.",
+        canRetryProcessing: false,
+        suggestReRecord: true,
+      };
+    case "evaluation_refused":
+      return {
+        title: "We couldn't assess this answer",
+        message: "Your recording and transcript are saved. Please try again, or record a new answer to the task question.",
+        canRetryProcessing: true,
+        suggestReRecord: true,
+      };
     case "evaluation_failed":
     case "evaluation_invalid_output":
+    case "evaluation_quality_rejected":
       return {
         title: "We couldn't prepare your feedback",
         message: "Your recording and transcript are saved. Please try again.",

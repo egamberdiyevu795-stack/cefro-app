@@ -55,7 +55,21 @@ export async function evaluateSpeaking(
 
     // Provider failures (timeouts, rate limits, refusals…) are not retried here;
     // the SDK already retries transient HTTP errors.
-    const raw = await model.evaluate(request, input);
+    let raw;
+    try {
+      raw = await model.evaluate(request, input);
+    } catch (error) {
+      // A provider that reports unusable output (empty, truncated) gets the same one
+      // regeneration as invalid JSON. Every other failure (timeout, auth, rate limit,
+      // refusal) is not retried here.
+      if (error instanceof ProviderError && error.failureCode === "evaluation_invalid_output") {
+        lastError = error;
+        rejectedDrafts.push([{ code: "schema_invalid", severity: "reject", path: "(response)", message: error.message }]);
+        logger.warn("Evaluation draft unusable", { call, reason: error.message });
+        continue;
+      }
+      throw error;
+    }
     inputTokens = sumNullable(inputTokens, raw.inputTokens);
     outputTokens = sumNullable(outputTokens, raw.outputTokens);
 
@@ -110,7 +124,7 @@ export function validateEvaluationOutput(output: unknown): EvaluationResult {
   let value = output;
   if (typeof value === "string") {
     try {
-      value = JSON.parse(value);
+      value = JSON.parse(stripCodeFence(value));
     } catch (error) {
       throw new ProviderError("evaluation_invalid_output", "Evaluation output is not valid JSON", { cause: error });
     }
@@ -126,6 +140,12 @@ export function validateEvaluationOutput(output: unknown): EvaluationResult {
     );
   }
   return parsed.data;
+}
+
+/** Some models wrap JSON in a markdown fence even when told not to. */
+function stripCodeFence(text: string): string {
+  const match = /^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$/i.exec(text);
+  return match ? match[1] : text;
 }
 
 /** Transcript-only evaluation: non-assessable criteria (always pronunciation) carry no score. */

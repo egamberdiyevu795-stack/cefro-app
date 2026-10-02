@@ -18,7 +18,7 @@ const envSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-transcribe"),
   OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
 
-  EVALUATION_PROVIDER: z.enum(["anthropic", "mock"]).default("anthropic"),
+  EVALUATION_PROVIDER: z.enum(["anthropic", "gemini", "mock"]).default("anthropic"),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_EVALUATION_MODEL: z.string().default("claude-opus-5-5"),
   ANTHROPIC_EVALUATION_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("high"),
@@ -28,6 +28,25 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
+
+  GEMINI_API_KEY: z.string().optional(),
+  /**
+   * Gemini model for evaluation. Default is Google's moving "latest Flash" alias, because
+   * pinned names get retired and this default could not be checked against the live model
+   * list. The model that actually answers is stored with every evaluation. Pin a
+   * specific model (and re-run the live validation) before relying on results long-term.
+   */
+  GEMINI_EVALUATION_MODEL: z.string().min(1).default("gemini-flash-latest"),
+  /** Thinking models spend output tokens on reasoning, so keep this generous. */
+  GEMINI_EVALUATION_MAX_TOKENS: z.coerce.number().int().min(4000).max(65_000).default(24_000),
+  /** Unset = model default. Only set this for models that support thinking levels. */
+  GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).optional(),
+  /**
+   * "schema": send the JSON schema to the API (constrained decoding) and in the prompt.
+   * "json": only request JSON and describe the shape in the prompt. Escape hatch if the API
+   * rejects the schema. Our own validation applies in both modes.
+   */
+  GEMINI_STRUCTURED_OUTPUT: z.enum(["schema", "json"]).default("schema"),
 
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),

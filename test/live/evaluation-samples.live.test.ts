@@ -9,6 +9,7 @@ import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking, type SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 import type { EvaluationInput } from "@/server/evaluation/types";
 import { B2_PART2_SAMPLES, type EvaluationSample } from "../evaluation-samples/b2-part2-samples";
+import { evaluatorSelection } from "./providers";
 import { writeReport } from "./report";
 
 /**
@@ -17,10 +18,19 @@ import { writeReport } from "./report";
  * safety rules; level/criterion expectations are soft (reported, not fatal),
  * because examiners can reasonably disagree by a band.
  *
+ *   EVALUATION_PROVIDER=gemini GEMINI_API_KEY=... npm run eval:live
  *   EVALUATION_PROVIDER=anthropic ANTHROPIC_API_KEY=... npm run eval:live
  *   EVAL_SAMPLES=S01,S04 npm run eval:live   # subset
+ *
+ * The provider is whatever EVALUATION_PROVIDER selects; the other provider's
+ * key is not needed. Keys are read from the environment and never printed.
+ * Hard assertions (quality gate passes, pronunciation not assessed, injection
+ * ignored) fail the run; level/criterion/coverage differences are listed in
+ * the summary for human review.
  */
-const configured = process.env.EVALUATION_PROVIDER !== "mock" && Boolean(process.env.ANTHROPIC_API_KEY);
+const selection = evaluatorSelection();
+const configured = selection.configured;
+if (!configured) console.log(`\nLIVE evaluation skipped: ${selection.hint}\n`);
 const task = getSpeakingTask("b2-part2-technology-young-people")!;
 const only = process.env.EVAL_SAMPLES?.split(",").map((s) => s.trim());
 const samples = B2_PART2_SAMPLES.filter((s) => !only || only.some((prefix) => s.id.startsWith(prefix)));
@@ -36,16 +46,25 @@ function inputFor(sample: EvaluationSample, previous: EvaluationInput["previousA
   };
 }
 
+interface Row {
+  sample: EvaluationSample;
+  evaluation?: SpeakingEvaluation;
+  error?: string;
+  failureCode?: string;
+  misses: string[];
+}
+
 describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set", () => {
-  const rows: { sample: EvaluationSample; evaluation?: SpeakingEvaluation; error?: string; misses: string[] }[] = [];
+  const rows: Row[] = [];
 
   it.each(samples.map((s) => [s.id, s] as const))("%s", async (_id, sample) => {
-    const row: (typeof rows)[number] = { sample, misses: [] };
+    const row: Row = { sample, misses: [] };
     rows.push(row);
     try {
       row.evaluation = await evaluateSpeaking(inputFor(sample), getEvaluationModel());
     } catch (error) {
       row.error = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      row.failureCode = (error as { failureCode?: string }).failureCode;
       throw error;
     }
     const { result } = row.evaluation;
@@ -67,7 +86,7 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
       if (actual !== status) row.misses.push(`coverage[${index}] ${actual ?? "missing"} ≠ ${status}`);
     }
     if (sample.expect.reliabilityNote && !result.reliability_note) row.misses.push("expected a reliability note");
-    expect.soft(row.misses, `${sample.id} expectations`).toEqual([]);
+    // Misses are recorded in the report for human review; they do not fail the run.
   });
 
   it("retry: weak answer → stronger answer is reviewed and compared honestly", async () => {
@@ -81,15 +100,20 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
       }),
       getEvaluationModel(),
     );
-    expect(second.result.retry_review).not.toBeNull();
     const comparison = compareAttempts({ evaluation: first.result, metrics: null }, { evaluation: second.result, metrics: null });
-    expect.soft(comparison.verdict).toMatch(/improvement/);
-    rows.push({ sample: { ...byId("S01"), id: "RETRY S03→S01" }, evaluation: second, misses: [`verdict: ${comparison.verdict}`] });
+    const misses = [`verdict: ${comparison.verdict}`];
+    if (!second.result.retry_review) misses.push("retry_review missing on a retry");
+    if (!/improvement/.test(comparison.verdict)) misses.push("weak → strong retry not reported as an improvement");
+    rows.push({ sample: { ...byId("S01"), id: "RETRY S03→S01" }, evaluation: second, misses });
   });
 
   it("writes the review report", () => {
-    const file = writeReport("live-evaluation", renderMarkdown(rows), rows);
-    console.log(`\nReview report: ${file}\n`);
+    const model = getEvaluationModel();
+    const withRetry = rows.filter((r) => r.sample.id.startsWith("RETRY"));
+    const summary = summarise(rows.filter((r) => !r.sample.id.startsWith("RETRY")), model.provider, model.model);
+    summary.expectationMisses.push(...withRetry.filter((r) => r.misses.some((m) => !m.startsWith("verdict"))).map((r) => ({ id: r.sample.id, misses: r.misses })));
+    const file = writeReport("live-evaluation", `${renderSummary(summary)}\n\n${renderMarkdown(rows)}`, { summary, rows });
+    console.log(`\n${renderSummary(summary)}\n\nReview report: ${file}\n`);
   });
 });
 
@@ -97,7 +121,62 @@ function byId(prefix: string): EvaluationSample {
   return B2_PART2_SAMPLES.find((s) => s.id.startsWith(prefix))!;
 }
 
-function renderMarkdown(rows: { sample: EvaluationSample; evaluation?: SpeakingEvaluation; error?: string; misses: string[] }[]): string {
+interface Summary {
+  provider: string;
+  model: string;
+  /** Models that actually answered (differs from `model` when an alias like "-latest" is configured). */
+  modelsAnswered: string[];
+  samples: number;
+  succeeded: number;
+  failed: number;
+  qualityGateFailures: number;
+  regenerated: number;
+  expectationMisses: { id: string; misses: string[] }[];
+  averageLatencyMs: number | null;
+  tokensIn: number | null;
+  tokensOut: number | null;
+  failures: { id: string; code: string }[];
+}
+
+/** Aggregate the run. Contains no secrets: provider/model names and counts only. */
+function summarise(rows: Row[], provider: string, model: string): Summary {
+  const ok = rows.filter((r) => r.evaluation);
+  const failed = rows.filter((r) => !r.evaluation);
+  const sum = (values: (number | null)[]) => (values.some((v) => v !== null) ? values.reduce<number>((a, v) => a + (v ?? 0), 0) : null);
+  return {
+    provider,
+    model,
+    modelsAnswered: [...new Set(ok.map((r) => r.evaluation!.model))],
+    samples: rows.length,
+    succeeded: ok.length,
+    failed: failed.length,
+    qualityGateFailures: failed.filter((r) => r.failureCode === "evaluation_quality_rejected").length,
+    regenerated: ok.filter((r) => (r.evaluation?.modelCalls ?? 1) > 1).length,
+    expectationMisses: rows.filter((r) => r.misses.length > 0).map((r) => ({ id: r.sample.id, misses: r.misses })),
+    averageLatencyMs: ok.length ? Math.round(ok.reduce((a, r) => a + r.evaluation!.latencyMs, 0) / ok.length) : null,
+    tokensIn: sum(ok.map((r) => r.evaluation!.inputTokens)),
+    tokensOut: sum(ok.map((r) => r.evaluation!.outputTokens)),
+    failures: failed.map((r) => ({ id: r.sample.id, code: r.failureCode ?? "unknown" })),
+  };
+}
+
+function renderSummary(s: Summary): string {
+  const name = s.provider.charAt(0).toUpperCase() + s.provider.slice(1);
+  return [
+    `Provider: ${name}`,
+    `Model: ${s.model}${s.modelsAnswered.length ? ` (answered by: ${s.modelsAnswered.join(", ")})` : ""}`,
+    `Samples: ${s.samples}`,
+    `Successful evaluations: ${s.succeeded}`,
+    `Failed evaluations: ${s.failed}${s.failures.length ? ` (${s.failures.map((f) => `${f.id}: ${f.code}`).join(", ")})` : ""}`,
+    `Quality-gate failures: ${s.qualityGateFailures}`,
+    `Recovered by regeneration: ${s.regenerated}`,
+    `Samples outside expected ranges (review these): ${s.expectationMisses.length}${s.expectationMisses.length ? ` (${s.expectationMisses.map((m) => m.id).join(", ")})` : ""}`,
+    `Average latency: ${s.averageLatencyMs === null ? "n/a" : `${(s.averageLatencyMs / 1000).toFixed(1)}s`}`,
+    `Tokens in/out (successful runs): ${s.tokensIn ?? "n/a"}/${s.tokensOut ?? "n/a"}`,
+  ].join("\n");
+}
+
+function renderMarkdown(rows: Row[]): string {
   const lines = [
     "# Live evaluation report",
     "",

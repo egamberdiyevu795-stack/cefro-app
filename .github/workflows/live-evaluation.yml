@@ -1,0 +1,69 @@
+# Live evaluation against the REAL Gemini API, run on demand.
+#
+# Why this exists: the secret below can only be read by GitHub Actions, and the
+# development sandbox cannot reach the Gemini API. Running here validates the
+# evaluator on the 14-sample B2 Part 2 set and uploads a review report.
+#
+# Setup (once): Repository → Settings → Secrets and variables → Actions →
+# New repository secret, name: GEMINI_API_KEY.
+#
+# Security: manual trigger only (never pull_request, so forks cannot reach the
+# secret); read-only token; the key is exposed only to the one step that needs
+# it and GitHub masks it in logs. The report contains model output for the
+# synthetic samples only, no student data.
+name: Live evaluation (Gemini)
+
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: "Optional comma-separated sample id prefixes (e.g. S01,S04). Empty = all 14."
+        required: false
+        default: ""
+      model:
+        description: "Optional Gemini model override. Empty = GEMINI_EVALUATION_MODEL default."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check the secret is configured (without printing it)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::Repository secret GEMINI_API_KEY is not set (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      - name: Run the live evaluation
+        env:
+          EVALUATION_PROVIDER: gemini
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          EVAL_SAMPLES: ${{ inputs.samples }}
+          GEMINI_EVALUATION_MODEL: ${{ inputs.model }}
+        run: npm run eval:live
+
+      - name: Upload the review report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-evaluation-report
+          path: eval-reports/
+          if-no-files-found: warn
+          retention-days: 30

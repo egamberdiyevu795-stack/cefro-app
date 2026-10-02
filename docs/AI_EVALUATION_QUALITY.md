@@ -5,11 +5,14 @@ quality is checked, and what we know about its weaknesses. It is a working
 document: add a row to the [findings log](#findings-log) whenever a review
 changes the prompt, schema, gate or rubric.
 
-> **Status (Stage 2):** all code-level and automated quality work is done.
-> **Real-provider validation has NOT been run yet** — no OpenAI/Anthropic
-> credentials were available in the development environment. Until the
-> live runs in [§6](#6-validating-with-real-providers) are done and reviewed,
-> treat real-model output quality as unverified.
+> **Status:** all code-level and automated quality work is done, for
+> both evaluation providers (Anthropic and Gemini). **Real-provider
+> validation has NOT been run for anything**: no Gemini, Anthropic or OpenAI
+> call has ever been made with a real key. Real-model output quality, the
+> chosen Gemini model default, Gemini's acceptance of our JSON schema, and
+> real-speech transcription are all unverified. See
+> [§6](#6-validating-with-real-providers) for how to run the checks and
+> [Gemini evaluation provider](#gemini-evaluation-provider) for what is unverified there.
 
 ## 1. Methodology
 
@@ -138,6 +141,36 @@ in practice. Models in this family are known to "smooth" disfluent speech. Run
 If it corrects errors, try `whisper-1` (configurable, no code change) and
 record the result below.
 
+### Gemini transcription: deliberately not implemented
+
+Evaluation can run on Gemini; transcription stays on OpenAI (or the mock).
+I checked whether Gemini could be added as a `TranscriptionProvider` and chose
+not to, because the property CEFRO needs most cannot be shown from here:
+
+- **Format:** the official SDK's type definitions list `audio/webm`, `audio/ogg`,
+  `audio/mpeg`, `audio/wav`, `audio/aac`, `audio/flac` and others as audio input,
+  so Chrome's WebM/Opus recordings are plausibly accepted. Safari's MP4/AAC is less clear.
+  I couldn't read Google's documentation (blocked from the development sandbox), so
+  size limits and exact format support are unconfirmed.
+- **Fidelity is the real question, and it is untested.** General-purpose
+  language models are known to tidy up speech when asked to transcribe:
+  grammar fixed, hesitations dropped, repetitions merged, and
+  text invented on silence. Our evaluation treats the transcript as evidence of errors, so a
+  silently corrected transcript would hide exactly the mistakes the student needs to see
+  ("He go to school" → "He goes to school"). A dedicated STT service is more likely to behave
+  literally, but that is also unverified for `gpt-4o-transcribe` (see above).
+- **No way to measure it now:** there is no key, and the Gemini API host is blocked from the
+  sandbox.
+
+So no `TRANSCRIPTION_PROVIDER=gemini` option exists. To add one properly: implement the
+interface, then run `npm run eval:transcription` on real recordings with `ref:` and `keep:`
+sidecars and compare word error rate and kept-error rate against the OpenAI provider.
+Add it only if it preserves learner errors and handles silence (`*silence*` files).
+
+**Consequence:** with only a Gemini key, the full microphone → transcription → evaluation
+path cannot be validated. The evaluator can be validated on text (the 14 samples), and
+transcription validation still needs OpenAI or another dedicated STT provider.
+
 ## 4. Comparison
 
 `src/domain/speaking/comparison.ts` derives everything from the two stored
@@ -159,12 +192,17 @@ evaluations:
 
 | Setting | Env var | Default |
 | --- | --- | --- |
-| Evaluation provider | `EVALUATION_PROVIDER` | `anthropic` |
-| Model | `ANTHROPIC_EVALUATION_MODEL` | `claude-opus-5-5` |
-| Effort | `ANTHROPIC_EVALUATION_EFFORT` | `high` |
-| Max output tokens | `ANTHROPIC_EVALUATION_MAX_TOKENS` | `16000` |
-| Refusal fallback (beta) | `ANTHROPIC_SERVER_FALLBACKS` | `true` |
-| Timeout | `EVALUATION_TIMEOUT_MS` | `180000` |
+| Evaluation provider | `EVALUATION_PROVIDER` (`anthropic`, `gemini`, `mock`) | `anthropic` |
+| **Anthropic** model | `ANTHROPIC_EVALUATION_MODEL` | `claude-opus-5-5` |
+| Anthropic effort | `ANTHROPIC_EVALUATION_EFFORT` | `high` |
+| Anthropic max output tokens | `ANTHROPIC_EVALUATION_MAX_TOKENS` | `16000` |
+| Anthropic refusal fallback (beta) | `ANTHROPIC_SERVER_FALLBACKS` | `true` |
+| **Gemini** key | `GEMINI_API_KEY` | — |
+| Gemini model | `GEMINI_EVALUATION_MODEL` | `gemini-flash-latest` (unverified alias) |
+| Gemini max output tokens | `GEMINI_EVALUATION_MAX_TOKENS` | `24000` |
+| Gemini thinking level | `GEMINI_THINKING_LEVEL` | unset (model default) |
+| Gemini structured-output mode | `GEMINI_STRUCTURED_OUTPUT` (`schema`, `json`) | `schema` |
+| Timeout (both) | `EVALUATION_TIMEOUT_MS` | `180000` |
 | Transcription provider / model | `TRANSCRIPTION_PROVIDER` / `OPENAI_TRANSCRIPTION_MODEL` | `openai` / `gpt-4o-transcribe` |
 
 Each evaluation row stores:
@@ -180,6 +218,7 @@ Attempts store `processing_duration_ms`, and transcripts store their own `latenc
 | --- | --- |
 | `speaking-evaluator/1.0.0`, schema 1 | Stage 1 |
 | `speaking-evaluator/2.0.0`, schema 2 | Stage 2: new prompt (prioritisation, evidence basis, task coverage, linked focus, meaning-preserving examples, banned generic advice, learner-friendly style, transcript escaping), new schema fields, quality gate + regeneration. Changes output content and shape. |
+| `speaking-evaluator/2.1.0`, schema 2 | Gemini provider added. Shared post-processing: markdown-fenced JSON is accepted, and an empty/truncated provider response gets the single regeneration. Prompt, rubric, schema and gate unchanged (same prompt hash). |
 | `b2-speaking-rubric/1.0.0` | Unchanged; the rubric text was not edited. |
 
 Old evaluations are never rewritten. They are upgraded for display only
@@ -192,23 +231,34 @@ the local database.
 
 ## 6. Validating with real providers
 
-1. Put keys in `.env.local` (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, real providers selected).
-2. **Evaluator on the sample set** (~14 calls, plus a retry pair):
-   `npm run eval:live`, or a subset with `EVAL_SAMPLES=S01,S04 npm run eval:live`.
-   - Hard assertions: the gate passes, pronunciation is not assessed, and the injection sample stays ≤ B1+.
-   - Soft expectations: level range, issue criterion, task coverage, reliability note.
-   - A full review report is written to `eval-reports/` (gitignored).
-3. **Transcription on real recordings:**
-   - Put audio in `local-samples/` (gitignored — never commit student audio),
-     with an optional `<name>.txt` sidecar:
-     `ref: <verbatim text>`, `keep: he go to school`, `seconds: 95`.
-   - Name silent test files `*silence*`.
-   - Run `npm run eval:transcription`. It reports word error rate, whether
-     learner errors were kept, and (with an evaluator configured) the
-     evaluated level.
-4. **Full end-to-end:** `npm run dev`, then record two attempts with a real
-   microphone, retry, and compare. Check `npm run stats` afterwards.
-5. Review every item with the checklist below and log findings in §8.
+**Evaluator on the sample set** (14 calls plus a retry pair; needs only the selected provider's key):
+
+- **Local:** put `EVALUATION_PROVIDER=gemini` and `GEMINI_API_KEY` in `.env.local` (never commit it), then
+  `npm run eval:live`. Subset: `EVAL_SAMPLES=S01,S04 npm run eval:live`.
+- **GitHub Actions** (works from the cloud sandbox, which cannot reach the Gemini API): add the repository
+  secret `GEMINI_API_KEY`, then run **Actions → "Live evaluation (Gemini)" → Run workflow**.
+  The workflow is manual-only and uploads the review report as an artifact.
+- Hard assertions: the quality gate passes, pronunciation is not assessed, and the injection sample
+  stays ≤ B1+. These fail the run.
+- Level, criterion, coverage and reliability-note differences do **not** fail the run; they are listed in
+  the summary for human review. A review report is written to `eval-reports/` (gitignored).
+- The summary reports provider, requested model and the model that actually answered, samples, successes,
+  failures, quality-gate failures, samples recovered by regeneration, samples outside the expected ranges,
+  average latency, and token totals (shown as `n/a` when the provider gives none).
+
+**Transcription on real recordings:**
+
+- Put audio in `local-samples/` (gitignored, so student audio is never committed), with an optional
+  `<name>.txt` sidecar: `ref: <verbatim text>`, `keep: he go to school`, `seconds: 95`.
+- Name silent test files `*silence*`.
+- Run `npm run eval:transcription`. It reports word error rate, whether learner errors were kept, and
+  (with an evaluator configured) the evaluated level.
+- Needs a real STT provider (currently OpenAI). Not possible with a Gemini key alone.
+
+**Full end-to-end:** `npm run dev`, then record two attempts with a real microphone, retry, and compare.
+Check `npm run stats` afterwards. Requires both a transcription and an evaluation provider.
+
+Review every item with the checklist below and log findings in §8.
 
 Recordings from real students must be anonymised (no names or identifying
 details in speech or filenames) and must stay out of git.
@@ -258,12 +308,76 @@ Automated tests that run in `npm test`:
 | Evidence matching | `src/domain/evaluation/evidence.test.ts` |
 | Tests A–E (evidence, meaning, pronunciation, generic, retry focus) | `src/server/evaluation/quality-gate.test.ts` |
 | Test F (malformed output) and Test H (versioning/config) | `src/server/evaluation/speaking-evaluator.test.ts` |
-| Test G (provider failures via a fake HTTP layer) | `anthropic-evaluation-model.test.ts`, `openai-transcription.test.ts` |
+| Test G (provider failures via a fake HTTP layer) | `anthropic-evaluation-model.test.ts`, `gemini-evaluation-model.test.ts`, `openai-transcription.test.ts` |
+| Gemini JSON-schema conversion | `src/server/evaluation/gemini-json-schema.test.ts` |
 | Honest comparison | `src/domain/speaking/comparison.test.ts` |
 | Stored v1 → v2 upgrade | `src/domain/evaluation/stored.test.ts` |
 | Pipeline (failures, timings, ownership, upload validation) | `src/server/attempts/attempt-pipeline.test.ts` |
 | Sample-set metrics and gate robustness | `test/evaluation-samples/samples.test.ts` |
 | Browser | `e2e/practice-flow.spec.ts` (`npm run test:e2e`) |
+
+## Gemini evaluation provider
+
+**Role:** evaluation only (`EVALUATION_PROVIDER=gemini`). Anthropic evaluation and OpenAI
+transcription are unchanged and still selectable.
+
+**SDK:** official `@google/genai` (Google's current JavaScript SDK). No unofficial wrappers.
+**Model:** `GEMINI_EVALUATION_MODEL`, default `gemini-flash-latest`. This default is a judgement call that
+could **not** be checked: Google's model list was unreachable, and the SDK's type definitions only show example
+names. A moving alias is less likely to be retired than a pinned name, but it can change behaviour silently.
+Every evaluation stores the model that actually answered (`modelVersion` from the response). Once you
+have chosen a model, pin it and re-run the live validation. If the default is not available to your key,
+the run fails with `provider_not_configured` and a "model not found (check GEMINI_EVALUATION_MODEL)" log line.
+
+**Pipeline** (identical for every provider; only the first box differs):
+
+```
+GeminiEvaluationModel ──raw text──▶ parse JSON ──▶ Zod schema v2 ──▶ quality gate ──▶ (one regeneration) ──▶ store
+```
+
+- The provider receives the *same* system prompt and user message as Anthropic, built by
+  `prompts/speaking-evaluation-v2.ts`. Rubric, task points, CEFR target, metrics and escaped transcript are all
+  in there. The student's transcript stays in the user message, escaped, and the system prompt declares it to be data.
+- Plumbing added for Gemini only: JSON mime type, the JSON schema (`responseJsonSchema`), and an
+  "Output format" block repeating the schema in the system instruction. This is not part of the prompt hash, so
+  both providers share one hash for one methodology.
+- The schema is derived from the Zod schema (`gemini-json-schema.ts`), limited to the JSON-Schema keywords Gemini
+  documents (string length/pattern/format and 64-bit integer bounds are dropped). API-side schema enforcement is
+  a convenience: **Zod validation and the quality gate remain authoritative and always run.**
+- If the API rejects the schema, set `GEMINI_STRUCTURED_OUTPUT=json`: no schema is sent to the API and the shape is
+  described only in the prompt; validation is unchanged.
+- The same single regeneration applies to every provider. Malformed JSON, schema violations, empty responses and
+  truncated output (`MAX_TOKENS`) are regenerated once, then fail with `evaluation_invalid_output`.
+  Quality-gate rejections regenerate once with a revision request, then fail with `evaluation_quality_rejected`.
+  Nothing invalid is stored.
+- Errors: HTTP 429 → `provider_rate_limited`; 401/403/404 and "API key not valid" → `provider_not_configured`;
+  408/504/timeouts → `provider_timeout`; blocked prompts or a safety/prohibited-content stop →
+  `evaluation_refused`; other 4xx/5xx and network errors → `evaluation_failed`. None of these are regenerated.
+  Error text is scrubbed of the API key before it reaches logs; the key travels only in the `x-goog-api-key` header.
+- **Observability:** `provider = gemini`, the answering model, `model_config` (max tokens, structured-output mode,
+  thinking level if set), `model_calls`, latency and quality report are stored like any other provider.
+  Tokens: input = `promptTokenCount`; output = `candidatesTokenCount + thoughtsTokenCount` (reasoning tokens are
+  billed as output). If Gemini omits usage metadata the columns stay `NULL`; nothing is estimated.
+
+**Tested (no key needed, in `npm test`):** requests (key only in the header, schema and settings sent),
+successful reply, malformed JSON, wrong structure, markdown-fenced JSON, empty reply, missing candidates, truncation,
+blocked/safety stops, timeout, network failure, 400/403/404/429/500/503/504 mapping, key redaction,
+regeneration success and failure, quality-gate rejection through the Gemini path (hallucinated quote, pronunciation
+claim, generic advice), no regeneration after provider failures, and the injected-instruction prompt shape. The live
+harness mechanics were also exercised against a throwaway local HTTP stand-in (not Gemini).
+
+**NOT verified (needs the real key):**
+
+- that the default model exists for your key and behaves as expected;
+- that the API accepts our schema (the `json` mode exists as a fallback);
+- how well Gemini applies the CEFRO methodology: evidence discipline, meaning-preserving corrections,
+  level accuracy, and how often the quality gate has to reject or regenerate;
+- thinking behaviour. `GEMINI_THINKING_LEVEL` is unset by default because the accepted values differ between
+  model generations, and an unsupported value would be rejected;
+- latency, cost and free-tier rate limits.
+
+Gemini and Anthropic results are not interchangeable: they are different models, and scores should not be
+compared across providers without checking on the sample set first.
 
 ## Findings log
 
@@ -284,6 +398,10 @@ output has been reviewed yet** — add live-review findings here.
 | F10 | Tests | Dev evaluator quoted `"Uh..."` (fillers only) as evidence on the hesitant sample; gate correctly rejected it | Low | Mock picks the first sentence with real words |
 | F11 | Audit | Transcript could contain `</transcript>` and break prompt sections | Low | Angle brackets escaped; test |
 | F12 | Audit | Stage 1 evaluator did not record model config or number of calls | Low | `model_config`, `model_calls`, `quality_report`, `processing_duration_ms` |
+| F13 | Gemini work | A provider-reported empty or truncated response failed immediately and was never regenerated, although malformed JSON was. Applied to every provider. | Medium | Shared evaluator regenerates once on any `evaluation_invalid_output`; evaluator bumped to 2.1.0 |
+| F14 | Gemini work | Live harness: level/criterion mismatches used `expect.soft`, which still fails the run, contradicting its own docs; a scheduled CI run would go red on ordinary examiner-style disagreement | Medium | Mismatches are listed in the summary only; hard rules still fail |
+| F15 | Gemini work | Live harness and transcription harness only recognised Anthropic keys, so a Gemini-only setup was skipped silently | Medium | Provider chosen by `EVALUATION_PROVIDER`; skip message names the missing variable |
+| F16 | Gemini work | With an alias model name, the summary showed only the requested model | Low | Summary also lists the models that actually answered |
 
 ## Known weaknesses and future improvements
 

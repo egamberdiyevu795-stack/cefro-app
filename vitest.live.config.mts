@@ -18,5 +18,8 @@ export default defineConfig({
     setupFiles: ["test/live/setup.ts"],
     testTimeout: 15 * 60 * 1000,
     fileParallelism: false,
+    // Show console output (the run summary) even for passing tests.
+    reporters: ["verbose"],
+    silent: false,
   },
 });

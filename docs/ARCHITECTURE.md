@@ -9,7 +9,7 @@
 | Database       | SQLite (better-sqlite3) via Drizzle ORM           | Zero-ops for now; Drizzle also supports Postgres                    |
 | Validation     | Zod                                               | Shared schemas for API input and AI output                          |
 | Speech-to-text | OpenAI transcription REST API (`gpt-4o-transcribe` default) | Accurate; a single `fetch`, no SDK needed                  |
-| Evaluation     | Claude (`claude-opus-5-5`, configurable) via `@anthropic-ai/sdk` with structured outputs | Schema-shaped JSON, validated server-side |
+| Evaluation     | Gemini (official `@google/genai`) or Claude (`@anthropic-ai/sdk`), selected by `EVALUATION_PROVIDER`; structured JSON output | Schema-shaped JSON, validated server-side |
 | Tests          | Vitest (unit/integration), Playwright (browser)   | Live provider runs are separate (`npm run eval:*`)                  |
 
 ## Directory layout
@@ -104,16 +104,29 @@ Full methodology, quality checks, test set and findings: [`AI_EVALUATION_QUALITY
    rubric (`rubrics/`), prioritisation, evidence rules, feedback method; user
    message = task + task points, examiner guidance, speech metrics, escaped
    transcript, and for retries the previous transcript/issues/focus.
-2. Call the configured `EvaluationModel` (Claude with structured outputs, or the dev mock).
+2. Call the configured `EvaluationModel`: `AnthropicEvaluationModel`, `GeminiEvaluationModel`, or the dev mock.
+   Each only turns the shared prompt into raw model output; everything after this step is provider-independent.
 3. Validate against the Zod schema (`domain/evaluation/schema.ts`, v2).
 4. Run the quality gate (`quality-gate.ts`): verifies quotes against the
    transcript, rejects pronunciation claims, generic advice, meaning-changing
    "improved" examples, duplicates and unlinked retry focus; repairs minor issues.
-5. On an invalid or rejected draft, regenerate **once** with a revision request;
+5. On an invalid, empty, truncated or rejected draft, regenerate **once** with a revision request;
    otherwise fail with `evaluation_invalid_output` / `evaluation_quality_rejected`.
 
 Nothing unvalidated is stored. Pronunciation is always "not assessed"
 (transcript-only evaluator).
+
+### Providers
+
+| Role | Providers | Selected by |
+| --- | --- | --- |
+| Evaluation | Anthropic, **Gemini**, mock | `EVALUATION_PROVIDER` |
+| Transcription | OpenAI, mock (no Gemini: see the quality doc for why) | `TRANSCRIPTION_PROVIDER` |
+
+Gemini (`server/evaluation/gemini-evaluation-model.ts`) uses the official `@google/genai` SDK with JSON-schema
+output (`gemini-json-schema.ts` derives it from the Zod schema), but never trusts API-side enforcement.
+Its configuration, error mapping, limits and unverified points are in
+[`AI_EVALUATION_QUALITY.md`](AI_EVALUATION_QUALITY.md#gemini-evaluation-provider).
 
 ### Versioning
 
@@ -186,8 +199,9 @@ Server: `recording_submitted`, `transcription_started|completed|failed`,
 
 ## Security notes
 
-- API keys are read only in `server/config/env.ts` (`server-only`); providers
-  are called only from server code. The browser never sees provider names
+- API keys (OpenAI, Anthropic, Gemini) are read only in `server/config/env.ts`
+  (`server-only`); providers are called only from server code. The Gemini key is sent
+  only in the `x-goog-api-key` header, and is scrubbed from error text before logging. The browser never sees provider names
   beyond what the evaluation metadata shows.
 - Uploads: Content-Length pre-check, 20 MB cap, MIME allow-list, and
   magic-byte check; storage keys are generated server-side (no client file
@@ -204,5 +218,5 @@ Server: `recording_submitted`, `transcription_started|completed|failed`,
 | ------------------- | -------------------------------------------- | --------------------------------------------- |
 | Audio storage (S3…) | `AudioStorage` in `server/storage/`          | Add a case in `server/storage/index.ts` + env |
 | Speech-to-text      | `TranscriptionProvider`                      | Add a case in `server/transcription/index.ts` |
-| Evaluation model    | `EvaluationModel`                            | Add a case in `server/evaluation/index.ts`    |
+| Evaluation model    | `EvaluationModel` (see `gemini-evaluation-model.ts` for a worked example) | Add a case in `server/evaluation/index.ts` + env |
 | Database (Postgres) | Port `server/db/schema.ts` to `pg-core`      | Swap the driver in `server/db/client.ts`; repositories use Drizzle's query builder and need few changes (the synchronous `.run()/.get()` calls become awaited) |

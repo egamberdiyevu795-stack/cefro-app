@@ -42,9 +42,13 @@ evaluator are clearly labelled in the UI. Both are refused when
 ```bash
 TRANSCRIPTION_PROVIDER=openai
 OPENAI_API_KEY=sk-...
-EVALUATION_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+EVALUATION_PROVIDER=gemini        # or: anthropic
+GEMINI_API_KEY=...                # or: ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+Only the selected provider's key is needed. Transcription currently supports OpenAI only,
+so with just a Gemini key you can validate evaluation (`npm run eval:live`) but not
+real-speech transcription.
 
 All variables (including model, effort and timeouts) are documented in
 [`.env.example`](.env.example). They are read server-side only. Before relying on
@@ -60,7 +64,7 @@ real feedback, run the validation steps in `docs/AI_EVALUATION_QUALITY.md` §6.
 | `npm run check`       | Lint + typecheck + tests (run before pushing)        |
 | `npm test`            | Unit and integration tests (Vitest)                  |
 | `npm run test:e2e`    | Browser tests (Playwright, mock providers, fake mic) |
-| `npm run eval:live`   | Run the evaluation sample set on the REAL evaluator (costs money) |
+| `npm run eval:live`   | Run the evaluation sample set on the REAL evaluator chosen by `EVALUATION_PROVIDER` (costs money) |
 | `npm run eval:transcription` | Transcribe real recordings in `local-samples/` |
 | `npm run stats`       | Latency, token and quality-gate summary          |
 | `npm run db:generate` | Generate a SQL migration after editing the DB schema |

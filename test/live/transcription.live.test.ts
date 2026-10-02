@@ -8,6 +8,7 @@ import { getEvaluationModel } from "@/server/evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking } from "@/server/evaluation/speaking-evaluator";
 import { getTranscriptionProvider } from "@/server/transcription";
+import { evaluatorSelection } from "./providers";
 import { writeReport } from "./report";
 
 /**
@@ -27,7 +28,7 @@ const DIR = path.join(process.cwd(), "local-samples");
 const MIME: Record<string, string> = { ".webm": "audio/webm", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg" };
 const files = fs.existsSync(DIR) ? fs.readdirSync(DIR).filter((f) => MIME[path.extname(f)]) : [];
 const configured = process.env.TRANSCRIPTION_PROVIDER !== "mock" && Boolean(process.env.OPENAI_API_KEY) && files.length > 0;
-const evaluate = process.env.EVALUATION_PROVIDER !== "mock" && Boolean(process.env.ANTHROPIC_API_KEY);
+const evaluate = evaluatorSelection().configured;
 const task = getSpeakingTask("b2-part2-technology-young-people")!;
 
 interface Row {

@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+ * CEFRO design tokens. Components use Tailwind utilities that reference
+ * these (e.g. bg-surface, text-muted, bg-brand) so the palette can change
+ * in one place.
+ */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-canvas: #f6f7fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f3f8;
+  --color-border: #e3e6ee;
+  --color-ink: #141a2e;
+  --color-muted: #5b6478;
+  --color-subtle: #8a92a6;
+
+  --color-brand: #4f46e5;
+  --color-brand-strong: #4338ca;
+  --color-brand-soft: #eef0ff;
+
+  --color-record: #dc2626;
+  --color-record-soft: #fef2f2;
+  --color-success: #15803d;
+  --color-success-soft: #ecfdf3;
+  --color-warning: #b45309;
+  --color-warning-soft: #fffbeb;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -197,6 +197,11 @@ function renderMarkdown(rows: Row[]): string {
     const r = e.result;
     lines.push("", `## ${sample.id} — ${sample.description}`, "", `> ${sample.transcript}`, "", `**${r.overall_level}** — ${r.overall_summary}`, "");
     lines.push(`Model: ${e.model} · ${e.evaluatorVersion} · rubric ${e.rubricVersion} · schema v${e.schemaVersion}`, "");
+    // What the quality gate rejected in earlier drafts (needed to judge whether the gate was right).
+    e.quality.rejectedDrafts.forEach((draft, n) =>
+      lines.push(`**Rejected draft ${n + 1}:**`, ...draft.map((v) => `- \`${v.code}\` @ ${v.path}: ${v.message}`), ""),
+    );
+    if (e.quality.violations.length) lines.push("**Repaired in the accepted draft:**", ...e.quality.violations.map((v) => `- \`${v.code}\` @ ${v.path}: ${v.message}`), "");
     lines.push("**Scores:** " + Object.entries(r.criteria).map(([k, c]) => `${CRITERION_LABELS[k as keyof typeof CRITERION_LABELS]} ${c.score ?? "n/a"}`).join(" · "));
     lines.push("", "**Task coverage:** " + r.task_coverage.map((c) => `#${c.prompt_index} ${c.status} (${c.note})`).join("; "));
     lines.push("", "**Strengths**", ...r.strengths.map((s) => `- ${s.title}: ${s.detail} — “${s.evidence_quote}”`));

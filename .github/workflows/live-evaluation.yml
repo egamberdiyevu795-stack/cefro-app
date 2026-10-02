@@ -59,6 +59,17 @@ jobs:
           GEMINI_EVALUATION_MODEL: ${{ inputs.model }}
         run: npm run eval:live
 
+      # The artifact host may be unreachable from some environments, so also print the report in
+      # the log. Output is wrapped in stop-commands so model-generated text can never be
+      # interpreted as workflow commands. The report holds synthetic samples and model output only.
+      - name: Print the review report in the log
+        if: always()
+        run: |
+          TOKEN="stop-$(openssl rand -hex 12)"
+          echo "::stop-commands::$TOKEN"
+          for f in eval-reports/*.md; do echo "=== REPORT $f ==="; cat "$f"; echo "=== END REPORT ==="; done
+          echo "::$TOKEN::"
+
       - name: Upload the review report
         if: always()
         uses: actions/upload-artifact@v4

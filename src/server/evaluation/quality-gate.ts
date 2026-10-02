@@ -123,14 +123,14 @@ export function applyQualityGate(
         "reject",
         "improved_example_changes_meaning",
         `issues[${i}].improved_example`,
-        `Improved version keeps only ${Math.round(check.overlap * 100)}% of the original's content words.`,
+        `Improved version keeps only ${Math.round(check.overlap * 100)}% of the original's content words: "${truncate(original, 140)}" → "${truncate(improved, 180)}"`,
       );
     } else if (check.tooElaborate) {
       add(
         "reject",
         "improved_example_too_elaborate",
         `issues[${i}].improved_example`,
-        `Improved version is ${check.lengthRatio.toFixed(1)}x longer than the original.`,
+        `Improved version is ${check.lengthRatio.toFixed(1)}x longer than the original: "${truncate(original, 140)}" → "${truncate(improved, 180)}"`,
       );
     }
   });

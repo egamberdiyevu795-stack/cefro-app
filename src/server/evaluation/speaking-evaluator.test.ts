@@ -109,9 +109,12 @@ describe("evaluateSpeaking", () => {
   it("returns a graceful failure when both drafts fail the quality gate", async () => {
     const bad = makeEvaluation();
     bad.issues[0].problem = "Improve your grammar.";
-    await expect(evaluateSpeaking(input, modelReturning([bad]))).rejects.toMatchObject({
-      failureCode: "evaluation_quality_rejected",
-    });
+    const failure = await evaluateSpeaking(input, modelReturning([bad])).catch((e: unknown) => e);
+    expect(failure).toMatchObject({ failureCode: "evaluation_quality_rejected" });
+    // Developers can still see what was rejected, but it is not part of the logged error.
+    const details = (failure as { details: { rejectedDrafts: { code: string }[][] } }).details;
+    expect(details.rejectedDrafts).toHaveLength(2);
+    expect(details.rejectedDrafts[0].map((v) => v.code)).toContain("generic_feedback");
   });
 
   it("does not retry provider failures such as timeouts (Test G)", async () => {
@@ -126,6 +129,17 @@ describe("evaluateSpeaking", () => {
     evaluation.criteria.pronunciation = { assessable: true, score: 6, level: "B1+", justification: "Not assessed from a transcript." };
     const { result } = await evaluateSpeaking(input, modelReturning([evaluation]));
     expect(result.criteria.pronunciation).toMatchObject({ assessable: false, score: null, level: null });
+  });
+
+  it("tells the model the rules that real runs showed it breaking", async () => {
+    const model = modelReturning([makeEvaluation()]);
+    await evaluateSpeaking(input, model);
+    const { system } = model.evaluate.mock.calls[0][0];
+    expect(system).toContain('"limit" is not "ban"'); // keep the student's stance
+    expect(system).toContain("Never replace their idea with a different example");
+    expect(system).toContain('set "original" to ""'); // missing-content issues
+    expect(system).toContain("Do not state benchmark figures as facts");
+    expect(system).toContain("direct fix for that issue");
   });
 
   it("puts task, transcript, metrics and the previous attempt in the prompt, with the transcript escaped", async () => {

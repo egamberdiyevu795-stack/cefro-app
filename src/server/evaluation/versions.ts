@@ -20,7 +20,14 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   JSON. The prompt, rubric, schema and quality gate are unchanged, so the
  *   prompt hash is identical to 2.0.0. Provider and model are recorded
  *   separately from the evaluator version.
+ * - speaking-evaluator/2.2.0 — Calibrated on the first real Gemini runs
+ *   (docs/AI_EVALUATION_QUALITY.md). Prompt: keep the student's stance, no
+ *   replacement examples, "original" rules for missing-content issues, no
+ *   invented benchmark figures, retry focus must be the direct fix. Quality gate:
+ *   improved-example checks no longer reject good corrections (word-swap fixes,
+ *   short statements gaining a reason clause) and repair unrelated originals
+ *   for missing-content issues instead of regenerating. New prompt hash.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/2.1.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/2.2.0";
 
 export { EVALUATION_SCHEMA_VERSION };

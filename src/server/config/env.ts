@@ -31,12 +31,12 @@ const envSchema = z.object({
 
   GEMINI_API_KEY: z.string().optional(),
   /**
-   * Gemini model for evaluation. Default is Google's moving "latest Flash" alias, because
-   * pinned names get retired and this default could not be checked against the live model
-   * list. The model that actually answers is stored with every evaluation. Pin a
-   * specific model (and re-run the live validation) before relying on results long-term.
+   * Gemini model for evaluation. Pinned to the model ID the API itself reported answering
+   * a "gemini-flash-latest" request, and verified by a successful run requesting this exact ID
+   * (docs/AI_EVALUATION_QUALITY.md). The "-latest" alias moves silently; change this
+   * deliberately and re-run the live validation.
    */
-  GEMINI_EVALUATION_MODEL: z.string().min(1).default("gemini-flash-latest"),
+  GEMINI_EVALUATION_MODEL: z.string().min(1).default("gemini-3.8-flash"),
   /** Thinking models spend output tokens on reasoning, so keep this generous. */
   GEMINI_EVALUATION_MAX_TOKENS: z.coerce.number().int().min(4000).max(65_000).default(24_000),
   /** Unset = model default. Only set this for models that support thinking levels. */

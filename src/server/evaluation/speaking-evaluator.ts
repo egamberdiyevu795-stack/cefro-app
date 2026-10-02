@@ -116,7 +116,13 @@ export async function evaluateSpeaking(
     );
   }
 
-  throw lastError ?? new ProviderError("evaluation_failed", "No evaluation produced");
+  // Attach what was rejected, so a failed evaluation can still be reviewed by developers.
+  const failure = lastError ?? new ProviderError("evaluation_failed", "No evaluation produced");
+  throw new ProviderError(failure.failureCode, failure.message, {
+    cause: failure.cause,
+    retryable: failure.retryable,
+    details: { rejectedDrafts },
+  });
 }
 
 /** Parse and validate unknown model output (object or JSON string) against the current schema. */

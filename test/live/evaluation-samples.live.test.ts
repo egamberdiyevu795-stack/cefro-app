@@ -51,7 +51,18 @@ interface Row {
   evaluation?: SpeakingEvaluation;
   error?: string;
   failureCode?: string;
+  /** Violations of each rejected draft (also kept when the evaluation failed). */
+  rejectedDrafts?: { code: string; path: string; message: string }[][];
   misses: string[];
+}
+
+function failureDetails(error: unknown): Pick<Row, "error" | "failureCode" | "rejectedDrafts"> {
+  const details = (error as { details?: { rejectedDrafts?: Row["rejectedDrafts"] } }).details;
+  return {
+    error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    failureCode: (error as { failureCode?: string }).failureCode,
+    rejectedDrafts: details?.rejectedDrafts,
+  };
 }
 
 describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set", () => {
@@ -63,8 +74,7 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
     try {
       row.evaluation = await evaluateSpeaking(inputFor(sample), getEvaluationModel());
     } catch (error) {
-      row.error = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      row.failureCode = (error as { failureCode?: string }).failureCode;
+      Object.assign(row, failureDetails(error));
       throw error;
     }
     const { result } = row.evaluation;
@@ -90,21 +100,30 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
   });
 
   it("retry: weak answer → stronger answer is reviewed and compared honestly", async () => {
-    const first = await evaluateSpeaking(inputFor(byId("S03")), getEvaluationModel());
-    const second = await evaluateSpeaking(
-      inputFor(byId("S01"), {
-        attemptNumber: 1,
-        transcript: byId("S03").transcript,
-        evaluation: first.result,
-        retryFocus: first.result.retry_focus,
-      }),
-      getEvaluationModel(),
-    );
+    const retryRow: Row = { sample: { ...byId("S01"), id: "RETRY S03→S01" }, misses: [] };
+    rows.push(retryRow); // recorded even if an evaluation fails, so the failure can be reviewed
+    let first: SpeakingEvaluation;
+    let second: SpeakingEvaluation;
+    try {
+      first = await evaluateSpeaking(inputFor(byId("S03")), getEvaluationModel());
+      second = await evaluateSpeaking(
+        inputFor(byId("S01"), {
+          attemptNumber: 1,
+          transcript: byId("S03").transcript,
+          evaluation: first.result,
+          retryFocus: first.result.retry_focus,
+        }),
+        getEvaluationModel(),
+      );
+    } catch (error) {
+      Object.assign(retryRow, failureDetails(error));
+      throw error;
+    }
     const comparison = compareAttempts({ evaluation: first.result, metrics: null }, { evaluation: second.result, metrics: null });
-    const misses = [`verdict: ${comparison.verdict}`];
-    if (!second.result.retry_review) misses.push("retry_review missing on a retry");
-    if (!/improvement/.test(comparison.verdict)) misses.push("weak → strong retry not reported as an improvement");
-    rows.push({ sample: { ...byId("S01"), id: "RETRY S03→S01" }, evaluation: second, misses });
+    retryRow.evaluation = second;
+    retryRow.misses.push(`verdict: ${comparison.verdict}`);
+    if (!second.result.retry_review) retryRow.misses.push("retry_review missing on a retry");
+    if (!/improvement/.test(comparison.verdict)) retryRow.misses.push("weak → strong retry not reported as an improvement");
   });
 
   it("writes the review report", () => {
@@ -192,8 +211,14 @@ function renderMarkdown(rows: Row[]): string {
         : `| ${sample.id} | ERROR | ${sample.expect.level.join("–")} | | | | | ${error} |`,
     );
   }
-  for (const { sample, evaluation: e } of rows) {
-    if (!e) continue;
+  for (const { sample, evaluation: e, error, rejectedDrafts } of rows) {
+    if (!e) {
+      lines.push("", `## ${sample.id} — FAILED`, "", `${error ?? "unknown error"}`, "");
+      (rejectedDrafts ?? []).forEach((draft, n) =>
+        lines.push(`**Rejected draft ${n + 1}:**`, ...draft.map((v) => `- \`${v.code}\` @ ${v.path}: ${v.message}`), ""),
+      );
+      continue;
+    }
     const r = e.result;
     lines.push("", `## ${sample.id} — ${sample.description}`, "", `> ${sample.transcript}`, "", `**${r.overall_level}** — ${r.overall_summary}`, "");
     lines.push(`Model: ${e.model} · ${e.evaluatorVersion} · rubric ${e.rubricVersion} · schema v${e.schemaVersion}`, "");

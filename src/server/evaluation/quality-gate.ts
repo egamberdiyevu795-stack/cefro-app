@@ -25,6 +25,7 @@ export type QualityCode =
   | "issue_without_evidence"
   | "quote_not_found"
   | "example_original_not_found"
+  | "example_original_unrelated"
   | "improved_example_changes_meaning"
   | "improved_example_too_elaborate"
   | "generic_feedback"
@@ -114,24 +115,25 @@ export function applyQualityGate(
   });
 
   // ── Improved examples must teach, not show off ──────────────────────
+  // Calibrated on real Gemini output (see docs/AI_EVALUATION_QUALITY.md, run 2):
+  // - word swaps ARE the fix for vocabulary issues, so only unrelated rewrites are rejected there;
+  // - a short bare statement may gain a reason clause, so length alone is no longer a reason to reject;
+  // - when the issue is about something the student never said, an unrelated "original" is dropped
+  //   (repair) rather than the whole draft being regenerated.
   result.issues.forEach((issue, i) => {
     const { original, improved } = issue.improved_example;
     if (!original) return;
-    const check = compareImprovedExample(original, improved);
-    if (check.meaningChanged) {
-      add(
-        "reject",
-        "improved_example_changes_meaning",
-        `issues[${i}].improved_example`,
-        `Improved version keeps only ${Math.round(check.overlap * 100)}% of the original's content words: "${truncate(original, 140)}" → "${truncate(improved, 180)}"`,
-      );
+    const check = compareImprovedExample(original, improved, issue.criterion);
+    const where = `issues[${i}].improved_example`;
+    const shown = `[${issue.criterion}/${issue.evidence_basis}] "${truncate(original, 140)}" → "${truncate(improved, 180)}"`;
+
+    if (check.meaningChanged && issue.evidence_basis === "task_requirement" && check.overlap < UNRELATED_ORIGINAL_OVERLAP) {
+      add("warn", "example_original_unrelated", where, `Dropped an unrelated "original" (missing-content issue): ${shown}`);
+      issue.improved_example.original = "";
+    } else if (check.meaningChanged) {
+      add("reject", "improved_example_changes_meaning", where, `Improved version keeps only ${Math.round(check.overlap * 100)}% of the original's content words ${shown}`);
     } else if (check.tooElaborate) {
-      add(
-        "reject",
-        "improved_example_too_elaborate",
-        `issues[${i}].improved_example`,
-        `Improved version is ${check.lengthRatio.toFixed(1)}x longer than the original: "${truncate(original, 140)}" → "${truncate(improved, 180)}"`,
-      );
+      add("reject", "improved_example_too_elaborate", where, `Improved version is ${check.lengthRatio.toFixed(1)}x longer (${check.improvedWords} words) ${shown}`);
     }
   });
 
@@ -142,9 +144,8 @@ export function applyQualityGate(
     }
   });
   for (const [path, text] of studentFacingTexts(result)) {
-    if (makesPronunciationClaim(text)) {
-      add("reject", "pronunciation_claim", path, `Pronunciation claim: "${truncate(text)}"`);
-    }
+    const claim = findPronunciationClaim(text);
+    if (claim) add("reject", "pronunciation_claim", path, `Pronunciation claim: "${truncate(claim, 200)}"`);
   }
 
   // ── Generic advice without specifics ────────────────────────────────
@@ -245,29 +246,47 @@ function stem(word: string): string {
   return word.length > 5 ? word.slice(0, 5) : word.replace(/(es|s)$/, "");
 }
 
-export function compareImprovedExample(original: string, improved: string) {
+/** Below this share of shared content words, an "original" is not what the improved version corrects. */
+const UNRELATED_ORIGINAL_OVERLAP = 0.2;
+/** Share of the original's content words the improved version must keep (pure rewrites aside). */
+const MIN_OVERLAP = 0.5;
+/** Vocabulary fixes replace words by design, so only a near-total rewrite counts as drift. */
+const MIN_OVERLAP_VOCABULARY = 0.1;
+/** A longer improved version is only "elaborate" once it is a paragraph, not a clause. */
+const ELABORATE_MIN_WORDS = 30;
+
+export function compareImprovedExample(original: string, improved: string, criterion?: string) {
   const originalStems = contentStems(original);
   const improvedStems = new Set(contentStems(improved));
   const overlap =
     originalStems.length === 0 ? 1 : originalStems.filter((s) => improvedStems.has(s)).length / originalStems.length;
   const originalWords = Math.max(1, wordCount(original));
-  const lengthRatio = wordCount(improved) / originalWords;
+  const improvedWords = wordCount(improved);
+  const lengthRatio = improvedWords / originalWords;
+  const minOverlap = criterion === "vocabulary" ? MIN_OVERLAP_VOCABULARY : MIN_OVERLAP;
   return {
     overlap,
     lengthRatio,
+    improvedWords,
     // Only judge meaning when the original carries enough content words.
-    meaningChanged: originalStems.length >= 3 && overlap < 0.5,
-    tooElaborate: originalWords >= 4 && lengthRatio > 3,
+    meaningChanged: originalStems.length >= 3 && overlap < minOverlap,
+    tooElaborate: originalWords >= 4 && lengthRatio > 3 && improvedWords >= ELABORATE_MIN_WORDS,
   };
 }
 
 const PRONUNCIATION_PATTERN = /\b(pronounc\w*|mispronounc\w*|accent\w*|intonation|vowels?|consonants?|phonem\w*|word stress)\b/i;
 const NEGATED_ASSESSMENT = /\b(not|cannot|can't|couldn't|unable to)\b[^.]*\b(assess\w*|judg\w*|evaluat\w*|hear\w*)\b/i;
 
+export function findPronunciationClaim(text: string): string | null {
+  return (
+    text
+      .split(/(?<=[.!?])\s+/)
+      .find((sentence) => PRONUNCIATION_PATTERN.test(sentence) && !NEGATED_ASSESSMENT.test(sentence)) ?? null
+  );
+}
+
 export function makesPronunciationClaim(text: string): boolean {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .some((sentence) => PRONUNCIATION_PATTERN.test(sentence) && !NEGATED_ASSESSMENT.test(sentence));
+  return findPronunciationClaim(text) !== null;
 }
 
 const GENERIC_PATTERNS = [

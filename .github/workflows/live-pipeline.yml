@@ -1,8 +1,8 @@
-# REAL pipeline validation: OpenAI transcription, Gemini evaluation, and the two together, including one
+# REAL pipeline validation: transcription (Gemini or OpenAI), evaluation (Gemini or Anthropic), and the two together, including one
 # browser flow. Manual only, and separate from CI because it spends API budget and needs secrets.
 #
 # Setup (once): Repository → Settings → Secrets and variables → Actions → New repository secret:
-#   OPENAI_API_KEY   (transcription, plus text-to-speech for the test audio)
+#   OPENAI_API_KEY   (OpenAI transcription, and text-to-speech when present)
 #   GEMINI_API_KEY   (evaluation with Gemini; also used by live-evaluation.yml)
 #   ANTHROPIC_API_KEY (evaluation with Anthropic, when the `evaluation_provider` input is anthropic)
 #
@@ -11,12 +11,13 @@
 #   2. eval:pipeline                  audio → createAttempt → OpenAI → Gemini → gate → database → read back (+ retry pair)
 #   3. test:e2e:live                  one browser flow with a fake microphone playing speech (real recorder path)
 #
-# The test audio is synthetic speech (OpenAI text-to-speech, encoded with ffmpeg), not real learners.
+# The test audio is synthetic speech (text-to-speech from OpenAI when its key is present, else Gemini; encoded with
+# ffmpeg), not real learners.
 #
 # Security: manual trigger only (never pull_request, so forks cannot reach the secrets); read-only token; the
 # keys are exposed only to the steps that need them, GitHub masks them in logs, and the reports contain only
 # synthetic transcripts and model output.
-name: Live pipeline validation (OpenAI + Gemini)
+name: Live pipeline validation
 
 on:
   workflow_dispatch:
@@ -26,6 +27,12 @@ on:
         type: boolean
         required: false
         default: true
+      transcription_provider:
+        description: "Speech-to-text provider (needs its repository secret). gemini = temporary, until OpenAI is available."
+        type: choice
+        options: [gemini, openai]
+        required: false
+        default: gemini
       evaluation_provider:
         description: "Evaluation provider for steps 2 and 3 (needs its repository secret)."
         type: choice
@@ -60,10 +67,12 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EVAL_PROVIDER: ${{ inputs.evaluation_provider }}
+          STT_PROVIDER: ${{ inputs.transcription_provider }}
         run: |
           missing=0
           evalkey="GEMINI_API_KEY"; [ "$EVAL_PROVIDER" = "anthropic" ] && evalkey="ANTHROPIC_API_KEY"
-          for name in OPENAI_API_KEY $evalkey; do
+          sttkey="GEMINI_API_KEY"; [ "$STT_PROVIDER" = "openai" ] && sttkey="OPENAI_API_KEY"
+          for name in $sttkey $evalkey; do
             if [ -z "${!name}" ]; then
               echo "::error::Repository secret $name is not set (Settings → Secrets and variables → Actions)."
               missing=1
@@ -82,19 +91,20 @@ jobs:
         if: ${{ inputs.browser }}
         run: npx playwright install --with-deps chromium
 
-      - name: 1. Controlled transcription validation (real OpenAI)
+      - name: 1. Controlled transcription validation (real, provider per input)
         id: transcription
         continue-on-error: true
         env:
-          TRANSCRIPTION_PROVIDER: openai
+          TRANSCRIPTION_PROVIDER: ${{ inputs.transcription_provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: npm run eval:transcription:controlled
 
-      - name: 2. Full pipeline validation (real OpenAI + real Gemini)
+      - name: 2. Full pipeline validation (real providers per inputs)
         id: pipeline
         continue-on-error: true
         env:
-          TRANSCRIPTION_PROVIDER: openai
+          TRANSCRIPTION_PROVIDER: ${{ inputs.transcription_provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           EVALUATION_PROVIDER: ${{ inputs.evaluation_provider }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -107,7 +117,7 @@ jobs:
         if: ${{ inputs.browser }}
         continue-on-error: true
         env:
-          TRANSCRIPTION_PROVIDER: openai
+          TRANSCRIPTION_PROVIDER: ${{ inputs.transcription_provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           EVALUATION_PROVIDER: ${{ inputs.evaluation_provider }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

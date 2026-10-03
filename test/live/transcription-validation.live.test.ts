@@ -5,6 +5,7 @@ import { evidenceTokens, isQuoteInTranscript } from "@/domain/evaluation/evidenc
 import { computeSpeechMetrics, type SpeechMetrics } from "@/domain/speaking/metrics";
 import { ProviderError } from "@/server/errors";
 import { getTranscriptionProvider } from "@/server/transcription";
+import { GEMINI_TRANSCRIPTION_PROMPT } from "@/server/transcription/gemini-transcription";
 import { VERBATIM_TRANSCRIPTION_PROMPT } from "@/server/transcription/openai-transcription";
 import {
   MIME_BY_FORMAT,
@@ -14,10 +15,12 @@ import {
   probeDurationSeconds,
   speechFile,
   ttsLog,
+  ttsProvider,
   type AudioFormat,
 } from "./audio";
 import { endpointOverrides, wordErrorRate } from "./checks";
 import { FORMAT_SAMPLE_REF, TRANSCRIPTION_SAMPLES } from "./audio-samples";
+import { transcriptionSelection } from "./providers";
 import { writeReport } from "./report";
 
 /**
@@ -31,8 +34,9 @@ import { writeReport } from "./report";
  * corrected, words dropped, fillers lost) is MEASURED AND REPORTED, never normalised away or failed silently.
  */
 const task = getSpeakingTask("b2-part2-technology-young-people")!;
-const configured = process.env.TRANSCRIPTION_PROVIDER !== "mock" && Boolean(process.env.OPENAI_API_KEY) && ffmpegAvailable();
-if (!configured) console.log("\nLIVE controlled transcription skipped: needs OPENAI_API_KEY (TRANSCRIPTION_PROVIDER=openai) and ffmpeg/ffprobe.\n");
+const selection = transcriptionSelection();
+const configured = selection.configured && ffmpegAvailable();
+if (!configured) console.log("\nLIVE controlled transcription skipped: needs TRANSCRIPTION_PROVIDER=openai|gemini with its API key, and ffmpeg/ffprobe.\n");
 
 interface Row {
   id: string;
@@ -53,12 +57,12 @@ interface Row {
   findings: string[]; // things to read, not necessarily failures
 }
 
-const PROMPT_WORDS = new Set(evidenceTokens(VERBATIM_TRANSCRIPTION_PROMPT));
+const PROMPT_WORDS = new Set(evidenceTokens(selection.provider === "gemini" ? GEMINI_TRANSCRIPTION_PROMPT : VERBATIM_TRANSCRIPTION_PROMPT));
 const DISTINCTIVE_PROMPT_WORDS = ["verbatim", "transcript", "learner", "grammar", "hesitation", "speaking", "exam"];
 const TASK_WORDS = new Set(evidenceTokens([task.question, ...task.prompts].join(" ")));
 const FILLER_RE = /\b(um+|uh+|er+m?|hmm+)\b/gi;
 
-describe.skipIf(!configured)("LIVE: OpenAI transcription on controlled audio", () => {
+describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on controlled audio`, () => {
   const rows: Row[] = [];
   const provider = () => getTranscriptionProvider();
 
@@ -159,10 +163,10 @@ describe.skipIf(!configured)("LIVE: OpenAI transcription on controlled audio", (
     const summary = [
       "",
       ...(endpointOverrides().length ? [`NOT A REAL RUN: ${endpointOverrides().join(", ")} point at a stand-in, not the provider.`] : []),
-      "Provider: OpenAI transcription",
+      `Provider: ${provider().name} transcription`,
       `Model: ${provider().model}`,
       "Audio: synthetic speech (text-to-speech, ffmpeg-encoded) + generated silence; NOT real learner recordings",
-      `Speech model for the audio: ${ttsLog.ttsRequests > 0 ? "OpenAI speech synthesis" : "cache (no synthesis this run)"}`,
+      `Speech model for the audio: ${ttsLog.ttsRequests > 0 ? `${ttsProvider()} speech synthesis` : "cache (no synthesis this run)"}`,
       `Samples: ${rows.length}`,
       `Formats: ${[...new Set(rows.map((r) => r.mime))].join(", ")}`,
       `Transcribed: ${rows.filter((r) => r.outcome === "transcribed" && r.transcript !== undefined).length}`,
@@ -179,7 +183,7 @@ describe.skipIf(!configured)("LIVE: OpenAI transcription on controlled audio", (
     console.log(summary);
 
     const md = [
-      "# Controlled transcription validation (real OpenAI)",
+      `# Controlled transcription validation (real ${provider().name})`,
       "",
       summary,
       "| Sample | Format | Audio | Latency | Outcome | WER | Learner errors kept | Fillers (metrics / ref) |",

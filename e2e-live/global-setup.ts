@@ -9,7 +9,6 @@ export const BROWSER_ANSWER_TEXT = B2_PART2_SAMPLES.find((s) => s.id.startsWith(
 export const LEAD_IN_SECONDS = 3;
 
 export default async function globalSetup() {
-  if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set (needed to synthesise the test speech)");
   const speech = await synthesizeSpeechWav(BROWSER_ANSWER_TEXT);
   const target = path.join(process.cwd(), "eval-audio", "browser-answer.wav");
   fs.mkdirSync(path.dirname(target), { recursive: true });

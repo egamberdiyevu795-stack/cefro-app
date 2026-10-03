@@ -15,3 +15,12 @@ export function evaluatorSelection(env: NodeJS.ProcessEnv = process.env): { prov
   const configured = Boolean(env[keyVar]);
   return { provider, configured, hint: configured ? "" : `Set EVALUATION_PROVIDER=${provider} and ${keyVar} (never commit the key).` };
 }
+
+const TRANSCRIPTION_KEY_VAR: Record<string, string> = { openai: "OPENAI_API_KEY", gemini: "GEMINI_API_KEY" };
+
+/** Which REAL transcription provider is configured for live runs (same rules as evaluatorSelection). */
+export function transcriptionSelection(env: NodeJS.ProcessEnv = process.env): { provider: string; configured: boolean } {
+  const provider = env.TRANSCRIPTION_PROVIDER || "openai";
+  const keyVar = TRANSCRIPTION_KEY_VAR[provider];
+  return { provider, configured: Boolean(keyVar && env[keyVar]) };
+}

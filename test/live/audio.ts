@@ -68,11 +68,78 @@ export function probeDurationSeconds(file: string): number {
 
 const key = (...parts: string[]) => createHash("sha256").update(parts.join("\u0000")).digest("hex").slice(0, 16);
 
-/** Speech for `text`, as WAV bytes. Calls the OpenAI speech endpoint unless a cached copy exists. */
+/** Which speech synthesiser produces the reference audio. Independent of the transcription provider under test. */
+export function ttsProvider(): "openai" | "gemini" {
+  const chosen = process.env.TTS_PROVIDER;
+  if (chosen === "openai" || chosen === "gemini") return chosen;
+  return process.env.OPENAI_API_KEY ? "openai" : "gemini";
+}
+
+const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Kore";
+let geminiTtsModel: string | undefined;
+
+async function discoverGeminiTtsModel(apiKey: string): Promise<string> {
+  if (process.env.GEMINI_TTS_MODEL) return process.env.GEMINI_TTS_MODEL;
+  if (geminiTtsModel) return geminiTtsModel;
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", {
+    headers: { "x-goog-api-key": apiKey },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) throw new Error(`Gemini model listing failed: HTTP ${response.status}`);
+  const body = (await response.json()) as { models?: { name: string; supportedGenerationMethods?: string[] }[] };
+  const candidates = (body.models ?? []).map((m) => m.name.replace(/^models\//, "")).filter((n) => /tts/i.test(n));
+  if (!candidates.length) throw new Error("No Gemini text-to-speech model is available to this key (set GEMINI_TTS_MODEL).");
+  geminiTtsModel = candidates.find((n) => /flash/i.test(n) && !/preview-\d{2}-\d{4}/.test(n)) ?? candidates[0];
+  console.log(`[live] Gemini TTS model: ${geminiTtsModel}`);
+  return geminiTtsModel;
+}
+
+async function synthesizeGeminiWav(text: string, file: string): Promise<void> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+  const model = await discoverGeminiTtsModel(apiKey);
+  ttsLog.ttsRequests += 1;
+  ttsLog.ttsCharacters += text.length;
+  const prompt = `${TTS_INSTRUCTIONS}\n\nText:\n${text}`;
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: GEMINI_TTS_VOICE } } } },
+    }),
+    signal: AbortSignal.timeout(180_000),
+  });
+  if (!response.ok) {
+    ttsLog.ttsErrors += 1;
+    throw new Error(`Gemini speech synthesis failed: HTTP ${response.status} ${(await response.text().catch(() => "")).replaceAll(apiKey, "[redacted]").slice(0, 200)}`);
+  }
+  const body = (await response.json()) as { candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[] };
+  const part = body.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+  if (!part?.inlineData?.data) {
+    ttsLog.ttsErrors += 1;
+    throw new Error("Gemini speech synthesis returned no audio");
+  }
+  const rate = /rate=(\d+)/.exec(part.inlineData.mimeType ?? "")?.[1] ?? "24000";
+  const pcm = path.join(os.tmpdir(), `cefro-${process.pid}-${path.basename(file)}.pcm`);
+  fs.writeFileSync(pcm, Buffer.from(part.inlineData.data, "base64"));
+  try {
+    run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "s16le", "-ar", rate, "-ac", "1", "-i", pcm, "-ar", "48000", "-c:a", "pcm_s16le", file]);
+  } finally {
+    fs.rmSync(pcm, { force: true });
+  }
+}
+
+/** Speech for `text`, as WAV bytes. Calls the configured speech endpoint unless a cached copy exists. */
 export async function synthesizeSpeechWav(text: string): Promise<string> {
   ensureCacheDir();
-  const file = path.join(CACHE_DIR, `tts-${key(TTS_MODEL, TTS_VOICE, TTS_INSTRUCTIONS, text)}.wav`);
+  const provider = ttsProvider();
+  const file = path.join(CACHE_DIR, `tts-${key(provider, TTS_MODEL, TTS_VOICE, GEMINI_TTS_VOICE, TTS_INSTRUCTIONS, text)}.wav`);
   if (fs.existsSync(file)) return file;
+  if (provider === "gemini") {
+    await synthesizeGeminiWav(text, file);
+    return file;
+  }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");

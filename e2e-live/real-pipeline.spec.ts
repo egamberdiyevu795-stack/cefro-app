@@ -7,13 +7,13 @@ import { BROWSER_ANSWER_TEXT, LEAD_IN_SECONDS } from "./global-setup";
 import type { EvaluationResult } from "../src/domain/evaluation/schema";
 
 /**
- * One real-provider browser flow: the real recorder path → upload → real OpenAI transcription → real evaluation →
+ * One real-provider browser flow: the real recorder path → upload → real transcription → real evaluation →
  * feedback on screen, then the stored attempt read back through the API. Marked NOT RUN when keys are absent.
  */
 const TASK_URL = "/practice/speaking/b2-part2-technology-young-people";
 const wav = path.join(process.cwd(), "eval-audio", "browser-answer.wav");
 
-test("browser → real recording path → OpenAI transcription → real evaluation → feedback", async ({ page }) => {
+test("browser → real recording path → real transcription → real evaluation → feedback", async ({ page }) => {
   const consoleProblems: string[] = [];
   page.on("pageerror", (error) => consoleProblems.push(String(error)));
   page.on("console", (m) => {
@@ -47,7 +47,7 @@ test("browser → real recording path → OpenAI transcription → real evaluati
   const { attempt } = await (await page.request.get(`/api/speaking/attempts/${list.attempts[0].id}`)).json();
 
   expect(attempt.status).toBe("completed");
-  expect(attempt.transcript.provider).toBe("openai");
+  expect(attempt.transcript.provider).toBe(process.env.TRANSCRIPTION_PROVIDER || "openai");
   expect(attempt.evaluation.meta.isDevelopmentProvider).toBe(false);
   expect(["gemini", "anthropic"]).toContain(attempt.evaluation.meta.provider);
   expect(attempt.evaluation.meta.evaluatorVersion).toMatch(/^speaking-evaluator\//);

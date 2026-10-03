@@ -17,9 +17,9 @@ import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { getTranscriptionProvider, setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
 import { endpointOverrides, evidenceViolations, numericClaimMismatches, wordErrorRate } from "./checks";
-import { MIME_BY_FORMAT, ffmpegAvailable, probeDurationSeconds, speechFile, ttsLog } from "./audio";
+import { MIME_BY_FORMAT, ffmpegAvailable, probeDurationSeconds, speechFile, ttsLog, ttsProvider } from "./audio";
 import { PIPELINE_SAMPLES, pipelineText, type PipelineSample } from "./audio-samples";
-import { evaluatorSelection } from "./providers";
+import { evaluatorSelection, transcriptionSelection } from "./providers";
 import { writeReport } from "./report";
 
 /**
@@ -38,9 +38,9 @@ import { writeReport } from "./report";
  * link between records) fail the run; quality observations (levels, numeric-claim mismatches) are reported for review.
  */
 const selection = evaluatorSelection();
-const configured =
-  selection.configured && process.env.TRANSCRIPTION_PROVIDER !== "mock" && Boolean(process.env.OPENAI_API_KEY) && ffmpegAvailable();
-if (!configured) console.log("\nLIVE full pipeline skipped: needs OPENAI_API_KEY + the evaluation provider key + ffmpeg/ffprobe.\n");
+const sttSelection = transcriptionSelection();
+const configured = selection.configured && sttSelection.configured && ffmpegAvailable();
+if (!configured) console.log("\nLIVE full pipeline skipped: needs the transcription provider key + the evaluation provider key + ffmpeg/ffprobe.\n");
 
 const only = process.env.EVAL_SAMPLES?.split(",").map((s) => s.trim());
 const samples = PIPELINE_SAMPLES.filter((s) => !only || only.some((p) => s.id.startsWith(p) || s.retryOf?.startsWith(p)));
@@ -77,7 +77,7 @@ interface Row {
   retryVerdict?: string;
 }
 
-describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini → gate → database)", () => {
+describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.provider} → ${selection.provider} → gate → database)`, () => {
   const rows: Row[] = [];
   const sttCalls: { ms: number; usage?: Record<string, number | string>; ok: boolean }[] = [];
   const evalCalls: { ms: number; ok: boolean }[] = [];
@@ -86,6 +86,31 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
   let db: ReturnType<typeof openDatabase>;
   let provider: TranscriptionProvider;
   let model: EvaluationModel;
+
+  const guidedTexts = new Map<string, string>();
+
+  /** Synthetic learner: rewrites a transcript applying only the given retry objectives (uses the Gemini key). */
+  async function guidedRewrite(transcript: string, objectives: string[]): Promise<string> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("the guided-retry sample needs GEMINI_API_KEY");
+    const prompt =
+      "You simulate a B2 English learner who has just received feedback and records a second attempt. Rewrite the spoken answer below " +
+      "so that it applies ONLY the retry objectives listed, keeping the same ideas, the same speaking style and any other mistakes the learner made. " +
+      "Do not fix anything the objectives do not mention. Keep it a natural spoken answer of similar length (it may grow a little). " +
+      `Reply with the rewritten answer only.\n\nRetry objectives:\n${objectives.map((o) => `- ${o}`).join("\n")}\n\nFirst answer:\n${transcript}`;
+    const model = process.env.GEMINI_EVALUATION_MODEL || "gemini-3.8-flash";
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 4096 } }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!response.ok) throw new Error(`guided rewrite failed: HTTP ${response.status}`);
+    const body = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const out = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
+    if (!out) throw new Error("guided rewrite returned no text");
+    return out;
+  }
 
   it("sets up a throwaway database and storage, with the real providers wrapped for measurement", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-pipeline-"));
@@ -137,13 +162,23 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
   });
 
   it.each(samples.map((s) => [s.id, s] as const))("%s", async (_id, sample) => {
-    const text = pipelineText(sample);
+    let text = pipelineText(sample);
+    if (sample.guided) {
+      const first = sample.retryOf ? attemptBySample.get(sample.retryOf) : undefined;
+      if (!first) {
+        rows.push({ sample, format: MIME_BY_FORMAT.webm, audioSeconds: 0, gateWarnings: [], rejectedDrafts: [], integrity: [], review: [], status: "not_run", failure: `its first attempt ${sample.retryOf} did not complete` });
+        return;
+      }
+      text = await guidedRewrite(first.view.transcript!.text, first.view.evaluation!.result.retry_focus.map((f) => f.objective));
+      guidedTexts.set(sample.id, text);
+    }
     const file = await speechFile(text, "webm");
     const audio = fs.readFileSync(file);
     expect(audio.byteLength).toBeLessThan(MAX_AUDIO_BYTES);
     const audioSeconds = probeDurationSeconds(file);
     const row: Row = { sample, format: MIME_BY_FORMAT.webm, audioSeconds, gateWarnings: [], rejectedDrafts: [], integrity: [], review: [] };
     rows.push(row);
+    if (sample.guided) row.review.push(`Spoken text (synthetic guided retry): ${text}`);
 
     const previous = sample.retryOf ? attemptBySample.get(sample.retryOf) : undefined;
     if (sample.retryOf && !previous) {
@@ -188,7 +223,7 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
       .map(([k, c]) => `${k.split("_")[0].slice(0, 4)} ${c.assessable ? c.score : "n/a"}`)
       .join(", ");
 
-    await checkPersistence(row, created.id, sessionId, audio, previous?.id ?? null, view.evaluation.meta.provider);
+    await checkPersistence(row, created.id, sessionId, audio, previous?.id ?? null);
     checkEvidence(row, result, view.transcript!.text);
     checkNumericClaims(row, result, view.metrics!, audioSeconds);
 
@@ -211,7 +246,7 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
     expect(row.wer ?? 1, `${sample.id}: transcript does not correspond to the audio`).toBeLessThan(0.6);
   });
 
-  async function checkPersistence(row: Row, attemptId: string, sessionId: string, audio: Buffer, previousId: string | null, provider: string) {
+  async function checkPersistence(row: Row, attemptId: string, sessionId: string, audio: Buffer, previousId: string | null) {
     const bad = (message: string) => row.integrity.push(message);
     const attempt = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
     const session = db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId)).get();
@@ -234,7 +269,7 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
     } catch {
       bad("stored audio file is missing");
     }
-    if (transcript.provider !== provider && transcript.provider !== "openai") bad("transcript provider not recorded");
+    if (transcript.provider !== sttSelection.provider) bad(`transcript provider recorded as ${transcript.provider}`);
     if (transcript.model.length === 0 || !transcript.latencyMs) bad("transcript model/latency not recorded");
     if (evaluation.transcriptId !== transcript.id) bad("evaluation does not point at the transcript");
     if (evaluation.evaluatorVersion !== EVALUATOR_VERSION) bad(`evaluator version ${evaluation.evaluatorVersion}`);
@@ -298,6 +333,7 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
       ...(endpointOverrides().length ? [`NOT A REAL RUN: ${endpointOverrides().join(", ")} point at a stand-in, not the provider.`] : []),
       `Transcription: ${provider.name} / ${provider.model} (real)`,
       `Evaluation: ${model.provider} / models answered: ${[...new Set(done.map((r) => r.evalModel))].join(", ") || "n/a"} (real)`,
+      ...(guidedTexts.size ? [`Guided retry text (synthetic, generated from the first attempt's retry focus): ${[...guidedTexts.keys()].join(", ")}`] : []),
       "Audio: synthetic speech through the browser's WebM/Opus format; not real learner recordings",
       `Samples: ${rows.length}`,
       `Completed end to end: ${done.length}`,
@@ -306,8 +342,8 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
       `Items for review (numeric claims, retry review shape, failures): ${rows.reduce((t, r) => t + r.review.length, 0)}`,
       `Regenerations: ${regenerations}`,
       `Quality-gate rejected drafts: ${rows.reduce((t, r) => t + r.rejectedDrafts.length, 0)}`,
-      `OpenAI transcription: ${sttCalls.length} request(s), avg ${(avg(stt) / 1000).toFixed(1)}s, min ${stt.length ? (Math.min(...stt) / 1000).toFixed(1) : "n/a"}s, max ${stt.length ? (Math.max(...stt) / 1000).toFixed(1) : "n/a"}s; usage reported: input_tokens ${usageSum("input_tokens")}, output_tokens ${usageSum("output_tokens")}, seconds ${usageSum("seconds")}`,
-      `OpenAI speech synthesis for the test audio: ${ttsLog.ttsRequests} request(s), ${ttsLog.ttsCharacters} characters${ttsLog.ttsRequests === 0 ? " (all from cache)" : ""}`,
+      `${provider.name} transcription: ${sttCalls.length} request(s), avg ${(avg(stt) / 1000).toFixed(1)}s, min ${stt.length ? (Math.min(...stt) / 1000).toFixed(1) : "n/a"}s, max ${stt.length ? (Math.max(...stt) / 1000).toFixed(1) : "n/a"}s; usage reported: input_tokens ${usageSum("input_tokens")}, output_tokens ${usageSum("output_tokens")}, seconds ${usageSum("seconds")}`,
+      `${ttsProvider()} speech synthesis for the test audio: ${ttsLog.ttsRequests} request(s), ${ttsLog.ttsCharacters} characters${ttsLog.ttsRequests === 0 ? " (all from cache)" : ""}`,
       `${model.provider} evaluation: ${evalCalls.length} request(s), avg stage latency ${(avg(evalMs) / 1000).toFixed(1)}s, tokens in/out ${done.reduce((t, r) => t + (r.inputTokens ?? 0), 0)}/${done.reduce((t, r) => t + (r.outputTokens ?? 0), 0)}`,
       `Total processing per attempt: avg ${(avg(rows.flatMap((r) => (r.totalMs ? [r.totalMs] : []))) / 1000).toFixed(1)}s`,
       "",
@@ -315,7 +351,7 @@ describe.skipIf(!configured)("LIVE: full pipeline (audio → OpenAI → Gemini �
     console.log(summary);
 
     const md = [
-      "# Full pipeline validation (real OpenAI transcription + real evaluation)",
+      `# Full pipeline validation (real ${provider.name} transcription + real ${model.provider} evaluation)`,
       "",
       summary,
       "| Sample | Format | Audio | STT | WER | Words | Eval | Model | Level | Calls | Gate | Total | Status |",

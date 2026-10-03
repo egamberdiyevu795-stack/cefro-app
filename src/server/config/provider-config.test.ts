@@ -29,6 +29,13 @@ describe("validateProviderConfig", () => {
     expect(validateProviderConfig(env({ OPENAI_API_KEY: "k", EVALUATION_PROVIDER: "anthropic" })).map((p) => p.variable)).toEqual(["ANTHROPIC_API_KEY"]);
   });
 
+  it("accepts Gemini for both roles with a single key, and names it when missing", () => {
+    const both = env({ TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "gemini", GEMINI_API_KEY: "k" });
+    expect(validateProviderConfig(both)).toEqual([]);
+    expect(describeProviderMode(both)).toEqual({ transcription: "gemini", evaluation: "gemini", mode: "real" });
+    expect(validateProviderConfig(env({ TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "gemini" })).map((p) => p.variable)).toEqual(["GEMINI_API_KEY", "GEMINI_API_KEY"]);
+  });
+
   it("only requires the selected provider's key", () => {
     expect(validateProviderConfig(env({ OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", ANTHROPIC_API_KEY: undefined }))).toEqual([]);
   });

@@ -31,6 +31,9 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
     case "openai":
       if (!env.OPENAI_API_KEY) problems.push({ variable: "OPENAI_API_KEY", message: "required when TRANSCRIPTION_PROVIDER=openai" });
       break;
+    case "gemini":
+      if (!env.GEMINI_API_KEY) problems.push({ variable: "GEMINI_API_KEY", message: "required when TRANSCRIPTION_PROVIDER=gemini" });
+      break;
     case "mock":
       if (production) problems.push({ variable: "TRANSCRIPTION_PROVIDER", message: "the mock transcriber is development-only and is refused in production" });
       break;

@@ -65,6 +65,11 @@ export interface PipelineSample {
   source: string; // evaluation sample id the spoken text comes from
   /** Retry of the sample with this id, in the same practice session. */
   retryOf?: string;
+  /**
+   * The spoken text is generated at run time: the model rewrites the first attempt's transcript applying ONLY that
+   * attempt's retry focus (synthetic: simulates a learner who followed the feedback; not a real learner).
+   */
+  guided?: boolean;
 }
 
 export const PIPELINE_SAMPLES: PipelineSample[] = [
@@ -75,6 +80,7 @@ export const PIPELINE_SAMPLES: PipelineSample[] = [
   { id: "P4b-fillers", description: "Many hesitations and false starts", source: "S09" },
   { id: "P5-off-task", description: "Does not address the task", source: "S10" },
   { id: "P6-retry-stronger", description: "Stronger retry of P2 (weak-to-strong pair)", source: "S01", retryOf: "P2-weaker" },
+  { id: "P7-guided-retry", description: "Synthetic guided retry of P2: P2's transcript rewritten applying only P2's retry focus", source: "S03", retryOf: "P2-weaker", guided: true },
 ];
 
 export const pipelineText = (sample: PipelineSample) => B2_PART2_SAMPLES.find((x) => x.id.startsWith(sample.source))!.transcript;

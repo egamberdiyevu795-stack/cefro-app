@@ -1,6 +1,7 @@
 import "server-only";
 import { getEnv } from "@/server/config/env";
 import { ProviderError } from "@/server/errors";
+import { GeminiTranscriptionProvider } from "./gemini-transcription";
 import { MockTranscriptionProvider } from "./mock-transcription";
 import { OpenAITranscriptionProvider } from "./openai-transcription";
 import type { TranscriptionProvider } from "./types";
@@ -19,6 +20,15 @@ export function getTranscriptionProvider(): TranscriptionProvider {
         });
       }
       return new MockTranscriptionProvider();
+    case "gemini":
+      if (!env.GEMINI_API_KEY) {
+        throw new ProviderError("provider_not_configured", "GEMINI_API_KEY is not set", { retryable: false });
+      }
+      return new GeminiTranscriptionProvider({
+        apiKey: env.GEMINI_API_KEY,
+        model: env.GEMINI_TRANSCRIPTION_MODEL,
+        timeoutMs: env.TRANSCRIPTION_TIMEOUT_MS,
+      });
     case "openai":
       if (!env.OPENAI_API_KEY) {
         throw new ProviderError("provider_not_configured", "OPENAI_API_KEY is not set", { retryable: false });

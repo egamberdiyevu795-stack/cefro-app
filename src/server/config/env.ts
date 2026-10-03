@@ -13,7 +13,7 @@ const envSchema = z.object({
   AUDIO_STORAGE_PROVIDER: z.enum(["local"]).default("local"),
   AUDIO_STORAGE_DIR: z.string().default("./data/audio"),
 
-  TRANSCRIPTION_PROVIDER: z.enum(["openai", "mock"]).default("openai"),
+  TRANSCRIPTION_PROVIDER: z.enum(["openai", "gemini", "mock"]).default("openai"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-transcribe"),
   OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
@@ -37,6 +37,11 @@ const envSchema = z.object({
    * deliberately and re-run the live validation.
    */
   GEMINI_EVALUATION_MODEL: z.string().min(1).default("gemini-3.8-flash"),
+  /**
+   * Gemini model for speech-to-text when TRANSCRIPTION_PROVIDER=gemini. Defaults to the evaluation model. Fidelity to
+   * what the learner actually said was validated only on synthetic speech: docs/AI_EVALUATION_QUALITY.md.
+   */
+  GEMINI_TRANSCRIPTION_MODEL: z.string().min(1).default("gemini-3.8-flash"),
   /** Thinking models spend output tokens on reasoning, so keep this generous. */
   GEMINI_EVALUATION_MAX_TOKENS: z.coerce.number().int().min(4000).max(65_000).default(24_000),
   /** Unset = model default. Only set this for models that support thinking levels. */

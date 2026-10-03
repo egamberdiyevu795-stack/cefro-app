@@ -5,14 +5,12 @@ quality is checked, and what we know about its weaknesses. It is a working
 document: add a row to the [findings log](#findings-log) whenever a review
 changes the prompt, schema, gate or rubric.
 
-> **Status:** all code-level and automated quality work is done, for
-> both evaluation providers (Anthropic and Gemini). **Real-provider
-> validation has NOT been run for anything**: no Gemini, Anthropic or OpenAI
-> call has ever been made with a real key. Real-model output quality, the
-> chosen Gemini model default, Gemini's acceptance of our JSON schema, and
-> real-speech transcription are all unverified. See
-> [§6](#6-validating-with-real-providers) for how to run the checks and
-> [Gemini evaluation provider](#gemini-evaluation-provider) for what is unverified there.
+> **Status:** the Gemini evaluation provider has been exercised against the **real Gemini API**
+> (`gemini-3.8-flash`) on 14 synthetic B2 Part 2 answers over five runs, and calibrated on what
+> those runs showed (see [Real Gemini validation](#real-gemini-validation)). **Not validated:**
+> OpenAI transcription, the Anthropic evaluator, real student speech, and the full
+> microphone → OpenAI → Gemini pipeline. 14 synthetic answers are a small sample, not production
+> validation.
 
 ## 1. Methodology
 
@@ -90,8 +88,11 @@ real guard.
 | Quote not found in transcript (normalised, see below) | warn | Quote removed |
 | `transcript_quote` issue left with no verified quote | **reject** | Regenerate |
 | `improved_example.original` not in transcript | warn | Original blanked (the UI never shows an invented "you said") |
-| Improved version keeps < 50% of the original's content words | **reject** | Regenerate |
-| Improved version > 3× the original's length | **reject** | Regenerate |
+| Improved version keeps < 50% of the original's content words (< 10% for vocabulary issues, where swapping words is the fix) | **reject** | Regenerate |
+| Improved version > 3× the original's length **and** ≥ 30 words (a short statement may gain a reason clause) | **reject** | Regenerate |
+| Missing-content issue (`task_requirement`) whose "original" shares < 20% of its words with the improved text | warn | "original" dropped, so the UI never shows a misleading "you said → better" pair |
+| Retry review marks a numeric target ("at least 90 seconds", "over 100 words") achieved when the measured value misses it | warn | Outcome downgraded to `partly_achieved`, measured value noted |
+| Student-facing text contains an internal field name (`timeUsedRatio`, `wordsPerMinute`…) | **reject** | Regenerate |
 | Pronunciation issue / pronunciation claim in feedback text | **reject** | Regenerate (saying it was *not assessed* is allowed) |
 | Generic advice ("improve your grammar", "use more vocabulary", "give more details"…) with no quoted words/numbers | **reject** | Regenerate |
 | Duplicate issues or retry focus (≥ 70% word overlap) | **reject** | Regenerate |
@@ -178,8 +179,15 @@ evaluations:
 
 - **±1 point** on a criterion, or **one sub-band** overall (e.g. B1 → B1+),
   is labelled *slight*. It is never presented as progress on its own, because
-  scores vary that much between similar answers.
-- ≥ 2 points is *clear*.
+  scores vary that much between runs on the same answer (measured: see
+  [Real Gemini validation](#real-gemini-validation)).
+- ≥ 2 points on a criterion is *clear*.
+- **A verdict is "clear" only when a criterion moved by 2+ points.** The overall
+  level alone cannot make it clear. Live evidence: the same transcript scored B2+ in one
+  run and C1 (two sub-bands higher) in another while every criterion differed by exactly 1
+  point. At the top of the scale one point is worth about two sub-bands, so the overall level
+  exaggerates small changes there. Before this was fixed, such a retry would have been reported as
+  "clearly better".
 - **Verdicts:** clear improvement, slight improvement ("the difference is
   small"), about the same, mixed, slight decline ("within normal variation"),
   clear decline.
@@ -198,7 +206,7 @@ evaluations:
 | Anthropic max output tokens | `ANTHROPIC_EVALUATION_MAX_TOKENS` | `16000` |
 | Anthropic refusal fallback (beta) | `ANTHROPIC_SERVER_FALLBACKS` | `true` |
 | **Gemini** key | `GEMINI_API_KEY` | — |
-| Gemini model | `GEMINI_EVALUATION_MODEL` | `gemini-flash-latest` (unverified alias) |
+| Gemini model | `GEMINI_EVALUATION_MODEL` | `gemini-3.8-flash` (pinned; the ID the API reported, confirmed by live runs) |
 | Gemini max output tokens | `GEMINI_EVALUATION_MAX_TOKENS` | `24000` |
 | Gemini thinking level | `GEMINI_THINKING_LEVEL` | unset (model default) |
 | Gemini structured-output mode | `GEMINI_STRUCTURED_OUTPUT` (`schema`, `json`) | `schema` |
@@ -219,6 +227,9 @@ Attempts store `processing_duration_ms`, and transcripts store their own `latenc
 | `speaking-evaluator/1.0.0`, schema 1 | Stage 1 |
 | `speaking-evaluator/2.0.0`, schema 2 | Stage 2: new prompt (prioritisation, evidence basis, task coverage, linked focus, meaning-preserving examples, banned generic advice, learner-friendly style, transcript escaping), new schema fields, quality gate + regeneration. Changes output content and shape. |
 | `speaking-evaluator/2.1.0`, schema 2 | Gemini provider added. Shared post-processing: markdown-fenced JSON is accepted, and an empty/truncated provider response gets the single regeneration. Prompt, rubric, schema and gate unchanged (same prompt hash). |
+| `speaking-evaluator/2.2.0`, schema 2 | Calibrated on the first real Gemini runs. Gate: improved-example checks no longer reject good corrections (word-swap fixes, short statements gaining a reason clause); unrelated originals on missing-content issues are dropped instead of regenerating. Prompt: keep the student's stance, no replacement examples, rules for "original", no invented benchmark figures, retry focus must be the direct fix. New prompt hash. |
+| `speaking-evaluator/2.3.0`, schema 2 | Retry review may not mark a numeric target achieved when the measurement misses it (repaired). Metrics gain `repeatedWords`; the prompt takes repetition counts from them. New prompt hash. |
+| `speaking-evaluator/2.4.0`, schema 2 | Gate rejects internal field names in student-facing text; prompt asks for plain-language numbers. New prompt hash. |
 | `b2-speaking-rubric/1.0.0` | Unchanged; the rubric text was not edited. |
 
 Old evaluations are never rewritten. They are upgraded for display only
@@ -237,7 +248,8 @@ the local database.
   `npm run eval:live`. Subset: `EVAL_SAMPLES=S01,S04 npm run eval:live`.
 - **GitHub Actions** (works from the cloud sandbox, which cannot reach the Gemini API): add the repository
   secret `GEMINI_API_KEY`, then run **Actions → "Live evaluation (Gemini)" → Run workflow**.
-  The workflow is manual-only and uploads the review report as an artifact.
+  The workflow is manual-only. It uploads the review report as an artifact **and prints it in the job
+  log** (some environments cannot download artifacts). Optional inputs: sample prefixes and a model override.
 - Hard assertions: the quality gate passes, pronunciation is not assessed, and the injection sample
   stays ≤ B1+. These fail the run.
 - Level, criterion, coverage and reliability-note differences do **not** fail the run; they are listed in

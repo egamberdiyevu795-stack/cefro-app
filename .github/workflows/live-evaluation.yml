@@ -1,4 +1,4 @@
-# Live evaluation against the REAL Gemini API, run on demand.
+# Live evaluation against a REAL evaluation provider (Gemini by default, or Anthropic), run on demand.
 #
 # Why this exists: the secret below can only be read by GitHub Actions, and the
 # development sandbox cannot reach the Gemini API. Running here validates the
@@ -20,8 +20,14 @@ on:
         description: "Optional comma-separated sample id prefixes (e.g. S01,S04). Empty = all 14."
         required: false
         default: ""
+      provider:
+        description: "Evaluation provider to validate (needs the matching repository secret)."
+        type: choice
+        options: [gemini, anthropic]
+        required: false
+        default: gemini
       model:
-        description: "Optional Gemini model override. Empty = GEMINI_EVALUATION_MODEL default."
+        description: "Optional model override for the chosen provider. Empty = that provider's configured default."
         required: false
         default: ""
 
@@ -45,18 +51,24 @@ jobs:
       - name: Check the secret is configured (without printing it)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PROVIDER: ${{ inputs.provider }}
         run: |
-          if [ -z "$GEMINI_API_KEY" ]; then
-            echo "::error::Repository secret GEMINI_API_KEY is not set (Settings → Secrets and variables → Actions)."
+          name="GEMINI_API_KEY"; [ "$PROVIDER" = "anthropic" ] && name="ANTHROPIC_API_KEY"
+          if [ -z "${!name}" ]; then
+            echo "::error::Repository secret $name is not set (Settings → Secrets and variables → Actions). Real $PROVIDER validation NOT RUN."
             exit 1
           fi
 
       - name: Run the live evaluation
         env:
-          EVALUATION_PROVIDER: gemini
+          EVALUATION_PROVIDER: ${{ inputs.provider }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EVAL_SAMPLES: ${{ inputs.samples }}
-          GEMINI_EVALUATION_MODEL: ${{ inputs.model }}
+          # Only the chosen provider's override is set; the other stays empty (= default).
+          GEMINI_EVALUATION_MODEL: ${{ inputs.provider == 'gemini' && inputs.model || '' }}
+          ANTHROPIC_EVALUATION_MODEL: ${{ inputs.provider == 'anthropic' && inputs.model || '' }}
         run: npm run eval:live
 
       # The artifact host may be unreachable from some environments, so also print the report in

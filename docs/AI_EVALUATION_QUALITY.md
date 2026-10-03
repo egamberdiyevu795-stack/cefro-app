@@ -510,6 +510,50 @@ code, the recording kept, no evaluation row, no dangling reference, and (for tra
 
 One real defect was found while writing the checks and fixed (evaluator 2.4.1): see findings log F24.
 
+## Provider failure matrix and security audit (B2 Part 2)
+
+Every row is covered by an automated test with injected providers; **no real provider failure was provoked**.
+All end as a stored `failed` attempt with a stage and a stable code, the recording kept (restartable within the run
+cap), no evaluation row, and a student-friendly message (`failure-messages.ts`); technical detail stays in server logs.
+
+| Failure | Stored code | Retryable | Where tested |
+|---|---|---|---|
+| OpenAI timeout / hang | `provider_timeout` | yes | `openai-transcription.test.ts`, `failure-paths.test.ts` |
+| OpenAI network interruption | `transcription_failed` | yes | `openai-transcription.test.ts` |
+| OpenAI API failure (5xx) | `transcription_failed` | yes | `openai-transcription.test.ts`, `failure-paths.test.ts` |
+| OpenAI invalid credentials (401/403) | `provider_not_configured` | no | `openai-transcription.test.ts` |
+| OpenAI rate limit (429) | `provider_rate_limited` | yes | same |
+| Unsupported / corrupt audio (400/413/415) | `audio_unsupported` | no | same; upload validation in `attempt-pipeline.test.ts` |
+| Silence / prompt echo / fewer than 5 words | `transcription_empty` | no | `openai-transcription.test.ts`, `failure-paths.test.ts` |
+| Anthropic timeout | `provider_timeout` | yes | `anthropic-evaluation-model.test.ts` |
+| Anthropic network interruption | `evaluation_failed` | yes | same |
+| Anthropic API failure (500/529) | `evaluation_failed` | yes | same |
+| Anthropic invalid credentials (401/403) | `provider_not_configured` | no | same (key never in the error) |
+| Anthropic rate limit (429) | `provider_rate_limited` | yes | same |
+| Anthropic rejected request (400, e.g. unknown model) | `evaluation_failed` | no | same (key redacted from the message) |
+| Anthropic refusal / truncated output | `evaluation_refused` / `evaluation_invalid_output` | no / yes | same |
+| Malformed or schema-invalid output | one regeneration, then `evaluation_invalid_output` | yes | `speaking-evaluator.test.ts`, `failure-paths.test.ts` |
+| Quality-gate rejection on both drafts | `evaluation_quality_rejected` | yes | `quality-gate*.test.ts`, `failure-paths.test.ts` |
+| Hung provider beyond the processing budget | `provider_timeout` | yes | `failure-paths.test.ts`, `processing-limits.test.ts` |
+
+Gemini has the same coverage in `gemini-evaluation-model.test.ts`.
+
+Security audit of the Part 2 pipeline (read from the code and covered by tests; nothing here needed a real provider):
+
+| Check | Result | Evidence |
+|---|---|---|
+| API keys never reach the browser | Pass | Keys are read only in `server/config/env.ts` (`server-only`); `test/client-boundary.test.ts` fails if any browser-bound module imports server code, reads `process.env` (other than `NODE_ENV`) or mentions a key/secret; a production build's static assets contained no key variable name or key-like string (checked by grep) |
+| Audio endpoint cannot reach arbitrary files | Pass | The route reads only the `storageKey` stored for an attempt the caller owns; `LocalAudioStorage` accepts only `[a-zA-Z0-9/_.-]` and no `..`, and joins under its root (`local-audio-storage.test.ts`: traversal, backslash, encoded, null byte, absolute-looking keys) |
+| Upload size/type validation | Pass | 20 MB counted while streaming, MIME allow-list, magic bytes (`api-routes.test.ts`, `attempt-pipeline.test.ts`) |
+| Transcript treated as untrusted | Pass | angle brackets escaped, declared data in the prompt, injection sample S13 ignored by the real model; `prompt-fingerprint`/gate tests |
+| Browser cannot choose a user id | Pass | identity only from `getCurrentUser()`; `cross-user.test.ts` (body, query and header ids ignored) |
+| Analytics cannot spoof another user | Pass | user id from the session/cookie; foreign session ids stored as none (`api-routes.test.ts`, `cross-user.test.ts`) |
+
+The Anthropic evaluator has the same prompt, schema, gate and error handling as the validated Gemini path, but **has not been
+run against the real Anthropic API** (no key). `live-evaluation.yml` takes a `provider` input (`gemini` or `anthropic`)
+and `live-pipeline.yml` an `evaluation_provider` input; either needs its repository secret. Real OpenAI transcription is also
+not validated (no key). Both statuses are in the summary at the top of this document.
+
 ## Findings log
 
 Findings so far come from code audit and automated tests. **No real-model
@@ -541,6 +585,8 @@ output has been reviewed yet** — add live-review findings here.
 | F22 | Live Gemini | Student-facing text contained an internal field name ('timeUsedRatio: 0.73') | Low | Gate rejection and prompt rule (2.4.0); none seen in run 5 |
 | F23 | Live Gemini | Report artifact download blocked from the dev sandbox; passing tests hid console output | Low | Report printed in the job log; verbose reporter |
 | F24 | Stage 3B | The pronunciation-claim check matched "pronounce…" but not the noun "pronunciation"/"mispronunciation", so "Your pronunciation is good" passed the gate. The existing tests only used verbs, accent, vowels and intonation | Medium | Pattern now `(?:mis)?pron(?:ou|u)nc\w*`; regression tests; evaluator 2.4.1 (gate only, prompt unchanged). No real Gemini output in runs 2-5 contained either word in student-facing text |
+| F25 | Part 2 re-audit | Anthropic error handling had no tests for 401/403, 429, 400 and 5xx, and a 400 message embedded the provider's text unredacted (a key echoed by the API would have reached a log) | Low | Tests for each status; `sk-ant-…` redacted from mapped messages |
+| F26 | Part 2 re-audit | No automated guard that browser-bound code stays free of server imports/secrets, and no direct tests of `LocalAudioStorage` path handling | Low | `test/client-boundary.test.ts`, `local-audio-storage.test.ts` |
 
 ## Known weaknesses and future improvements
 

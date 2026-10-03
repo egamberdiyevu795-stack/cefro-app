@@ -104,6 +104,9 @@ export class AnthropicEvaluationModel implements EvaluationModel {
   }
 }
 
+/** Anthropic keys look like `sk-ant-…`; never let one into an error message that reaches a log. */
+const redactKeys = (text: string) => text.replace(/sk-ant-[\w-]+/gi, "[redacted]");
+
 export function mapAnthropicError(error: unknown): ProviderError {
   if (error instanceof ProviderError) return error;
   if (error instanceof Anthropic.APIConnectionTimeoutError) {
@@ -120,7 +123,7 @@ export function mapAnthropicError(error: unknown): ProviderError {
   }
   if (error instanceof Anthropic.BadRequestError) {
     // Usually configuration (unknown model, beta not enabled) — retrying won't help.
-    return new ProviderError("evaluation_failed", `Anthropic rejected the request: ${error.message}`, {
+    return new ProviderError("evaluation_failed", `Anthropic rejected the request: ${redactKeys(error.message)}`, {
       cause: error,
       retryable: false,
     });

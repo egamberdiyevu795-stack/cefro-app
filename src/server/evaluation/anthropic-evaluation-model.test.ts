@@ -113,4 +113,41 @@ describe("AnthropicEvaluationModel", () => {
     }) as unknown as typeof fetch;
     await expect(modelWith(offline).evaluate(prompt, input)).rejects.toMatchObject({ failureCode: "evaluation_failed" });
   });
+
+  describe("HTTP failures end as stable failure codes", () => {
+    const failing = (status: number, message = "boom") =>
+      modelWith((async () => json(status, { type: "error", error: { type: "api_error", message } })) as unknown as typeof fetch);
+
+    it("invalid credentials (401/403): provider_not_configured, not retryable, and the key is never in the error", async () => {
+      for (const status of [401, 403]) {
+        const error = await failing(status, "invalid x-api-key sk-ant-test-not-real").evaluate(prompt, input).catch((e) => e);
+        expect(error).toMatchObject({ failureCode: "provider_not_configured", retryable: false });
+        expect(String(error.message)).not.toContain("sk-ant-test-not-real");
+        expect(JSON.stringify(error.message)).not.toMatch(/sk-ant-/);
+      }
+    });
+
+    it("rate limit (429): provider_rate_limited, retryable", async () => {
+      await expect(failing(429).evaluate(prompt, input)).rejects.toMatchObject({ failureCode: "provider_rate_limited", retryable: true });
+    });
+
+    it("rejected request (400, e.g. unknown model): evaluation_failed, not retryable, key redacted from the message", async () => {
+      const error = await failing(400, "model not found (key sk-ant-api03-SECRETSECRET)").evaluate(prompt, input).catch((e) => e);
+      expect(error).toMatchObject({ failureCode: "evaluation_failed", retryable: false });
+      expect(error.message).not.toContain("SECRETSECRET");
+    });
+
+    it("server errors and overload (500/529): evaluation_failed, retryable", async () => {
+      for (const status of [500, 529]) {
+        await expect(failing(status).evaluate(prompt, input)).rejects.toMatchObject({ failureCode: "evaluation_failed", retryable: true });
+      }
+    });
+
+    it("no failure carries a stack trace or the request body into its message", async () => {
+      const error = await failing(500, "x").evaluate(prompt, { ...input }).catch((e) => e);
+      expect(String(error.message)).not.toMatch(/\n\s+at /);
+      expect(String(error.message)).not.toContain("system"); // the prompt is never echoed
+    });
+  });
 });
+

@@ -3,7 +3,8 @@
 #
 # Setup (once): Repository → Settings → Secrets and variables → Actions → New repository secret:
 #   OPENAI_API_KEY   (transcription, plus text-to-speech for the test audio)
-#   GEMINI_API_KEY   (evaluation; already used by live-evaluation.yml)
+#   GEMINI_API_KEY   (evaluation with Gemini; also used by live-evaluation.yml)
+#   ANTHROPIC_API_KEY (evaluation with Anthropic, when the `evaluation_provider` input is anthropic)
 #
 # What it runs, in order (each step's result is reported even if an earlier one fails):
 #   1. eval:transcription:controlled  controlled audio → OpenAI transcription (fidelity, fillers, silence, formats)
@@ -25,6 +26,12 @@ on:
         type: boolean
         required: false
         default: true
+      evaluation_provider:
+        description: "Evaluation provider for steps 2 and 3 (needs its repository secret)."
+        type: choice
+        options: [gemini, anthropic]
+        required: false
+        default: gemini
       samples:
         description: "Optional comma-separated pipeline sample prefixes (e.g. P1,P2). Empty = all."
         required: false
@@ -51,9 +58,12 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EVAL_PROVIDER: ${{ inputs.evaluation_provider }}
         run: |
           missing=0
-          for name in OPENAI_API_KEY GEMINI_API_KEY; do
+          evalkey="GEMINI_API_KEY"; [ "$EVAL_PROVIDER" = "anthropic" ] && evalkey="ANTHROPIC_API_KEY"
+          for name in OPENAI_API_KEY $evalkey; do
             if [ -z "${!name}" ]; then
               echo "::error::Repository secret $name is not set (Settings → Secrets and variables → Actions)."
               missing=1
@@ -86,8 +96,9 @@ jobs:
         env:
           TRANSCRIPTION_PROVIDER: openai
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          EVALUATION_PROVIDER: gemini
+          EVALUATION_PROVIDER: ${{ inputs.evaluation_provider }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EVAL_SAMPLES: ${{ inputs.samples }}
         run: npm run eval:pipeline
 
@@ -98,8 +109,9 @@ jobs:
         env:
           TRANSCRIPTION_PROVIDER: openai
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          EVALUATION_PROVIDER: gemini
+          EVALUATION_PROVIDER: ${{ inputs.evaluation_provider }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npm run test:e2e:live
 
       # The artifact host may be unreachable from some environments, so the reports are also printed in the

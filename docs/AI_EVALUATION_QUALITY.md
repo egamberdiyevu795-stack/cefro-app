@@ -541,7 +541,7 @@ RUN.** Synthetic speech is clean and evenly paced; it says nothing about accents
 |---|---|
 | Gemini WebM/Opus acceptance (the browser recorder's format) | Accepted; also m4a and ogg accepted. |
 | Fidelity on 4 speech samples | Median WER 0%; 7 of 7 deliberate learner errors preserved ("I have went", "I buy two bread", "he don't like", "it make people lazy", "Me and my friend is", "discussing about", "the phones is"); 6 of 6 fillers kept. Not perfectly literal: it added commas and "usefull" → "useful", "every day" → "everyday", "face to face" → "face-to-face" (harmless for assessment). |
-| Silence and near-silence | **FAIL (real limitation, not fixed).** Gemini invented speech on 8 s of silence: first run (plain-text reply) "Uh my parents gave me uh their support and encouraged me to learn" and "I think when I was little I was afraid of ghosts"; after removing the exam framing and requiring a structured `speech_detected` answer it still returned "It usually usually it makes me feel relax." (8 words) for digital silence and "a ball" (2 words) for near-silence. Output varies between runs. Only transcripts under 5 words are caught by the existing "not enough speech" rule. |
+| Silence and near-silence | **FAIL before the Speech Activity Guard; fixed by it (next section).** Gemini invented speech on 8 s of silence: first run (plain-text reply) "Uh my parents gave me uh their support and encouraged me to learn" and "I think when I was little I was afraid of ghosts"; after removing the exam framing and requiring a structured `speech_detected` answer it still returned "It usually usually it makes me feel relax." (8 words) for digital silence and "a ball" (2 words) for near-silence. Output varies between runs. Only transcripts under 5 words are caught by the existing "not enough speech" rule. |
 | Full pipeline, 8 samples (normal, weaker, grammar mistakes, repetition, fillers, off-task, weak→strong retry, synthetic guided retry), run on `7f6d1dc` | 8/8 completed; 0 integrity violations (evidence quotes found in transcript, record linkage, versions, `h2:` prompt hash, stored audio equals uploaded audio, events correlated); 0 regenerations in that run (2 in the earlier run on `9155347`, both fixed by the one regeneration); average processing 15.1 s per attempt (earlier run 22.2 s). |
 | Browser flow (Chromium fake microphone through the real MediaRecorder path, synthetic speech) | Passed: provider `gemini`, WER 0%, 152 words, level B2+, 28.5 s from finishing to feedback in the first run. |
 | Latency and tokens (baseline only, no optimisation) | Transcription 1.4-4.2 s per answer; evaluation stage 10-26 s; evaluation tokens in/out 37,050/24,442 over 8 attempts (run on `7f6d1dc`); transcription tokens 11,437/5,027. No cost figures. |
@@ -584,7 +584,7 @@ The Stage 2B runs above are the first test of speech-to-text and of the whole pa
 
 - The Gemini-backed B2 Part 2 pipeline successfully completed a real end-to-end test with synthetic speech (8/8 samples
   and one browser flow). This is not production validation.
-- **Open defect: Gemini speech-to-text invents words on silent or near-silent audio.** A prompt change and a structured
+- **Defect found and then fixed by the Speech Activity Guard: Gemini speech-to-text invents words on silent or near-silent audio.** A prompt change and a structured
   reply did not remove it. A learner who submits silence could be given feedback on words they never said. Needs a
   provider-independent speech-activity check before transcription (for example a decoded-energy check) or a dedicated
   STT provider whose silence behaviour is measured; not built here because it is a new subsystem beyond this stage.
@@ -593,6 +593,66 @@ The Stage 2B runs above are the first test of speech-to-text and of the whole pa
 - No validation exists with OpenAI transcription or Anthropic evaluation: NOT RUN (no keys).
 - Gemini fidelity was measured on four speech samples from one synthetic voice; it may differ for real accents and noisy
   audio. Real learner validation is still required.
+
+## Speech Activity Guard
+
+**Why it exists.** In the Stage 2B run Gemini invented learner answers for silence ("Uh my parents gave me uh their
+support..."), and neither removing the exam framing nor a structured `speech_detected` reply fixed it. Asking the
+model whether speech exists is therefore not reliable. The decision is made from the audio signal, before any
+transcription provider is called.
+
+**Where it sits.** `audio upload → Speech Activity Guard → transcription provider (Gemini, OpenAI, ...) → quality checks → evaluation`.
+It is in `attempt-processing.ts`, ahead of `provider.transcribe`, so it is the same for every provider and nothing in
+the domain layer knows about Gemini. Code: `src/domain/audio/speech-activity.ts` (pure analysis),
+`src/server/audio/speech-guard.ts` (ffmpeg decode and the switch).
+
+**What it checks.** The recording is decoded to 16 kHz mono PCM (ffmpeg handles WebM/Opus, Ogg, MP4/AAC, WAV, MP3) and
+cut into 20 ms frames. A frame is *active* if it is at least 12 dB above the recording's own noise floor (10th
+percentile of frame levels) **and** above -60 dBFS. Gaps up to 200 ms are bridged and runs under 80 ms dropped. The
+recording passes only with at least 0.8 s of active speech and one continuous stretch of at least 0.5 s. Consequences:
+steady noise never counts however loud (it does not rise above its own floor), quiet speech over a quiet floor does,
+and leading/trailing silence and long pauses are simply inactive frames. Five words, the pipeline's own minimum for an
+assessable answer, take about a second, so the 0.8 s limit never rejects an answer that could have been assessed.
+
+**What happens when it blocks.** The provider is not called, no transcript is stored, nothing is evaluated, the audio
+is kept, and the attempt ends with the existing `transcription_empty` failure ("We couldn't hear enough speech... check
+that the right microphone is selected and record again"). A `speech_guard_blocked` server event records the reason and
+measurements (no transcript, no audio). If the guard cannot run (ffmpeg missing), the attempt fails closed as
+`provider_not_configured` and the boot check in production refuses to start without ffmpeg when the guard is on;
+silently skipping would let silence reach the provider. `SPEECH_GUARD=auto|on|off` (auto: on for real providers, off for
+the development mock) and `FFMPEG_PATH` configure it. Not a second AI call: no cost, decode about 75-130 ms locally
+(avg 182 ms, max 483 ms on the CI runner across the files below, including 66 s recordings), analysis a few ms.
+
+**How the thresholds were chosen (and the caveat).** Margin (12 dB), floor (-60 dBFS), 0.8 s and 0.5 s were set by
+measuring the features of 27 fixtures (listed below) made with the `espeak-ng` synthesiser and ffmpeg noise, then
+choosing values that separated them; those fixtures are therefore not an independent test of the thresholds. The
+independent check is the Gemini text-to-speech run below, which the thresholds had not been tuned on.
+
+**What was tested.**
+
+| Evidence | Kind | Result |
+|---|---|---|
+| 27 fixture files through ffmpeg decode + guard (`speech-guard.test.ts`): silence, near-silence, quiet room, loud steady noise, 50 Hz hum, drifting noise, click, tap train, keyboard bursts, cough; normal, very short, hesitation, learner-mistakes, long pause, 5 s lead silence, 5 s trailing silence, 1 s answer in 10 s of silence, several pauses, -30 dB and -40 dB speech, speech over steady noise and over loud noise; MP4 and Ogg containers | synthetic (espeak-ng + ffmpeg), not a person | PASS: every non-speech file blocked, every speech file allowed |
+| Pipeline with spy providers (`speech-guard-pipeline.test.ts`): silence, near-silence, quiet room, loud noise (WebM), silence in Ogg and MP4 | synthetic | PASS: transcription provider and evaluator never called, no transcript or evaluation row, `transcription_empty`, audio kept, event recorded |
+| Same pipeline with speech (10 fixtures) | synthetic | PASS: provider called exactly once with the original, untouched audio; attempt completes; transcript reused on an evaluation-only retry without decoding again |
+| Real Gemini, controlled audio (workflow run 37128464596, commit `dd05bbf`): Gemini text-to-speech reading known texts | synthetic speech through the **real** Gemini | silence, near-silence, 8 s of room noise and 8 s of loud steady noise **blocked before any provider call** (provider calls made by the suite: 9, all for speech). Speech allowed and transcribed: normal, learner errors, fillers, repetition, 3-word answer, three sentences with 3 s pauses and 4 s of silence before and after (WER 0%), the learner-errors answer 35 dB quieter (7 of 7 mistakes kept), plus m4a and ogg copies. Learner errors preserved 14 of 14; median WER 0%; fillers 6 of 6 |
+| Real Gemini, full pipeline: 9 samples incl. the weak→strong retry pair, a synthetic guided retry, and a paused answer; silence and near-silence through `createAttempt`/`processAttempt` | synthetic | 9/9 completed, 0 integrity violations, 0 regenerations; silence and near-silence: 0 transcription requests, 0 evaluation requests, `transcription/transcription_empty`, 0 transcript rows, 0 evaluation rows |
+| Browser flow (Chromium fake microphone, real recorder path, guard on, real Gemini) | synthetic speech | Passed: provider `gemini`, WER 0%, 152 words, level B2+ |
+
+Developer-recorded validation: **NOT RUN**. Real-student validation: **NOT RUN**. All audio above is synthetic.
+
+**Known limitations.**
+- It detects *energy activity*, not speech. Loud sounds that vary like speech (music, a television, other people talking),
+  a sustained cough or a long loud noise burst will pass and can then reach the provider; a provider may still invent
+  text for such audio. Not tested with real background speech or music.
+- Very quiet speech is blocked: speech whose loudest frames sit below about -60 dBFS (roughly 45 dB under a normal level;
+  the -40 dB fixture passed, -50 dB would not) or less than 12 dB above its own noise floor.
+- Noise whose level swells for more than 0.5 s (a fan spinning up) can count as activity. Slowly drifting noise
+  (fixture `wander`) was blocked, but that is one example, not a guarantee.
+- Thresholds were tuned on espeak-ng fixtures; the Gemini speech was an independent check but is also synthetic and
+  clean. Real microphones, accents and rooms are not covered until developer-recorded and real-student samples are run.
+- Requires ffmpeg on the server (installed in CI and the live workflow; the deployment must provide it).
+- A learner who whispers or records from far away gets "couldn't hear enough speech", which is the intended safe side.
 
 ## Provider failure matrix and security audit (B2 Part 2)
 

@@ -334,12 +334,12 @@ Automated tests that run in `npm test`:
 transcription are unchanged and still selectable.
 
 **SDK:** official `@google/genai` (Google's current JavaScript SDK). No unofficial wrappers.
-**Model:** `GEMINI_EVALUATION_MODEL`, default `gemini-flash-latest`. This default is a judgement call that
-could **not** be checked: Google's model list was unreachable, and the SDK's type definitions only show example
-names. A moving alias is less likely to be retired than a pinned name, but it can change behaviour silently.
-Every evaluation stores the model that actually answered (`modelVersion` from the response). Once you
-have chosen a model, pin it and re-run the live validation. If the default is not available to your key,
-the run fails with `provider_not_configured` and a "model not found (check GEMINI_EVALUATION_MODEL)" log line.
+**Model:** `GEMINI_EVALUATION_MODEL`, default `gemini-3.8-flash`. This is the identifier the API itself
+reported as the answering model on the first real run, and an explicit request for it was then verified live.
+It is pinned (not an alias) so behaviour does not change silently. Every evaluation stores the model that
+actually answered (`modelVersion` from the response). If a model is not available to a key, the run fails with
+`provider_not_configured` and a "model not found (check GEMINI_EVALUATION_MODEL)" log line. Changing the model
+means re-running the live validation.
 
 **Pipeline** (identical for every provider; only the first box differs):
 
@@ -378,18 +378,88 @@ regeneration success and failure, quality-gate rejection through the Gemini path
 claim, generic advice), no regeneration after provider failures, and the injected-instruction prompt shape. The live
 harness mechanics were also exercised against a throwaway local HTTP stand-in (not Gemini).
 
-**NOT verified (needs the real key):**
+**Verified live (five runs, 14 synthetic answers each):** the model exists for the key and accepts the
+derived JSON schema (`schema` mode, no fallback needed); no JSON or schema failures; evidence quotes were exact;
+latency (~14-16 s average) and token use; the quality gate, regeneration and repair paths against real output.
 
-- that the default model exists for your key and behaves as expected;
-- that the API accepts our schema (the `json` mode exists as a fallback);
-- how well Gemini applies the CEFRO methodology: evidence discipline, meaning-preserving corrections,
-  level accuracy, and how often the quality gate has to reject or regenerate;
-- thinking behaviour. `GEMINI_THINKING_LEVEL` is unset by default because the accepted values differ between
-  model generations, and an unsupported value would be rejected;
-- latency, cost and free-tier rate limits.
+**Still NOT verified:**
+
+- `json` structured-output mode and `GEMINI_THINKING_LEVEL` (neither used);
+- cost and free-tier / paid rate limits under load (no 429 was seen);
+- behaviour on real student speech (transcripts here are synthetic and perfectly punctuated);
+- score stability beyond three comparable runs (see the consistency table below).
 
 Gemini and Anthropic results are not interchangeable: they are different models, and scores should not be
 compared across providers without checking on the sample set first.
+
+## Real Gemini validation
+
+**Provider:** Gemini (`@google/genai`), `EVALUATION_PROVIDER=gemini`
+**Actual model:** `gemini-3.8-flash` (reported by the API in every run; `answered by` matches the request)
+**Date:** 2026-10-02 and 2026-10-03
+**Samples:** the 14 synthetic B2 Part 2 answers (section 8) plus the weak-to-strong retry pair, run through the
+manual GitHub Actions workflow `Live evaluation (Gemini)` with the `GEMINI_API_KEY` repository secret. The key
+was never printed, logged or committed. Transcription was not part of this validation.
+
+| Run | Evaluator | Result | Evaluated | Regenerated | Avg latency | Notes |
+|---|---|---|---|---|---|---|
+| 1 | 2.1.0 | pass | 14/14 | 8 | ~25 s | gate over-rejecting improved examples |
+| 2 | 2.1.0 | **failure** | 13/14 | n/a | n/a | S05 and the retry pair rejected on both drafts |
+| 3 | 2.2.0 | pass | 14/14 | 1 | 15.9 s | gate recalibrated; no rejections persisted |
+| 4 | 2.3.0 | pass | 14/14 | 2 | 13.6 s | retry-review and repetition counts fixed |
+| 5 | 2.4.0 | pass | 14/14 | 2 | 15.1 s | 72,856 tokens in / 53,412 out; 0 failures, 0 gate failures |
+
+**Final run (5):** 14 of 14 samples and the retry pair evaluated, 0 failed, 0 quality-gate failures, 2 recovered
+by one regeneration (S05, S08; both for `improved_example_changes_meaning`), average 15.1 s (slowest S05 at
+31.5 s, which needed two calls). The numeric retry-review repair fired for real: the model marked "speak for at
+least 90 seconds" as achieved while citing 88 seconds, and the gate changed it to `partly_achieved`.
+
+**Confirmed strengths**
+
+- Evidence discipline: no hallucinated quote in any run; speech-metric issues correctly carry no quote.
+- Feedback is specific and follows identify → explain → fix → improved example with the student's own words.
+- Task coverage was judged per point, including partial coverage (S08, S11) and off-topic (S10).
+- The prompt-injection sample (S13) was treated as ordinary speech; no pronunciation claim was made anywhere.
+- Levels followed the expected ordering on all runs; Uzbek-learner transfer errors (S14) were identified.
+- No JSON, schema, truncation, safety or rate-limit failures across all five runs.
+
+**Score consistency across runs 3-5 (same transcripts, different evaluator versions):** 7 of 14 samples had the
+same overall level in all three runs; six others moved by one sub-band (S03, S05, S06, S07, S08, S09, always between
+adjacent levels) and S02 moved B2+ → C1 → C1- (two sub-bands between runs, every criterion within 1 point). Variation of one
+sub-band between evaluations of the same answer is therefore normal for this model, which supports the rule that
+a 1-point or one-sub-band change is "slight".
+
+**Results by criterion (final run, manual review of every sample):** understanding and task coverage correct;
+weaknesses real; evidence exact; explanations and corrections correct; meaning preserved after calibration; retry
+focus is the direct fix for its issue; no generic feedback; no pronunciation claims. One sample (S08, B1- against
+an expected B1 to B2-) is judged defensible: 57 words in 60 seconds with no development is B1- under the rubric,
+so the expectation range, not the model, was generous. It was not changed.
+
+**PASS**
+
+- Gemini evaluation works end to end through the shared pipeline with the real API, and the gate is provider-independent.
+
+**ISSUES FOUND and FIXED** (details in the findings log F17-F23)
+
+- The improved-example check over-rejected correct, minimal corrections (8 of 14 first drafts in run 1; two
+  evaluations failed in run 2). Recalibrated; regenerations fell to 1-2 per run and latency from ~25 s to ~15 s.
+- The retry review called an unmet numeric target "achieved". Now repaired against the measured values.
+- A repetition count was wrong (7 stated, 13 actual). The evaluator now takes counts from `repeatedWords`.
+- The overall level alone could make an unchanged answer look clearly better or worse. "Clear" verdicts now need
+  a criterion that moved by 2+ points.
+- A raw field name leaked into feedback ("timeUsedRatio: 0.73"). Rejected by the gate and discouraged in the prompt.
+
+**REMAINING LIMITATIONS**
+
+- Only Gemini evaluation is real-validated. **OpenAI transcription is NOT real-validated** (no key), **Anthropic
+  evaluation is preserved but not real-validated**, and the **full microphone → OpenAI transcription → Gemini
+  evaluation pipeline is NOT validated** and must not be called production validated.
+- 14 synthetic answers, reviewed by one reviewer (no inter-rater data); real student speech may differ.
+- The meaning-preservation check is skipped when the original has fewer than 3 content words, so a short
+  original could still be replaced by an unrelated example (seen once, run 3, S10; not in runs 4-5).
+- Score stability is one sub-band between runs, two for very strong answers.
+- Evaluator version history is dense (2.1.0 to 2.4.0 in a day); scores across those versions are not strictly
+  comparable.
 
 ## Findings log
 
@@ -414,21 +484,26 @@ output has been reviewed yet** — add live-review findings here.
 | F14 | Gemini work | Live harness: level/criterion mismatches used `expect.soft`, which still fails the run, contradicting its own docs; a scheduled CI run would go red on ordinary examiner-style disagreement | Medium | Mismatches are listed in the summary only; hard rules still fail |
 | F15 | Gemini work | Live harness and transcription harness only recognised Anthropic keys, so a Gemini-only setup was skipped silently | Medium | Provider chosen by `EVALUATION_PROVIDER`; skip message names the missing variable |
 | F16 | Gemini work | With an alias model name, the summary showed only the requested model | Low | Summary also lists the models that actually answered |
+| F17 | Live Gemini | Improved-example check rejected correct minimal corrections (e.g. 'make → do homework'; a clause added for a reason); 8 of 14 first drafts regenerated, two evaluations failed | High | Vocabulary 10% overlap floor, 30-word length floor, unrelated-original repair; real-output regression tests (2.2.0) |
+| F18 | Live Gemini | Missing-content issues quoted an unrelated original sentence | Medium | `original` is blanked and a warning recorded; prompt rule for missing content (2.2.0) |
+| F19 | Live Gemini | Retry review marked 'speak for at least 90 seconds' achieved while citing 88 seconds | High | Numeric-target repair against measured metrics (2.3.0); fired live in run 5 |
+| F20 | Live Gemini | Repetition stated as 'seven times' for 13 repetitions | Medium | `repeatedWords` metric; counts only from metrics (2.3.0); confirmed exact in run 4 |
+| F21 | Live Gemini | Same transcript scored B2+ and C1 with every criterion within 1 point; the comparison read it as clear change | Medium | Clear verdict needs a 2+ point criterion change (2.4.0) |
+| F22 | Live Gemini | Student-facing text contained an internal field name ('timeUsedRatio: 0.73') | Low | Gate rejection and prompt rule (2.4.0); none seen in run 5 |
+| F23 | Live Gemini | Report artifact download blocked from the dev sandbox; passing tests hid console output | Low | Report printed in the job log; verbose reporter |
 
 ## Known weaknesses and future improvements
 
-- **Real-provider output is unverified** (see status above). The gate's
-  thresholds (50% overlap, 3× length, 70% duplicate overlap) are first
-  estimates and need tuning against real output.
+- **Real-provider coverage is partial.** Gemini evaluation was validated live on synthetic answers; OpenAI
+  transcription and the Anthropic evaluator were not. Gate thresholds were tuned on Gemini output only and may
+  need retuning for another model.
 - The generic-feedback check is pattern-based. It catches common phrasings,
   not every vague sentence.
 - Meaning preservation is a lexical heuristic. A paraphrase with different
   words but the same meaning could be flagged, and a same-words/different-meaning
   rewrite could pass.
-- No inter-rater reliability data yet: we don't know how stable scores are
-  across repeated evaluations of the same transcript. The comparison's
-  "±1 = slight" rule assumes that variation; measure it by running
-  `eval:live` twice.
+- Score stability is measured on Gemini only (three comparable runs: one sub-band of variation, two for the
+  strongest sample). The comparison's "±1 = slight" rule is based on that; there is no human inter-rater data.
 - Pronunciation is not assessed. A future audio-capable evaluator can fill
   the existing schema slot.
 - The client reports the recording duration (used for WPM). It is not

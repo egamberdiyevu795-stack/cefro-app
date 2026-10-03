@@ -35,7 +35,8 @@ const envSchema = z.object({
    * Needs ffmpeg when on (docs/AI_EVALUATION_QUALITY.md, Speech Activity Guard).
    */
   SPEECH_GUARD: z.enum(["auto", "on", "off"]).default("auto"),
-  FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
+  /** Unset = use the ffmpeg on PATH if there is one, otherwise the binary bundled with the ffmpeg-static package (Vercel). */
+  FFMPEG_PATH: z.string().min(1).optional(),
 
   GEMINI_API_KEY: z.string().optional(),
   /**
@@ -100,6 +101,26 @@ const envSchema = z.object({
 
 export type ServerEnv = z.infer<typeof envSchema>;
 
+/** Where Vercel lets a function write: only /tmp, which is per-instance and lost on cold starts and redeploys. */
+export const VERCEL_TEMP_DIR = "/tmp/cefro";
+
+/**
+ * Defaults that depend on the hosting platform, applied only for values that are not set explicitly.
+ * On Vercel the project directory is read-only, so the database and recordings go to the temporary directory, and the
+ * public origin is taken from the platform's own variables so no APP_URL has to be configured for a test deployment.
+ * This is a TEST-DEPLOYMENT arrangement, not durable storage (docs/DEPLOY_VERCEL.md).
+ */
+export function applyHostingDefaults(raw: Record<string, string | undefined>): Record<string, string | undefined> {
+  if (!raw.VERCEL) return raw;
+  const host = raw.VERCEL_PROJECT_PRODUCTION_URL || raw.VERCEL_URL;
+  return {
+    ...raw,
+    DATABASE_PATH: raw.DATABASE_PATH ?? `${VERCEL_TEMP_DIR}/cefro.db`,
+    AUDIO_STORAGE_DIR: raw.AUDIO_STORAGE_DIR ?? `${VERCEL_TEMP_DIR}/audio`,
+    ...(raw.APP_URL || !host ? {} : { APP_URL: `https://${host}` }),
+  };
+}
+
 let cached: ServerEnv | undefined;
 
 export function getEnv(): ServerEnv {
@@ -108,7 +129,7 @@ export function getEnv(): ServerEnv {
     const raw = Object.fromEntries(
       Object.entries(process.env).filter(([, value]) => value !== ""),
     );
-    cached = envSchema.parse(raw);
+    cached = envSchema.parse(applyHostingDefaults(raw));
   }
   return cached;
 }

@@ -19,6 +19,11 @@ export interface ProviderMode {
   mode: "real" | "development_mock";
 }
 
+/** True when the configured database and recordings live in Vercel's temporary directory (not durable). */
+export function usesTemporaryStorage(env: Pick<ServerEnv, "DATABASE_PATH" | "AUDIO_STORAGE_DIR">): boolean {
+  return Boolean(process.env.VERCEL) && (env.DATABASE_PATH.startsWith("/tmp/") || env.AUDIO_STORAGE_DIR.startsWith("/tmp/"));
+}
+
 export function describeProviderMode(env: ServerEnv): ProviderMode {
   const mock = env.TRANSCRIPTION_PROVIDER === "mock" || env.EVALUATION_PROVIDER === "mock";
   return { transcription: env.TRANSCRIPTION_PROVIDER, evaluation: env.EVALUATION_PROVIDER, mode: mock ? "development_mock" : "real" };

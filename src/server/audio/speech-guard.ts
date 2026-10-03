@@ -1,6 +1,7 @@
 import "server-only";
 import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
+import ffmpegStatic from "ffmpeg-static";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -28,12 +29,29 @@ export interface SpeechGuard {
   check(input: { audio: Buffer; mimeType: string }): Promise<SpeechGuardResult>;
 }
 
-export function ffmpegCommand(): string {
-  return getEnv().FFMPEG_PATH;
+/**
+ * Which ffmpeg to run: FFMPEG_PATH when set (taken literally, so a wrong path is reported as such); otherwise the ffmpeg
+ * on PATH when there is one; otherwise the static binary shipped by the `ffmpeg-static` package, which is what makes the
+ * guard work on hosts without ffmpeg installed (Vercel functions have none).
+ */
+export function resolveFfmpegCommand(explicit?: string): string {
+  if (explicit) return explicit;
+  if (spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0) return "ffmpeg";
+  return typeof ffmpegStatic === "string" && fs.existsSync(ffmpegStatic) ? ffmpegStatic : "ffmpeg";
 }
 
-export function isFfmpegAvailable(command = ffmpegCommand()): boolean {
-  return spawnSync(command, ["-version"], { stdio: "ignore" }).status === 0;
+// The lookup spawns a process, so remember the answer for as long as PATH is unchanged.
+let resolvedDefault: { path: string | undefined; command: string } | undefined;
+
+export function ffmpegCommand(): string {
+  const explicit = getEnv().FFMPEG_PATH;
+  if (explicit) return explicit;
+  if (resolvedDefault?.path !== process.env.PATH) resolvedDefault = { path: process.env.PATH, command: resolveFfmpegCommand() };
+  return resolvedDefault!.command;
+}
+
+export function isFfmpegAvailable(explicit?: string): boolean {
+  return spawnSync(/* turbopackIgnore: true */ resolveFfmpegCommand(explicit), ["-version"], { stdio: "ignore" }).status === 0;
 }
 
 /** Whether the guard runs for this configuration: "auto" = on for real transcription providers, off for the mock. */
@@ -50,8 +68,9 @@ async function decodeToPcm(audio: Buffer): Promise<Int16Array> {
   fs.writeFileSync(file, audio, { mode: 0o600 });
   try {
     return await new Promise<Int16Array>((resolve, reject) => {
+      // The command is only known at run time; the marker stops the bundler from tracing the whole project for it.
       const child = spawn(
-        command,
+        /* turbopackIgnore: true */ command,
         ["-v", "error", "-nostdin", "-i", file, "-vn", "-t", String(MAX_ANALYSED_SECONDS), "-ac", "1", "-ar", String(ANALYSIS_RATE), "-f", "s16le", "pipe:1"],
         { stdio: ["ignore", "pipe", "pipe"] },
       );

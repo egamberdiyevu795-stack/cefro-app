@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ProviderError } from "@/server/errors";
-import { ffmpegSpeechGuard, isFfmpegAvailable } from "./speech-guard";
+import ffmpegStatic from "ffmpeg-static";
+import { ffmpegSpeechGuard, isFfmpegAvailable, resolveFfmpegCommand } from "./speech-guard";
 
 /**
  * The guard against real (synthetic) audio files: decoded by ffmpeg from the container the browser produces, then
@@ -79,5 +80,43 @@ describe.skipIf(!ffmpeg)("speech activity guard on audio files", () => {
     const total = performance.now() - started;
     console.log(`speech guard: 14 s recording, decode ${result.decodeMs} ms + analysis ${result.analyseMs} ms (total ${total.toFixed(0)} ms)`);
     expect(total).toBeLessThan(3000);
+  });
+});
+
+/**
+ * Vercel functions have no ffmpeg on PATH. The guard then uses the static binary from the `ffmpeg-static` package; this
+ * runs the real guard with an empty PATH to prove that fallback decodes audio and still blocks silence.
+ */
+describe.skipIf(!ffmpegStatic || !fs.existsSync(ffmpegStatic))("speech activity guard without an ffmpeg on PATH (Vercel)", () => {
+  const withoutSystemFfmpeg = async <T,>(run: () => Promise<T>): Promise<T> => {
+    const saved = process.env.PATH;
+    process.env.PATH = "";
+    try {
+      return await run();
+    } finally {
+      process.env.PATH = saved;
+    }
+  };
+
+  it("resolves to the bundled binary when there is no ffmpeg on PATH, and takes an explicit path literally", async () => {
+    await withoutSystemFfmpeg(async () => {
+      expect(resolveFfmpegCommand()).toBe(ffmpegStatic);
+      expect(isFfmpegAvailable()).toBe(true);
+      expect(resolveFfmpegCommand("/nonexistent/ffmpeg")).toBe("/nonexistent/ffmpeg");
+      expect(isFfmpegAvailable("/nonexistent/ffmpeg")).toBe(false);
+    });
+  });
+
+  it("decodes and classifies with the bundled binary: silence and near-silence blocked, speech allowed", async () => {
+    const results = await withoutSystemFfmpeg(async () => ({
+      silence: await check("silence.webm"),
+      nearSilence: await check("nearsil.webm"),
+      speech: await check("normal.webm"),
+      pauses: await check("longpause.webm"),
+    }));
+    expect(results.silence.hasSpeech).toBe(false);
+    expect(results.nearSilence.hasSpeech).toBe(false);
+    expect(results.speech.hasSpeech).toBe(true);
+    expect(results.pauses.hasSpeech).toBe(true);
   });
 });

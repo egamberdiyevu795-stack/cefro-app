@@ -47,6 +47,11 @@ In production set `AUTH_SECRET` (32+ random characters) and `APP_URL` (https): t
 without them. Email is not verified and there is no password reset yet. Design and limits:
 [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md#11-identity-and-accounts-stage-4).
 
+### Trying it on a public URL (Vercel)
+
+See [`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md): four environment variables and a project import. It is a test deployment
+with temporary storage, not production.
+
 ### Running with real providers
 
 ```bash
@@ -56,9 +61,10 @@ EVALUATION_PROVIDER=gemini        # or: anthropic
 GEMINI_API_KEY=...                # or: ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Only the selected provider's key is needed. Transcription currently supports OpenAI only,
-so with just a Gemini key you can validate evaluation (`npm run eval:live`) but not
-real-speech transcription.
+Only the selected provider's key is needed. Transcription supports OpenAI and Gemini
+(`TRANSCRIPTION_PROVIDER=gemini`, temporary, validated on synthetic speech only;
+see `docs/AI_EVALUATION_QUALITY.md`). Real providers run the Speech Activity Guard, which needs ffmpeg
+(on `PATH`, `FFMPEG_PATH`, or the bundled `ffmpeg-static`).
 
 With real providers the server checks its configuration when it starts (production refuses to come up
 healthy with a missing key or a mock provider) and refuses uploads with a 503 if it is misconfigured; it never

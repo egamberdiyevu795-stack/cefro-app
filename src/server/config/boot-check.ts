@@ -1,6 +1,6 @@
 import "server-only";
 import { getEnv } from "./env";
-import { describeProviderMode, validateAuthConfig, validateProviderConfig } from "./provider-config";
+import { describeProviderMode, usesTemporaryStorage, validateAuthConfig, validateProviderConfig } from "./provider-config";
 import { logger } from "@/server/logging/logger";
 
 /**
@@ -22,6 +22,12 @@ export function checkProvidersAtBoot(): void {
     logger.error("Invalid server configuration (see .env.example)", { error });
     if (process.env.NODE_ENV === "production") throw new Error("Invalid server configuration");
     return;
+  }
+
+  if (usesTemporaryStorage(env)) {
+    logger.warn(
+      "Database and recordings are in the platform's temporary directory: instance-local, lost on cold starts and redeploys. Test deployment only (docs/DEPLOY_VERCEL.md).",
+    );
   }
 
   const mode = describeProviderMode(env);

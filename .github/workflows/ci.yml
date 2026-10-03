@@ -1,0 +1,62 @@
+# Normal validation: lint, typecheck, unit/integration tests, build, browser tests.
+#
+# Deliberately free of secrets and of any real provider call: the unit/integration tests use fakes, and
+# the browser tests run against the mock providers. The live Gemini validation is a separate, manual
+# workflow (live-evaluation.yml) because it spends API budget and needs the GEMINI_API_KEY secret.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Read-only token; no secrets are referenced anywhere in this file.
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Unit and integration tests (includes the migration tests)
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  browser:
+    name: Browser tests (mock providers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm run test:e2e
+      - name: Keep the Playwright traces of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

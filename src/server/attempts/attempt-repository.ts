@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, lt, max, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, max, or, sql } from "drizzle-orm";
 import type { RetryFocusItem } from "@/domain/evaluation/schema";
 import type { AttemptStatus, FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
@@ -36,6 +36,8 @@ export function ensureTaskSnapshot(task: SpeakingTask): void {
 export function insertAttemptWithRecording(input: {
   attemptId: string;
   userId: string;
+  /** The practice session this response belongs to (null only in tests of legacy rows). */
+  sessionId: string | null;
   task: SpeakingTask;
   previousAttemptId: string | null;
   retryFocus: RetryFocusItem[] | null;
@@ -60,6 +62,7 @@ export function insertAttemptWithRecording(input: {
       .values({
         id: input.attemptId,
         userId: input.userId,
+        sessionId: input.sessionId,
         taskId: input.task.id,
         taskVersion: input.task.version,
         attemptNumber: (current?.value ?? 0) + 1,
@@ -129,10 +132,11 @@ export function findLatestEvaluationsFor(attemptIds: string[]): Map<string, Eval
 
 /**
  * Atomically claim an attempt for processing. Returns false if it is
- * already being processed (and not stale) or already completed — this is
- * what prevents two concurrent pipelines for the same attempt.
+ * already being processed (and not stale), already completed, or out of
+ * processing runs — this is what prevents two concurrent pipelines for the
+ * same attempt and unbounded restarts.
  */
-export function claimAttemptForProcessing(attemptId: string, staleBefore: string): boolean {
+export function claimAttemptForProcessing(attemptId: string, staleBefore: string, maxProcessingRuns: number): boolean {
   const now = nowIso();
   const result = getDb()
     .update(speakingAttempts)
@@ -147,6 +151,8 @@ export function claimAttemptForProcessing(attemptId: string, staleBefore: string
     .where(
       and(
         eq(speakingAttempts.id, attemptId),
+        // Every run (first, manual restart, stalled re-claim) spends provider money: cap them.
+        lt(speakingAttempts.processingRuns, maxProcessingRuns),
         or(
           inArray(speakingAttempts.status, ["uploaded", "failed"]),
           and(
@@ -232,4 +238,34 @@ export function saveEvaluationAndComplete(
       .run();
     return row;
   });
+}
+
+/** Attempts created since `sinceIso`, for one user or (userId null) for everyone. Used by the usage limits. */
+export function countAttemptsSince(userId: string | null, sinceIso: string): number {
+  const where = userId
+    ? and(eq(speakingAttempts.userId, userId), gte(speakingAttempts.createdAt, sinceIso))
+    : gte(speakingAttempts.createdAt, sinceIso);
+  return getDb().select({ value: count() }).from(speakingAttempts).where(where).get()?.value ?? 0;
+}
+
+/** The user's attempts that are being processed right now (stalled ones no longer count). */
+export function countInProgressAttempts(userId: string, processingStaleBefore: string, uploadStaleBefore: string): number {
+  return (
+    getDb()
+      .select({ value: count() })
+      .from(speakingAttempts)
+      .where(
+        and(
+          eq(speakingAttempts.userId, userId),
+          or(
+            and(
+              inArray(speakingAttempts.status, ["processing", "transcribing", "evaluating"]),
+              gte(speakingAttempts.processingStartedAt, processingStaleBefore),
+            ),
+            and(eq(speakingAttempts.status, "uploaded"), gte(speakingAttempts.createdAt, uploadStaleBefore)),
+          ),
+        ),
+      )
+      .get()?.value ?? 0
+  );
 }

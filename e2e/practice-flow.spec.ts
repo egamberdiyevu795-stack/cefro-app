@@ -111,3 +111,62 @@ test("mobile layout has no horizontal scroll", async ({ browser }) => {
   expect(overflow).toBeLessThanOrEqual(0);
   await context.close();
 });
+
+test("security headers are sent and nothing the app needs is blocked by them", async ({ page }) => {
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (/content security policy|refused to/i.test(message.text())) violations.push(message.text());
+  });
+  page.on("pageerror", (error) => violations.push(String(error)));
+
+  const response = await page.goto(TASK_URL);
+  const headers = response!.headers();
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(headers["permissions-policy"]).toContain("microphone=(self)");
+  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+
+  // The API carries them too, and a practice session is issued by the server.
+  const session = await page.request.post("/api/sessions");
+  expect(session.status()).toBe(201);
+  expect(session.headers()["x-content-type-options"]).toBe("nosniff");
+  expect((await session.json()).sessionId).toMatch(/^[0-9a-f-]{36}$/);
+
+  // The recorder, blob: audio preview and polling all work under the policy.
+  await recordAndSubmit(page);
+  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  expect(violations).toEqual([]);
+});
+
+test("the browser sends its session id with the recording and its analytics events", async ({ page }) => {
+  const sessionRequests: string[] = [];
+  const eventBodies: { events: { sessionId?: string | null }[] }[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/api/sessions")) sessionRequests.push(request.method());
+    if (request.url().endsWith("/api/analytics/events")) eventBodies.push(request.postDataJSON());
+  });
+  // Playwright cannot read multipart bodies that contain a Blob, so record the text fields as they are appended.
+  await page.addInitScript(() => {
+    const fields: Record<string, string> = {};
+    (window as unknown as { __formFields: Record<string, string> }).__formFields = fields;
+    const original = FormData.prototype.append;
+    FormData.prototype.append = function (this: FormData, name: string, value: string | Blob, ...rest: [string?]) {
+      if (typeof value === "string") fields[name] = value;
+      return (original as (...args: unknown[]) => void).call(this, name, value, ...rest);
+    } as typeof FormData.prototype.append;
+  });
+
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page);
+  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(2000); // let the analytics batch flush
+
+  // React strict mode (dev only) mounts effects twice, so more than one request is possible; the first is discarded.
+  expect(sessionRequests.length).toBeGreaterThanOrEqual(1);
+  expect(new Set(sessionRequests)).toEqual(new Set(["POST"]));
+  const uploadSessionId = await page.evaluate(() => (window as unknown as { __formFields: Record<string, string> }).__formFields.sessionId);
+  expect(uploadSessionId).toMatch(/^[0-9a-f-]{36}$/);
+  const sessionIds = new Set(eventBodies.flatMap((body) => body.events.map((event) => event.sessionId)));
+  expect(sessionIds).toEqual(new Set([uploadSessionId])); // every client event carries the same server-issued session
+});

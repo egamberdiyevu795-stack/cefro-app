@@ -50,8 +50,14 @@ async function request<T>(input: string, init?: RequestInit & { timeoutMs?: numb
   return (await response.json()) as T;
 }
 
+/** Ask the server for a practice session id (a correlation key; the flow works without one). */
+export function startSession(): Promise<{ sessionId: string }> {
+  return request("/api/sessions", { method: "POST" });
+}
+
 export function submitRecording(input: {
   taskId: string;
+  sessionId?: string | null;
   audio: Blob;
   durationMs: number;
   previousAttemptId: string | null;
@@ -62,6 +68,7 @@ export function submitRecording(input: {
   form.append("taskId", input.taskId);
   form.append("durationMs", String(Math.round(input.durationMs)));
   if (input.previousAttemptId) form.append("previousAttemptId", input.previousAttemptId);
+  if (input.sessionId) form.append("sessionId", input.sessionId);
   return request("/api/speaking/attempts", { method: "POST", body: form, timeoutMs: 120_000 });
 }
 

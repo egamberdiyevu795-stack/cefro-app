@@ -34,6 +34,11 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  * - speaking-evaluator/2.4.0 — Fourth real Gemini run. Gate rejects student-facing text that
  *   contains internal field names (a live issue read "(timeUsedRatio: 0.73)"); prompt asks for
  *   plain-language numbers. New prompt hash.
+ *
+ * Stage 3 (no evaluator version change; what the model is asked and how results are judged did not
+ * change): `prompt_hash` now also covers the user-message template, the revision template and the
+ * result schema, and is stored with an "h2:" prefix (prompt-fingerprint.ts). Hashes written before
+ * this are bare hex and identify only version + system prompt; they are not comparable with h2 hashes.
  */
 export const EVALUATOR_VERSION = "speaking-evaluator/2.4.0";
 

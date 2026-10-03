@@ -1,7 +1,9 @@
 import { after } from "next/server";
 import { claimAttempt, runClaimedAttempt } from "@/server/attempts/attempt-processing";
 import { getAttemptViewForUser, getOwnedAttempt } from "@/server/attempts/attempt-service";
+import { isAttemptStalled } from "@/server/attempts/attempt-views";
 import { withErrorHandling } from "@/server/http";
+import { assertCanRestart } from "@/server/limits/usage-limits";
 import { getOrCreateCurrentUserId } from "@/server/identity/anonymous-user";
 
 export const maxDuration = 300;
@@ -15,7 +17,9 @@ export const POST = withErrorHandling(
   async (_request: Request, ctx: RouteContext<"/api/speaking/attempts/[attemptId]/process">) => {
     const { attemptId } = await ctx.params;
     const userId = await getOrCreateCurrentUserId();
-    getOwnedAttempt(userId, attemptId);
+    const attempt = getOwnedAttempt(userId, attemptId);
+    // Only a restart that would actually run needs a run left; completed/in-progress attempts stay a no-op.
+    if (attempt.status === "failed" || isAttemptStalled(attempt)) assertCanRestart(attempt);
 
     const started = claimAttempt(attemptId);
     if (started) after(() => runClaimedAttempt(attemptId));

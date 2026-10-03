@@ -16,7 +16,7 @@ function inputFor(sampleId: string) {
   const sample = byId[sampleId];
   return {
     task,
-    rubric: getSpeakingRubric("B2"),
+    rubric: getSpeakingRubric(task),
     transcript: sample.transcript,
     metrics: computeSpeechMetrics(sample.transcript, sample.durationMs, task.speakingSeconds),
     audio: { storageProvider: "local", storageKey: "k", mimeType: "audio/webm", durationMs: sample.durationMs },

@@ -1,6 +1,16 @@
 import type { TargetLevel } from "@/domain/cefr";
 
 /**
+ * What kind of response a task asks for. It selects the evaluation approach together with `rubricId`.
+ * Only "long_turn" (one question, several task points, one extended answer: B2 Part 2) exists; new
+ * kinds are added here when their content, rubric and evaluator contract are designed, not before.
+ */
+export type SpeakingTaskType = "long_turn";
+
+/** Identifies a rubric in the server's rubric registry (`server/evaluation/rubrics`). */
+export type RubricId = "b2-long-turn";
+
+/**
  * A speaking task as authored in the content layer (`src/content`).
  *
  * Content is versioned: if the wording of a task changes in a way that
@@ -14,6 +24,12 @@ export interface SpeakingTask {
   level: TargetLevel;
   /** Speaking part number within the exam format. */
   part: number;
+  taskType: SpeakingTaskType;
+  /**
+   * The rubric the evaluator scores this task against. Chosen by the task, not derived from the level,
+   * so two parts of the same level can have different rubrics.
+   */
+  rubricId: RubricId;
   title: string;
   topic: string;
   /** The main question the student must answer. */

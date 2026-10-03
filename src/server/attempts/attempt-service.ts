@@ -6,7 +6,9 @@ import { getSpeakingTask } from "@/content/speaking";
 import { trackServerEvent } from "@/server/analytics/track";
 import { HttpError } from "@/server/errors";
 import { newId } from "@/server/ids";
+import { assertCanSubmitAttempt } from "@/server/limits/usage-limits";
 import { logger } from "@/server/logging/logger";
+import { createPracticeSession, resolveOwnedSessionId } from "@/server/sessions/session-service";
 import { getAudioStorage } from "@/server/storage";
 import * as repo from "./attempt-repository";
 import { containerForMime, sniffAudioContainer } from "./audio-format";
@@ -24,6 +26,8 @@ export interface CreateAttemptInput {
   mimeType: string;
   durationMs: number;
   previousAttemptId: string | null;
+  /** Session id supplied by the client. Used only if it is one of the user's own; otherwise a new one is made. */
+  sessionId?: string | null;
 }
 
 /**
@@ -48,6 +52,9 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
   if (sniffAudioContainer(input.audio) !== containerForMime(baseMime)) {
     throw new HttpError(415, "unsupported_audio", "This file doesn't look like a valid recording.");
   }
+
+  // Cost protection comes before anything is stored or any provider is called.
+  assertCanSubmitAttempt(input.userId);
 
   // Retry: the previous attempt must be the user's own, for the same task, and evaluated.
   let retryFocus: EvaluationResult["retry_focus"] | null = null;
@@ -75,10 +82,12 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
     throw new HttpError(503, "storage_failed", "We could not save your recording. Please try again.");
   }
 
+  const sessionId = resolveOwnedSessionId(input.userId, input.sessionId) ?? createPracticeSession(input.userId);
   repo.ensureTaskSnapshot(task);
   const attempt = repo.insertAttemptWithRecording({
     attemptId,
     userId: input.userId,
+    sessionId,
     task,
     previousAttemptId: input.previousAttemptId,
     retryFocus,
@@ -94,6 +103,7 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
   trackServerEvent({
     name: "recording_submitted",
     userId: input.userId,
+    sessionId,
     taskId: task.id,
     attemptId: attempt.id,
     properties: {

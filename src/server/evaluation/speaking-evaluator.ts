@@ -1,9 +1,9 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import { evaluationResultSchema, type EvaluationResult } from "@/domain/evaluation/schema";
 import { ProviderError } from "@/server/errors";
 import { logger } from "@/server/logging/logger";
 import { buildRevisionRequest, buildSpeakingEvaluationPrompt } from "./prompts/speaking-evaluation-v2";
+import { computePromptHash } from "./prompt-fingerprint";
 import { applyQualityGate, type QualityReport, type QualityViolation } from "./quality-gate";
 import type { EvaluationInput, EvaluationModel } from "./types";
 import { EVALUATION_SCHEMA_VERSION, EVALUATOR_VERSION } from "./versions";
@@ -30,6 +30,9 @@ export interface SpeakingEvaluation {
 /** One draft, plus one controlled regeneration if it is invalid or fails the quality gate. */
 const MAX_MODEL_CALLS = 2;
 
+/** A regeneration is not started with less than this left of the processing budget (live calls took 8-32 s). */
+const MIN_TIME_FOR_REGENERATION_MS = 40_000;
+
 /**
  * Runs the speaking evaluation methodology:
  * build prompt → call model → validate schema → quality gate → (regenerate once) → attach versions.
@@ -38,9 +41,10 @@ const MAX_MODEL_CALLS = 2;
 export async function evaluateSpeaking(
   input: EvaluationInput,
   model: EvaluationModel,
+  options: { deadlineAt?: number } = {},
 ): Promise<SpeakingEvaluation> {
   const prompt = buildSpeakingEvaluationPrompt(input);
-  const promptHash = sha256(`${EVALUATOR_VERSION}\n${prompt.system}`);
+  const promptHash = computePromptHash(input, prompt);
   const startedAt = Date.now();
   const rejectedDrafts: QualityViolation[][] = [];
   let inputTokens: number | null = null;
@@ -48,6 +52,11 @@ export async function evaluateSpeaking(
   let lastError: ProviderError | undefined;
 
   for (let call = 1; call <= MAX_MODEL_CALLS; call++) {
+    // Never start a regeneration that cannot finish inside the caller's processing budget.
+    if (call > 1 && options.deadlineAt !== undefined && options.deadlineAt - Date.now() < MIN_TIME_FOR_REGENERATION_MS) {
+      logger.warn("Skipping regeneration: processing budget nearly used up", { call });
+      break;
+    }
     const previousRejection = rejectedDrafts.at(-1);
     const request = previousRejection
       ? { system: prompt.system, user: `${prompt.user}\n\n${buildRevisionRequest(previousRejection)}` }
@@ -179,8 +188,4 @@ function logQualityReport(report: QualityReport, call: number) {
 
 function sumNullable(a: number | null, b: number | null): number | null {
   return a === null && b === null ? null : (a ?? 0) + (b ?? 0);
-}
-
-function sha256(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
 }

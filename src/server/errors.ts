@@ -28,6 +28,8 @@ export class HttpError extends Error {
     readonly status: number,
     readonly code: string,
     readonly publicMessage: string,
+    /** Sent as the Retry-After header (a hint for rate-limit and capacity errors). */
+    readonly retryAfterSeconds?: number,
   ) {
     super(publicMessage);
     this.name = "HttpError";

@@ -1,7 +1,10 @@
 import "server-only";
 import type { TargetLevel } from "@/domain/cefr";
+import type { RubricId, SpeakingTask } from "@/domain/speaking/task";
 
 export interface Rubric {
+  /** Registry key; tasks refer to a rubric by this id. */
+  id: RubricId;
   /** Persisted with each evaluation. Bump on any change to the text below. */
   version: string;
   targetLevel: TargetLevel;
@@ -15,6 +18,7 @@ export interface Rubric {
  * that numbers are comparable across criteria and across attempts.
  */
 const B2_SPEAKING_RUBRIC: Rubric = {
+  id: "b2-long-turn",
   version: "b2-speaking-rubric/1.0.0",
   targetLevel: "B2",
   text: `
@@ -57,12 +61,16 @@ OVERALL LEVEL
 `.trim(),
 };
 
-const RUBRICS: Partial<Record<TargetLevel, Rubric>> = {
-  B2: B2_SPEAKING_RUBRIC,
+const RUBRICS: Record<RubricId, Rubric> = {
+  "b2-long-turn": B2_SPEAKING_RUBRIC,
 };
 
-export function getSpeakingRubric(level: TargetLevel): Rubric {
-  const rubric = RUBRICS[level];
-  if (!rubric) throw new Error(`No speaking rubric defined for level ${level}`);
+/** The rubric a task is scored against. The rubric's own version is stored with every evaluation. */
+export function getSpeakingRubric(task: Pick<SpeakingTask, "id" | "rubricId" | "level">): Rubric {
+  const rubric = RUBRICS[task.rubricId];
+  if (!rubric) throw new Error(`Task ${task.id} refers to unknown rubric "${task.rubricId}"`);
+  if (rubric.targetLevel !== task.level) {
+    throw new Error(`Rubric ${rubric.id} targets ${rubric.targetLevel} but task ${task.id} is ${task.level}`);
+  }
   return rubric;
 }

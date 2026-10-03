@@ -236,6 +236,20 @@ Old evaluations are never rewritten. They are upgraded for display only
 (`parseStoredEvaluation`) and keep showing their original versions.
 `model_calls` is `NULL` for Stage 1 rows, because it was not recorded then.
 
+### Prompt hash
+
+`evaluations.prompt_hash` identifies what the model was asked, so equal hashes mean equal instructions. Since
+Stage 3 it is `h2:` + SHA-256 over: the evaluator version, the system prompt actually sent (which contains the
+rubric), the user-message template (rendered from a fixed sentinel input, so it does not vary with the student's
+answer), the revision-request template, and the evaluation result schema including its field descriptions
+(`server/evaluation/prompt-fingerprint.ts`). Before Stage 3 the hash covered only version + system prompt, so a
+change to the user template or the schema descriptions was invisible; those rows are bare hex and are **not
+comparable** with `h2:` hashes. The change affects bookkeeping only: the prompt the model receives is
+byte-identical (checked against the previous commit), so the evaluator version was not bumped. Not covered, by
+design: the task's own wording and guidance (versioned by `task_version`) and provider request settings (stored
+in `model_config`). Tests show that changing the user template, system prompt, revision template, schema or
+version changes the hash.
+
 `npm run stats` prints latency percentiles, token averages per
 evaluator/model, the regeneration rate and quality-gate finding counts from
 the local database.

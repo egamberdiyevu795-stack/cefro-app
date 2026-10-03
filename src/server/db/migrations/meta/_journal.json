@@ -15,6 +15,13 @@
       "when": 1790960268916,
       "tag": "0001_stage2_quality_observability",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790995908236,
+      "tag": "0002_stage3_foundation",
+      "breakpoints": true
     }
   ]
 }

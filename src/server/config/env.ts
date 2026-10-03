@@ -48,6 +48,24 @@ const envSchema = z.object({
    */
   GEMINI_STRUCTURED_OUTPUT: z.enum(["schema", "json"]).default("schema"),
 
+  /**
+   * Usage limits (server-enforced, per anonymous or future signed-in user, plus one global ceiling).
+   * Rationale and tuning: docs/ARCHITECTURE_DECISIONS.md, "Cost and abuse protection".
+   */
+  LIMIT_ATTEMPTS_PER_USER_HOUR: z.coerce.number().int().positive().default(15),
+  LIMIT_ATTEMPTS_PER_USER_DAY: z.coerce.number().int().positive().default(60),
+  LIMIT_CONCURRENT_PROCESSING_PER_USER: z.coerce.number().int().positive().default(2),
+  /** Backstop against many anonymous identities (clearing cookies): total new attempts per hour. */
+  LIMIT_ATTEMPTS_GLOBAL_HOUR: z.coerce.number().int().positive().default(600),
+  /** Processing runs per attempt: the first run plus manual restarts and stalled re-claims. */
+  LIMIT_PROCESSING_RUNS_PER_ATTEMPT: z.coerce.number().int().positive().default(3),
+
+  /**
+   * Wall-clock budget for one processing run (transcription + evaluation). Must stay below the route's
+   * maxDuration (300 s) so a slow provider ends in a stored failure instead of a killed request.
+   */
+  PROCESSING_BUDGET_MS: z.coerce.number().int().min(10_000).max(290_000).default(270_000),
+
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
   EVALUATION_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),

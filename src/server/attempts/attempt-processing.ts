@@ -4,6 +4,7 @@ import { parseStoredEvaluation } from "@/domain/evaluation/stored";
 import type { FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
 import { computeSpeechMetrics, type SpeechMetrics } from "@/domain/speaking/metrics";
 import { getSpeakingTask } from "@/content/speaking";
+import { getEnv } from "@/server/config/env";
 import { trackServerEvent } from "@/server/analytics/track";
 import { ProviderError } from "@/server/errors";
 import { evaluateSpeaking, getEvaluationModel } from "@/server/evaluation";
@@ -12,6 +13,7 @@ import { logger } from "@/server/logging/logger";
 import { AudioNotFoundError, getAudioStorage } from "@/server/storage";
 import { getTranscriptionProvider } from "@/server/transcription";
 import * as repo from "./attempt-repository";
+import { withDeadline } from "./deadline";
 import { PROCESSING_STALE_AFTER_MS } from "./attempt-views";
 
 /** Fewer recognised words than this means there is nothing meaningful to assess. */
@@ -24,7 +26,7 @@ const MIN_TRANSCRIPT_WORDS = 5;
  */
 export function claimAttempt(attemptId: string): boolean {
   const staleBefore = new Date(Date.now() - PROCESSING_STALE_AFTER_MS).toISOString();
-  const claimed = repo.claimAttemptForProcessing(attemptId, staleBefore);
+  const claimed = repo.claimAttemptForProcessing(attemptId, staleBefore, getEnv().LIMIT_PROCESSING_RUNS_PER_ATTEMPT);
   if (!claimed) logger.info("Attempt not claimable; skipping processing", { attemptId });
   return claimed;
 }
@@ -41,12 +43,15 @@ export async function processAttempt(attemptId: string): Promise<void> {
  * transcribing again, so retrying after an evaluation failure is cheap.
  * Never throws — failures are stored on the attempt.
  */
-export async function runClaimedAttempt(attemptId: string): Promise<void> {
+export async function runClaimedAttempt(attemptId: string, options: { budgetMs?: number } = {}): Promise<void> {
   const attempt = repo.findAttempt(attemptId);
   if (!attempt) return;
-  const context = { userId: attempt.userId, taskId: attempt.taskId, attemptId };
+  const context = { userId: attempt.userId, sessionId: attempt.sessionId, taskId: attempt.taskId, attemptId };
   let stage: ProcessingStage = "transcription";
   const runStartedAt = Date.now();
+  // The whole run (transcription + evaluation, including a regeneration) must end inside this budget,
+  // which is below the route's maxDuration and the stalled threshold (see attempt-views.ts).
+  const deadlineAt = runStartedAt + (options.budgetMs ?? getEnv().PROCESSING_BUDGET_MS);
   let stageStartedAt = runStartedAt;
   let transcriptionMs: number | null = null;
 
@@ -66,7 +71,11 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
 
       const audio = await readAudio(recording.storageKey);
       stageStartedAt = Date.now();
-      const output = await provider.transcribe({ audio, mimeType: recording.mimeType, language: "en" });
+      const output = await withDeadline(
+        provider.transcribe({ audio, mimeType: recording.mimeType, language: "en" }),
+        deadlineAt,
+        "transcription",
+      );
       const latencyMs = Date.now() - stageStartedAt;
       transcriptionMs = latencyMs;
 
@@ -99,21 +108,23 @@ export async function runClaimedAttempt(attemptId: string): Promise<void> {
     const model = getEvaluationModel();
     trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
 
-    const evaluation = await evaluateSpeaking(
-      {
-        task,
-        rubric: getSpeakingRubric(task.level),
-        transcript: transcript.text,
-        metrics,
-        audio: {
-          storageProvider: recording.storageProvider,
-          storageKey: recording.storageKey,
-          mimeType: recording.mimeType,
-          durationMs: recording.durationMs,
-        },
-        previousAttempt: loadPreviousAttemptContext(attempt),
+    const evaluationInput = {
+      task,
+      rubric: getSpeakingRubric(task),
+      transcript: transcript.text,
+      metrics,
+      audio: {
+        storageProvider: recording.storageProvider,
+        storageKey: recording.storageKey,
+        mimeType: recording.mimeType,
+        durationMs: recording.durationMs,
       },
-      model,
+      previousAttempt: loadPreviousAttemptContext(attempt),
+    };
+    const evaluation = await withDeadline(
+      evaluateSpeaking(evaluationInput, model, { deadlineAt }),
+      deadlineAt,
+      "evaluation",
     );
 
     const processingDurationMs = Date.now() - runStartedAt;

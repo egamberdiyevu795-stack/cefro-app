@@ -179,7 +179,7 @@ describe("Gemini through the shared evaluation pipeline", () => {
   const task = getSpeakingTask("b2-part2-technology-young-people")!;
   const input: EvaluationInput = {
     task,
-    rubric: getSpeakingRubric("B2"),
+    rubric: getSpeakingRubric(task),
     transcript: FIXTURE_TRANSCRIPT,
     metrics: computeSpeechMetrics(FIXTURE_TRANSCRIPT, 60_000, task.speakingSeconds),
     audio: { storageProvider: "local", storageKey: "k", mimeType: "audio/webm", durationMs: 60_000 },

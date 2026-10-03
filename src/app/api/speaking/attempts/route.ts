@@ -2,8 +2,10 @@ import { after } from "next/server";
 import { z } from "zod";
 import { MAX_AUDIO_BYTES, createAttempt } from "@/server/attempts/attempt-service";
 import { claimAttempt, runClaimedAttempt } from "@/server/attempts/attempt-processing";
+import { getEnv } from "@/server/config/env";
+import { validateProviderConfig } from "@/server/config/provider-config";
 import { HttpError } from "@/server/errors";
-import { withErrorHandling } from "@/server/http";
+import { parseFormData, readBodyWithLimit, withErrorHandling } from "@/server/http";
 import { getOrCreateCurrentUserId } from "@/server/identity/anonymous-user";
 
 // Processing (transcription + evaluation) continues after the response via `after`.
@@ -13,7 +15,11 @@ const fieldsSchema = z.object({
   taskId: z.string().min(1).max(200),
   durationMs: z.coerce.number().int().min(0).max(30 * 60 * 1000),
   previousAttemptId: z.string().uuid().optional(),
+  sessionId: z.string().uuid().optional(),
 });
+
+/** The audio limit plus room for the multipart framing and the small text fields. */
+const MAX_BODY_BYTES = MAX_AUDIO_BYTES + 64 * 1024;
 
 /**
  * Submit a recording (multipart/form-data: audio, taskId, durationMs,
@@ -21,19 +27,21 @@ const fieldsSchema = z.object({
  * background; the client polls GET /api/speaking/attempts/:id for progress.
  */
 export const POST = withErrorHandling(async (request: Request) => {
-  // Reject oversized uploads before buffering the body (the form adds a little overhead).
-  const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (declaredLength > MAX_AUDIO_BYTES + 64 * 1024) {
-    throw new HttpError(413, "audio_too_large", "The recording is too large.");
+  // Fail before buffering anything when the server cannot evaluate answers (the student keeps the
+  // recording in the browser and can send it again once this is fixed).
+  if (validateProviderConfig(getEnv()).length > 0) {
+    throw new HttpError(
+      503,
+      "service_not_configured",
+      "CEFRO can't check answers right now. Your recording is still here: please try sending it again in a little while.",
+      300,
+    );
   }
   const userId = await getOrCreateCurrentUserId();
 
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    throw new HttpError(400, "invalid_form", "The upload was incomplete. Please try again.");
-  }
+  // The body is counted as it arrives: Content-Length is only a fast path and may be missing or wrong.
+  const body = await readBodyWithLimit(request, MAX_BODY_BYTES);
+  const form = await parseFormData(body, request.headers.get("content-type"));
 
   const audio = form.get("audio");
   if (!(audio instanceof Blob)) throw new HttpError(400, "missing_audio", "No recording was received.");
@@ -42,6 +50,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     taskId: form.get("taskId"),
     durationMs: form.get("durationMs"),
     previousAttemptId: form.get("previousAttemptId") || undefined,
+    sessionId: form.get("sessionId") || undefined,
   });
   if (!fields.success) throw new HttpError(400, "invalid_fields", "The upload was missing information.");
 
@@ -52,6 +61,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     mimeType: audio.type || "audio/webm",
     durationMs: fields.data.durationMs,
     previousAttemptId: fields.data.previousAttemptId ?? null,
+    sessionId: fields.data.sessionId ?? null,
   });
 
   if (claimAttempt(attempt.id)) {

@@ -2,6 +2,7 @@ import type { ClientEventName, EventProperties } from "@/domain/analytics/events
 
 interface QueuedEvent {
   name: ClientEventName;
+  sessionId?: string | null;
   taskId?: string | null;
   attemptId?: string | null;
   properties?: EventProperties;
@@ -9,7 +10,18 @@ interface QueuedEvent {
 }
 
 const queue: QueuedEvent[] = [];
+/** Issued by the server (POST /api/sessions); the server re-checks it against the user on every event. */
+let currentSessionId: string | null = null;
 let flushTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Set (or clear, with null) the session that following events belong to. Events tracked before the
+ * server answered are attached when the id arrives, so `practice_opened` is not left without one.
+ */
+export function setAnalyticsSession(sessionId: string | null): void {
+  currentSessionId = sessionId;
+  if (sessionId) for (const event of queue) if (event.sessionId === undefined) event.sessionId = sessionId;
+}
 
 /**
  * Fire-and-forget product analytics. Events are batched briefly and sent
@@ -21,7 +33,7 @@ export function track(
   data: { taskId?: string | null; attemptId?: string | null; properties?: EventProperties } = {},
 ): void {
   if (typeof window === "undefined") return;
-  queue.push({ name, ...data, occurredAt: new Date().toISOString() });
+  queue.push({ name, ...data, sessionId: currentSessionId ?? undefined, occurredAt: new Date().toISOString() });
   if (queue.length >= 20) flush();
   else if (!flushTimer) flushTimer = setTimeout(flush, 1500);
 }

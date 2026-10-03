@@ -38,7 +38,7 @@ const samples = B2_PART2_SAMPLES.filter((s) => !only || only.some((prefix) => s.
 function inputFor(sample: EvaluationSample, previous: EvaluationInput["previousAttempt"] = null): EvaluationInput {
   return {
     task,
-    rubric: getSpeakingRubric("B2"),
+    rubric: getSpeakingRubric(task),
     transcript: sample.transcript,
     metrics: computeSpeechMetrics(sample.transcript, sample.durationMs, task.speakingSeconds),
     audio: { storageProvider: "none", storageKey: sample.id, mimeType: "audio/webm", durationMs: sample.durationMs },

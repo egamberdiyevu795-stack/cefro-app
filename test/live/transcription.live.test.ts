@@ -70,7 +70,7 @@ describe.skipIf(!configured)("LIVE: real transcription of local recordings", () 
       const evaluation = await evaluateSpeaking(
         {
           task,
-          rubric: getSpeakingRubric("B2"),
+          rubric: getSpeakingRubric(task),
           transcript: row.text,
           metrics,
           audio: { storageProvider: "local-samples", storageKey: file, mimeType: MIME[path.extname(file)], durationMs: seconds * 1000 },

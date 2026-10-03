@@ -10,7 +10,7 @@
 | Validation     | Zod                                               | Shared schemas for API input and AI output                          |
 | Speech-to-text | OpenAI transcription REST API (`gpt-4o-transcribe` default) | Accurate; a single `fetch`, no SDK needed                  |
 | Evaluation     | Gemini (official `@google/genai`) or Claude (`@anthropic-ai/sdk`), selected by `EVALUATION_PROVIDER`; structured JSON output | Schema-shaped JSON, validated server-side |
-| Tests          | Vitest (unit/integration), Playwright (browser)   | Live provider runs are separate (`npm run eval:*`)                  |
+| Tests          | Vitest (unit/integration, migrations), Playwright (browser) | CI runs them on every push; live provider runs are separate (`npm run eval:*`) |
 
 ## Directory layout
 
@@ -148,19 +148,23 @@ different methodology versions are flagged.
 ## Data model
 
 ```
-users ─┬─< speaking_attempts >── speaking_tasks (id, version snapshot)
-       │        │  (previous_attempt_id → speaking_attempts)
+users ─┬─< practice_sessions ─< speaking_attempts >── speaking_tasks (id, version snapshot)
+       │                            │  (previous_attempt_id → speaking_attempts)
        │        ├── recordings      (storage provider + key; bytes live in storage)
        │        ├─< transcripts
        │        └─< evaluations ── transcripts
        └─< analytics_events
 ```
 
-`speaking_tasks` stores a snapshot of each task version that was attempted;
+Sessions, the identity merge tombstone (`users.merged_into_user_id`) and the foreign keys are explained in
+[`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md). `speaking_tasks` stores a snapshot of each task version that was attempted;
 task content itself is authored in `src/content`. Migrations live in
 `src/server/db/migrations` and are applied automatically on startup.
 
 ## Identity
+
+(The rules for canonical identity, anonymous identity and future account merging are in
+[`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md#3-identity-boundary-audit-b3).)
 
 There is no authentication yet. Each browser gets a random UUID in the
 httpOnly cookie `cefro_uid` (set by `src/proxy.ts` on page loads, or by
@@ -173,7 +177,7 @@ link the anonymous `users` row to the account so history is kept.
 Client events go through `features/speaking-practice/lib/analytics.ts`
 (batched, `sendBeacon` on page hide) to `POST /api/analytics/events`, which
 accepts only the names in `CLIENT_EVENT_NAMES`. The user id is taken from the
-cookie, never from the payload. Server events are recorded by the pipeline
+cookie, never from the payload, and a `sessionId` is stored only if the server issued it to that user. Server events are recorded by the pipeline
 where outcomes are known reliably. Everything lands in `analytics_events`;
 forwarding to a hosted tool later means changing `server/analytics/track.ts`.
 
@@ -183,6 +187,14 @@ Client: `practice_opened`, `preparation_started`, `preparation_completed`,
 `retry_started`, `comparison_viewed`.
 Server: `recording_submitted`, `transcription_started|completed|failed`,
 `evaluation_started|completed|failed`, `retry_completed`.
+
+## Usage limits and processing budget
+
+Submission, concurrency, global and restart limits are enforced server-side before audio is stored or a
+provider is called (`server/limits`); a processing run has a wall-clock budget below the route `maxDuration`
+and the stalled threshold (`attempts/deadline.ts`). Values and reasoning:
+[`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md#5-cost-and-abuse-protection). `after()` is still not
+a durable queue.
 
 ## Errors
 

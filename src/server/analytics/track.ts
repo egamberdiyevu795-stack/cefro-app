@@ -9,6 +9,8 @@ export interface TrackEventInput {
   name: AnalyticsEventName;
   source: "client" | "server";
   userId?: string | null;
+  /** Must already be verified as belonging to `userId` (see sessions/session-service.ts). */
+  sessionId?: string | null;
   taskId?: string | null;
   attemptId?: string | null;
   properties?: EventProperties;
@@ -33,6 +35,7 @@ export function trackEvents(events: TrackEventInput[]): void {
           name: event.name,
           source: event.source,
           userId: event.userId ?? null,
+          sessionId: event.sessionId ?? null,
           taskId: event.taskId ?? null,
           attemptId: event.attemptId ?? null,
           properties: event.properties ?? null,

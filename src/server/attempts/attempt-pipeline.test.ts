@@ -4,14 +4,14 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
-import { analyticsEvents, evaluations, users } from "@/server/db/schema";
+import { analyticsEvents, evaluations, practiceSessions, speakingAttempts, users } from "@/server/db/schema";
 import { ProviderError } from "@/server/errors";
 import { setEvaluationModelForTesting, type EvaluationModel } from "@/server/evaluation";
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
 import { FIXTURE_TRANSCRIPT, fakeWebm, makeEvaluation } from "../../../test/fixtures";
-import { claimAttempt, processAttempt } from "./attempt-processing";
+import { claimAttempt, processAttempt, runClaimedAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser, listAttemptSummaries } from "./attempt-service";
 
 const TASK_ID = "b2-part2-technology-young-people";
@@ -97,7 +97,7 @@ describe("speaking attempt pipeline", () => {
       isDevelopmentProvider: false,
     });
     const stored = db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).get();
-    expect(stored?.promptHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(stored?.promptHash).toMatch(/^h2:[a-f0-9]{64}$/);
     expect(stored).toMatchObject({
       inputTokens: 100,
       outputTokens: 200,
@@ -225,5 +225,78 @@ describe("speaking attempt pipeline", () => {
     await expect(
       createAttempt({ userId: USER, taskId: "nope", audio: fakeWebm(), mimeType: "audio/webm", durationMs: 1, previousAttemptId: null }),
     ).rejects.toMatchObject({ code: "task_not_found" });
+  });
+
+  it("gives every attempt a session, and links its server events to it", async () => {
+    const attempt = await submit();
+    const row = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get()!;
+    expect(row.sessionId).not.toBeNull();
+    expect(db.select().from(practiceSessions).where(eq(practiceSessions.id, row.sessionId!)).get()).toMatchObject({ userId: USER });
+
+    await processAttempt(attempt.id);
+    const events = db.select().from(analyticsEvents).all();
+    expect(events.length).toBeGreaterThanOrEqual(5);
+    for (const event of events) expect(event.sessionId).toBe(row.sessionId); // submitted, transcription_*, evaluation_*
+  });
+
+  it("keeps a retry in the same session when the client sends the same session id", async () => {
+    const first = await submit();
+    const sessionId = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, first.id)).get()!.sessionId;
+    await processAttempt(first.id);
+    const retry = await createAttempt({
+      userId: USER, taskId: TASK_ID, audio: fakeWebm(), mimeType: "audio/webm", durationMs: 95_000, previousAttemptId: first.id, sessionId,
+    });
+    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, retry.id)).get()?.sessionId).toBe(sessionId);
+  });
+
+  it("refuses a retry link to an attempt that does not exist (foreign key integrity)", () => {
+    expect(() =>
+      db.insert(speakingAttempts).values({
+        id: "99999999-9999-4999-8999-999999999999", userId: USER, taskId: TASK_ID, taskVersion: 1, attemptNumber: 9,
+        previousAttemptId: "00000000-0000-4000-8000-000000000000", status: "uploaded", updatedAt: new Date().toISOString(),
+      }).run(),
+    ).toThrow(/FOREIGN KEY/);
+  });
+
+  describe("processing time budget", () => {
+    const never = () => new Promise<never>(() => undefined);
+
+    it("ends a hung transcription inside the budget with a stored, restartable failure", async () => {
+      transcription.transcribe.mockImplementationOnce(never);
+      const attempt = await submit();
+      expect(claimAttempt(attempt.id)).toBe(true);
+      const startedAt = Date.now();
+      await runClaimedAttempt(attempt.id, { budgetMs: 150 });
+      expect(Date.now() - startedAt).toBeLessThan(2_000);
+      expect(getAttemptViewForUser(USER, attempt.id)).toMatchObject({ status: "failed", failure: { stage: "transcription", code: "provider_timeout" }, isStalled: false });
+
+      // Restartable: the next run (within the run cap) completes normally.
+      await processAttempt(attempt.id);
+      expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+      expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get()?.processingRuns).toBe(2);
+    });
+
+    it("ends a hung evaluation inside the budget, keeping the transcript for the restart", async () => {
+      evaluation.evaluate.mockImplementationOnce(never);
+      const attempt = await submit();
+      expect(claimAttempt(attempt.id)).toBe(true);
+      await runClaimedAttempt(attempt.id, { budgetMs: 150 });
+      expect(getAttemptViewForUser(USER, attempt.id)).toMatchObject({ status: "failed", failure: { stage: "evaluation", code: "provider_timeout" } });
+
+      await processAttempt(attempt.id);
+      expect(transcription.transcribe).toHaveBeenCalledTimes(1); // not transcribed (or paid for) again
+      expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+    });
+
+    it("lets a slow but healthy run finish", async () => {
+      evaluation.evaluate.mockImplementationOnce(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        return { output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 1, outputTokens: 1 };
+      });
+      const attempt = await submit();
+      expect(claimAttempt(attempt.id)).toBe(true);
+      await runClaimedAttempt(attempt.id, { budgetMs: 5_000 });
+      expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+    });
   });
 });

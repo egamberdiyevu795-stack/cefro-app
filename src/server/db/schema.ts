@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
 /**
  * Database schema (SQLite via Drizzle ORM).
@@ -25,8 +25,31 @@ const timestamps = {
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   kind: text("kind", { enum: ["anonymous"] }).notNull().default("anonymous"),
+  /**
+   * Set when this identity was merged into another one (see server/identity/merge-users.ts and
+   * docs/ARCHITECTURE_DECISIONS.md). A merged row is never deleted: a browser that still holds its
+   * cookie keeps resolving to the surviving user.
+   */
+  mergedIntoUserId: text("merged_into_user_id").references((): AnySQLiteColumn => users.id),
   ...timestamps,
 });
+
+/**
+ * One sitting of practice. Today every session covers a single task ("single_task"); the table exists
+ * so that several responses can later belong to one exam-style session without renaming attempts.
+ * Created by the server only; its id is also the correlation key on analytics events.
+ */
+export const practiceSessions = sqliteTable(
+  "practice_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    kind: text("kind", { enum: ["single_task"] }).notNull().default("single_task"),
+    ...timestamps,
+  },
+);
+// No secondary indexes on practice_sessions or analytics_events.session_id yet: nothing queries by them.
+// Add one with the first query that needs it.
 
 /**
  * Snapshot of each task version that has been attempted. Task content is
@@ -46,17 +69,23 @@ export const speakingTasks = sqliteTable(
   (table) => [uniqueIndex("speaking_tasks_id_version_uq").on(table.id, table.version)],
 );
 
+/**
+ * One response to one task, within a practice session. (Named "attempt" because a student can answer
+ * the same task several times; it is the "response" of the session/response model.)
+ */
 export const speakingAttempts = sqliteTable(
   "speaking_attempts",
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull().references(() => users.id),
+    /** Null only for attempts created before sessions existed. */
+    sessionId: text("session_id").references(() => practiceSessions.id),
     taskId: text("task_id").notNull(),
     taskVersion: integer("task_version").notNull(),
     /** 1-based, per user and task. */
     attemptNumber: integer("attempt_number").notNull(),
     /** The attempt this one retries (null for a first attempt). */
-    previousAttemptId: text("previous_attempt_id"),
+    previousAttemptId: text("previous_attempt_id").references((): AnySQLiteColumn => speakingAttempts.id),
     /** Snapshot of the retry focus shown to the student before this attempt. */
     retryFocus: text("retry_focus", { mode: "json" }),
     status: text("status", {
@@ -82,6 +111,14 @@ export const speakingAttempts = sqliteTable(
       table.attemptNumber,
     ),
     index("speaking_attempts_user_task_idx").on(table.userId, table.taskId),
+    // Usage limits count a user's recent attempts, and everyone's.
+    index("speaking_attempts_user_created_idx").on(table.userId, table.createdAt),
+    index("speaking_attempts_created_idx").on(table.createdAt),
+    // The student can only attempt a task version whose snapshot exists.
+    foreignKey({
+      columns: [table.taskId, table.taskVersion],
+      foreignColumns: [speakingTasks.id, speakingTasks.version],
+    }),
   ],
 );
 
@@ -160,6 +197,8 @@ export const analyticsEvents = sqliteTable(
     name: text("name").notNull(),
     source: text("source", { enum: ["client", "server"] }).notNull(),
     userId: text("user_id"),
+    /** Validated server-side: only a session that belongs to `userId` is ever stored here. */
+    sessionId: text("session_id"),
     taskId: text("task_id"),
     attemptId: text("attempt_id"),
     properties: text("properties", { mode: "json" }),

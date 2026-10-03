@@ -9,8 +9,8 @@ import { useAttemptPolling } from "../hooks/useAttemptPolling";
 import { useAudioLevel } from "../hooks/useAudioLevel";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { useDeadline } from "../hooks/useDeadline";
-import { track } from "../lib/analytics";
-import { ApiError, fetchAttempt, fetchTaskAttempts, restartProcessing, submitRecording } from "../lib/api-client";
+import { setAnalyticsSession, track } from "../lib/analytics";
+import { ApiError, fetchAttempt, fetchTaskAttempts, restartProcessing, startSession, submitRecording } from "../lib/api-client";
 import { initialPracticeState, practiceReducer } from "../lib/practice-machine";
 import { AttemptHistory } from "./AttemptHistory";
 import { BriefPanel } from "./BriefPanel";
@@ -57,6 +57,26 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
     } catch {
       // Non-critical.
     }
+  }, [taskId]);
+
+  // One practice session per visit, issued by the server. If it cannot be created the practice flow
+  // still works: the server then creates a session when the recording is submitted.
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setAnalyticsSession(null);
+    startSession()
+      .then(({ sessionId }) => {
+        if (cancelled) return;
+        sessionIdRef.current = sessionId;
+        setAnalyticsSession(sessionId);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      sessionIdRef.current = null;
+      setAnalyticsSession(null);
+    };
   }, [taskId]);
 
   useEffect(() => {
@@ -137,6 +157,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
     try {
       const { attempt } = await submitRecording({
         taskId,
+        sessionId: sessionIdRef.current,
         audio: recording.blob,
         durationMs: recording.durationMs,
         previousAttemptId: retryOfId,

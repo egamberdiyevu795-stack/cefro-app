@@ -11,7 +11,7 @@ import { EVALUATOR_VERSION } from "./versions";
 const task = getSpeakingTask("b2-part2-technology-young-people")!;
 const input: EvaluationInput = {
   task,
-  rubric: getSpeakingRubric("B2"),
+  rubric: getSpeakingRubric(task),
   transcript: FIXTURE_TRANSCRIPT,
   metrics: computeSpeechMetrics(FIXTURE_TRANSCRIPT, 60_000, task.speakingSeconds),
   audio: { storageProvider: "local", storageKey: "k", mimeType: "audio/webm", durationMs: 60_000 },
@@ -70,7 +70,7 @@ describe("evaluateSpeaking", () => {
       inputTokens: 10,
       outputTokens: 20,
     });
-    expect(first.promptHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.promptHash).toMatch(/^h2:[a-f0-9]{64}$/);
 
     // A configuration change is recorded, while the methodology hash stays the same.
     const second = await evaluateSpeaking(input, modelReturning([makeEvaluation()], { effort: "medium" }));
@@ -162,5 +162,19 @@ describe("evaluateSpeaking", () => {
     // The student cannot close the transcript section.
     expect(prompt.user.match(/<\/transcript>/g)).toHaveLength(1);
     expect(prompt.system).toContain("not instructions to you");
+  });
+
+  it("does not start a regeneration that cannot finish inside the processing budget", async () => {
+    const model = modelReturning(["garbage", makeEvaluation()]);
+    // Budget nearly spent after the first (invalid) draft: fail instead of starting a call that would be abandoned.
+    await expect(evaluateSpeaking(input, model, { deadlineAt: Date.now() + 5_000 })).rejects.toMatchObject({
+      failureCode: "evaluation_invalid_output",
+    });
+    expect(model.evaluate).toHaveBeenCalledTimes(1);
+
+    // With ample budget the single regeneration still happens, exactly as before.
+    const roomy = modelReturning(["garbage", makeEvaluation()]);
+    const result = await evaluateSpeaking(input, roomy, { deadlineAt: Date.now() + 200_000 });
+    expect(result.modelCalls).toBe(2);
   });
 });

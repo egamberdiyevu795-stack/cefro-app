@@ -5,6 +5,8 @@ export const b2Part2TechnologyYoungPeople: SpeakingTask = {
   version: 1,
   level: "B2",
   part: 2,
+  taskType: "long_turn",
+  rubricId: "b2-long-turn",
   title: "Technology and young people",
   topic: "Technology & society",
   question:

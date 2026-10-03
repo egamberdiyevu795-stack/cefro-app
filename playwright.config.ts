@@ -15,6 +15,9 @@ const executablePath =
 export default defineConfig({
   testDir: "e2e",
   timeout: 90_000,
+  // `next dev` compiles each route on first use. On a cold CI runner the first test waits for the account API to
+  // compile, which can exceed the default 5 s assertion timeout (seen on CI as a failure of the very first test only).
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
   reporter: [["list"]],

@@ -128,22 +128,21 @@ export function compareAttempts(before: ComparableAttempt, after: ComparableAtte
   };
 }
 
+/**
+ * A "clear" verdict needs a criterion that moved by 2+ points. The overall level alone is not
+ * enough: the same transcript scored B2+ in one live run and C1 (two sub-bands higher) in
+ * another while every criterion differed by exactly 1 point, because at the top of the scale
+ * one point is worth about two sub-bands. Without a criterion-level change, a shift in the
+ * overall level is treated as ordinary variation.
+ */
 function verdictOf(
-  overall: { direction: ChangeDirection; magnitude: ChangeMagnitude },
+  overall: { direction: ChangeDirection },
   clearImprovements: number,
   clearDeclines: number,
 ): ComparisonVerdict {
-  const overallClear = overall.magnitude === "clear";
-  if ((clearImprovements > 0 && clearDeclines > 0) || (overallClear && overall.direction === "improved" && clearDeclines > 0)) {
-    return "mixed";
-  }
-  if ((overallClear && overall.direction === "declined" && clearImprovements > 0)) return "mixed";
-  if (clearImprovements > 0 || (overallClear && overall.direction === "improved")) {
-    return overall.direction === "declined" ? "mixed" : "clear_improvement";
-  }
-  if (clearDeclines > 0 || (overallClear && overall.direction === "declined")) {
-    return overall.direction === "improved" ? "mixed" : "clear_decline";
-  }
+  if (clearImprovements > 0 && clearDeclines > 0) return "mixed";
+  if (clearImprovements > 0) return overall.direction === "declined" ? "mixed" : "clear_improvement";
+  if (clearDeclines > 0) return overall.direction === "improved" ? "mixed" : "clear_decline";
   if (overall.direction === "improved") return "slight_improvement";
   if (overall.direction === "declined") return "slight_decline";
   return "about_the_same";

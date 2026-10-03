@@ -214,3 +214,26 @@ describe("retry review honesty (real Gemini output, run 3)", () => {
     expect(result.retry_review?.objectives[0].outcome).toBe("achieved");
   });
 });
+
+describe("internal field names never reach students (real Gemini output, run 4)", () => {
+  const withIssueText = (text: string) => {
+    const evaluation = makeEvaluation();
+    evaluation.issues[1].problem = text;
+    return applyQualityGate(evaluation, {
+      transcript: "I think phones are good. I think they help us talk with friends every day. Last year I have went to Samarkand with my friend and we used maps.",
+      taskPromptCount: 3,
+      hasPreviousAttempt: false,
+    });
+  };
+
+  it("rejects the exact leak seen live", () => {
+    const { report } = withIssueText("You finished speaking at 88 seconds out of the 120 seconds available (timeUsedRatio: 0.73).");
+    expect(report.passed).toBe(false);
+    expect(report.violations.map((v) => v.code)).toContain("internal_field_leak");
+  });
+
+  it("accepts the same fact in plain words", () => {
+    const { report } = withIssueText("You spoke for 88 of the 120 seconds available, so about a quarter of your time was unused.");
+    expect(report.violations.map((v) => v.code)).not.toContain("internal_field_leak");
+  });
+});

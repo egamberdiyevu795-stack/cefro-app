@@ -22,6 +22,7 @@ import type { EvaluationIssue, EvaluationResult } from "@/domain/evaluation/sche
 export type QualityCode =
   | "schema_invalid"
   | "pronunciation_claim"
+  | "internal_field_leak"
   | "issue_without_evidence"
   | "quote_not_found"
   | "example_original_not_found"
@@ -149,6 +150,12 @@ export function applyQualityGate(
   for (const [path, text] of studentFacingTexts(result)) {
     const claim = findPronunciationClaim(text);
     if (claim) add("reject", "pronunciation_claim", path, `Pronunciation claim: "${truncate(claim, 200)}"`);
+  }
+
+  // ── Internal field names must never reach students (seen live: "(timeUsedRatio: 0.73)") ──
+  for (const [path, text] of allStudentTexts(result)) {
+    const leak = INTERNAL_FIELD_NAMES.exec(text);
+    if (leak) add("reject", "internal_field_leak", path, `Internal field name "${leak[0]}" in student-facing text: "${truncate(text, 160)}"`);
   }
 
   // ── Generic advice without specifics ────────────────────────────────
@@ -373,6 +380,26 @@ function studentFacingTexts(result: EvaluationResult): [string, string][] {
     out.push([`issues[${i}]`, [issue.problem, issue.why_it_matters, issue.how_to_fix].join(" ")]),
   );
   result.retry_focus.forEach((f, i) => out.push([`retry_focus[${i}]`, `${f.objective}. ${f.success_check}`]));
+  return out;
+}
+
+/** Names of fields the evaluator is given as data (metrics, schema); they are not student vocabulary. */
+export const INTERNAL_FIELD_NAMES =
+  /\b(timeUsedRatio|wordsPerMinute|lexicalVariety|fillerCount|wordCount|speakingSeconds|repeatedPhrases|repeatedWords|speech_metrics?|prompt_index|addresses_issue|evidence_basis|retry_focus|task_coverage)\b/;
+
+/** Every string a student can read, with where it came from. */
+function allStudentTexts(result: EvaluationResult): [string, string][] {
+  const out: [string, string][] = [["overall_summary", result.overall_summary]];
+  if (result.reliability_note) out.push(["reliability_note", result.reliability_note]);
+  for (const [key, c] of Object.entries(result.criteria)) out.push([`criteria.${key}.justification`, c.justification]);
+  result.task_coverage.forEach((t, i) => out.push([`task_coverage[${i}].note`, t.note]));
+  result.strengths.forEach((s, i) => out.push([`strengths[${i}]`, `${s.title}. ${s.detail}`]));
+  result.issues.forEach((issue, i) =>
+    out.push([`issues[${i}]`, [issue.problem, issue.why_it_matters, issue.how_to_fix, issue.improved_example.improved].join(" ")]),
+  );
+  result.retry_focus.forEach((f, i) => out.push([`retry_focus[${i}]`, `${f.objective}. ${f.success_check}`]));
+  result.retry_review?.objectives.forEach((o, i) => out.push([`retry_review.objectives[${i}]`, `${o.objective}. ${o.evidence}`]));
+  if (result.retry_review) out.push(["retry_review.summary", result.retry_review.summary]);
   return out;
 }
 

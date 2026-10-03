@@ -141,6 +141,7 @@ describe("evaluateSpeaking", () => {
     expect(system).toContain("Do not state benchmark figures as facts");
     expect(system).toContain("direct fix for that issue");
     expect(system).toContain("take the number from <speech_metrics>");
+    expect(system).toContain("never write field names such as timeUsedRatio");
   });
 
   it("puts task, transcript, metrics and the previous attempt in the prompt, with the transcript escaped", async () => {

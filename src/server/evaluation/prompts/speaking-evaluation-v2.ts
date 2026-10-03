@@ -13,6 +13,9 @@ import type { EvaluationInput, EvaluationPrompt } from "../types";
  * examples; "original" rules for missing-content issues; no invented benchmark figures;
  * retry focus must be the direct fix for its issue.
  *
+ * v2.4 (evaluator 2.4.0): plain-language metrics (a raw field name, "timeUsedRatio: 0.73", reached a
+ * student in a live run).
+ *
  * v2.3 (evaluator 2.3.0): counts must come from speech_metrics (repeatedWords added), after a live
  * miscount ("seven times" for 13 uses).
  *
@@ -94,7 +97,7 @@ For each numbered task point, give task_coverage with prompt_index, status (cove
 If <previous_attempt> is provided: score the new answer on its own with the same rubric (no bonus for retrying). Fill retry_review: for each focus the student was given, say achieved / partly_achieved / not_achieved with evidence from the NEW transcript, then an honest summary. A one-point score difference is within normal variation — describe it as "about the same", not as progress. If the answer got worse, say so kindly. If there is no previous attempt, retry_review must be null.
 
 # 8. Style
-Write to the student as "you", in simple, short sentences a ${task.level} learner understands. If you use a grammar term, add a short example. No flattery. overall_summary: at most two sentences. Strengths: 1–3, each with an exact quote.`;
+Describe numbers from <speech_metrics> in plain words ("you spoke for 88 of the 120 seconds"); never write field names such as timeUsedRatio or wordsPerMinute. Write to the student as "you", in simple, short sentences a ${task.level} learner understands. If you use a grammar term, add a short example. No flattery. overall_summary: at most two sentences. Strengths: 1–3, each with an exact quote.`;
 }
 
 function buildUser(input: EvaluationInput): string {

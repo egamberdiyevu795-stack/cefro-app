@@ -31,7 +31,10 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   mark a numeric target ("at least 90 seconds") achieved when the measured value misses it
  *   (repaired to partly_achieved). Metrics gain repeatedWords; the prompt tells the evaluator
  *   to take repetition counts from the metrics. New prompt hash.
+ * - speaking-evaluator/2.4.0 — Fourth real Gemini run. Gate rejects student-facing text that
+ *   contains internal field names (a live issue read "(timeUsedRatio: 0.73)"); prompt asks for
+ *   plain-language numbers. New prompt hash.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/2.3.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/2.4.0";
 
 export { EVALUATION_SCHEMA_VERSION };

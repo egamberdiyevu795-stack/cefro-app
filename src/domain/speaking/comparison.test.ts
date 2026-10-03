@@ -73,4 +73,36 @@ describe("compareAttempts", () => {
     expect(compare(makeEvaluation(), makeEvaluation(), ["v1", "v2"]).methodologyChanged).toBe(true);
     expect(compare(makeEvaluation(), makeEvaluation(), ["v2", "v2"]).methodologyChanged).toBe(false);
   });
+
+  describe("real Gemini score variation (same transcript, different runs)", () => {
+    const scored = (level: EvaluationResult["overall_level"], f: number, g: number, v: number, t: number) =>
+      withScores({ fluency_coherence: f, grammar: g, vocabulary: v, task_achievement: t }, { overall_level: level });
+
+    it("S02: B2+ → C1 with every criterion only +1 is NOT a clear improvement", () => {
+      const result = compare(scored("B2+", 7, 9, 8, 8), scored("C1", 8, 10, 9, 9));
+      expect(result.overall).toMatchObject({ before: "B2+", after: "C1", direction: "improved", magnitude: "clear" });
+      expect(result.clearlyImproved).toEqual([]);
+      expect(result.verdict).toBe("slight_improvement");
+    });
+
+    it("S09: identical criterion scores, B1 → B1- is within normal variation", () => {
+      const result = compare(scored("B1", 4, 5, 5, 5), scored("B1-", 4, 5, 5, 5));
+      expect(result.verdict).toBe("slight_decline");
+      expect(result.tally).toEqual({ improved: 0, declined: 0, same: 4 });
+    });
+
+    it("a big overall drop with only 1-point criterion changes is not a clear decline either", () => {
+      expect(compare(scored("C1", 8, 10, 9, 9), scored("B2+", 7, 9, 8, 8)).verdict).toBe("slight_decline");
+    });
+
+    it("a genuine retry (S03 → S01: every criterion +4) is still a clear improvement", () => {
+      const result = compare(scored("B1-", 4, 4, 4, 4), scored("B2+", 8, 8, 8, 8));
+      expect(result.clearlyImproved).toHaveLength(4);
+      expect(result.verdict).toBe("clear_improvement");
+    });
+
+    it("a clear criterion change in the opposite direction to the overall level is reported as mixed", () => {
+      expect(compare(scored("B1", 5, 5, 5, 5), scored("B1+", 5, 3, 6, 6)).verdict).toBe("mixed");
+    });
+  });
 });

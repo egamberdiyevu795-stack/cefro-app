@@ -35,6 +35,7 @@ export type QualityCode =
   | "retry_focus_criterion_mismatch"
   | "task_coverage_invalid"
   | "missing_retry_review"
+  | "retry_review_contradicts_metrics"
   | "unexpected_retry_review"
   | "level_score_mismatch"
   | "issues_reordered"
@@ -55,6 +56,8 @@ export interface QualityReport {
 }
 
 export interface QualityContext {
+  /** Measured facts about this attempt, used to check numeric claims in the retry review. */
+  metrics?: { speakingSeconds: number; wordCount: number };
   transcript: string;
   /** Number of task points (prompts) in the task. */
   taskPromptCount: number;
@@ -203,6 +206,19 @@ export function applyQualityGate(
     add("warn", "missing_retry_review", "retry_review", "Retry evaluated without reviewing the previous focus.");
   }
 
+  // ── A retry review must not claim a measurable target was met when it was not ──
+  // (Seen live: "speak for at least 90 seconds" marked achieved with "88 seconds" as the evidence.)
+  if (result.retry_review && context.metrics) {
+    result.retry_review.objectives.forEach((objective, i) => {
+      if (objective.outcome !== "achieved") return;
+      const unmet = findUnmetTarget(objective.objective, context.metrics!);
+      if (!unmet) return;
+      add("warn", "retry_review_contradicts_metrics", `retry_review.objectives[${i}]`, `Marked achieved, but ${unmet}`);
+      objective.outcome = "partly_achieved";
+      objective.evidence = `${objective.evidence.trim()} (Measured: ${unmet}.)`;
+    });
+  }
+
   // ── Consistency and length (warnings only) ──────────────────────────
   const scored = Object.values(result.criteria).filter((c) => c.assessable && c.score !== null);
   if (scored.length > 0) {
@@ -272,6 +288,24 @@ export function compareImprovedExample(original: string, improved: string, crite
     meaningChanged: originalStems.length >= 3 && overlap < minOverlap,
     tooElaborate: originalWords >= 4 && lengthRatio > 3 && improvedWords >= ELABORATE_MIN_WORDS,
   };
+}
+
+/**
+ * Find an explicit numeric target in an objective ("at least 90 seconds", "over 100 words") that the
+ * measured attempt did not meet. Rates ("100 words per minute") and ranges are deliberately ignored.
+ */
+export function findUnmetTarget(text: string, metrics: { speakingSeconds: number; wordCount: number }): string | null {
+  const pattern = /\b(at least|minimum of|over|above|more than|exceed(?:ing)?)\s+(\d{1,4})\s*(seconds?|secs?|words?)\b(?!\s*(?:per|a|each|every)\b)/gi;
+  for (const match of text.matchAll(pattern)) {
+    const strict = /^(over|above|more than|exceed)/i.test(match[1]);
+    const target = Number(match[2]);
+    const isTime = /^sec/i.test(match[3]);
+    const actual = isTime ? metrics.speakingSeconds : metrics.wordCount;
+    if (strict ? actual <= target : actual < target) {
+      return `${actual} ${isTime ? "seconds" : "words"} is not ${strict ? "over" : "at least"} the ${target}-${isTime ? "second" : "word"} target`;
+    }
+  }
+  return null;
 }
 
 const PRONUNCIATION_PATTERN = /\b(pronounc\w*|mispronounc\w*|accent\w*|intonation|vowels?|consonants?|phonem\w*|word stress)\b/i;

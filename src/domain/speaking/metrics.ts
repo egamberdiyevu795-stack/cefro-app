@@ -14,6 +14,11 @@ export interface SpeechMetrics {
   fillerCount: number;
   /** Phrases of 2–3 words used 3+ times, most frequent first. */
   repeatedPhrases: { phrase: string; count: number }[];
+  /**
+   * Content words used 4+ times, most frequent first. Gives the evaluator real counts to
+   * quote ("good" ×7) instead of counting in its head. Absent on attempts saved before it existed.
+   */
+  repeatedWords?: { word: string; count: number }[];
   /** Share of the available speaking time that was used (0–1). */
   timeUsedRatio: number | null;
 }
@@ -59,6 +64,7 @@ export function computeSpeechMetrics(
         : null,
     fillerCount: words.length - contentWords.length,
     repeatedPhrases: findRepeatedPhrases(contentWords),
+    repeatedWords: findRepeatedWords(contentWords),
     timeUsedRatio:
       availableSpeakingSeconds > 0
         ? round2(Math.min(1, speakingSeconds / availableSpeakingSeconds))
@@ -89,6 +95,28 @@ function findRepeatedPhrases(words: string[]): { phrase: string; count: number }
     if (result.length === 5) break;
   }
   return result;
+}
+
+/** Function words that are expected to repeat; counting them says nothing about vocabulary range. */
+const COMMON_WORDS = new Set(
+  (
+    "a an the and or but so because if when while then than that this these those it its i me my we our you your he him his she her they them their " +
+    "is am are was were be been being have has had do does did will would can could should may might must to of in on at for with by from about as " +
+    "into over after before very really just also too not no yes there here what which who how all some any more most much many one is it's i'm don't can't"
+  ).split(" "),
+);
+
+function findRepeatedWords(words: string[]): { word: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const word of words) {
+    if (word.length < 3 || COMMON_WORDS.has(word)) continue;
+    counts.set(word, (counts.get(word) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count >= 4)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([word, count]) => ({ word, count }));
 }
 
 function round2(value: number): number {

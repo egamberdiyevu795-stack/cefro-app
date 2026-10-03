@@ -27,7 +27,11 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   improved-example checks no longer reject good corrections (word-swap fixes,
  *   short statements gaining a reason clause) and repair unrelated originals
  *   for missing-content issues instead of regenerating. New prompt hash.
+ * - speaking-evaluator/2.3.0 — From the third real Gemini run. Gate: a retry review may not
+ *   mark a numeric target ("at least 90 seconds") achieved when the measured value misses it
+ *   (repaired to partly_achieved). Metrics gain repeatedWords; the prompt tells the evaluator
+ *   to take repetition counts from the metrics. New prompt hash.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/2.2.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/2.3.0";
 
 export { EVALUATION_SCHEMA_VERSION };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EvaluationResult } from "@/domain/evaluation/schema";
 import { makeEvaluation } from "../../../test/fixtures";
-import { applyQualityGate, findPronunciationClaim } from "./quality-gate";
+import { applyQualityGate, findPronunciationClaim, findUnmetTarget } from "./quality-gate";
 
 /**
  * Calibration cases taken verbatim from the first real Gemini runs
@@ -164,5 +164,53 @@ describe("quality gate calibration on real Gemini output", () => {
     const text = "Say 'I agree' without 'am'. Pronounce the final -s clearly when you speak.";
     expect(findPronunciationClaim(text)).toBe("Pronounce the final -s clearly when you speak.");
     expect(findPronunciationClaim("Pronunciation cannot be assessed from a transcript.")).toBeNull();
+  });
+});
+
+describe("retry review honesty (real Gemini output, run 3)", () => {
+  const measured = { speakingSeconds: 88, wordCount: 152 };
+  const review = (objective: string, outcome: "achieved" | "partly_achieved" | "not_achieved", evidence: string) =>
+    makeEvaluation({ retry_review: { objectives: [{ objective, outcome, evidence }], summary: "Better." } });
+  const gate = (evaluation: EvaluationResult, metrics = measured) =>
+    applyQualityGate(evaluation, {
+      transcript: "I think phones are good. I think they help us talk with friends every day. Last year I have went to Samarkand with my friend and we used maps.",
+      taskPromptCount: 3,
+      hasPreviousAttempt: true,
+      metrics,
+    });
+
+  it("downgrades 'achieved' when the measured value misses an explicit target (88 s vs 'at least 90 seconds')", () => {
+    const { result, report } = gate(
+      review(
+        "Add one specific example from your daily life to each prompt point to speak for at least 90 seconds.",
+        "achieved",
+        "You reached 152 words and 88 seconds, including specific personal details like your Telegram group.",
+      ),
+    );
+    expect(result.retry_review?.objectives[0].outcome).toBe("partly_achieved");
+    expect(result.retry_review?.objectives[0].evidence).toContain("Measured: 88 seconds is not at least the 90-second target");
+    expect(report.passed).toBe(true); // repaired, not rejected
+    expect(report.violations.map((v) => v.code)).toContain("retry_review_contradicts_metrics");
+  });
+
+  it("leaves a met target alone, and never upgrades anything", () => {
+    const met = gate(review("Speak for at least 85 seconds.", "achieved", "You spoke for 88 seconds."));
+    expect(met.result.retry_review?.objectives[0].outcome).toBe("achieved");
+    const notAchieved = gate(review("Speak for at least 85 seconds.", "not_achieved", "x"));
+    expect(notAchieved.result.retry_review?.objectives[0].outcome).toBe("not_achieved");
+  });
+
+  it("understands 'over' as strictly more, and ignores rates and ranges", () => {
+    expect(findUnmetTarget("Use over 152 words.", measured)).not.toBeNull();
+    expect(findUnmetTarget("Use over 151 words.", measured)).toBeNull();
+    expect(findUnmetTarget("Reach at least 130 words per minute.", measured)).toBeNull();
+    expect(findUnmetTarget("Speak between 100 and 115 seconds.", measured)).toBeNull();
+    expect(findUnmetTarget("Use 'I think' at most once.", measured)).toBeNull();
+  });
+
+  it("does nothing when metrics are not provided", () => {
+    const evaluation = review("Speak for at least 90 seconds.", "achieved", "x");
+    const { result } = applyQualityGate(evaluation, { transcript: "t", taskPromptCount: 3, hasPreviousAttempt: true });
+    expect(result.retry_review?.objectives[0].outcome).toBe("achieved");
   });
 });

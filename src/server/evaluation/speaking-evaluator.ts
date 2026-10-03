@@ -87,6 +87,7 @@ export async function evaluateSpeaking(
       transcript: input.transcript,
       taskPromptCount: input.task.prompts.length,
       hasPreviousAttempt: input.previousAttempt !== null,
+      metrics: { speakingSeconds: input.metrics.speakingSeconds, wordCount: input.metrics.wordCount },
     });
     logQualityReport(report, call);
 

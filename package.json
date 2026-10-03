@@ -15,7 +15,10 @@
     "eval:live": "vitest run --config vitest.live.config.mts test/live/evaluation-samples.live.test.ts",
     "eval:transcription": "vitest run --config vitest.live.config.mts test/live/transcription.live.test.ts",
     "stats": "node scripts/processing-stats.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "eval:transcription:controlled": "vitest run --config vitest.live.config.mts test/live/transcription-validation.live.test.ts",
+    "eval:pipeline": "vitest run --config vitest.live.config.mts test/live/full-pipeline.live.test.ts",
+    "test:e2e:live": "playwright test -c playwright.live.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

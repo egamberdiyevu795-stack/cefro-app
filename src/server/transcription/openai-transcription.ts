@@ -101,8 +101,19 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
         retryable: false,
       });
     }
-    return { text, language: input.language };
+    return { text, language: input.language, ...usageOf(payload) };
   }
+}
+
+/** Keep only flat numeric/string usage fields (e.g. input_tokens, output_tokens, seconds) from the response. */
+function usageOf(payload: unknown): { usage?: Record<string, number | string> } {
+  const raw = payload && typeof payload === "object" && "usage" in payload ? (payload as { usage: unknown }).usage : null;
+  if (!raw || typeof raw !== "object") return {};
+  const usage: Record<string, number | string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === "number" || (typeof value === "string" && value.length <= 40)) usage[key] = value;
+  }
+  return Object.keys(usage).length > 0 ? { usage } : {};
 }
 
 /**

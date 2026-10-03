@@ -315,7 +315,8 @@ export function findUnmetTarget(text: string, metrics: { speakingSeconds: number
   return null;
 }
 
-const PRONUNCIATION_PATTERN = /\b(pronounc\w*|mispronounc\w*|accent\w*|intonation|vowels?|consonants?|phonem\w*|word stress)\b/i;
+// "pron(ou|u)nc" covers both the verb ("pronounce", "mispronounced") and the noun ("pronunciation", "mispronunciation").
+const PRONUNCIATION_PATTERN = /\b((?:mis)?pron(?:ou|u)nc\w*|accent\w*|intonation|vowels?|consonants?|phonem\w*|word stress)\b/i;
 const NEGATED_ASSESSMENT = /\b(not|cannot|can't|couldn't|unable to)\b[^.]*\b(assess\w*|judg\w*|evaluat\w*|hear\w*)\b/i;
 
 export function findPronunciationClaim(text: string): string | null {

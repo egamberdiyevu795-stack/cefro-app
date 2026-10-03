@@ -89,7 +89,7 @@ describe("speaking attempt pipeline", () => {
     expect(view.metrics?.wordCount).toBe(29);
     expect(view.evaluation?.result.overall_level).toBe("B1+");
     expect(view.evaluation?.meta).toMatchObject({
-      evaluatorVersion: "speaking-evaluator/2.4.0",
+      evaluatorVersion: "speaking-evaluator/2.4.1",
       rubricVersion: "b2-speaking-rubric/1.0.0",
       schemaVersion: 2,
       provider: "fake-llm",

@@ -49,3 +49,4 @@ next-env.d.ts
 /local-samples/
 /test-results/
 /playwright-report/
+/eval-audio/

@@ -1,0 +1,132 @@
+# REAL pipeline validation: OpenAI transcription, Gemini evaluation, and the two together, including one
+# browser flow. Manual only, and separate from CI because it spends API budget and needs secrets.
+#
+# Setup (once): Repository → Settings → Secrets and variables → Actions → New repository secret:
+#   OPENAI_API_KEY   (transcription, plus text-to-speech for the test audio)
+#   GEMINI_API_KEY   (evaluation; already used by live-evaluation.yml)
+#
+# What it runs, in order (each step's result is reported even if an earlier one fails):
+#   1. eval:transcription:controlled  controlled audio → OpenAI transcription (fidelity, fillers, silence, formats)
+#   2. eval:pipeline                  audio → createAttempt → OpenAI → Gemini → gate → database → read back (+ retry pair)
+#   3. test:e2e:live                  one browser flow with a fake microphone playing speech (real recorder path)
+#
+# The test audio is synthetic speech (OpenAI text-to-speech, encoded with ffmpeg), not real learners.
+#
+# Security: manual trigger only (never pull_request, so forks cannot reach the secrets); read-only token; the
+# keys are exposed only to the steps that need them, GitHub masks them in logs, and the reports contain only
+# synthetic transcripts and model output.
+name: Live pipeline validation (OpenAI + Gemini)
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: "Also run the real-provider browser flow (one extra transcription + evaluation)."
+        type: boolean
+        required: false
+        default: true
+      samples:
+        description: "Optional comma-separated pipeline sample prefixes (e.g. P1,P2). Empty = all."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check the secrets are configured (without printing them)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          missing=0
+          for name in OPENAI_API_KEY GEMINI_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not set (Settings → Secrets and variables → Actions)."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Make sure ffmpeg and ffprobe are available
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -version | head -1
+
+      - name: Install Chromium (browser flow)
+        if: ${{ inputs.browser }}
+        run: npx playwright install --with-deps chromium
+
+      - name: 1. Controlled transcription validation (real OpenAI)
+        id: transcription
+        continue-on-error: true
+        env:
+          TRANSCRIPTION_PROVIDER: openai
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: npm run eval:transcription:controlled
+
+      - name: 2. Full pipeline validation (real OpenAI + real Gemini)
+        id: pipeline
+        continue-on-error: true
+        env:
+          TRANSCRIPTION_PROVIDER: openai
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVALUATION_PROVIDER: gemini
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          EVAL_SAMPLES: ${{ inputs.samples }}
+        run: npm run eval:pipeline
+
+      - name: 3. Real-provider browser flow
+        id: browser
+        if: ${{ inputs.browser }}
+        continue-on-error: true
+        env:
+          TRANSCRIPTION_PROVIDER: openai
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVALUATION_PROVIDER: gemini
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: npm run test:e2e:live
+
+      # The artifact host may be unreachable from some environments, so the reports are also printed in the
+      # log, wrapped in stop-commands so model output can never be interpreted as workflow commands.
+      - name: Print the reports in the log
+        if: always()
+        run: |
+          TOKEN="stop-$(openssl rand -hex 12)"
+          echo "::stop-commands::$TOKEN"
+          for f in eval-reports/*.md eval-reports/browser-real-pipeline.json; do [ -f "$f" ] && { echo "=== REPORT $f ==="; cat "$f"; echo "=== END REPORT ==="; }; done
+          echo "::$TOKEN::"
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-pipeline-reports
+          path: eval-reports/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail the run if any validation step failed
+        if: always()
+        run: |
+          echo "transcription: ${{ steps.transcription.outcome }}"
+          echo "pipeline:      ${{ steps.pipeline.outcome }}"
+          echo "browser:       ${{ steps.browser.outcome }}"
+          if [ "${{ steps.transcription.outcome }}" != "success" ] || [ "${{ steps.pipeline.outcome }}" != "success" ] || { [ "${{ inputs.browser }}" = "true" ] && [ "${{ steps.browser.outcome }}" != "success" ]; }; then
+            exit 1
+          fi

@@ -104,6 +104,22 @@ describe("quality gate", () => {
       expect(makesPronunciationClaim("Your intonation is flat when you list ideas.")).toBe(true);
     });
 
+    it("recognises the NOUN too: 'pronunciation' and 'mispronunciation' (the pattern once matched only 'pronounce…')", () => {
+      for (const text of [
+        "Your pronunciation of 'went' is unclear.",
+        "Your pronunciation is good.",
+        "Work on your pronunciation of long vowels.",
+        "Mispronunciation of 'th' sounds makes you hard to follow.",
+        "You mispronounced the word.",
+      ]) {
+        expect(makesPronunciationClaim(text), text).toBe(true);
+      }
+      expect(codes(withIssue({ why_it_matters: "Your pronunciation is very clear." }))).toContain("reject:pronunciation_claim");
+      // Still allowed: saying it was not assessed.
+      expect(makesPronunciationClaim("Pronunciation cannot be judged from a transcript.")).toBe(false);
+      expect(makesPronunciationClaim("We did not assess pronunciation.")).toBe(false);
+    });
+
     it("allows saying that pronunciation was not assessed", () => {
       expect(makesPronunciationClaim("Pronunciation was not assessed because we only have a transcript.")).toBe(false);
       const evaluation = makeEvaluation({ overall_summary: "Clear answer. Pronunciation cannot be judged from text." });

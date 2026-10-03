@@ -10,6 +10,11 @@ export interface TranscriptionInput {
 export interface TranscriptionOutput {
   text: string;
   language: string | null;
+  /**
+   * Usage metadata exactly as the provider reported it (token or duration counts), when it reports any.
+   * Not persisted: used for cost/latency validation only. Never contains transcript text or credentials.
+   */
+  usage?: Record<string, number | string>;
 }
 
 /**

@@ -230,6 +230,7 @@ Attempts store `processing_duration_ms`, and transcripts store their own `latenc
 | `speaking-evaluator/2.2.0`, schema 2 | Calibrated on the first real Gemini runs. Gate: improved-example checks no longer reject good corrections (word-swap fixes, short statements gaining a reason clause); unrelated originals on missing-content issues are dropped instead of regenerating. Prompt: keep the student's stance, no replacement examples, rules for "original", no invented benchmark figures, retry focus must be the direct fix. New prompt hash. |
 | `speaking-evaluator/2.3.0`, schema 2 | Retry review may not mark a numeric target achieved when the measurement misses it (repaired). Metrics gain `repeatedWords`; the prompt takes repetition counts from them. New prompt hash. |
 | `speaking-evaluator/2.4.0`, schema 2 | Gate rejects internal field names in student-facing text; prompt asks for plain-language numbers. New prompt hash. |
+| `speaking-evaluator/2.4.1`, schema 2 | Gate only: the pronunciation-claim check now also matches the noun "pronunciation" / "mispronunciation" (it matched only "pronounce…", so "Your pronunciation is good" passed). Found while building the real-pipeline checks; none of the real Gemini output reviewed in runs 2-5 contained either word in student-facing text. Prompt unchanged. |
 | `b2-speaking-rubric/1.0.0` | Unchanged; the rubric text was not edited. |
 
 Old evaluations are never rewritten. They are upgraded for display only

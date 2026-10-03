@@ -35,11 +35,16 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   contains internal field names (a live issue read "(timeUsedRatio: 0.73)"); prompt asks for
  *   plain-language numbers. New prompt hash.
  *
+ * - speaking-evaluator/2.4.1 — Stage 3B. Gate only: the pronunciation-claim check matched "pronounce…" but not
+ *   the noun "pronunciation" / "mispronunciation", so "Your pronunciation is good" passed. Found while building the
+ *   real-pipeline checks. No real Gemini output in four runs contained either word in student-facing text, so
+ *   nothing the model produced would have been rejected differently; prompt unchanged.
+ *
  * Stage 3 (no evaluator version change; what the model is asked and how results are judged did not
  * change): `prompt_hash` now also covers the user-message template, the revision template and the
  * result schema, and is stored with an "h2:" prefix (prompt-fingerprint.ts). Hashes written before
  * this are bare hex and identify only version + system prompt; they are not comparable with h2 hashes.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/2.4.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/2.4.1";
 
 export { EVALUATION_SCHEMA_VERSION };

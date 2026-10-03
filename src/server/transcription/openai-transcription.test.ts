@@ -67,3 +67,23 @@ describe("looksLikePromptEcho", () => {
     expect(looksLikePromptEcho("Um, I think, uh, yes.", VERBATIM_TRANSCRIPTION_PROMPT)).toBe(false);
   });
 });
+
+describe("OpenAITranscriptionProvider usage metadata", () => {
+  it("returns the usage the provider reported, flat fields only", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        text: "I think phones are useful",
+        usage: { type: "tokens", input_tokens: 120, output_tokens: 8, total_tokens: 128, input_token_details: { audio_tokens: 120 } },
+      }),
+    );
+    const result = await provider(fetchMock as unknown as typeof fetch).transcribe(audio);
+    expect(result.usage).toEqual({ type: "tokens", input_tokens: 120, output_tokens: 8, total_tokens: 128 }); // nested objects dropped
+  });
+
+  it("omits usage when the provider reports none or something unexpected", async () => {
+    for (const payload of [{ text: "hello there my friend again" }, { text: "hello there my friend again", usage: "x" }, { text: "hello there my friend again", usage: {} }]) {
+      const result = await provider((async () => Response.json(payload)) as unknown as typeof fetch).transcribe(audio);
+      expect(result).not.toHaveProperty("usage");
+    }
+  });
+});

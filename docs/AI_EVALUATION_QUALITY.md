@@ -476,6 +476,39 @@ so the expectation range, not the model, was generous. It was not changed.
 - Evaluator version history is dense (2.1.0 to 2.4.0 in a day); scores across those versions are not strictly
   comparable.
 
+## Real transcription and full-pipeline validation (Stage 3B)
+
+**Status: NOT RUN against real OpenAI.** The OpenAI key is not available: the sandbox has none and cannot reach
+`api.openai.com`, and the manual workflow `live-pipeline.yml` (run 37092651529) stopped at its secrets check because
+the repository secret `OPENAI_API_KEY` is not set (`GEMINI_API_KEY` is). Nothing below has been measured on a real
+OpenAI response, so **OpenAI transcription, the full microphone → OpenAI → Gemini pipeline and the real-provider
+browser flow are still NOT validated.**
+
+What was built so the validation is one click once the secret exists (Settings → Secrets and variables → Actions →
+`OPENAI_API_KEY`; it is also used for text-to-speech of the test audio):
+
+| Harness | Command | What it checks |
+|---|---|---|
+| Controlled transcription | `npm run eval:transcription:controlled` | Text-to-speech renders known texts (normal B2 answer; learner errors; fillers and false starts; repetition; a 3-word answer), ffmpeg encodes them as WebM/Opus (the browser recorder's format), plus m4a and ogg copies, 8 s of silence and 8 s of near-silence. Reports WER against the spoken text, which learner errors survived, fillers transcribed vs spoken, metrics from the transcript vs the spoken text, latency and the usage the API reports. Hard assertions only for silence: no transcript of 5+ words, no prompt words, no task words. |
+| Full pipeline | `npm run eval:pipeline` | Seven samples (normal, weaker, grammar mistakes, repetition, fillers, off-task, and a weak→strong retry) through `createAttempt` → `processAttempt` with the real providers, then read back. Verifies the chain user → session → attempt → recording → transcript → evaluation, stored audio equals uploaded audio, versions, `h2:` prompt hash, model config, quality report, timings, session-correlated events, retry linkage; quotes occur in the transcript; no pronunciation claim; numeric claims in the feedback match the stored metrics (reported for review); records stage latencies, models, gate warnings, regenerations and usage. |
+| Browser | `npm run test:e2e:live` | One flow in Chromium whose fake microphone plays the speech file, so the real MediaRecorder WebM/Opus path, upload, real transcription and evaluation run; the stored attempt is read back through the API. |
+
+All three are manual and separate from CI. The test audio is **synthetic speech**: clean, evenly paced, no accent, noise
+or microphone. It gives an exact reference for fidelity checks; it does not show performance on real learners. Real
+recordings still go through `npm run eval:transcription` (`local-samples/`).
+
+The mechanics of all three were exercised against local stand-ins for the OpenAI and Gemini endpoints (a stand-in is
+detected and the report says "NOT A REAL RUN"). That proves the harness, the persistence checks and the report format
+work; it proves nothing about OpenAI or Gemini.
+
+Failure paths are covered with injected providers (`src/server/attempts/failure-paths.test.ts`): transcription
+timeout, API error, rate limit, unsupported audio, missing key and silence; evaluation timeout, API error, refusal,
+malformed output twice, provider-reported unusable output twice, gate rejection on both drafts (regeneration
+exhausted) and gate rejection fixed by the regeneration. Each ends as a stored `failed` attempt with a stage and a stable
+code, the recording kept, no evaluation row, no dangling reference, and (for transient faults) a restart that completes.
+
+One real defect was found while writing the checks and fixed (evaluator 2.4.1): see findings log F24.
+
 ## Findings log
 
 Findings so far come from code audit and automated tests. **No real-model
@@ -506,6 +539,7 @@ output has been reviewed yet** — add live-review findings here.
 | F21 | Live Gemini | Same transcript scored B2+ and C1 with every criterion within 1 point; the comparison read it as clear change | Medium | Clear verdict needs a 2+ point criterion change (2.4.0) |
 | F22 | Live Gemini | Student-facing text contained an internal field name ('timeUsedRatio: 0.73') | Low | Gate rejection and prompt rule (2.4.0); none seen in run 5 |
 | F23 | Live Gemini | Report artifact download blocked from the dev sandbox; passing tests hid console output | Low | Report printed in the job log; verbose reporter |
+| F24 | Stage 3B | The pronunciation-claim check matched "pronounce…" but not the noun "pronunciation"/"mispronunciation", so "Your pronunciation is good" passed the gate. The existing tests only used verbs, accent, vowels and intonation | Medium | Pattern now `(?:mis)?pron(?:ou|u)nc\w*`; regression tests; evaluator 2.4.1 (gate only, prompt unchanged). No real Gemini output in runs 2-5 contained either word in student-facing text |
 
 ## Known weaknesses and future improvements
 

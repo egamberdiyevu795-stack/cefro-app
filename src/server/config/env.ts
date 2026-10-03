@@ -66,6 +66,20 @@ const envSchema = z.object({
    */
   PROCESSING_BUDGET_MS: z.coerce.number().int().min(10_000).max(290_000).default(270_000),
 
+  /**
+   * Secret that signs the login-session cookie (server/auth). REQUIRED in production (32+ random characters,
+   * e.g. `openssl rand -base64 48`); the boot check refuses to start without it. Development and tests fall
+   * back to a fixed, public value, which is why it must never be used in production.
+   */
+  AUTH_SECRET: z.string().min(32).optional(),
+  /** Public origin of the app (e.g. https://app.example.com). Used for the auth origin check; inferred from the request when unset. */
+  APP_URL: z.string().url().optional(),
+  /** Login/registration abuse limits (in-memory, per process; see docs/ARCHITECTURE_DECISIONS.md). */
+  LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN: z.coerce.number().int().positive().default(8),
+  LIMIT_LOGIN_FAILURES_PER_IP_15MIN: z.coerce.number().int().positive().default(30),
+  LIMIT_REGISTRATIONS_PER_IP_HOUR: z.coerce.number().int().positive().default(10),
+  LIMIT_REGISTRATIONS_GLOBAL_HOUR: z.coerce.number().int().positive().default(100),
+
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
   EVALUATION_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),

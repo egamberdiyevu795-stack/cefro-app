@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { foreignKey, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { customType, foreignKey, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
 /**
  * Database schema (SQLite via Drizzle ORM).
@@ -13,6 +13,21 @@ import { foreignKey, index, integer, sqliteTable, text, uniqueIndex, type AnySQL
  * After editing, run `npm run db:generate` to create a migration.
  */
 
+/**
+ * ISO-8601 text in the database (like every other timestamp), a Date in code. The auth library reads and writes
+ * Dates, so the tables it owns (and the users columns it touches) use this instead of plain text.
+ */
+const isoDate = customType<{ data: Date; driverData: string }>({
+  dataType: () => "text",
+  toDriver: (value) => value.toISOString(),
+  fromDriver: (value) => new Date(value),
+});
+
+const dateTimestamps = {
+  createdAt: isoDate("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  updatedAt: isoDate("updated_at").notNull(),
+};
+
 const timestamps = {
   createdAt: text("created_at").notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 };
@@ -24,15 +39,81 @@ const timestamps = {
  */
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
-  kind: text("kind", { enum: ["anonymous"] }).notNull().default("anonymous"),
+  /** "anonymous": a browser's low-trust cookie identity. "registered": an account with credentials (see auth_accounts). */
+  kind: text("kind", { enum: ["anonymous", "registered"] }).notNull().default("anonymous"),
+  /** Registered users only: lower-cased sign-in email. Unverified (no email is sent yet). Null for anonymous users. */
+  email: text("email"),
+  name: text("name"),
+  /** Required by the auth library's user model; profile images are not used. */
+  image: text("image"),
+  emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+  updatedAt: isoDate("updated_at"),
   /**
    * Set when this identity was merged into another one (see server/identity/merge-users.ts and
    * docs/ARCHITECTURE_DECISIONS.md). A merged row is never deleted: a browser that still holds its
    * cookie keeps resolving to the surviving user.
    */
   mergedIntoUserId: text("merged_into_user_id").references((): AnySQLiteColumn => users.id),
-  ...timestamps,
-});
+  createdAt: dateTimestamps.createdAt,
+}, (table) => [uniqueIndex("users_email_uq").on(table.email)]);
+
+/**
+ * Server-side login sessions (managed by the auth library; see server/auth). The cookie holds only a signed
+ * reference to `token`; deleting the row (logout) ends the session immediately.
+ */
+export const authSessions = sqliteTable(
+  "auth_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    token: text("token").notNull(),
+    expiresAt: isoDate("expires_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    ...dateTimestamps,
+  },
+  (table) => [uniqueIndex("auth_sessions_token_uq").on(table.token), index("auth_sessions_user_idx").on(table.userId)],
+);
+
+/**
+ * Login credentials. Only the email + password provider exists: `password` is the library's salted scrypt hash,
+ * never the password itself.
+ */
+export const authAccounts = sqliteTable(
+  "auth_accounts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    password: text("password"),
+    // The next six columns belong to the library's account model (social login). Unused: only email + password exists.
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: isoDate("access_token_expires_at"),
+    refreshTokenExpiresAt: isoDate("refresh_token_expires_at"),
+    scope: text("scope"),
+    ...dateTimestamps,
+  },
+  (table) => [uniqueIndex("auth_accounts_provider_uq").on(table.providerId, table.accountId), index("auth_accounts_user_idx").on(table.userId)],
+);
+
+/**
+ * Short-lived tokens for email verification and password reset. Part of the library's required schema; nothing writes to it
+ * yet because CEFRO sends no email (see docs/ARCHITECTURE_DECISIONS.md).
+ */
+export const authVerifications = sqliteTable(
+  "auth_verifications",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: isoDate("expires_at").notNull(),
+    ...dateTimestamps,
+  },
+  (table) => [index("auth_verifications_identifier_idx").on(table.identifier)],
+);
 
 /**
  * One sitting of practice. Today every session covers a single task ("single_task"); the table exists

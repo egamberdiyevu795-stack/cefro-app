@@ -39,6 +39,14 @@ audio), and the mock evaluator uses simple heuristics. Results from the mock
 evaluator are clearly labelled in the UI. Both are refused when
 `NODE_ENV=production`.
 
+### Accounts
+
+Practice works without an account. `/register` and `/login` add optional accounts (email + password, via the
+`better-auth` library); what an anonymous visitor practised is attached to the account when they register or sign in.
+In production set `AUTH_SECRET` (32+ random characters) and `APP_URL` (https): the server refuses to start healthy
+without them. Email is not verified and there is no password reset yet. Design and limits:
+[`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md#11-identity-and-accounts-stage-4).
+
 ### Running with real providers
 
 ```bash

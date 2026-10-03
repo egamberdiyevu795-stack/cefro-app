@@ -1,6 +1,6 @@
 import "server-only";
 import { getEnv } from "./env";
-import { describeProviderMode, validateProviderConfig } from "./provider-config";
+import { describeProviderMode, validateAuthConfig, validateProviderConfig } from "./provider-config";
 import { logger } from "@/server/logging/logger";
 
 /**
@@ -25,7 +25,7 @@ export function checkProvidersAtBoot(): void {
   }
 
   const mode = describeProviderMode(env);
-  const problems = validateProviderConfig(env);
+  const problems = [...validateProviderConfig(env), ...validateAuthConfig(env)];
   if (problems.length === 0) {
     logger.info("Provider configuration OK", { ...mode });
     return;

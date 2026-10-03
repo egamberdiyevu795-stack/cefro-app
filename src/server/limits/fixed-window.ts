@@ -28,6 +28,13 @@ export class FixedWindowLimiter {
     return { allowed: true };
   }
 
+  /** Whether `key` is already at its limit, WITHOUT counting a hit (used to count only failures). */
+  isBlocked(key: string, now = Date.now()): { blocked: false } | { blocked: true; retryAfterSeconds: number } {
+    const current = this.windows.get(key);
+    if (!current || now - current.start >= this.windowMs || current.hits < this.maxHits) return { blocked: false };
+    return { blocked: true, retryAfterSeconds: Math.max(1, Math.ceil((current.start + this.windowMs - now) / 1000)) };
+  }
+
   private prune(now: number) {
     for (const [key, window] of this.windows) {
       if (now - window.start >= this.windowMs) this.windows.delete(key);

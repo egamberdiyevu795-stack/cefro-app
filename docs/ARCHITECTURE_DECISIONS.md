@@ -19,6 +19,7 @@ the code disagree, the code wins; please fix the document.
 | 8 | Storage and deployment limits stay documented, not solved | [8](#8-storage-and-deployment-limits) |
 | 9 | Migration strategy, foreign keys and the migration harness | [9](#9-migration-strategy) |
 | 10 | What was deliberately left out | [10](#10-intentionally-deferred) |
+| 11 | Identity and accounts (Stage 4): one canonical user, library-managed sessions, conversion by merge | [11](#11-identity-and-accounts-stage-4) |
 
 Also in this stage (small, no separate decision): upload bodies are counted as they stream in
 (`readBodyWithLimit`, `server/http.ts`); `prompt_hash` covers the whole prompt template (see
@@ -108,12 +109,17 @@ or `part` on the session, and the Part 1 question model. Do not add them until a
 
 ## 3. Identity boundary (audit B3)
 
-No login exists. This section fixes the rules so that adding it later is a bounded piece of work.
+> **Superseded in part by [section 11](#11-identity-and-accounts-stage-4).** This section was written before login
+> existed. Stage 4 implemented it, and changed one rule for security reasons: **a tombstoned anonymous cookie no longer
+> resolves to the account** (the paragraph "What a merge does" below says the opposite and is kept as history of the
+> decision). Everything else here still holds. Where the two sections differ, section 11 wins.
+
+No login existed when this was written. This section fixed the rules so that adding it later is a bounded piece of work.
 
 **Canonical identity.** `users.id` is the single identity every other table references (attempts, sessions,
 and later subscriptions). It is an opaque random UUID and never an email, provider id or cookie secret. Code
-obtains it only from `getOrCreateCurrentUserId()` (`server/identity/anonymous-user.ts`), which returns the
-**canonical** id (see tombstones below). Nothing else reads the cookie.
+obtains it only from `getCurrentUser()` / `getOrCreateCurrentUserId()` (`server/identity/current-user.ts`), which
+returns the canonical id of the caller. Nothing else reads the cookies.
 
 **Anonymous identity.** A `users` row with `kind = 'anonymous'`, created on a browser's first visit. Its id is
 held in the httpOnly cookie `cefro_uid`. It is deliberately **low-trust**: the cookie value is the credential,
@@ -134,10 +140,10 @@ user, and cost protection must not rely on it (see section 5, which has an ident
 **What a merge does** (implemented and tested, though nothing calls it yet):
 
 - Moves `speaking_attempts`, `practice_sessions` and `analytics_events` to the surviving user.
-- Leaves the merged row in place with `merged_into_user_id` set (a tombstone). `resolveCanonicalUserId`
-  follows tombstones (chains and cycles are handled), and `getOrCreateCurrentUserId` calls it, so a browser or
-  device still holding an anonymous cookie resolves to the account. This is also what makes **multiple
-  devices** work: each device's anonymous row is merged once, the first time it signs in.
+- Leaves the merged row in place with `merged_into_user_id` set (a tombstone). *(Stage 3 intended an old anonymous
+  cookie to follow the tombstone to the account. Stage 4 reverses that: see section 11, "The anonymous cookie".
+  Tombstones are now lineage and what makes a retried merge a no-op.)* Multiple devices work because each
+  device's anonymous row is merged once, the first time that device signs in.
 - Refuses to merge a user into itself, into a user that was itself merged, or from a user that is not
   anonymous or was already merged. An account can therefore never be merged away.
 - Needs no file moves: audio keys embed the old user id but are stored on each recording row.
@@ -166,11 +172,11 @@ reported as "not found". A client-supplied session id grants nothing: it is used
 caller, otherwise ignored. When teachers or organisations arrive, access must go through one explicit
 policy function rather than additional inline comparisons.
 
-**Schema change made.** Only `users.merged_into_user_id` (nullable, foreign key to `users.id`).
+**Schema change made in Stage 3.** Only `users.merged_into_user_id` (nullable, foreign key to `users.id`).
 
-**Deferred.** Login, account tables, credential rotation, session cookies for accounts, retention/deletion of
-tombstones, merge of two registered accounts, audit log of merges, and moving the bearer credential out of the
-primary key (the anonymous cookie still *is* the user id).
+**Deferred then** (status now): login and account tables (done in Stage 4), credential rotation (the library
+rotates sessions on every sign-in), retention of tombstones, merge of two registered accounts, an audit log of
+merges, and moving the anonymous bearer credential out of the primary key (still open).
 
 ---
 
@@ -354,3 +360,145 @@ because Next.js emits them and the home page is static), `exam`/format fields be
 and any change to the Gemini evaluation methodology. The real-provider gaps are unchanged: OpenAI
 transcription, the Anthropic evaluator and the full microphone → OpenAI → Gemini pipeline are not
 real-validated.
+
+---
+
+## 11. Identity and accounts (Stage 4)
+
+Stage 4 adds registration, sign-in and sign-out on top of the Stage 3 identity boundary. It adds identity
+infrastructure only: no profile, roles, billing, password reset, social login or account settings.
+
+### The model
+
+| Term | What it is |
+|---|---|
+| **Canonical user** | A row in `users`. `users.id` is the **only** id that owns data (sessions, attempts, recordings, analytics, and later subscriptions). Authorization compares it and nothing else. |
+| **Anonymous identity** | A `users` row with `kind = 'anonymous'`, no email and no credentials. It is "anonymous" because nothing proves who holds it: its id sits in the `cefro_uid` cookie, and whoever presents that value acts as it. Low-trust by design. |
+| **Account identity** | A `users` row with `kind = 'registered'`, a unique lower-cased `email`, and a credential row in `auth_accounts` (password hash). It is "authenticated" only while the caller holds a valid, unexpired **login session** (`auth_sessions` row + signed cookie). Possessing the account's id proves nothing. |
+
+**Account and user are the same entity, not two.** There is no separate account id: registering creates a `users`
+row of kind `registered`, and `auth_accounts.user_id` / `auth_sessions.user_id` point at it. One id, so no id can
+drift out of sync or be confused with another. (The auth library's own user model is mapped onto `users`.)
+
+### Mechanism
+
+The maintained **`better-auth`** library (pinned, 1.7.7) provides password hashing (scrypt), session tokens,
+cookie signing, input validation and the three endpoints; nothing cryptographic is written in this repository.
+It is isolated behind `server/auth/auth.ts` (configuration + the conversion hook) and `server/identity/current-user.ts`
+(the only place that asks who the caller is). `app/api/auth/[...all]/route.ts` exposes exactly
+`POST /api/auth/sign-up/email`, `/sign-in/email` and `/sign-out`; every other library endpoint answers 404.
+Chosen over a hand-written scheme or Auth.js because it fits the Drizzle/SQLite stack with server-side sessions
+(logout is immediate) and ships the password and cookie handling that must not be home-grown.
+
+Rejected alternatives: *Auth.js with JWT sessions* (stateless: logout cannot revoke); *Lucia* (retired);
+*hand-rolled scrypt + tokens* (explicitly out of scope).
+
+### Who is the caller? (`getCurrentUser`)
+
+1. If a login-session cookie is present, the library verifies its signature, expiry and the `auth_sessions` row. Valid
+   and the row is a live `registered` user → **authenticated**, `userId` = that account.
+2. Otherwise the anonymous cookie is honoured only for an **active anonymous** user:
+   - unknown well-formed id → that anonymous user is created (as before);
+   - the id of a **registered** user, or of a **tombstoned** (merged) anonymous user → **not honoured**; the browser
+     gets a fresh anonymous identity and cookie;
+   - malformed → fresh anonymous identity.
+3. While authenticated, the anonymous cookie is ignored.
+
+Request bodies, query strings and headers are never a source of identity.
+
+### The anonymous cookie, and what changed from Stage 3
+
+Stage 3 planned for an old anonymous cookie to follow the merge tombstone to the account. **That is reversed.** An
+anonymous cookie is a bearer credential held by an unauthenticated browser, so letting it resolve to an account
+would let anyone who ever held or stole it read (and, later, act on) the account's data, including everything added
+after sign-up. So: after conversion the anonymous cookie is **cleared**, and a browser that still has an old
+anonymous cookie simply becomes a *new* anonymous visitor. Its history is not lost: it is in the account, reached by
+signing in. A registered user's id presented through the anonymous cookie is likewise refused.
+
+### Registration, sign-in, sign-out
+
+- **Sign-up** creates the `users` row (kind `registered`, email lower-cased, unverified), the credential, and a
+  session, and signs the user in. Duplicate emails (any case) are refused by the library and by a unique index.
+- **Sign-in** verifies the password and creates a **new** session token every time; a token chosen by the client is
+  never adopted (no session fixation). Wrong password and unknown email give the same answer.
+- **Sign-out** deletes the session row and clears the cookie; a replayed old cookie no longer authenticates.
+- Successful sign-in/sign-up answers `{"ok": true}` only: no session token and no user record in the body.
+
+### Converting anonymous history (the most important part)
+
+After a successful sign-up or sign-in the library's `after` hook calls `mergeAnonymousCookieIdentity`
+(`server/identity/convert-anonymous.ts`) with **the request's anonymous cookie** and **the account the library just
+authenticated**: `mergeUsers` then moves everything in one transaction.
+
+| Question | Answer |
+|---|---|
+| What moves? | `speaking_attempts` (and, through them, recordings, transcripts, evaluations: no row is copied or rewritten), `practice_sessions`, `analytics_events.user_id`. Audio files do not move (keys are stored per recording). |
+| Who may be merged away? | Only an **active anonymous** user. A registered user's id or an already-merged id in the cookie is ignored, so presenting someone else's identity cannot move their data. An id supplied in a body is never read. |
+| Authorization-safe? | The target is the freshly authenticated account; the source is whatever anonymous identity the caller *holds*. Holding it is the only authority anonymous data ever had. |
+| Transactional? | Yes: all moves, the renumbering and the tombstone happen in one SQLite transaction, or none. |
+| Idempotent / safe to retry? | Yes. A source already merged into the same account is a no-op (`alreadyMerged`). If the merge fails, the sign-in still succeeds, the anonymous cookie is **kept**, nothing is half-moved, and signing in again completes it. |
+| Account already has data for the same task? | Attempts are renumbered into one gapless chronological sequence per task (rules in section 3). Retry links are by id and survive. |
+| Two anonymous identities, one account? | Each merges once, the first time its browser signs in (several devices, several visits). |
+| Same account on several devices? | Each device has its own login session; all resolve to the same canonical id. |
+| What is the anonymous row afterwards? | A tombstone (`merged_into_user_id` = the account). It is never deleted and never accepted as an identity again. |
+| What happens to the cookie? | Cleared in the sign-in/sign-up response. |
+| Subscriptions later? | Belong to a registered user's `users.id`. Merging never moves entitlements; an anonymous user cannot hold one. |
+
+### Authorization
+
+`server/identity/authorization.ts` (`ownsResource`, `assertOwnedOrNotFound`) is the one place ownership is decided:
+the caller's canonical id must equal the resource's `userId`. A resource owned by someone else is reported as "not
+found", exactly like a missing one. It guards attempts, audio, restarts, history, retries and (via ownership-filtered
+queries) sessions and analytics session ids. Tests exercise another signed-in user, an anonymous visitor, spoofed
+ids in bodies/queries/headers, replayed cookies and the auth library's other endpoints (closed). Account-only
+endpoints use `requireAuthenticated()` (401). Future roles must extend this module.
+
+### Session and cookie security
+
+- Login cookie `cefro.session_token` (`__Secure-cefro.session_token` in production): **HttpOnly**, **SameSite=Lax**,
+  `Path=/`, **Secure** in production (verified against a production build), signed, 7-day expiry sliding daily.
+  Sessions are rows: logout and expiry are enforced on every request (no signed-cookie cache).
+- A new token on every sign-in; client-chosen tokens ignored; no token in a URL or response body.
+- **CSRF / login CSRF:** `POST /api/auth/*` refuses any request whose `Origin` is not the app's own, or that a browser
+  marks cross-site (`Sec-Fetch-Site`); requests with neither header (non-browser clients) are allowed. The library's own
+  check runs only for requests that already carry cookies, so this is not left to it. Other state-changing routes rely
+  on SameSite=Lax cookies.
+- Credentials in bodies only; bodies over 8 KB are refused before parsing (also without a Content-Length).
+- Passwords: 8-128 characters; stored only as the library's salted scrypt hash. Neither passwords nor tokens are
+  logged (a test captures all console output). The session cookie secret is `AUTH_SECRET` (required, 32+ characters,
+  in production; the boot check refuses a missing or the public development value) and `APP_URL` (https) is required
+  in production for the origin check.
+- Analytics carry no credentials, emails or session tokens.
+
+### Abuse limits (in-memory, per process)
+
+Sign-in counts **failures** per email (8 / 15 min) and per client IP (30 / 15 min), and refuses further attempts with
+`login_rate_limited` (429, `Retry-After`) while a limit is hit, even for a correct password. Sign-up is limited per IP
+(10 / hour) and in total (100 / hour): `registration_rate_limited`. All overridable by environment
+(`LIMIT_LOGIN_FAILURES_*`, `LIMIT_REGISTRATIONS_*`). The library's own limiter is also on (30 / minute per path).
+Limits: the client IP comes from `X-Forwarded-For`, which a client can forge unless a trusted proxy sets it; the
+counters are per process, reset on restart and are not shared between instances (not a distributed limiter); an
+attacker can lock a known email out for the window by failing on purpose.
+
+### Schema (migration `0003_stage4_auth`, additive)
+
+`users` gains `email` (unique, nullable), `name`, `image`, `email_verified`, `updated_at`; `kind` gains `registered`.
+New tables `auth_sessions`, `auth_accounts` (credential: password hash), `auth_verifications` (the library requires
+it; nothing writes to it because no email is sent). Foreign keys to `users` follow the existing convention. The
+migration contains no table rebuild and no data change, so existing anonymous users and their data are untouched
+(tested: upgrade from the previous schema with data, conversion on the upgraded database, idempotence, and that a failing
+migration batch rolls back completely).
+
+### Known limitations (not production-scale)
+
+- **Email is not verified and there is no password reset** (nothing can send email). A forgotten password means a
+  lost account; an address can be registered by someone who does not own it (no takeover path, since there is no reset, but
+  squatting is possible). Registration reveals whether an email exists.
+- Sign-in/registration limits are in-memory and per process; with several instances or a restart they are weaker.
+- Everything still assumes one Node host with SQLite and local disk (section 8): the session table is local too.
+- A session slides for as long as it is used; there is no absolute maximum lifetime and no "sign out everywhere".
+- Merge trusts possession of the anonymous cookie, as all anonymous data always has: stealing an anonymous cookie
+  lets the thief attach that anonymous history to their own new account.
+- The password hashing and session logic are the library's; they were not independently audited here.
+- No MFA, no account deletion, no account settings.
+

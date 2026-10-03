@@ -1,4 +1,5 @@
 import "server-only";
+import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
 import type { ServerEnv } from "./env";
 
 /**
@@ -47,5 +48,16 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
       break;
   }
 
+  return problems;
+}
+
+/** Authentication configuration. Production must have a real secret (the development fallback is public) and a public https origin. */
+export function validateAuthConfig(env: ServerEnv): ConfigProblem[] {
+  if (env.NODE_ENV !== "production") return [];
+  const problems: ConfigProblem[] = [];
+  if (!env.AUTH_SECRET) problems.push({ variable: "AUTH_SECRET", message: "required in production (32+ random characters); it signs the login-session cookie" });
+  else if (env.AUTH_SECRET === INSECURE_DEV_AUTH_SECRET) problems.push({ variable: "AUTH_SECRET", message: "is the public development value; set a real secret" });
+  if (!env.APP_URL) problems.push({ variable: "APP_URL", message: "required in production (the public https origin, e.g. https://app.example.com); the sign-in origin check uses it" });
+  else if (!env.APP_URL.startsWith("https://")) problems.push({ variable: "APP_URL", message: "must be an https:// URL in production (login cookies are Secure)" });
   return problems;
 }

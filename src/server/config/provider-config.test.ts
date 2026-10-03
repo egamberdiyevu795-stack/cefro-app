@@ -12,7 +12,8 @@ const logs = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), d
 vi.mock("@/server/logging/logger", () => ({ logger: logs }));
 
 import { checkProvidersAtBoot } from "./boot-check";
-import { describeProviderMode, validateProviderConfig } from "./provider-config";
+import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
+import { describeProviderMode, validateAuthConfig, validateProviderConfig } from "./provider-config";
 
 const env = (overrides: Record<string, unknown>) =>
   ({ NODE_ENV: "development", TRANSCRIPTION_PROVIDER: "openai", EVALUATION_PROVIDER: "gemini", ...overrides }) as unknown as ServerEnv;
@@ -58,7 +59,7 @@ describe("checkProvidersAtBoot", () => {
   });
 
   it("logs success and does not throw when configured", () => {
-    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" });
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com" });
     expect(() => checkProvidersAtBoot()).not.toThrow();
     expect(logs.info).toHaveBeenCalledWith("Provider configuration OK", expect.objectContaining({ mode: "real" }));
   });
@@ -84,3 +85,33 @@ describe("checkProvidersAtBoot", () => {
     expect(process.env.NODE_ENV).toBe(original);
   });
 });
+
+describe("validateAuthConfig", () => {
+  const SECRET = "x".repeat(40);
+  it("requires a real AUTH_SECRET in production", () => {
+    const APP_URL = "https://app.example.com";
+    expect(validateAuthConfig(env({ NODE_ENV: "production" })).map((p) => p.variable)).toEqual(["AUTH_SECRET", "APP_URL"]);
+    expect(validateAuthConfig(env({ NODE_ENV: "production", AUTH_SECRET: INSECURE_DEV_AUTH_SECRET, APP_URL })).map((p) => p.variable)).toEqual(["AUTH_SECRET"]);
+    expect(validateAuthConfig(env({ NODE_ENV: "production", AUTH_SECRET: SECRET, APP_URL: "http://app.example.com" })).map((p) => p.variable)).toEqual(["APP_URL"]);
+    expect(validateAuthConfig(env({ NODE_ENV: "production", AUTH_SECRET: SECRET, APP_URL }))).toEqual([]);
+  });
+
+  it("does not require it in development and tests (a public development value is used there)", () => {
+    expect(validateAuthConfig(env({ NODE_ENV: "development" }))).toEqual([]);
+    expect(validateAuthConfig(env({ NODE_ENV: "test" }))).toEqual([]);
+  });
+
+  it("never reports the secret's value", () => {
+    expect(JSON.stringify(validateAuthConfig(env({ NODE_ENV: "production", AUTH_SECRET: INSECURE_DEV_AUTH_SECRET })))).not.toContain(INSECURE_DEV_AUTH_SECRET);
+  });
+
+  it("makes the production boot check fail without it", () => {
+    vi.clearAllMocks();
+    state.throwOnParse = false;
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" });
+    expect(() => checkProvidersAtBoot()).toThrow(/AUTH_SECRET/);
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", AUTH_SECRET: SECRET, APP_URL: "https://app.example.com" });
+    expect(() => checkProvidersAtBoot()).not.toThrow();
+  });
+});
+

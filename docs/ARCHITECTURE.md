@@ -163,14 +163,13 @@ task content itself is authored in `src/content`. Migrations live in
 
 ## Identity
 
-(The rules for canonical identity, anonymous identity and future account merging are in
-[`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md#3-identity-boundary-audit-b3).)
-
-There is no authentication yet. Each browser gets a random UUID in the
-httpOnly cookie `cefro_uid` (set by `src/proxy.ts` on page loads, or by
-`getOrCreateCurrentUserId` for API calls). All attempt access is checked
-against this id. When auth arrives, replace `getOrCreateCurrentUserId` and
-link the anonymous `users` row to the account so history is kept.
+Who the caller is comes from exactly one place, `server/identity/current-user.ts` (`getCurrentUser()`): a signed-in
+account (valid login session, managed by the `better-auth` library behind `server/auth/auth.ts`) or an anonymous visitor
+(random UUID in the httpOnly cookie `cefro_uid`, set by `src/proxy.ts` on page loads or at first API use). Both are rows
+in `users`; `users.id` is the canonical id every ownership check uses, and the id is never taken from a request. When an
+anonymous visitor signs up or signs in, their history is merged into the account and the anonymous cookie is cleared.
+The full model, conversion rules, session security and limits are in
+[`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md#11-identity-and-accounts-stage-4).
 
 ## Analytics
 

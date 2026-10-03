@@ -5,6 +5,7 @@ import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import { getSpeakingTask } from "@/content/speaking";
 import { trackServerEvent } from "@/server/analytics/track";
 import { HttpError } from "@/server/errors";
+import { assertOwnedOrNotFound, ownsResource } from "@/server/identity/authorization";
 import { newId } from "@/server/ids";
 import { assertCanSubmitAttempt } from "@/server/limits/usage-limits";
 import { logger } from "@/server/logging/logger";
@@ -60,7 +61,7 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
   let retryFocus: EvaluationResult["retry_focus"] | null = null;
   if (input.previousAttemptId) {
     const previous = repo.findAttempt(input.previousAttemptId);
-    if (!previous || previous.userId !== input.userId || previous.taskId !== task.id) {
+    if (!previous || !ownsResource(input.userId, previous) || previous.taskId !== task.id) {
       throw new HttpError(400, "invalid_previous_attempt", "The previous attempt could not be found.");
     }
     const previousEvaluation = repo.findLatestEvaluation(previous.id);
@@ -121,10 +122,7 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
 /** Load an attempt the user owns. Other users' attempts are reported as not found. */
 export function getOwnedAttempt(userId: string, attemptId: string): repo.AttemptRow {
   const attempt = UUID_PATTERN.test(attemptId) ? repo.findAttempt(attemptId) : undefined;
-  if (!attempt || attempt.userId !== userId) {
-    throw new HttpError(404, "attempt_not_found", "This attempt could not be found.");
-  }
-  return attempt;
+  return assertOwnedOrNotFound(userId, attempt, () => new HttpError(404, "attempt_not_found", "This attempt could not be found."));
 }
 
 export function getAttemptViewForUser(userId: string, attemptId: string): AttemptView {

@@ -36,8 +36,11 @@ export function withErrorHandling<Args extends unknown[]>(
  * a fast path: it can be absent (chunked uploads) or wrong, so the bytes actually received are
  * counted and the stream is cancelled the moment the limit is crossed.
  */
-export async function readBodyWithLimit(request: Request, maxBytes: number): Promise<Buffer> {
-  const tooLarge = () => new HttpError(413, "audio_too_large", "The recording is too large.");
+export async function readBodyWithLimit(
+  request: Request,
+  maxBytes: number,
+  tooLarge: () => HttpError = () => new HttpError(413, "audio_too_large", "The recording is too large."),
+): Promise<Buffer> {
   const declared = Number(request.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > maxBytes) throw tooLarge();
   if (!request.body) throw new HttpError(400, "invalid_form", "The upload was incomplete. Please try again.");

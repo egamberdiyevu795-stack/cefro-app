@@ -3,11 +3,17 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/headers", async () => (await import("../../../test/next-headers-mock")).nextHeadersMock);
 import { getSpeakingTask } from "@/content/speaking";
 import { findAttempt, findRecording, insertAttemptWithRecording, ensureTaskSnapshot } from "@/server/attempts/attempt-repository";
 import { MIGRATIONS_DIR, migrateDatabase, openDatabase, setDbForTesting } from "./client";
 import * as schema from "./schema";
+import { PASSWORD, signIn, signUp } from "../../../test/auth-helpers";
+import { jar } from "../../../test/next-headers-mock";
+import { getCurrentUser } from "@/server/identity/current-user";
+import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
 
 /**
  * Migration harness. Proves that the migration history is internally consistent, that a fresh database
@@ -85,6 +91,9 @@ describe("fresh database", () => {
     const sqlite = (db as unknown as { $client: Database.Database }).$client;
     expect(names(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite_%'").all())).toEqual([
       "analytics_events",
+      "auth_accounts",
+      "auth_sessions",
+      "auth_verifications",
       "evaluations",
       "practice_sessions",
       "recordings",
@@ -222,5 +231,106 @@ describe("upgrading a database created by an earlier release", () => {
       INSERT INTO speaking_attempts (id, user_id, task_id, task_version, attempt_number, status, updated_at) VALUES ('a1','u1','ghost-task',1,1,'completed','x');
     `);
     expect(() => migrateDatabase(sqlite, db)).toThrow(/foreign key violation/i);
+  });
+});
+
+describe("Stage 4 (authentication) migration", () => {
+  const ANON = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
+
+  it("adds the account tables, the users columns and the email uniqueness rule", () => {
+    const db = openDatabase(":memory:");
+    const sqlite = (db as unknown as { $client: Database.Database }).$client;
+    expect(names(sqlite.pragma("table_info(users)") as unknown[])).toEqual(
+      expect.arrayContaining(["email", "name", "image", "email_verified", "updated_at", "merged_into_user_id", "kind"]),
+    );
+    for (const table of ["auth_sessions", "auth_accounts"]) {
+      const fks = sqlite.pragma(`foreign_key_list(${table})`) as { from: string; table: string }[];
+      expect(fks.map((fk) => `${fk.from}→${fk.table}`)).toEqual(["user_id→users"]);
+    }
+    expect(names(sqlite.pragma("index_list(users)") as unknown[])).toContain("users_email_uq");
+    expect(names(sqlite.pragma("index_list(auth_sessions)") as unknown[])).toContain("auth_sessions_token_uq");
+
+    // Two accounts cannot share an email; any number of anonymous users (NULL email) can coexist.
+    sqlite.exec("INSERT INTO users (id) VALUES ('x1'), ('x2'), ('x3')");
+    sqlite.exec("UPDATE users SET email = 'a@example.com', kind = 'registered' WHERE id = 'x1'");
+    expect(() => sqlite.exec("UPDATE users SET email = 'a@example.com', kind = 'registered' WHERE id = 'x2'")).toThrow(/UNIQUE/);
+    // A session needs a real user.
+    expect(() => sqlite.exec("INSERT INTO auth_sessions (id,user_id,token,expires_at,updated_at) VALUES ('s','ghost','t','x','x')")).toThrow(/FOREIGN KEY/);
+  });
+
+  it("upgrades a database from the previous schema with anonymous users and data, then converts them to an account", async () => {
+    const { sqlite, db } = openRaw(path.join(tempDir(), "previous.sqlite"));
+    migrateDatabase(sqlite, db, migrationsUpTo(3)); // the schema before authentication existed
+    expect(names(sqlite.pragma("table_info(users)") as unknown[])).not.toContain("email");
+    const content = JSON.stringify({ id: "b2-part2-technology-young-people", version: 1 });
+    sqlite.exec(`
+      INSERT INTO users (id) VALUES ('${ANON}'), ('a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2');
+      INSERT INTO practice_sessions (id, user_id) VALUES ('5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', '${ANON}');
+      INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-technology-young-people', 1, 'B2', 2, 'T', '${content}');
+      INSERT INTO speaking_attempts (id, user_id, session_id, task_id, task_version, attempt_number, status, updated_at) VALUES
+        ('d1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1', '${ANON}', '5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', 'b2-part2-technology-young-people', 1, 1, 'completed', 'x');
+      INSERT INTO analytics_events (id, name, source, user_id, session_id, occurred_at) VALUES ('ev1', 'practice_opened', 'client', '${ANON}', '5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', '2026-01-01T00:00:00.000Z');
+    `);
+
+    migrateDatabase(sqlite, db); // the real, full set
+    sqlite.pragma("foreign_keys = ON");
+
+    const users = sqlite.prepare("SELECT id, kind, email, name, email_verified, merged_into_user_id FROM users ORDER BY id").all();
+    expect(users).toEqual([
+      { id: ANON, kind: "anonymous", email: null, name: null, email_verified: 0, merged_into_user_id: null },
+      { id: "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2", kind: "anonymous", email: null, name: null, email_verified: 0, merged_into_user_id: null },
+    ]);
+    expect(sqlite.pragma("foreign_key_check")).toEqual([]);
+
+    // Now authenticate on the upgraded database and attach the existing anonymous history.
+    setDbForTesting(db);
+    resetAuthLimitersForTesting();
+    jar.clear();
+    jar.set("cefro_uid", ANON);
+    expect((await signUp("upgraded@example.com", PASSWORD, { ip: "10.9.0.1" })).status).toBe(200);
+    const account = await getCurrentUser();
+    expect(account).toMatchObject({ kind: "authenticated", email: "upgraded@example.com" });
+    expect(sqlite.prepare("SELECT user_id FROM speaking_attempts WHERE id = 'd1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1'").get()).toEqual({ user_id: account.userId });
+    expect(sqlite.prepare("SELECT user_id FROM practice_sessions").get()).toEqual({ user_id: account.userId });
+    expect(sqlite.prepare("SELECT user_id FROM analytics_events WHERE id = 'ev1'").get()).toEqual({ user_id: account.userId });
+    expect(sqlite.prepare("SELECT merged_into_user_id AS m FROM users WHERE id = ?").get(ANON)).toEqual({ m: account.userId });
+
+    // A second sign-in with the same stale anonymous cookie changes nothing (idempotent).
+    jar.clear();
+    jar.set("cefro_uid", ANON);
+    expect((await signIn("upgraded@example.com", PASSWORD, { ip: "10.9.0.2" })).status).toBe(200);
+    expect(sqlite.prepare("SELECT count(*) AS n FROM speaking_attempts").get()).toEqual({ n: 1 });
+    expect(sqlite.pragma("foreign_key_check")).toEqual([]);
+  });
+
+  function folderWithBrokenMigration() {
+    const dir = tempDir();
+    fs.cpSync(MIGRATIONS_DIR, dir, { recursive: true });
+    const entries = journal().entries;
+    const bad = { idx: entries.length, version: "6", when: entries.at(-1)!.when + 1000, tag: `${String(entries.length).padStart(4, "0")}_deliberately_broken`, breakpoints: true };
+    fs.writeFileSync(path.join(dir, `${bad.tag}.sql`), "CREATE TABLE `half_done` (`id` text);--> statement-breakpoint\nTHIS IS NOT SQL;");
+    fs.writeFileSync(path.join(dir, "meta/_journal.json"), JSON.stringify({ version: "7", dialect: "sqlite", entries: [...entries, bad] }));
+    return { dir, applied: entries.length };
+  }
+
+  it("rolls a failing migration back completely: an existing database keeps its schema and its data", () => {
+    const { dir, applied } = folderWithBrokenMigration();
+    const { sqlite, db } = openRaw(path.join(tempDir(), "failing.sqlite"));
+    migrateDatabase(sqlite, db); // the real set is applied
+    sqlite.exec("INSERT INTO users (id, kind, email) VALUES ('keep-me', 'registered', 'keep@example.com')");
+
+    expect(() => migrateDatabase(sqlite, db, dir)).toThrow();
+    expect(names(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all())).not.toContain("half_done"); // its first statement was undone too
+    expect((sqlite.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get() as { n: number }).n).toBe(applied);
+    expect(sqlite.prepare("SELECT email FROM users WHERE id = 'keep-me'").get()).toEqual({ email: "keep@example.com" });
+  });
+
+  it("applies a batch of pending migrations all-or-nothing (a failure in the last one leaves a fresh database empty, not half-built)", () => {
+    const { dir } = folderWithBrokenMigration();
+    const { sqlite, db } = openRaw(path.join(tempDir(), "fresh-failing.sqlite"));
+    expect(() => migrateDatabase(sqlite, db, dir)).toThrow();
+    const tables = names(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all());
+    expect(tables).not.toContain("half_done");
+    expect(tables).not.toContain("users"); // nothing from the earlier migrations in the same batch survived
   });
 });

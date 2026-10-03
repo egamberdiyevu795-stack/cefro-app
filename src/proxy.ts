@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   USER_COOKIE_MAX_AGE_SECONDS,
   USER_COOKIE_NAME,
+  hasSessionCookie,
   isValidUserId,
 } from "@/server/identity/user-cookie";
 
@@ -12,6 +13,8 @@ import {
  * proxy off them avoids buffering audio uploads.
  */
 export function proxy(request: NextRequest) {
+  // A signed-in browser does not need an anonymous identity. (Presence only: the session itself is verified by the server.)
+  if (hasSessionCookie(request.cookies)) return NextResponse.next();
   const existing = request.cookies.get(USER_COOKIE_NAME)?.value;
   if (existing && isValidUserId(existing)) return NextResponse.next();
 

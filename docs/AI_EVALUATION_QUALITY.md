@@ -423,6 +423,7 @@ was never printed, logged or committed. Transcription was not part of this valid
 | 3 | 2.2.0 | pass | 14/14 | 1 | 15.9 s | gate recalibrated; no rejections persisted |
 | 4 | 2.3.0 | pass | 14/14 | 2 | 13.6 s | retry-review and repetition counts fixed |
 | 5 | 2.4.0 | pass | 14/14 | 2 | 15.1 s | 72,856 tokens in / 53,412 out; 0 failures, 0 gate failures |
+| 6 | 2.4.1 | pass | 14/14 | 2 | 14.4 s | 72,756 tokens in / 50,304 out; 0 failures, 0 gate failures; re-run after the pronunciation-noun gate fix (Stage 3B): no regression, no pronunciation wording in any student-facing text |
 
 **Final run (5):** 14 of 14 samples and the retry pair evaluated, 0 failed, 0 quality-gate failures, 2 recovered
 by one regeneration (S05, S08; both for `improved_example_changes_meaning`), average 15.1 s (slowest S05 at

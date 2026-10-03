@@ -142,7 +142,10 @@ in practice. Models in this family are known to "smooth" disfluent speech. Run
 If it corrects errors, try `whisper-1` (configurable, no code change) and
 record the result below.
 
-### Gemini transcription: deliberately not implemented
+### Gemini transcription: deliberately not implemented (SUPERSEDED by Stage 2B below)
+
+> This subsection records the Stage 3B decision at the time. A `gemini` transcription provider now exists and was
+> measured on synthetic speech; see "Stage 2B: temporary Gemini real-provider validation".
 
 Evaluation can run on Gemini; transcription stays on OpenAI (or the mock).
 I checked whether Gemini could be added as a `TranscriptionProvider` and chose
@@ -509,6 +512,87 @@ exhausted) and gate rejection fixed by the regeneration. Each ends as a stored `
 code, the recording kept, no evaluation row, no dangling reference, and (for transient faults) a restart that completes.
 
 One real defect was found while writing the checks and fixed (evaluator 2.4.1): see findings log F24.
+
+## Stage 2B: temporary Gemini real-provider validation
+
+**Why Gemini.** No OpenAI or Anthropic key exists for this project; only `GEMINI_API_KEY` (a GitHub Actions repository
+secret). Gemini is therefore a **temporary** real provider so the whole path could be exercised for the first time. It
+is not the permanent evaluator: both roles are behind the existing interfaces (`TranscriptionProvider`,
+`EvaluationModel`) and are chosen by configuration (`TRANSCRIPTION_PROVIDER=gemini|openai|mock`,
+`EVALUATION_PROVIDER=gemini|anthropic|mock`). Switching to OpenAI transcription or Anthropic evaluation later is
+configuration plus the key; the evaluator version (`speaking-evaluator/2.4.1`), rubric, schema, prompt, gate, evidence
+check, retry and comparison are unchanged.
+
+**What was added.** `src/server/transcription/gemini-transcription.ts`: the existing evaluation SDK, a verbatim prompt
+(no sample utterance, no exam framing), a structured reply (`speech_detected`, `transcript`), the same stable error
+codes as the other providers, and key redaction (the key is only sent in the `x-goog-api-key` header, never logged or put
+in an error). The live harness can synthesise its test speech with Gemini text-to-speech when no OpenAI key exists
+(`TTS_PROVIDER`). Manual workflow `live-pipeline.yml` has a `transcription_provider` input. The production bundle was
+checked: it contains neither the name `GEMINI_API_KEY` nor a key-shaped string.
+
+**What these runs are, and are not.** Every result below is **synthetic speech** (Gemini text-to-speech reading known
+texts, encoded to WebM/Opus) sent to the **real** Gemini speech-to-text and evaluation. Nothing here is a
+developer-recorded or real-student recording: **developer-recorded validation: NOT RUN; real-student validation: NOT
+RUN.** Synthetic speech is clean and evenly paced; it says nothing about accents, noise or microphones.
+
+### Run results (GitHub Actions, commits `9155347` → `7f6d1dc` → `f93ada6`)
+
+| Check | Result |
+|---|---|
+| Gemini WebM/Opus acceptance (the browser recorder's format) | Accepted; also m4a and ogg accepted. |
+| Fidelity on 4 speech samples | Median WER 0%; 7 of 7 deliberate learner errors preserved ("I have went", "I buy two bread", "he don't like", "it make people lazy", "Me and my friend is", "discussing about", "the phones is"); 6 of 6 fillers kept. Not perfectly literal: it added commas and "usefull" → "useful", "every day" → "everyday", "face to face" → "face-to-face" (harmless for assessment). |
+| Silence and near-silence | **FAIL (real limitation, not fixed).** Gemini invented speech on 8 s of silence: first run (plain-text reply) "Uh my parents gave me uh their support and encouraged me to learn" and "I think when I was little I was afraid of ghosts"; after removing the exam framing and requiring a structured `speech_detected` answer it still returned "It usually usually it makes me feel relax." (8 words) for digital silence and "a ball" (2 words) for near-silence. Output varies between runs. Only transcripts under 5 words are caught by the existing "not enough speech" rule. |
+| Full pipeline, 8 samples (normal, weaker, grammar mistakes, repetition, fillers, off-task, weak→strong retry, synthetic guided retry), run on `7f6d1dc` | 8/8 completed; 0 integrity violations (evidence quotes found in transcript, record linkage, versions, `h2:` prompt hash, stored audio equals uploaded audio, events correlated); 0 regenerations in that run (2 in the earlier run on `9155347`, both fixed by the one regeneration); average processing 15.1 s per attempt (earlier run 22.2 s). |
+| Browser flow (Chromium fake microphone through the real MediaRecorder path, synthetic speech) | Passed: provider `gemini`, WER 0%, 152 words, level B2+, 28.5 s from finishing to feedback in the first run. |
+| Latency and tokens (baseline only, no optimisation) | Transcription 1.4-4.2 s per answer; evaluation stage 10-26 s; evaluation tokens in/out 37,050/24,442 over 8 attempts (run on `7f6d1dc`); transcription tokens 11,437/5,027. No cost figures. |
+
+Retry test (synthetic guided retry, same session). P2 (B1-, 56 words) got the retry focus "speak at least 80 seconds by
+adding one personal example to each prompt" and "replace good/bad". P7 was P2's own transcript rewritten by Gemini
+applying only those two items (synthetic: simulates a learner who followed the feedback). Stored: link to the previous
+attempt, retry focus snapshot, second transcript and second evaluation. The second evaluation's `retry_review` marked
+the vocabulary goal `achieved` ("did not use good or bad once") and the length goal `partly_achieved` (71 s against the
+80 s target), and still flagged the unrelated mistake the retry kept ("spend many time"). The comparison reported
+`clear_improvement` (B1- → B1+, focus 1 achieved, 1 partly achieved). That matches what the text actually did.
+
+### Human quality review (on the output above; one reviewer, the developer agent, not an examiner)
+
+- **A. Transcript:** faithful on every speech sample; learner errors and fillers kept. See silence failure above.
+- **B. Weaknesses:** correct and concrete (P3: missing third-person -s, "must to limit", "should using", "People is sharing").
+- **C. Evidence:** quotes are exact transcript text; sentences with no quotable evidence (length) correctly use a `speech_metric` basis with no quote.
+- **D. Explanation:** short, plain English, tied to the student's own words.
+- **E. Correction:** each issue has a fix and an `improved_example` built from the student's own sentence.
+- **F. Improved version:** natural and close to the original, not a different answer.
+- **G. Retry focus:** two measurable objectives tied to issues (P2: "speak at least 80 seconds", "avoid good/bad").
+- **H. Comparison:** matched the real change (above).
+- **Minor flags for review, not defects found:** the numeric-claim check flagged "30%" in P2's reliability note (the answer used 27% of the time; the note said "under 30%", which is true) and "80 seconds" in the retry review (that is the target quoted from the previous focus, not a measurement). The numeric check is intentionally conservative.
+
+### Failure paths
+
+Covered by tests, not by deliberately breaking the live key: no key → `provider_not_configured` with the setting named
+(boot check); 401/403/400-with-key-text/404 → `provider_not_configured`, 429 → `provider_rate_limited`, timeouts →
+`provider_timeout`, 400/413/415 → `audio_unsupported`, blocked/truncated/non-JSON replies → `transcription_failed`; the
+key never appears in any message, cause or stack (tested with a key-shaped sentinel). The historical live runs 1-6 and
+the redaction tests are unchanged.
+
+### Existing synthetic evaluation validation (kept separate)
+
+The earlier text-only result is unchanged and is a different test: **14 of 14 synthetic transcripts on evaluator
+2.4.1, 2 regenerations, about 14.4 s per evaluation** (see "Real Gemini validation"). It tested the evaluator on text.
+The Stage 2B runs above are the first test of speech-to-text and of the whole path.
+
+### Conclusions and limits
+
+- The Gemini-backed B2 Part 2 pipeline successfully completed a real end-to-end test with synthetic speech (8/8 samples
+  and one browser flow). This is not production validation.
+- **Open defect: Gemini speech-to-text invents words on silent or near-silent audio.** A prompt change and a structured
+  reply did not remove it. A learner who submits silence could be given feedback on words they never said. Needs a
+  provider-independent speech-activity check before transcription (for example a decoded-energy check) or a dedicated
+  STT provider whose silence behaviour is measured; not built here because it is a new subsystem beyond this stage.
+- Pronunciation is not assessed: the transcript is text, so the feedback never makes pronunciation claims
+  (the gate enforces this).
+- No validation exists with OpenAI transcription or Anthropic evaluation: NOT RUN (no keys).
+- Gemini fidelity was measured on four speech samples from one synthetic voice; it may differ for real accents and noisy
+  audio. Real learner validation is still required.
 
 ## Provider failure matrix and security audit (B2 Part 2)
 

@@ -39,6 +39,10 @@ on:
         options: [gemini, anthropic]
         required: false
         default: gemini
+      transcription_samples:
+        description: "Optional comma-separated sample prefixes for step 1 (e.g. T02,T06,T07). Empty = all."
+        required: false
+        default: ""
       samples:
         description: "Optional comma-separated pipeline sample prefixes (e.g. P1,P2). Empty = all."
         required: false
@@ -98,6 +102,7 @@ jobs:
           TRANSCRIPTION_PROVIDER: ${{ inputs.transcription_provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TRANSCRIPTION_SAMPLES: ${{ inputs.transcription_samples }}
         run: npm run eval:transcription:controlled
 
       - name: 2. Full pipeline validation (real providers per inputs)

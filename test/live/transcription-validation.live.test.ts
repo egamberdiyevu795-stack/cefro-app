@@ -57,6 +57,7 @@ interface Row {
   findings: string[]; // things to read, not necessarily failures
 }
 
+const onlySamples = process.env.TRANSCRIPTION_SAMPLES?.split(",").map((x) => x.trim()).filter(Boolean);
 const PROMPT_WORDS = new Set(evidenceTokens(selection.provider === "gemini" ? GEMINI_TRANSCRIPTION_PROMPT : VERBATIM_TRANSCRIPTION_PROMPT));
 const DISTINCTIVE_PROMPT_WORDS = ["verbatim", "transcript", "learner", "grammar", "hesitation", "speaking", "exam"];
 const TASK_WORDS = new Set(evidenceTokens([task.question, ...task.prompts].join(" ")));
@@ -72,7 +73,7 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
     return { output, latencyMs: Date.now() - started };
   }
 
-  it.each(TRANSCRIPTION_SAMPLES.map((s) => [s.id, s] as const))("%s", async (_id, sample) => {
+  it.each(TRANSCRIPTION_SAMPLES.filter((s) => !onlySamples || onlySamples.some((p) => s.id.startsWith(p))).map((s) => [s.id, s] as const))("%s", async (_id, sample) => {
     const format: AudioFormat = "webm"; // the format the browser recorder produces
     const file =
       sample.kind === "silence" ? makeSilence(sample.seconds ?? 8, format) : sample.kind === "near_silence" ? makeNearSilence(sample.seconds ?? 8, format) : await speechFile(sample.ref!, format);

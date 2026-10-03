@@ -13,6 +13,7 @@ const reply = (text: string | null, candidate: Record<string, unknown> = {}, ext
   modelVersion: "gemini-test-001",
   ...extra,
 });
+const speech = (transcript: string, detected = true) => JSON.stringify({ speech_detected: detected, transcript });
 const apiError = (code: number, status: string, message: string) => json(code, { error: { code, message, status } });
 
 function provider(fetchImpl: (...args: never[]) => Promise<Response>, overrides: Partial<ConstructorParameters<typeof GeminiTranscriptionProvider>[0]> = {}) {
@@ -21,7 +22,7 @@ function provider(fetchImpl: (...args: never[]) => Promise<Response>, overrides:
 
 describe("GeminiTranscriptionProvider", () => {
   it("sends the audio and the verbatim instructions server-side, with the key only in a header, and returns the text unchanged", async () => {
-    const fetchMock = vi.fn(async () => json(200, reply("  He go to school every day, uh, and I have went there twice.  ")));
+    const fetchMock = vi.fn(async () => json(200, reply(speech("  He go to school every day, uh, and I have went there twice.  "))));
     const result = await provider(fetchMock).transcribe(audio);
     expect(result.text).toBe("He go to school every day, uh, and I have went there twice."); // mistakes preserved, only trimmed
     expect(result.language).toBe("en");
@@ -37,20 +38,36 @@ describe("GeminiTranscriptionProvider", () => {
     expect(parts[1].inlineData.mimeType).toBe("audio/webm"); // codec parameter removed
     expect(Buffer.from(parts[1].inlineData.data, "base64").equals(audio.audio)).toBe(true);
     expect(body.generationConfig.temperature).toBe(0);
+    expect(body.generationConfig.responseMimeType).toBe("application/json");
+    expect(body.generationConfig.responseJsonSchema.required).toEqual(["speech_detected", "transcript"]);
     expect(JSON.stringify(body)).not.toContain(KEY);
   });
 
   it("tells the model not to correct anything, and contains no sample utterance to echo", () => {
     expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/Do NOT correct/);
-    expect(GEMINI_TRANSCRIPTION_PROMPT).toContain(NO_SPEECH_MARKER);
+    expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/Never guess/);
+    expect(GEMINI_TRANSCRIPTION_PROMPT).not.toMatch(/exam/i); // the exam framing primed the model to invent an answer on silence
     expect(GEMINI_TRANSCRIPTION_PROMPT).not.toMatch(/"[^"]{12,}"/); // no quoted example sentence
   });
 
   it("treats the no-speech marker, an empty answer and an echo of the instructions as silence (transcription_empty)", async () => {
-    for (const text of [NO_SPEECH_MARKER, `${NO_SPEECH_MARKER}\n`, "", null, "Transcribe the speech exactly as spoken word for word and keep every mistake."]) {
+    for (const text of [
+      speech("", false),
+      speech("Uh my parents gave me their support", false), // the model says there is no speech: its text is not trusted
+      speech(NO_SPEECH_MARKER),
+      speech(""),
+      "",
+      null,
+      speech("Transcribe the speech exactly as spoken word for word and keep every mistake."),
+    ]) {
       const p = provider(async () => json(200, reply(text)));
       await expect(p.transcribe(audio), String(text)).rejects.toMatchObject({ failureCode: "transcription_empty", retryable: false });
     }
+  });
+
+  it("a reply that is not the requested JSON is a retryable transcription_failed, not a transcript", async () => {
+    const p = provider(async () => json(200, reply("He go to school every day.")));
+    await expect(p.transcribe(audio)).rejects.toMatchObject({ failureCode: "transcription_failed" });
   });
 
   it("accepts a genuine short answer that merely shares a few words with the instructions", () => {

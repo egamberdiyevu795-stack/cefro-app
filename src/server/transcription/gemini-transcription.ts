@@ -15,13 +15,29 @@ import type { TranscriptionInput, TranscriptionOutput, TranscriptionProvider } f
  */
 export const NO_SPEECH_MARKER = "[[NO_SPEECH]]";
 
+/**
+ * The first live run (docs/AI_EVALUATION_QUALITY.md, Stage 2B) showed that with a plain-text reply and a prompt that
+ * mentioned an exam, Gemini INVENTED a plausible learner answer for 8 seconds of silence ("Uh my parents gave me uh
+ * their support..."). So the reply is structured: the model must first decide `speech_detected`, the prompt says
+ * that many recordings contain no speech and that guessing is forbidden, and nothing about the exam is mentioned.
+ */
 export const GEMINI_TRANSCRIPTION_PROMPT =
-  "Transcribe the English speech in this audio recording exactly as spoken, word for word. " +
-  "The speaker is an English learner answering a speaking exam question. " +
-  "Keep every grammar mistake, wrong verb form, missing word, wrong word choice, repetition, false start, self-correction and hesitation sound (um, uh, er) exactly as said. " +
+  "Transcribe the English speech that is actually audible in this audio recording, exactly as spoken, word for word. " +
+  "Many recordings contain no speech at all: only silence, a quiet room, hiss or background noise. " +
+  "If you cannot clearly hear a person speaking, set speech_detected to false and transcript to an empty string. " +
+  "Never guess, never invent words, and never produce a sentence that is not clearly audible. " +
+  "The speaker may be an English learner: keep every grammar mistake, wrong verb form, missing word, wrong word choice, repetition, false start, self-correction and hesitation sound (um, uh, er) exactly as said. " +
   "Do NOT correct, improve, complete, summarise or translate anything, and do not add words that were not spoken. " +
-  "Write plain text only: no timestamps, no speaker labels, no notes, no quotation marks around the whole text, and no introduction. " +
-  `If there is no intelligible speech (silence, background noise, music), reply with exactly ${NO_SPEECH_MARKER} and nothing else.`;
+  "In transcript write plain text only: no timestamps, no speaker labels, no notes and no introduction.";
+
+const RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    speech_detected: { type: "boolean", description: "true only if a person can clearly be heard speaking" },
+    transcript: { type: "string", description: "verbatim words spoken; empty string when speech_detected is false" },
+  },
+  required: ["speech_detected", "transcript"],
+};
 
 /** Gemini accepts audio inline up to about 20 MB of request; base64 adds a third, so stay well under. */
 export const MAX_INLINE_AUDIO_BYTES = 14 * 1024 * 1024;
@@ -72,7 +88,7 @@ export class GeminiTranscriptionProvider implements TranscriptionProvider {
             parts: [{ text: GEMINI_TRANSCRIPTION_PROMPT }, { inlineData: { mimeType, data: input.audio.toString("base64") } }],
           },
         ],
-        config: { temperature: 0, maxOutputTokens: 8192 },
+        config: { temperature: 0, maxOutputTokens: 8192, responseMimeType: "application/json", responseJsonSchema: RESPONSE_SCHEMA },
       });
     } catch (error) {
       throw mapGeminiTranscriptionError(error, this.options.apiKey);
@@ -90,13 +106,21 @@ export class GeminiTranscriptionProvider implements TranscriptionProvider {
       throw new ProviderError("transcription_failed", `Gemini did not finish the transcript (${candidate.finishReason})`);
     }
 
-    const text = (candidate.content?.parts ?? [])
+    const raw = (candidate.content?.parts ?? [])
       .filter((part) => !part.thought && typeof part.text === "string")
       .map((part) => part.text)
       .join("")
       .trim();
 
-    if (text === "" || text.includes(NO_SPEECH_MARKER)) {
+    let parsed: { speech_detected?: unknown; transcript?: unknown };
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      if (raw === "") throw new ProviderError("transcription_empty", "Gemini reported no intelligible speech", { retryable: false });
+      throw new ProviderError("transcription_failed", "Gemini returned a transcript that is not the requested JSON");
+    }
+    const text = typeof parsed.transcript === "string" ? parsed.transcript.trim() : "";
+    if (parsed.speech_detected === false || text === "" || text.includes(NO_SPEECH_MARKER)) {
       throw new ProviderError("transcription_empty", "Gemini reported no intelligible speech", { retryable: false });
     }
     if (looksLikeInstructionEcho(text)) {

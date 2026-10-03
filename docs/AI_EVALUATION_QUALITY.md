@@ -606,3 +606,11 @@ output has been reviewed yet** — add live-review findings here.
   verified server-side.
 - Uzbek-learner-specific error patterns are only covered by sample S14. Add
   real (anonymised) recordings to `local-samples/` for validation.
+- **Real-provider runs on 2026-10-03 (commit `e89225c`):** `live-evaluation.yml` with `provider=anthropic` and
+  `live-pipeline.yml` with `evaluation_provider=anthropic` both stopped at their secret checks: repository secrets
+  `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are not set (`GEMINI_API_KEY` is). Anthropic evaluation, OpenAI
+  transcription and the real end-to-end flow are therefore **NOT RUN**.
+- `npm audit` (including development tools) reports 5 high advisories, all in the lint toolchain
+  (`eslint-config-next` → `braces`/`micromatch`, a DoS on deeply nested glob patterns). `npm audit --omit=dev` reports 0, so
+  nothing in the shipped application is affected; the fix needs a breaking upgrade of the Next lint config and is deferred.
+

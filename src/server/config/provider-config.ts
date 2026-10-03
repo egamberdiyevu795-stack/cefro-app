@@ -1,5 +1,6 @@
 import "server-only";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
+import { isFfmpegAvailable, isSpeechGuardEnabled } from "@/server/audio/speech-guard";
 import type { ServerEnv } from "./env";
 
 /**
@@ -49,6 +50,12 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
     case "mock":
       if (production) problems.push({ variable: "EVALUATION_PROVIDER", message: "the mock evaluator is development-only and is refused in production" });
       break;
+  }
+
+  // The Speech Activity Guard decodes audio with ffmpeg. Running without it would let silent recordings reach the
+  // transcription provider, so a missing ffmpeg is a configuration problem, not something to skip silently.
+  if (isSpeechGuardEnabled(env) && !isFfmpegAvailable(env.FFMPEG_PATH)) {
+    problems.push({ variable: "FFMPEG_PATH", message: "ffmpeg is required by the speech activity guard (install ffmpeg, set FFMPEG_PATH, or SPEECH_GUARD=off for development)" });
   }
 
   return problems;

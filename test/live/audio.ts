@@ -200,6 +200,43 @@ function generated(name: string, source: string, seconds: number, format: AudioF
   return encodeAudio(wav, format);
 }
 
+/**
+ * Speech with silence around and between its parts: `lead` seconds, the chunks separated by `gap` seconds, `trail` seconds.
+ * Used to check that pauses and leading/trailing silence do not stop a real answer from being transcribed.
+ */
+export async function pausedSpeechFile(chunks: string[], layout: { lead: number; gap: number; trail: number }, format: AudioFormat): Promise<string> {
+  ensureCacheDir();
+  const wavs: string[] = [];
+  for (const chunk of chunks) wavs.push(await synthesizeSpeechWav(chunk));
+  const name = `paused-${key(ttsProvider(), JSON.stringify(layout), ...chunks)}`;
+  const wav = path.join(CACHE_DIR, `${name}.wav`);
+  if (!fs.existsSync(wav)) {
+    const silence = (seconds: number) => ["-f", "lavfi", "-t", String(seconds), "-i", "anullsrc=r=48000:cl=mono"];
+    const inputs: string[] = [...silence(layout.lead)];
+    wavs.forEach((file, index) => {
+      inputs.push("-i", file);
+      if (index < wavs.length - 1) inputs.push(...silence(layout.gap));
+    });
+    inputs.push(...silence(layout.trail));
+    const count = inputs.filter((arg) => arg === "-i").length;
+    const labels = Array.from({ length: count }, (_, i) => `[${i}:a]`).join("");
+    run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...inputs, "-filter_complex", `${labels}concat=n=${count}:v=0:a=1[out]`, "-map", "[out]", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", wav]);
+  }
+  return encodeAudio(wav, format);
+}
+
+/** The same speech made quieter by `db` decibels (negative), as a WAV file next to the original. */
+export function attenuatedWav(input: string, db: number): string {
+  const output = path.join(CACHE_DIR, `${path.parse(input).name}-${db}dB.wav`);
+  if (!fs.existsSync(output)) run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", input, "-af", `volume=${db}dB`, "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", output]);
+  return output;
+}
+
+/** Steady noise only (no speech), at a fixed level: quiet room, fan. */
+export function makeNoise(name: string, color: "white" | "pink", amplitude: number, seconds: number, format: AudioFormat = "webm"): string {
+  return generated(`noise-${name}-${seconds}`, `anoisesrc=color=${color}:amplitude=${amplitude}:r=48000`, seconds, format);
+}
+
 /** Speech for `text` in the requested container, cached. */
 export async function speechFile(text: string, format: AudioFormat): Promise<string> {
   return encodeAudio(await synthesizeSpeechWav(text), format);

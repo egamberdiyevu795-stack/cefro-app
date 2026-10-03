@@ -29,6 +29,14 @@ const envSchema = z.object({
     .default("true")
     .transform((value) => value === "true"),
 
+  /**
+   * Speech Activity Guard: recordings without enough speech never reach the transcription provider (models can invent
+   * an answer for silence). "auto" = on for real providers, off for the development mock; "on"/"off" force it.
+   * Needs ffmpeg when on (docs/AI_EVALUATION_QUALITY.md, Speech Activity Guard).
+   */
+  SPEECH_GUARD: z.enum(["auto", "on", "off"]).default("auto"),
+  FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
+
   GEMINI_API_KEY: z.string().optional(),
   /**
    * Gemini model for evaluation. Pinned to the model ID the API itself reported answering

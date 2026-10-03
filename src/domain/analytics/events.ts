@@ -22,6 +22,7 @@ export const CLIENT_EVENT_NAMES = [
 export const SERVER_EVENT_NAMES = [
   "recording_submitted",
   "transcription_started",
+  "speech_guard_blocked",
   "transcription_completed",
   "transcription_failed",
   "evaluation_started",

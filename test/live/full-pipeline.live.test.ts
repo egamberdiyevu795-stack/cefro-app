@@ -17,8 +17,8 @@ import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { getTranscriptionProvider, setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
 import { endpointOverrides, evidenceViolations, numericClaimMismatches, wordErrorRate } from "./checks";
-import { MIME_BY_FORMAT, ffmpegAvailable, probeDurationSeconds, speechFile, ttsLog, ttsProvider } from "./audio";
-import { PIPELINE_SAMPLES, pipelineText, type PipelineSample } from "./audio-samples";
+import { MIME_BY_FORMAT, ffmpegAvailable, makeNearSilence, makeSilence, pausedSpeechFile, probeDurationSeconds, speechFile, ttsLog, ttsProvider } from "./audio";
+import { PIPELINE_SAMPLES, pipelineText, threeParts, type PipelineSample } from "./audio-samples";
 import { evaluatorSelection, transcriptionSelection } from "./providers";
 import { writeReport } from "./report";
 
@@ -172,7 +172,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
       text = await guidedRewrite(first.view.transcript!.text, first.view.evaluation!.result.retry_focus.map((f) => f.objective));
       guidedTexts.set(sample.id, text);
     }
-    const file = await speechFile(text, "webm");
+    const file = sample.pauses ? await pausedSpeechFile(threeParts(text), { lead: 4, gap: 3, trail: 4 }, "webm") : await speechFile(text, "webm");
     const audio = fs.readFileSync(file);
     expect(audio.byteLength).toBeLessThan(MAX_AUDIO_BYTES);
     const audioSeconds = probeDurationSeconds(file);
@@ -320,6 +320,41 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     row.review.push(...numericClaimMismatches(result, metrics, audioSeconds));
   }
 
+  const guardRows: string[] = [];
+
+  it.each([
+    ["silence", () => makeSilence(8, "webm")],
+    ["near-silence", () => makeNearSilence(8, "webm")],
+  ])("%s is stopped by the Speech Activity Guard before transcription: no provider call, no transcript, no evaluation", async (label, make) => {
+    const file = make();
+    const audio = fs.readFileSync(file);
+    const sttBefore = sttCalls.length;
+    const evalBefore = evalCalls.length;
+    const created = await createAttempt({
+      userId: USER,
+      taskId: TASK_ID,
+      audio,
+      mimeType: MIME_BY_FORMAT.webm,
+      durationMs: 8000,
+      previousAttemptId: null,
+      sessionId: createPracticeSession(USER),
+    });
+    await processAttempt(created.id);
+    const view = getAttemptViewForUser(USER, created.id);
+    const transcriptRows = db.select().from(transcripts).where(eq(transcripts.attemptId, created.id)).all();
+    const evaluationRows = db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).all();
+    guardRows.push(
+      `${label}: transcription requests ${sttCalls.length - sttBefore}, evaluation requests ${evalCalls.length - evalBefore}, failure ${view.failure?.stage}/${view.failure?.code}, transcript rows ${transcriptRows.length}, evaluation rows ${evaluationRows.length}`,
+    );
+
+    expect(sttCalls.length - sttBefore, `${label}: the transcription provider was called`).toBe(0);
+    expect(evalCalls.length - evalBefore, `${label}: the evaluator was called`).toBe(0);
+    expect(view.status).toBe("failed");
+    expect(view.failure).toEqual({ stage: "transcription", code: "transcription_empty" });
+    expect(transcriptRows).toHaveLength(0);
+    expect(evaluationRows).toHaveLength(0);
+  });
+
   it("writes the review report", () => {
     const done = rows.filter((r) => r.status === "completed");
     const failed = rows.filter((r) => r.status !== "completed");
@@ -334,6 +369,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
       `Transcription: ${provider.name} / ${provider.model} (real)`,
       `Evaluation: ${model.provider} / models answered: ${[...new Set(done.map((r) => r.evalModel))].join(", ") || "n/a"} (real)`,
       ...(guidedTexts.size ? [`Guided retry text (synthetic, generated from the first attempt's retry focus): ${[...guidedTexts.keys()].join(", ")}`] : []),
+      ...guardRows.map((r) => `Speech Activity Guard, ${r}`),
       "Audio: synthetic speech through the browser's WebM/Opus format; not real learner recordings",
       `Samples: ${rows.length}`,
       `Completed end to end: ${done.length}`,

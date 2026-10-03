@@ -11,7 +11,12 @@ import {
   MIME_BY_FORMAT,
   ffmpegAvailable,
   makeNearSilence,
+  makeNoise,
   makeSilence,
+  pausedSpeechFile,
+  attenuatedWav,
+  synthesizeSpeechWav,
+  encodeAudio,
   probeDurationSeconds,
   speechFile,
   ttsLog,
@@ -22,6 +27,7 @@ import { endpointOverrides, wordErrorRate } from "./checks";
 import { FORMAT_SAMPLE_REF, TRANSCRIPTION_SAMPLES } from "./audio-samples";
 import { transcriptionSelection } from "./providers";
 import { writeReport } from "./report";
+import { ffmpegSpeechGuard } from "@/server/audio/speech-guard";
 
 /**
  * REAL OpenAI transcription validation on controlled audio (see audio.ts for what the audio is and is not).
@@ -46,7 +52,9 @@ interface Row {
   audioSeconds: number;
   latencyMs?: number;
   transcript?: string;
-  outcome: "transcribed" | "rejected_empty" | "error";
+  outcome: "transcribed" | "rejected_empty" | "blocked_by_guard" | "error";
+  /** Speech Activity Guard measurements (it runs before the provider). */
+  guard?: { hasSpeech: boolean; reason: string; activeSeconds: number; noiseFloorDb: number; loudDb: number; decodeMs: number; analyseMs: number };
   errorCode?: string;
   usage?: Record<string, number | string>;
   ref?: string;
@@ -59,15 +67,30 @@ interface Row {
 
 const onlySamples = (process.env.TRANSCRIPTION_SAMPLES ?? "").split(",").map((x) => x.trim()).filter(Boolean);
 const PROMPT_WORDS = new Set(evidenceTokens(selection.provider === "gemini" ? GEMINI_TRANSCRIPTION_PROMPT : VERBATIM_TRANSCRIPTION_PROMPT));
-const DISTINCTIVE_PROMPT_WORDS = ["verbatim", "transcript", "learner", "grammar", "hesitation", "speaking", "exam"];
-const TASK_WORDS = new Set(evidenceTokens([task.question, ...task.prompts].join(" ")));
 const FILLER_RE = /\b(um+|uh+|er+m?|hmm+)\b/gi;
+
+async function sampleFile(sample: (typeof TRANSCRIPTION_SAMPLES)[number], format: AudioFormat): Promise<string> {
+  switch (sample.kind) {
+    case "silence":
+      return makeSilence(sample.seconds ?? 8, format);
+    case "near_silence":
+      return makeNearSilence(sample.seconds ?? 8, format);
+    case "noise":
+      return makeNoise(sample.id, sample.noise!.color, sample.noise!.amplitude, sample.seconds ?? 8, format);
+    default:
+      if (sample.pauses) return pausedSpeechFile(sample.pauses.chunks, sample.pauses, format);
+      if (sample.quietDb !== undefined) return encodeAudio(attenuatedWav(await synthesizeSpeechWav(sample.ref!), sample.quietDb), format);
+      return speechFile(sample.ref!, format);
+  }
+}
 
 describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on controlled audio`, () => {
   const rows: Row[] = [];
   const provider = () => getTranscriptionProvider();
+  let providerCalls = 0; // every real transcription request made by this suite
 
   async function transcribeFile(file: string, format: AudioFormat) {
+    providerCalls += 1;
     const started = Date.now();
     const output = await provider().transcribe({ audio: fs.readFileSync(file), mimeType: MIME_BY_FORMAT[format], language: "en" });
     return { output, latencyMs: Date.now() - started };
@@ -75,8 +98,8 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
 
   it.each(TRANSCRIPTION_SAMPLES.filter((s) => onlySamples.length === 0 || onlySamples.some((p) => s.id.startsWith(p))).map((s) => [s.id, s] as const))("%s", async (_id, sample) => {
     const format: AudioFormat = "webm"; // the format the browser recorder produces
-    const file =
-      sample.kind === "silence" ? makeSilence(sample.seconds ?? 8, format) : sample.kind === "near_silence" ? makeNearSilence(sample.seconds ?? 8, format) : await speechFile(sample.ref!, format);
+    const callsAtStart = providerCalls;
+    const file = await sampleFile(sample, format);
     const row: Row = {
       id: sample.id,
       description: sample.description,
@@ -89,6 +112,29 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
       findings: [],
     };
     rows.push(row);
+
+    // The Speech Activity Guard decides first, from the audio signal, exactly as the pipeline does.
+    const activity = await ffmpegSpeechGuard.check({ audio: fs.readFileSync(file), mimeType: MIME_BY_FORMAT[format] });
+    row.guard = {
+      hasSpeech: activity.hasSpeech,
+      reason: activity.reason,
+      activeSeconds: Math.round(activity.activeSeconds * 100) / 100,
+      noiseFloorDb: Math.round(activity.noiseFloorDb),
+      loudDb: Math.round(activity.loudDb),
+      decodeMs: activity.decodeMs,
+      analyseMs: activity.analyseMs,
+    };
+    if (!activity.hasSpeech) {
+      expect(sample.kind, `${sample.id}: the guard blocked real speech (${activity.reason})`).not.toBe("speech");
+      row.outcome = "blocked_by_guard";
+      row.findings.push(`Blocked by the Speech Activity Guard (${activity.reason}) before any provider call.`);
+      expect(providerCalls, `${sample.id}: the provider was called for blocked audio`).toBe(callsAtStart);
+      return;
+    }
+    if (sample.kind !== "speech") {
+      row.findings.push("The guard let this non-speech audio through; it is NOT sent to the provider so no transcript can be invented, and the test fails.");
+      expect.fail(`${sample.id}: the Speech Activity Guard let non-speech audio (${sample.kind}) through (${activity.reason}, ${activity.activeSeconds.toFixed(2)} s active)`);
+    }
 
     try {
       const { output, latencyMs } = await transcribeFile(file, format);
@@ -103,16 +149,6 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
     }
 
     const words = evidenceTokens(row.transcript ?? "");
-    if (sample.kind !== "speech") {
-      // Silence must never become a fabricated answer or an echo of the prompt/task.
-      const echoed = words.filter((w) => DISTINCTIVE_PROMPT_WORDS.includes(w));
-      expect(echoed, `${sample.id}: transcript contains words from the transcription prompt`).toEqual([]);
-      expect(words.length, `${sample.id}: silence produced a transcript long enough to be graded`).toBeLessThan(5);
-      const taskish = words.filter((w) => TASK_WORDS.has(w) && w.length > 4);
-      expect(taskish, `${sample.id}: transcript contains task words`).toEqual([]);
-      row.findings.push(row.outcome === "rejected_empty" ? "Rejected as an echo of the prompt (transcription_empty)." : `Returned ${words.length} word(s): "${row.transcript}"`);
-      return;
-    }
 
     const transcript = row.transcript!;
     row.wer = wordErrorRate(sample.ref!, transcript);
@@ -160,7 +196,9 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
     const kept = rows.flatMap((r) => r.keptErrors);
     const sum = (key: string) => rows.reduce((total, r) => total + (typeof r.usage?.[key] === "number" ? (r.usage[key] as number) : 0), 0);
     const median = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : 0);
-    const silence = rows.filter((r) => /silence/.test(r.id));
+    const nonSpeech = rows.filter((r) => /silence|noise/.test(r.id));
+    const blocked = rows.filter((r) => r.outcome === "blocked_by_guard");
+    const guardMs = rows.flatMap((r) => (r.guard ? [r.guard.decodeMs + r.guard.analyseMs] : []));
     const summary = [
       "",
       ...(endpointOverrides().length ? [`NOT A REAL RUN: ${endpointOverrides().join(", ")} point at a stand-in, not the provider.`] : []),
@@ -171,13 +209,14 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
       `Samples: ${rows.length}`,
       `Formats: ${[...new Set(rows.map((r) => r.mime))].join(", ")}`,
       `Transcribed: ${rows.filter((r) => r.outcome === "transcribed" && r.transcript !== undefined).length}`,
-      `Rejected as empty/prompt-echo: ${rows.filter((r) => r.outcome === "rejected_empty").length}`,
+      `Rejected by the provider as empty/prompt-echo: ${rows.filter((r) => r.outcome === "rejected_empty").length}`,
       `Errors: ${rows.filter((r) => r.outcome === "error").length}`,
       `Median word error rate vs spoken text: ${speech.length ? `${(median(speech.map((r) => r.wer ?? 0)) * 100).toFixed(1)}%` : "n/a"}`,
       `Learner errors preserved: ${kept.filter((k) => k.kept).length} of ${kept.length}`,
-      `Silence / near-silence passed (no fabricated or prompt-derived transcript): ${silence.length} of ${silence.length} (assertions are hard)`,
+      `Speech Activity Guard: blocked ${blocked.length} of ${nonSpeech.length} non-speech sample(s) before any provider call (${nonSpeech.map((r) => r.id).join(", ") || "none"}); provider calls made by this suite: ${providerCalls}`,
+      `Guard overhead per recording (decode + analysis): avg ${guardMs.length ? Math.round(guardMs.reduce((a, b) => a + b, 0) / guardMs.length) : "n/a"} ms, max ${guardMs.length ? Math.max(...guardMs) : "n/a"} ms`,
       `Transcription latency: avg ${latencies.length ? (latencies.reduce((a, b) => a + b, 0) / latencies.length / 1000).toFixed(1) : "n/a"}s, min ${latencies.length ? (Math.min(...latencies) / 1000).toFixed(1) : "n/a"}s, max ${latencies.length ? (Math.max(...latencies) / 1000).toFixed(1) : "n/a"}s`,
-      `Transcription requests: ${rows.length}; usage reported by the API: input_tokens ${sum("input_tokens")}, output_tokens ${sum("output_tokens")}, seconds ${sum("seconds")}`,
+      `Transcription requests: ${providerCalls}; usage reported by the API: input_tokens ${sum("input_tokens")}, output_tokens ${sum("output_tokens")}, seconds ${sum("seconds")}`,
       `Speech-synthesis requests this run: ${ttsLog.ttsRequests} (${ttsLog.ttsCharacters} characters)`,
       "",
     ].join("\n");
@@ -187,11 +226,11 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
       `# Controlled transcription validation (real ${provider().name})`,
       "",
       summary,
-      "| Sample | Format | Audio | Latency | Outcome | WER | Learner errors kept | Fillers (metrics / ref) |",
-      "|---|---|---|---|---|---|---|---|",
+      "| Sample | Format | Audio | Guard (speech? / active s / floor dB / loud dB) | Latency | Outcome | WER | Learner errors kept | Fillers (metrics / ref) |",
+      "|---|---|---|---|---|---|---|---|---|",
       ...rows.map(
         (r) =>
-          `| ${r.id} | ${r.mime} | ${r.audioSeconds.toFixed(1)}s | ${r.latencyMs ? `${(r.latencyMs / 1000).toFixed(1)}s` : "—"} | ${r.outcome}${r.errorCode ? ` (${r.errorCode})` : ""} | ${r.wer === undefined ? "—" : `${(r.wer * 100).toFixed(0)}%`} | ${r.keptErrors.length ? `${r.keptErrors.filter((k) => k.kept).length}/${r.keptErrors.length}` : "—"} | ${r.metricsFromTranscript ? `${r.metricsFromTranscript.fillerCount} / ${r.metricsFromRef?.fillerCount}` : "—"} |`,
+          `| ${r.id} | ${r.mime} | ${r.audioSeconds.toFixed(1)}s | ${r.guard ? `${r.guard.hasSpeech ? "yes" : `NO (${r.guard.reason})`} / ${r.guard.activeSeconds} / ${r.guard.noiseFloorDb} / ${r.guard.loudDb}` : "—"} | ${r.latencyMs ? `${(r.latencyMs / 1000).toFixed(1)}s` : "—"} | ${r.outcome}${r.errorCode ? ` (${r.errorCode})` : ""} | ${r.wer === undefined ? "—" : `${(r.wer * 100).toFixed(0)}%`} | ${r.keptErrors.length ? `${r.keptErrors.filter((k) => k.kept).length}/${r.keptErrors.length}` : "—"} | ${r.metricsFromTranscript ? `${r.metricsFromTranscript.fillerCount} / ${r.metricsFromRef?.fillerCount}` : "—"} |`,
       ),
       "",
       ...rows.flatMap((r) => [

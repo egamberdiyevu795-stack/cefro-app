@@ -30,10 +30,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The speech activity guard decodes audio with ffmpeg; its tests must run, not be skipped.
+      - name: Install ffmpeg (needed by the speech activity guard tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: npm run lint
       - run: npm run typecheck
       - name: Unit and integration tests (includes the migration tests)
         run: npm test
+        env:
+          REQUIRE_FFMPEG: "1"
       - name: Build
         run: npm run build
 

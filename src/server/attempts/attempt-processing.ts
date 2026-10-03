@@ -11,6 +11,7 @@ import { evaluateSpeaking, getEvaluationModel } from "@/server/evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { logger } from "@/server/logging/logger";
 import { AudioNotFoundError, getAudioStorage } from "@/server/storage";
+import { getSpeechGuard } from "@/server/audio/speech-guard";
 import { getTranscriptionProvider } from "@/server/transcription";
 import * as repo from "./attempt-repository";
 import { withDeadline } from "./deadline";
@@ -70,6 +71,34 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       trackServerEvent({ name: "transcription_started", ...context, properties: { provider: provider.name } });
 
       const audio = await readAudio(recording.storageKey);
+
+      // Speech Activity Guard: decided from the audio signal, before any provider is called, because transcription
+      // models can invent an answer for silence. Blocked recordings stop here with the existing "not enough speech" failure.
+      const guard = getSpeechGuard();
+      if (guard) {
+        const activity = await guard.check({ audio, mimeType: recording.mimeType });
+        logger.info("Speech activity checked", {
+          ...context,
+          hasSpeech: activity.hasSpeech,
+          reason: activity.reason,
+          activeSeconds: Math.round(activity.activeSeconds * 10) / 10,
+          decodeMs: activity.decodeMs,
+          analyseMs: activity.analyseMs,
+        });
+        if (!activity.hasSpeech) {
+          trackServerEvent({
+            name: "speech_guard_blocked",
+            ...context,
+            properties: {
+              reason: activity.reason,
+              audioSeconds: Math.round(activity.durationSeconds * 10) / 10,
+              activeSeconds: Math.round(activity.activeSeconds * 10) / 10,
+              provider: provider.name,
+            },
+          });
+          throw new ProviderError("transcription_empty", `No speech detected in the recording (${activity.reason})`, { retryable: false });
+        }
+      }
       stageStartedAt = Date.now();
       const output = await withDeadline(
         provider.transcribe({ audio, mimeType: recording.mimeType, language: "en" }),

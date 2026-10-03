@@ -11,8 +11,14 @@ export interface AudioSample {
   ref?: string;
   /** Learner mistakes that must survive transcription (checked with the same normalisation as evidence quotes). */
   keep?: string[];
-  kind: "speech" | "silence" | "near_silence";
+  kind: "speech" | "silence" | "near_silence" | "noise";
   seconds?: number;
+  /** Speech split into parts with silence before, between and after (pauses must not stop transcription). */
+  pauses?: { chunks: string[]; lead: number; gap: number; trail: number };
+  /** Speech made this many dB quieter (negative). */
+  quietDb?: number;
+  /** Steady noise only. */
+  noise?: { color: "white" | "pink"; amplitude: number };
 }
 
 const s = (id: string) => B2_PART2_SAMPLES.find((x) => x.id.startsWith(id))!;
@@ -51,8 +57,39 @@ export const TRANSCRIPTION_SAMPLES: AudioSample[] = [
       "I think phones are good because phones are good for everything, so phones are good.",
   },
   { id: "T05-short", description: "Too short to assess (3 words).", kind: "speech", ref: "I like phones." },
+  {
+    id: "T08-pauses",
+    description: "Three sentences with 3 s pauses between them, 4 s of silence before and after (pauses and leading/trailing silence).",
+    kind: "speech",
+    pauses: {
+      chunks: [
+        "Well, I think technology is useful for young people.",
+        "For example, I talk with my cousin every day on video call.",
+        "But sometimes it is difficult to concentrate.",
+      ],
+      lead: 4,
+      gap: 3,
+      trail: 4,
+    },
+    ref:
+      "Well, I think technology is useful for young people. For example, I talk with my cousin every day on video call. " +
+      "But sometimes it is difficult to concentrate.",
+  },
+  {
+    id: "T09-quiet-learner-errors",
+    description: "The learner-errors answer spoken 35 dB quieter than normal (quiet speaker or distant microphone).",
+    kind: "speech",
+    quietDb: -35,
+    ref:
+      "Yesterday I have went to the market and I buy two bread. My friend he don't like technology because it make people lazy. " +
+      "Me and my friend is discussing about this problem many times. In my opinion the phones is very usefull for study, " +
+      "but too much of them are dangerous for the eyes.",
+    keep: ["I have went", "I buy two bread", "he don't like", "it make people lazy", "Me and my friend is", "discussing about", "the phones is"],
+  },
   { id: "T06-silence", description: "Eight seconds of digital silence.", kind: "silence", seconds: 8 },
   { id: "T07-near-silence", description: "Eight seconds of very quiet noise (open microphone, no speech).", kind: "near_silence", seconds: 8 },
+  { id: "T10-room-noise", description: "Eight seconds of steady room noise at a moderate level, no speech.", kind: "noise", seconds: 8, noise: { color: "pink", amplitude: 0.01 } },
+  { id: "T11-loud-steady-noise", description: "Eight seconds of loud steady noise (fan), no speech.", kind: "noise", seconds: 8, noise: { color: "white", amplitude: 0.05 } },
 ];
 
 /** The strong answer re-encoded, to check the other containers the app accepts. */
@@ -70,6 +107,8 @@ export interface PipelineSample {
    * attempt's retry focus (synthetic: simulates a learner who followed the feedback; not a real learner).
    */
   guided?: boolean;
+  /** Spoken in three parts with 3 s pauses and 4 s of silence before and after (pauses must not stop the pipeline). */
+  pauses?: boolean;
 }
 
 export const PIPELINE_SAMPLES: PipelineSample[] = [
@@ -80,7 +119,15 @@ export const PIPELINE_SAMPLES: PipelineSample[] = [
   { id: "P4b-fillers", description: "Many hesitations and false starts", source: "S09" },
   { id: "P5-off-task", description: "Does not address the task", source: "S10" },
   { id: "P6-retry-stronger", description: "Stronger retry of P2 (weak-to-strong pair)", source: "S01", retryOf: "P2-weaker" },
+  { id: "P8-pauses", description: "Grammar-mistakes answer spoken in three parts with 3 s pauses and 4 s of silence before and after", source: "S04", pauses: true },
   { id: "P7-guided-retry", description: "Synthetic guided retry of P2: P2's transcript rewritten applying only P2's retry focus", source: "S03", retryOf: "P2-weaker", guided: true },
 ];
+
+/** Splits an answer into three consecutive parts at sentence boundaries (for the paused-speech sample). */
+export function threeParts(text: string): string[] {
+  const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)/g)?.map((x) => x.trim()) ?? [text];
+  const size = Math.ceil(sentences.length / 3);
+  return [0, 1, 2].map((i) => sentences.slice(i * size, (i + 1) * size).join(" ")).filter(Boolean);
+}
 
 export const pipelineText = (sample: PipelineSample) => B2_PART2_SAMPLES.find((x) => x.id.startsWith(sample.source))!.transcript;

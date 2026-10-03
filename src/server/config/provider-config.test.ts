@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerEnv } from "./env";
 
@@ -16,7 +19,7 @@ import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
 import { describeProviderMode, validateAuthConfig, validateProviderConfig } from "./provider-config";
 
 const env = (overrides: Record<string, unknown>) =>
-  ({ NODE_ENV: "development", TRANSCRIPTION_PROVIDER: "openai", EVALUATION_PROVIDER: "gemini", ...overrides }) as unknown as ServerEnv;
+  ({ NODE_ENV: "development", TRANSCRIPTION_PROVIDER: "openai", EVALUATION_PROVIDER: "gemini", SPEECH_GUARD: "off", ...overrides }) as unknown as ServerEnv;
 
 describe("validateProviderConfig", () => {
   it("accepts a complete real configuration (Gemini evaluation + OpenAI transcription)", () => {
@@ -34,6 +37,21 @@ describe("validateProviderConfig", () => {
     expect(validateProviderConfig(both)).toEqual([]);
     expect(describeProviderMode(both)).toEqual({ transcription: "gemini", evaluation: "gemini", mode: "real" });
     expect(validateProviderConfig(env({ TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "gemini" })).map((p) => p.variable)).toEqual(["GEMINI_API_KEY", "GEMINI_API_KEY"]);
+  });
+
+  it("requires ffmpeg for the speech activity guard, and says which setting to change", () => {
+    const base = { OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" };
+    // A tiny executable that exits 0 stands in for an installed ffmpeg without needing one on the machine.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-fake-ffmpeg-"));
+    const fake = path.join(dir, "ffmpeg");
+    fs.writeFileSync(fake, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    expect(validateProviderConfig(env({ ...base, SPEECH_GUARD: "on", FFMPEG_PATH: fake }))).toEqual([]);
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(validateProviderConfig(env({ ...base, SPEECH_GUARD: "on", FFMPEG_PATH: "/nonexistent/ffmpeg" })).map((p) => p.variable)).toEqual(["FFMPEG_PATH"]);
+    expect(validateProviderConfig(env({ ...base, SPEECH_GUARD: "auto", FFMPEG_PATH: "/nonexistent/ffmpeg" })).map((p) => p.variable)).toEqual(["FFMPEG_PATH"]);
+    expect(validateProviderConfig(env({ ...base, SPEECH_GUARD: "off", FFMPEG_PATH: "/nonexistent/ffmpeg" }))).toEqual([]);
+    // auto + the development mock transcriber: the guard is off, so ffmpeg is not required
+    expect(validateProviderConfig(env({ TRANSCRIPTION_PROVIDER: "mock", EVALUATION_PROVIDER: "mock", SPEECH_GUARD: "auto", FFMPEG_PATH: "/nonexistent/ffmpeg" }))).toEqual([]);
   });
 
   it("only requires the selected provider's key", () => {

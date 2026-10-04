@@ -16,14 +16,14 @@ import { isValidUserId } from "./user-cookie";
  * Anything else is ignored silently: a stale or foreign cookie must never turn a login into a merge.
  * Returns what was moved, or null when there was nothing to convert. Safe to retry.
  */
-export function mergeAnonymousCookieIdentity(
+export async function mergeAnonymousCookieIdentity(
   db: Db,
   input: { anonymousUserId: string; accountUserId: string },
-): MergeResult | null {
+): Promise<MergeResult | null> {
   const { anonymousUserId, accountUserId } = input;
   if (!isValidUserId(anonymousUserId) || anonymousUserId === accountUserId) return null;
 
-  const anonymous = db
+  const anonymous = await db
     .select({ id: users.id, mergedInto: users.mergedIntoUserId })
     .from(users)
     .where(and(eq(users.id, anonymousUserId), eq(users.kind, "anonymous")))
@@ -32,7 +32,7 @@ export function mergeAnonymousCookieIdentity(
   if (anonymous.mergedInto === accountUserId) return null; // already converted (a retried login)
   if (anonymous.mergedInto) return null; // belongs to some other account's history: leave it alone
 
-  const result = mergeUsers(db, { fromUserId: anonymousUserId, intoUserId: accountUserId });
+  const result = await mergeUsers(db, { fromUserId: anonymousUserId, intoUserId: accountUserId });
   logger.info("Anonymous identity attached to account", { attemptsMoved: result.attemptsMoved, sessionsMoved: result.sessionsMoved });
   return result;
 }

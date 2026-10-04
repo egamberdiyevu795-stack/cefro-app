@@ -4,7 +4,7 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ffmpegSpeechGuard, isFfmpegAvailable, setSpeechGuardForTesting } from "@/server/audio/speech-guard";
-import { openDatabase, setDbForTesting } from "@/server/db/client";
+import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import { analyticsEvents, evaluations, recordings, transcripts, users } from "@/server/db/schema";
 import { ProviderError } from "@/server/errors";
 import { setEvaluationModelForTesting, type EvaluationModel } from "@/server/evaluation";
@@ -27,15 +27,15 @@ const TASK_ID = "b2-part2-technology-young-people";
 const USER = "11111111-1111-4111-8111-111111111111";
 const DIR = path.join(process.cwd(), "test", "audio-fixtures", "speech-guard");
 
-let db: ReturnType<typeof openDatabase>;
+let db: Db;
 let storageDir: string;
 let transcription: TranscriptionProvider & { transcribe: ReturnType<typeof vi.fn> };
 let evaluation: EvaluationModel & { evaluate: ReturnType<typeof vi.fn> };
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
-  db.insert(users).values({ id: USER }).run();
+  await db.insert(users).values({ id: USER }).run();
   storageDir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-guard-audio-"));
   setAudioStorageForTesting(new LocalAudioStorage(storageDir));
   transcription = { name: "spy-stt", model: "spy-1", transcribe: vi.fn(async () => ({ text: FIXTURE_TRANSCRIPT, language: "en" })) };
@@ -51,7 +51,7 @@ beforeEach(() => {
   setSpeechGuardForTesting(ffmpegSpeechGuard);
 });
 
-afterEach(() => {
+afterEach(async () => {
   setSpeechGuardForTesting(undefined);
   setDbForTesting(undefined);
   setAudioStorageForTesting(undefined);
@@ -78,15 +78,15 @@ describe.skipIf(!ffmpeg)("speech activity guard in the attempt pipeline", () => 
     expect(transcription.transcribe).not.toHaveBeenCalled();
     expect(evaluation.evaluate).not.toHaveBeenCalled();
 
-    const view = getAttemptViewForUser(USER, id);
+    const view = await getAttemptViewForUser(USER, id);
     expect(view.status).toBe("failed");
     expect(view.failure).toEqual({ stage: "transcription", code: "transcription_empty" }); // the existing "not enough speech" semantics
     expect(view.transcript).toBeNull(); // no fabricated transcript
-    expect(db.select().from(transcripts).all()).toHaveLength(0);
-    expect(db.select().from(evaluations).all()).toHaveLength(0);
-    expect(db.select().from(recordings).where(eq(recordings.attemptId, id)).all()).toHaveLength(1); // the audio is kept
+    expect(await db.select().from(transcripts).all()).toHaveLength(0);
+    expect(await db.select().from(evaluations).all()).toHaveLength(0);
+    expect(await db.select().from(recordings).where(eq(recordings.attemptId, id)).all()).toHaveLength(1); // the audio is kept
 
-    const events = db.select().from(analyticsEvents).where(eq(analyticsEvents.attemptId, id)).all();
+    const events = await db.select().from(analyticsEvents).where(eq(analyticsEvents.attemptId, id)).all();
     const blocked = events.find((e) => e.name === "speech_guard_blocked");
     expect(blocked?.properties).toMatchObject({ provider: "spy-stt" });
     expect(events.map((e) => e.name)).not.toContain("transcription_completed");
@@ -118,7 +118,7 @@ describe.skipIf(!ffmpeg)("speech activity guard in the attempt pipeline", () => 
     const input = transcription.transcribe.mock.calls[0][0] as { audio: Buffer; mimeType: string };
     expect(input.audio.equals(original)).toBe(true); // the guard analyses a copy; the provider gets the recording untouched
     expect(input.mimeType).toBe("audio/webm"); // as stored by the attempt service
-    expect(getAttemptViewForUser(USER, id).status).toBe("completed");
+    expect((await getAttemptViewForUser(USER, id)).status).toBe("completed");
     expect(evaluation.evaluate).toHaveBeenCalledTimes(1);
   });
 
@@ -127,7 +127,7 @@ describe.skipIf(!ffmpeg)("speech activity guard in the attempt pipeline", () => 
     const spy = vi.fn(ffmpegSpeechGuard.check);
     setSpeechGuardForTesting({ check: spy });
     const id = await submitFixture("normal.webm");
-    expect(getAttemptViewForUser(USER, id).failure?.stage).toBe("evaluation");
+    expect((await getAttemptViewForUser(USER, id)).failure?.stage).toBe("evaluation");
     expect(spy).toHaveBeenCalledTimes(1);
     await processAttempt(id);
     expect(spy).toHaveBeenCalledTimes(1);
@@ -142,7 +142,7 @@ describe.skipIf(!ffmpeg)("speech activity guard in the attempt pipeline", () => 
     });
     const id = await submitFixture("normal.webm");
     expect(transcription.transcribe).not.toHaveBeenCalled();
-    expect(getAttemptViewForUser(USER, id).failure).toEqual({ stage: "transcription", code: "provider_not_configured" });
+    expect((await getAttemptViewForUser(USER, id)).failure).toEqual({ stage: "transcription", code: "provider_not_configured" });
   });
 
   it("switched off (the development mock), the provider is called as before", async () => {

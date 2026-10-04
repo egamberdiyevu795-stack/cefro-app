@@ -24,10 +24,10 @@ import { logger } from "@/server/logging/logger";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-export function assertCanSubmitAttempt(userId: string, now = Date.now()): void {
+export async function assertCanSubmitAttempt(userId: string, now = Date.now()): Promise<void> {
   const env = getEnv();
 
-  const inProgress = repo.countInProgressAttempts(
+  const inProgress = await repo.countInProgressAttempts(
     userId,
     new Date(now - PROCESSING_STALE_AFTER_MS).toISOString(),
     new Date(now - UPLOAD_STALE_AFTER_MS).toISOString(),
@@ -36,16 +36,16 @@ export function assertCanSubmitAttempt(userId: string, now = Date.now()): void {
     throw new HttpError(429, "too_many_in_progress", "Your earlier answers are still being checked. Please wait for the feedback, then try again.", 30);
   }
 
-  const lastHour = repo.countAttemptsSince(userId, new Date(now - HOUR_MS).toISOString());
+  const lastHour = await repo.countAttemptsSince(userId, new Date(now - HOUR_MS).toISOString());
   if (lastHour >= env.LIMIT_ATTEMPTS_PER_USER_HOUR) {
     throw new HttpError(429, "hourly_limit_reached", "You've sent a lot of answers in the last hour. Take a break and try again a little later.", 600);
   }
-  const lastDay = repo.countAttemptsSince(userId, new Date(now - DAY_MS).toISOString());
+  const lastDay = await repo.countAttemptsSince(userId, new Date(now - DAY_MS).toISOString());
   if (lastDay >= env.LIMIT_ATTEMPTS_PER_USER_DAY) {
     throw new HttpError(429, "daily_limit_reached", "You've reached today's practice limit. Please come back tomorrow.", 3600);
   }
 
-  const everyone = repo.countAttemptsSince(null, new Date(now - HOUR_MS).toISOString());
+  const everyone = await repo.countAttemptsSince(null, new Date(now - HOUR_MS).toISOString());
   if (everyone >= env.LIMIT_ATTEMPTS_GLOBAL_HOUR) {
     logger.warn("Global hourly attempt ceiling reached", { limit: env.LIMIT_ATTEMPTS_GLOBAL_HOUR });
     throw new HttpError(503, "capacity_reached", "CEFRO is very busy right now. Please try again in a few minutes.", 300);

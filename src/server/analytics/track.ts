@@ -24,10 +24,11 @@ export interface TrackEventInput {
  * Events go to the `analytics_events` table for now; forwarding to a
  * hosted analytics tool later only requires changing this function.
  */
-export function trackEvents(events: TrackEventInput[]): void {
+export async function trackEvents(events: TrackEventInput[]): Promise<void> {
   if (events.length === 0) return;
   try {
-    getDb()
+    const db = await getDb();
+    await db
       .insert(analyticsEvents)
       .values(
         events.map((event) => ({
@@ -48,6 +49,6 @@ export function trackEvents(events: TrackEventInput[]): void {
   }
 }
 
-export function trackServerEvent(event: Omit<TrackEventInput, "source">): void {
-  trackEvents([{ ...event, source: "server" }]);
+export async function trackServerEvent(event: Omit<TrackEventInput, "source">): Promise<void> {
+  await trackEvents([{ ...event, source: "server" }]);
 }

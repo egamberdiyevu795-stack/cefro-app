@@ -55,16 +55,16 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
   }
 
   // Cost protection comes before anything is stored or any provider is called.
-  assertCanSubmitAttempt(input.userId);
+  await assertCanSubmitAttempt(input.userId);
 
   // Retry: the previous attempt must be the user's own, for the same task, and evaluated.
   let retryFocus: EvaluationResult["retry_focus"] | null = null;
   if (input.previousAttemptId) {
-    const previous = repo.findAttempt(input.previousAttemptId);
+    const previous = await repo.findAttempt(input.previousAttemptId);
     if (!previous || !ownsResource(input.userId, previous) || previous.taskId !== task.id) {
       throw new HttpError(400, "invalid_previous_attempt", "The previous attempt could not be found.");
     }
-    const previousEvaluation = repo.findLatestEvaluation(previous.id);
+    const previousEvaluation = await repo.findLatestEvaluation(previous.id);
     retryFocus = previousEvaluation
       ? (parseStoredEvaluation(previousEvaluation.schemaVersion, previousEvaluation.result)?.retry_focus ?? null)
       : null;
@@ -83,9 +83,12 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
     throw new HttpError(503, "storage_failed", "We could not save your recording. Please try again.");
   }
 
-  const sessionId = resolveOwnedSessionId(input.userId, input.sessionId) ?? createPracticeSession(input.userId);
-  repo.ensureTaskSnapshot(task);
-  const attempt = repo.insertAttemptWithRecording({
+  let attempt: repo.AttemptRow;
+  let sessionId: string;
+  try {
+    sessionId = (await resolveOwnedSessionId(input.userId, input.sessionId)) ?? (await createPracticeSession(input.userId));
+    await repo.ensureTaskSnapshot(task);
+    attempt = await repo.insertAttemptWithRecording({
     attemptId,
     userId: input.userId,
     sessionId,
@@ -100,8 +103,13 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
       durationMs: Math.max(0, Math.round(input.durationMs)),
     },
   });
+  } catch (error) {
+    // The attempt row was not created, so the stored bytes would be orphaned: remove them (best effort).
+    await storage.delete?.(storageKey).catch((cleanupError) => logger.warn("Could not remove an orphaned recording", { error: cleanupError, attemptId }));
+    throw error;
+  }
 
-  trackServerEvent({
+  await trackServerEvent({
     name: "recording_submitted",
     userId: input.userId,
     sessionId,
@@ -120,23 +128,25 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
 }
 
 /** Load an attempt the user owns. Other users' attempts are reported as not found. */
-export function getOwnedAttempt(userId: string, attemptId: string): repo.AttemptRow {
-  const attempt = UUID_PATTERN.test(attemptId) ? repo.findAttempt(attemptId) : undefined;
+export async function getOwnedAttempt(userId: string, attemptId: string): Promise<repo.AttemptRow> {
+  // Only a genuinely missing (or foreign) row is a 404; a database failure propagates and is reported as one.
+  const attempt = UUID_PATTERN.test(attemptId) ? await repo.findAttempt(attemptId) : undefined;
   return assertOwnedOrNotFound(userId, attempt, () => new HttpError(404, "attempt_not_found", "This attempt could not be found."));
 }
 
-export function getAttemptViewForUser(userId: string, attemptId: string): AttemptView {
-  const attempt = getOwnedAttempt(userId, attemptId);
-  return toAttemptView(attempt, {
-    recording: repo.findRecording(attempt.id),
-    transcript: repo.findLatestTranscript(attempt.id),
-    evaluation: repo.findLatestEvaluation(attempt.id),
-  });
+export async function getAttemptViewForUser(userId: string, attemptId: string): Promise<AttemptView> {
+  const attempt = await getOwnedAttempt(userId, attemptId);
+  const [recording, transcript, evaluation] = await Promise.all([
+    repo.findRecording(attempt.id),
+    repo.findLatestTranscript(attempt.id),
+    repo.findLatestEvaluation(attempt.id),
+  ]);
+  return toAttemptView(attempt, { recording, transcript, evaluation });
 }
 
-export function listAttemptSummaries(userId: string, taskId: string): AttemptSummary[] {
-  const attempts = repo.listAttemptsForUserTask(userId, taskId);
-  const evaluationsByAttempt = repo.findLatestEvaluationsFor(attempts.map((a) => a.id));
+export async function listAttemptSummaries(userId: string, taskId: string): Promise<AttemptSummary[]> {
+  const attempts = await repo.listAttemptsForUserTask(userId, taskId);
+  const evaluationsByAttempt = await repo.findLatestEvaluationsFor(attempts.map((a) => a.id));
   return attempts.map((attempt) => toAttemptSummary(attempt, evaluationsByAttempt.get(attempt.id)));
 }
 
@@ -144,8 +154,8 @@ export async function getRecordingAudio(
   userId: string,
   attemptId: string,
 ): Promise<{ data: Buffer; mimeType: string }> {
-  getOwnedAttempt(userId, attemptId);
-  const recording = repo.findRecording(attemptId);
+  await getOwnedAttempt(userId, attemptId);
+  const recording = await repo.findRecording(attemptId);
   if (!recording) throw new HttpError(404, "recording_not_found", "Recording not found.");
   const data = await getAudioStorage().read(recording.storageKey);
   return { data, mimeType: recording.mimeType };

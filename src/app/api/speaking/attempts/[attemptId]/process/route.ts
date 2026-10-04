@@ -17,14 +17,14 @@ export const POST = withErrorHandling(
   async (_request: Request, ctx: RouteContext<"/api/speaking/attempts/[attemptId]/process">) => {
     const { attemptId } = await ctx.params;
     const userId = await getOrCreateCurrentUserId();
-    const attempt = getOwnedAttempt(userId, attemptId);
+    const attempt = await getOwnedAttempt(userId, attemptId);
     // Only a restart that would actually run needs a run left; completed/in-progress attempts stay a no-op.
     if (attempt.status === "failed" || isAttemptStalled(attempt)) assertCanRestart(attempt);
 
-    const started = claimAttempt(attemptId);
+    const started = await claimAttempt(attemptId);
     if (started) after(() => runClaimedAttempt(attemptId));
     return Response.json(
-      { started, attempt: getAttemptViewForUser(userId, attemptId) },
+      { started, attempt: await getAttemptViewForUser(userId, attemptId) },
       { status: started ? 202 : 200 },
     );
   },

@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyHostingDefaults, VERCEL_TEMP_DIR } from "./env";
-import { usesTemporaryStorage } from "./provider-config";
+import { describe, expect, it } from "vitest";
+import { applyHostingDefaults } from "./env";
 
 describe("hosting defaults (Vercel)", () => {
   it("changes nothing off Vercel", () => {
@@ -10,29 +9,18 @@ describe("hosting defaults (Vercel)", () => {
     expect(applyHostingDefaults(raw)).toBe(raw);
   });
 
-  it("on Vercel, puts the database and recordings in the writable temp directory and derives the public origin", () => {
+  it("on Vercel, derives the public origin from the platform variables and leaves storage settings alone", () => {
     const out = applyHostingDefaults({ VERCEL: "1", VERCEL_URL: "cefro-abc123.vercel.app", VERCEL_PROJECT_PRODUCTION_URL: "cefro.vercel.app" });
-    expect(out.DATABASE_PATH).toBe(`${VERCEL_TEMP_DIR}/cefro.db`);
-    expect(out.AUDIO_STORAGE_DIR).toBe(`${VERCEL_TEMP_DIR}/audio`);
     expect(out.APP_URL).toBe("https://cefro.vercel.app"); // the production domain wins over the per-deployment URL
     expect(applyHostingDefaults({ VERCEL: "1", VERCEL_URL: "cefro-abc123.vercel.app" }).APP_URL).toBe("https://cefro-abc123.vercel.app");
+    // No /tmp defaults any more: a function's filesystem is per instance and wiped, so it must never hold data.
+    expect(out.DATABASE_PATH).toBeUndefined();
+    expect(out.AUDIO_STORAGE_DIR).toBeUndefined();
   });
 
   it("never overrides an explicit setting", () => {
-    const out = applyHostingDefaults({ VERCEL: "1", VERCEL_URL: "x.vercel.app", DATABASE_PATH: "/mnt/db/cefro.db", AUDIO_STORAGE_DIR: "/mnt/audio", APP_URL: "https://test.example.com" });
-    expect(out).toMatchObject({ DATABASE_PATH: "/mnt/db/cefro.db", AUDIO_STORAGE_DIR: "/mnt/audio", APP_URL: "https://test.example.com" });
-  });
-
-  describe("temporary storage notice", () => {
-    afterEach(() => vi.unstubAllEnvs());
-    it("is flagged only on Vercel and only for /tmp paths", () => {
-      const tmp = { DATABASE_PATH: "/tmp/cefro/cefro.db", AUDIO_STORAGE_DIR: "/tmp/cefro/audio" };
-      vi.stubEnv("VERCEL", "");
-      expect(usesTemporaryStorage(tmp)).toBe(false);
-      vi.stubEnv("VERCEL", "1");
-      expect(usesTemporaryStorage(tmp)).toBe(true);
-      expect(usesTemporaryStorage({ DATABASE_PATH: "/mnt/db", AUDIO_STORAGE_DIR: "/mnt/audio" })).toBe(false);
-    });
+    const out = applyHostingDefaults({ VERCEL: "1", VERCEL_URL: "x.vercel.app", APP_URL: "https://test.example.com" });
+    expect(out.APP_URL).toBe("https://test.example.com");
   });
 });
 
@@ -40,7 +28,7 @@ describe("Vercel packaging (next.config.ts)", () => {
   const config = fs.readFileSync(path.join(process.cwd(), "next.config.ts"), "utf8");
 
   it("keeps the native/binary packages external and ships the files that are read at runtime", () => {
-    expect(config).toMatch(/serverExternalPackages:\s*\[[^\]]*"better-sqlite3"[^\]]*"ffmpeg-static"/);
+    expect(config).toMatch(/serverExternalPackages:\s*\[[^\]]*"libsql"[^\]]*"ffmpeg-static"/);
     expect(config).toContain("./src/server/db/migrations/**/*"); // read by the migrator on first database use
     expect(config).toContain("./node_modules/ffmpeg-static/ffmpeg"); // the speech guard's decoder
     expect(config).toContain("/api/speaking/attempts"); // the routes that process an attempt

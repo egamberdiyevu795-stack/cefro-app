@@ -1,6 +1,7 @@
 import "server-only";
+import { isTursoConfigured } from "@/server/db/target";
 import { getEnv } from "./env";
-import { describeProviderMode, usesTemporaryStorage, validateAuthConfig, validateProviderConfig } from "./provider-config";
+import { describeProviderMode, validateAuthConfig, validateProviderConfig } from "./provider-config";
 import { logger } from "@/server/logging/logger";
 
 /**
@@ -24,16 +25,10 @@ export function checkProvidersAtBoot(): void {
     return;
   }
 
-  if (usesTemporaryStorage(env)) {
-    logger.warn(
-      "Database and recordings are in the platform's temporary directory: instance-local, lost on cold starts and redeploys. Test deployment only (docs/DEPLOY_VERCEL.md).",
-    );
-  }
-
   const mode = describeProviderMode(env);
   const problems = [...validateProviderConfig(env), ...validateAuthConfig(env)];
   if (problems.length === 0) {
-    logger.info("Provider configuration OK", { ...mode });
+    logger.info("Provider configuration OK", { ...mode, database: isTursoConfigured(env) ? "turso" : "local-sqlite" });
     return;
   }
   for (const problem of problems) logger.error("Provider configuration problem", { ...mode, ...problem });

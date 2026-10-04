@@ -17,21 +17,21 @@ let ip = 0;
 const freshIp = () => `10.1.0.${++ip}`;
 const ANON = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
   jar.clear();
   resetAuthLimitersForTesting();
 });
 afterEach(() => setDbForTesting(undefined));
 
-const kindOf = (id: string) => db.select({ kind: users.kind }).from(users).where(eq(users.id, id)).get()?.kind;
+const kindOf = async (id: string) => (await db.select({ kind: users.kind }).from(users).where(eq(users.id, id)).get())?.kind;
 
 describe("anonymous callers", () => {
   it("get a new anonymous identity and a cookie on first use, and keep it afterwards", async () => {
     const first = await getCurrentUser();
     expect(first.kind).toBe("anonymous");
-    expect(kindOf(first.userId)).toBe("anonymous");
+    expect(await kindOf(first.userId)).toBe("anonymous");
     expect(jar.get(USER_COOKIE_NAME)).toBe(first.userId);
     expect((await getCurrentUser()).userId).toBe(first.userId);
   });
@@ -39,7 +39,7 @@ describe("anonymous callers", () => {
   it("keep an existing anonymous identity from a valid cookie", async () => {
     jar.set(USER_COOKIE_NAME, ANON);
     expect(await getCurrentUser()).toEqual({ kind: "anonymous", userId: ANON });
-    expect(kindOf(ANON)).toBe("anonymous");
+    expect(await kindOf(ANON)).toBe("anonymous");
   });
 
   it("get a new identity when the cookie is malformed", async () => {
@@ -55,14 +55,14 @@ describe("authenticated callers", () => {
     await signUp("me@example.com", PASSWORD, { ip: freshIp() });
     const user = await getCurrentUser();
     expect(user).toMatchObject({ kind: "authenticated", email: "me@example.com" });
-    expect(kindOf(user.userId)).toBe("registered");
+    expect(await kindOf(user.userId)).toBe("registered");
     expect(jar.has(USER_COOKIE_NAME)).toBe(false); // no anonymous identity was created for a signed-in browser
   });
 
   it("ignore the anonymous cookie while a valid login session exists", async () => {
     await signUp("me@example.com", PASSWORD, { ip: freshIp() });
     jar.set(USER_COOKIE_NAME, ANON);
-    db.insert(users).values({ id: ANON }).run();
+    await db.insert(users).values({ id: ANON }).run();
     const user = await getCurrentUser();
     expect(user.kind).toBe("authenticated");
     expect(user.userId).not.toBe(ANON);
@@ -85,7 +85,7 @@ describe("authenticated callers", () => {
   it("stop being authenticated when the session expires", async () => {
     await signUp("me@example.com", PASSWORD, { ip: freshIp() });
     expect((await getCurrentUser()).kind).toBe("authenticated");
-    db.update(authSessions).set({ expiresAt: new Date(Date.now() - 60_000) }).run();
+    await db.update(authSessions).set({ expiresAt: new Date(Date.now() - 60_000) }).run();
     expect((await getCurrentUser()).kind).toBe("anonymous");
   });
 
@@ -105,7 +105,7 @@ describe("authenticated callers", () => {
     await signIn("me@example.com", PASSWORD, { ip: freshIp() });
     const second = await getCurrentUser();
     expect(second.userId).toBe(first.userId);
-    expect(db.select().from(authSessions).all()).toHaveLength(2);
+    expect(await db.select().from(authSessions).all()).toHaveLength(2);
   });
 });
 
@@ -119,14 +119,14 @@ describe("the anonymous cookie is never a way into an account", () => {
     expect(user.kind).toBe("anonymous");
     expect(user.userId).not.toBe(accountId);
     expect(jar.get(USER_COOKIE_NAME)).toBe(user.userId); // replaced with a fresh anonymous identity
-    expect(kindOf(accountId)).toBe("registered");
+    expect(await kindOf(accountId)).toBe("registered");
   });
 
   it("is not honoured after its identity was merged into an account (tombstone)", async () => {
     await signUp("owner@example.com", PASSWORD, { ip: freshIp() });
     const accountId = (await getCurrentUser()).userId;
-    db.insert(users).values({ id: ANON }).run();
-    mergeUsers(db, { fromUserId: ANON, intoUserId: accountId });
+    await db.insert(users).values({ id: ANON }).run();
+    await mergeUsers(db, { fromUserId: ANON, intoUserId: accountId });
     jar.clear();
     jar.set(USER_COOKIE_NAME, ANON); // the old anonymous cookie, still in some browser
     const user = await getCurrentUser();

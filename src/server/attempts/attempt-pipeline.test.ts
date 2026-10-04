@@ -24,10 +24,10 @@ let storageDir: string;
 let transcription: TranscriptionProvider & { transcribe: ReturnType<typeof vi.fn> };
 let evaluation: EvaluationModel & { evaluate: ReturnType<typeof vi.fn> };
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
-  db.insert(users).values([{ id: USER }, { id: OTHER_USER }]).run();
+  await db.insert(users).values([{ id: USER }, { id: OTHER_USER }]).run();
   storageDir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-audio-"));
   setAudioStorageForTesting(new LocalAudioStorage(storageDir));
   transcription = {
@@ -52,7 +52,7 @@ beforeEach(() => {
   setEvaluationModelForTesting(evaluation);
 });
 
-afterEach(() => {
+afterEach(async () => {
   setDbForTesting(undefined);
   setAudioStorageForTesting(undefined);
   setTranscriptionProviderForTesting(undefined);
@@ -71,8 +71,8 @@ function submit(previousAttemptId: string | null = null, userId = USER) {
   });
 }
 
-function eventNames() {
-  return db.select().from(analyticsEvents).all().map((e) => e.name);
+async function eventNames() {
+  return (await db.select().from(analyticsEvents).all()).map((e) => e.name);
 }
 
 describe("speaking attempt pipeline", () => {
@@ -82,7 +82,7 @@ describe("speaking attempt pipeline", () => {
     expect(fs.readdirSync(path.join(storageDir, "speaking", USER))).toHaveLength(1);
 
     await processAttempt(created.id);
-    const view = getAttemptViewForUser(USER, created.id);
+    const view = await getAttemptViewForUser(USER, created.id);
 
     expect(view.status).toBe("completed");
     expect(view.transcript).toEqual({ text: TRANSCRIPT, provider: "fake-stt", model: "fake-stt-1" });
@@ -96,7 +96,7 @@ describe("speaking attempt pipeline", () => {
       model: "fake-llm-1",
       isDevelopmentProvider: false,
     });
-    const stored = db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).get();
+    const stored = await db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).get();
     expect(stored?.promptHash).toMatch(/^h2:[a-f0-9]{64}$/);
     expect(stored).toMatchObject({
       inputTokens: 100,
@@ -107,7 +107,7 @@ describe("speaking attempt pipeline", () => {
     expect(stored?.latencyMs).toBeGreaterThanOrEqual(0);
     expect(view.evaluation?.meta.latencyMs).toBe(stored?.latencyMs);
 
-    expect(eventNames()).toEqual(
+    expect(await eventNames()).toEqual(
       expect.arrayContaining([
         "recording_submitted",
         "transcription_started",
@@ -130,9 +130,9 @@ describe("speaking attempt pipeline", () => {
     await processAttempt(second.id);
     const input = evaluation.evaluate.mock.calls[1][1];
     expect(input.previousAttempt).toMatchObject({ attemptNumber: 1, transcript: TRANSCRIPT });
-    expect(eventNames()).toContain("retry_completed");
+    expect(await eventNames()).toContain("retry_completed");
 
-    const summaries = listAttemptSummaries(USER, TASK_ID);
+    const summaries = await listAttemptSummaries(USER, TASK_ID);
     expect(summaries.map((s) => s.attemptNumber)).toEqual([2, 1]);
     expect(summaries[0].overallLevel).toBe("B1+");
   });
@@ -142,13 +142,13 @@ describe("speaking attempt pipeline", () => {
     const attempt = await submit();
     await processAttempt(attempt.id);
 
-    let view = getAttemptViewForUser(USER, attempt.id);
+    let view = await getAttemptViewForUser(USER, attempt.id);
     expect(view.status).toBe("failed");
     expect(view.failure).toEqual({ stage: "transcription", code: "provider_timeout" });
-    expect(eventNames()).toContain("transcription_failed");
+    expect(await eventNames()).toContain("transcription_failed");
 
     await processAttempt(attempt.id);
-    view = getAttemptViewForUser(USER, attempt.id);
+    view = await getAttemptViewForUser(USER, attempt.id);
     expect(view.status).toBe("completed");
   });
 
@@ -156,10 +156,10 @@ describe("speaking attempt pipeline", () => {
     evaluation.evaluate.mockRejectedValueOnce(new ProviderError("evaluation_failed", "500"));
     const attempt = await submit();
     await processAttempt(attempt.id);
-    expect(getAttemptViewForUser(USER, attempt.id).failure).toEqual({ stage: "evaluation", code: "evaluation_failed" });
+    expect((await getAttemptViewForUser(USER, attempt.id)).failure).toEqual({ stage: "evaluation", code: "evaluation_failed" });
 
     await processAttempt(attempt.id);
-    expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+    expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
     expect(transcription.transcribe).toHaveBeenCalledTimes(1);
   });
 
@@ -167,47 +167,47 @@ describe("speaking attempt pipeline", () => {
     transcription.transcribe.mockResolvedValueOnce({ text: "um", language: "en" });
     const attempt = await submit();
     await processAttempt(attempt.id);
-    expect(getAttemptViewForUser(USER, attempt.id).failure?.code).toBe("transcription_empty");
+    expect((await getAttemptViewForUser(USER, attempt.id)).failure?.code).toBe("transcription_empty");
   });
 
   it("fails cleanly when the model keeps returning malformed JSON", async () => {
     evaluation.evaluate.mockResolvedValue({ output: "{oops", provider: "fake-llm", model: "m", inputTokens: null, outputTokens: null });
     const attempt = await submit();
     await processAttempt(attempt.id);
-    expect(getAttemptViewForUser(USER, attempt.id).failure).toEqual({
+    expect((await getAttemptViewForUser(USER, attempt.id)).failure).toEqual({
       stage: "evaluation",
       code: "evaluation_invalid_output",
     });
-    expect(db.select().from(evaluations).all()).toHaveLength(0);
+    expect(await db.select().from(evaluations).all()).toHaveLength(0);
   });
 
   it("does not let two runs process the same attempt", async () => {
     const attempt = await submit();
-    expect(claimAttempt(attempt.id)).toBe(true);
-    expect(claimAttempt(attempt.id)).toBe(false);
+    expect(await claimAttempt(attempt.id)).toBe(true);
+    expect(await claimAttempt(attempt.id)).toBe(false);
   });
 
   it("records processing time, and failure details, on the attempt", async () => {
     evaluation.evaluate.mockRejectedValueOnce(new ProviderError("provider_rate_limited", "429"));
     const attempt = await submit();
     await processAttempt(attempt.id);
-    const failedEvent = db.select().from(analyticsEvents).where(eq(analyticsEvents.name, "evaluation_failed")).get();
+    const failedEvent = await db.select().from(analyticsEvents).where(eq(analyticsEvents.name, "evaluation_failed")).get();
     expect(failedEvent?.properties).toMatchObject({ code: "provider_rate_limited" });
-    expect(getAttemptViewForUser(USER, attempt.id).failure?.code).toBe("provider_rate_limited");
+    expect((await getAttemptViewForUser(USER, attempt.id)).failure?.code).toBe("provider_rate_limited");
 
     await processAttempt(attempt.id);
-    const completed = db.select().from(analyticsEvents).where(eq(analyticsEvents.name, "evaluation_completed")).get();
+    const completed = await db.select().from(analyticsEvents).where(eq(analyticsEvents.name, "evaluation_completed")).get();
     expect(completed?.properties).toMatchObject({ modelCalls: 1, inputTokens: 100, outputTokens: 200 });
     expect((completed?.properties as { processingDurationMs: number }).processingDurationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("rejects malformed attempt ids as not found", () => {
-    expect(() => getAttemptViewForUser(USER, "../../etc/passwd")).toThrow(/could not be found/);
+  it("rejects malformed attempt ids as not found", async () => {
+    await expect(getAttemptViewForUser(USER, "../../etc/passwd")).rejects.toThrow(/could not be found/);
   });
 
   it("hides other users' attempts and rejects retries of them", async () => {
     const attempt = await submit();
-    expect(() => getAttemptViewForUser(OTHER_USER, attempt.id)).toThrow(/could not be found/);
+    await expect(getAttemptViewForUser(OTHER_USER, attempt.id)).rejects.toThrow(/could not be found/);
     await expect(submit(attempt.id, OTHER_USER)).rejects.toMatchObject({ code: "invalid_previous_attempt" });
   });
 
@@ -229,33 +229,31 @@ describe("speaking attempt pipeline", () => {
 
   it("gives every attempt a session, and links its server events to it", async () => {
     const attempt = await submit();
-    const row = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get()!;
+    const row = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get())!;
     expect(row.sessionId).not.toBeNull();
-    expect(db.select().from(practiceSessions).where(eq(practiceSessions.id, row.sessionId!)).get()).toMatchObject({ userId: USER });
+    expect(await db.select().from(practiceSessions).where(eq(practiceSessions.id, row.sessionId!)).get()).toMatchObject({ userId: USER });
 
     await processAttempt(attempt.id);
-    const events = db.select().from(analyticsEvents).all();
+    const events = await db.select().from(analyticsEvents).all();
     expect(events.length).toBeGreaterThanOrEqual(5);
     for (const event of events) expect(event.sessionId).toBe(row.sessionId); // submitted, transcription_*, evaluation_*
   });
 
   it("keeps a retry in the same session when the client sends the same session id", async () => {
     const first = await submit();
-    const sessionId = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, first.id)).get()!.sessionId;
+    const sessionId = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, first.id)).get())!.sessionId;
     await processAttempt(first.id);
     const retry = await createAttempt({
       userId: USER, taskId: TASK_ID, audio: fakeWebm(), mimeType: "audio/webm", durationMs: 95_000, previousAttemptId: first.id, sessionId,
     });
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, retry.id)).get()?.sessionId).toBe(sessionId);
+    expect((await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, retry.id)).get())?.sessionId).toBe(sessionId);
   });
 
-  it("refuses a retry link to an attempt that does not exist (foreign key integrity)", () => {
-    expect(() =>
-      db.insert(speakingAttempts).values({
+  it("refuses a retry link to an attempt that does not exist (foreign key integrity)", async () => {
+    await expect(db.insert(speakingAttempts).values({
         id: "99999999-9999-4999-8999-999999999999", userId: USER, taskId: TASK_ID, taskVersion: 1, attemptNumber: 9,
         previousAttemptId: "00000000-0000-4000-8000-000000000000", status: "uploaded", updatedAt: new Date().toISOString(),
-      }).run(),
-    ).toThrow(/FOREIGN KEY/);
+      }).run()).rejects.toMatchObject({ cause: { message: expect.stringMatching(/FOREIGN KEY/) } });
   });
 
   describe("processing time budget", () => {
@@ -264,28 +262,28 @@ describe("speaking attempt pipeline", () => {
     it("ends a hung transcription inside the budget with a stored, restartable failure", async () => {
       transcription.transcribe.mockImplementationOnce(never);
       const attempt = await submit();
-      expect(claimAttempt(attempt.id)).toBe(true);
+      expect(await claimAttempt(attempt.id)).toBe(true);
       const startedAt = Date.now();
       await runClaimedAttempt(attempt.id, { budgetMs: 150 });
       expect(Date.now() - startedAt).toBeLessThan(2_000);
-      expect(getAttemptViewForUser(USER, attempt.id)).toMatchObject({ status: "failed", failure: { stage: "transcription", code: "provider_timeout" }, isStalled: false });
+      expect(await getAttemptViewForUser(USER, attempt.id)).toMatchObject({ status: "failed", failure: { stage: "transcription", code: "provider_timeout" }, isStalled: false });
 
       // Restartable: the next run (within the run cap) completes normally.
       await processAttempt(attempt.id);
-      expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
-      expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get()?.processingRuns).toBe(2);
+      expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
+      expect((await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get())?.processingRuns).toBe(2);
     });
 
     it("ends a hung evaluation inside the budget, keeping the transcript for the restart", async () => {
       evaluation.evaluate.mockImplementationOnce(never);
       const attempt = await submit();
-      expect(claimAttempt(attempt.id)).toBe(true);
+      expect(await claimAttempt(attempt.id)).toBe(true);
       await runClaimedAttempt(attempt.id, { budgetMs: 150 });
-      expect(getAttemptViewForUser(USER, attempt.id)).toMatchObject({ status: "failed", failure: { stage: "evaluation", code: "provider_timeout" } });
+      expect(await getAttemptViewForUser(USER, attempt.id)).toMatchObject({ status: "failed", failure: { stage: "evaluation", code: "provider_timeout" } });
 
       await processAttempt(attempt.id);
       expect(transcription.transcribe).toHaveBeenCalledTimes(1); // not transcribed (or paid for) again
-      expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+      expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
     });
 
     it("lets a slow but healthy run finish", async () => {
@@ -294,9 +292,9 @@ describe("speaking attempt pipeline", () => {
         return { output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 1, outputTokens: 1 };
       });
       const attempt = await submit();
-      expect(claimAttempt(attempt.id)).toBe(true);
+      expect(await claimAttempt(attempt.id)).toBe(true);
       await runClaimedAttempt(attempt.id, { budgetMs: 5_000 });
-      expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+      expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
     });
   });
 });

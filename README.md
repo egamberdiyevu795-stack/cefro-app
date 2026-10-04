@@ -22,8 +22,9 @@ cp .env.example .env.local     # then edit
 npm run dev                    # http://localhost:3000
 ```
 
-The SQLite database (`./data/cefro.db`) is created and migrated automatically on
-the first request. Recorded audio is stored under `./data/audio`.
+Without any Turso variables the app uses a local SQLite file (`./data/cefro.db`, created and migrated automatically on
+the first request) and stores recorded audio under `./data/audio`. Nothing about local development needs a hosted
+database. With `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` set (hosting, see below) it uses the hosted database instead.
 
 ### Running without API keys
 
@@ -101,8 +102,13 @@ manual workflow (`live-evaluation.yml`) because it spends API budget; `live-pipe
 
 ## Deployment notes
 
-The slice uses SQLite and local-disk audio storage, so it needs a Node.js host
-with a **persistent disk** (a VPS, Railway, Fly.io, Render with a volume, …).
-It will not keep data on serverless platforms with ephemeral filesystems
-(e.g. Vercel) until the database and audio storage are switched to hosted
-services — see "Replacing providers" in the architecture doc.
+The app is ready for serverless hosting (Vercel) once two variables are provided:
+
+- `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` select the hosted libSQL (Turso) database. Attempts, accounts, sessions
+  **and the recordings** (table `recording_blobs`, behind the `AudioStorage` interface) live there, so every function
+  instance sees the same data. They are server-only variables.
+- The Vercel build runs `npm run db:migrate`, which migrates the hosted database before the new code serves traffic.
+- Without those variables (local development, tests, a host with a persistent disk) the app uses a SQLite file and
+  local audio, as before.
+
+Step by step, and what has and has not been verified against a real Turso database: `docs/DEPLOY_VERCEL.md`.

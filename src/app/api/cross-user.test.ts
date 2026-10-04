@@ -77,7 +77,7 @@ let attemptOfA: string;
 let sessionOfA: string;
 
 beforeEach(async () => {
-  db = openDatabase(":memory:");
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-xuser-"));
   setAudioStorageForTesting(new LocalAudioStorage(dir));
@@ -92,7 +92,7 @@ beforeEach(async () => {
   const { body } = await upload({ sessionId: sessionOfA });
   attemptOfA = body.attempt.id;
 });
-afterEach(() => {
+afterEach(async () => {
   setDbForTesting(undefined);
   setAudioStorageForTesting(undefined);
   fs.rmSync(dir, { recursive: true, force: true });
@@ -124,11 +124,11 @@ describe.each([["another signed-in user (bob)", "bob"], ["an anonymous visitor",
   });
 
   it("cannot (re)start her attempt's processing", async () => {
-    db.update(speakingAttempts).set({ status: "failed", failureStage: "evaluation", failureCode: "evaluation_failed" }).where(eq(speakingAttempts.id, attemptOfA)).run();
+    await db.update(speakingAttempts).set({ status: "failed", failureStage: "evaluation", failureCode: "evaluation_failed" }).where(eq(speakingAttempts.id, attemptOfA)).run();
     afterTasks.length = 0;
     expect((await postProcess(post("/x"), ctxFor({ attemptId: attemptOfA }))).status).toBe(404);
     expect(afterTasks).toHaveLength(0);
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptOfA)).get()?.status).toBe("failed"); // untouched
+    expect((await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptOfA)).get())?.status).toBe("failed"); // untouched
   });
 
   it("sees only their own history for the task", async () => {
@@ -138,13 +138,13 @@ describe.each([["another signed-in user (bob)", "bob"], ["an anonymous visitor",
   it("cannot attach events or recordings to her session", async () => {
     const events = [{ name: "practice_opened", occurredAt: new Date().toISOString(), taskId: TASK_ID, sessionId: sessionOfA }];
     expect((await postAnalytics(post("/x", { headers: { "content-type": "application/json" }, body: JSON.stringify({ events }) }))).status).toBe(204);
-    const stored = db.select().from(analyticsEvents).where(eq(analyticsEvents.name, "practice_opened")).all().filter((e) => e.userId !== null);
+    const stored = (await db.select().from(analyticsEvents).where(eq(analyticsEvents.name, "practice_opened")).all()).filter((e) => e.userId !== null);
     expect(stored.some((e) => e.sessionId === sessionOfA)).toBe(false);
 
     const { body } = await upload({ sessionId: sessionOfA });
-    const row = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, body.attempt.id)).get()!;
+    const row = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, body.attempt.id)).get())!;
     expect(row.sessionId).not.toBe(sessionOfA);
-    expect(db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionOfA)).get()?.userId).not.toBe(row.userId);
+    expect((await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionOfA)).get())?.userId).not.toBe(row.userId);
   });
 
   it("cannot retry her attempt (the link is refused)", async () => {
@@ -154,9 +154,9 @@ describe.each([["another signed-in user (bob)", "bob"], ["an anonymous visitor",
   });
 
   it("cannot make an upload belong to her by naming her in the request", async () => {
-    const aliceId = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptOfA)).get()!.userId;
+    const aliceId = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptOfA)).get())!.userId;
     const { body } = await upload({ userId: aliceId, user_id: aliceId, accountId: aliceId });
-    const row = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, body.attempt.id)).get()!;
+    const row = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, body.attempt.id)).get())!;
     expect(row.userId).not.toBe(aliceId);
   });
 });
@@ -164,7 +164,7 @@ describe.each([["another signed-in user (bob)", "bob"], ["an anonymous visitor",
 describe("identity cannot be modified or spoofed from outside", () => {
   it("a query-string or header user id changes nothing", async () => {
     actAs(actors.bob);
-    const aliceId = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptOfA)).get()!.userId;
+    const aliceId = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptOfA)).get())!.userId;
     const request = new Request(`http://localhost/api/speaking/attempts/${attemptOfA}?userId=${aliceId}`, { headers: { "x-user-id": aliceId, "x-forwarded-user": aliceId } });
     expect((await getAttempt(request, ctxFor({ attemptId: attemptOfA }))).status).toBe(404);
   });

@@ -26,8 +26,8 @@ import { USER_COOKIE_NAME } from "./user-cookie";
 const ANON = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
 let db: Db;
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
   jar.clear();
   resetAuthLimitersForTesting();
@@ -37,8 +37,8 @@ afterEach(() => setDbForTesting(undefined));
 
 describe("when attaching anonymous history fails", () => {
   it("still signs the user in, keeps the anonymous data and cookie untouched, and a later sign-in completes the merge", async () => {
-    seedUsers(db, ANON);
-    const attempt = seedAttempt(db, { userId: ANON, attemptNumber: 1 });
+    await seedUsers(db, ANON);
+    const attempt = await seedAttempt(db, { userId: ANON, attemptNumber: 1 });
     jar.set(USER_COOKIE_NAME, ANON);
 
     control.failMerge = true;
@@ -48,8 +48,8 @@ describe("when attaching anonymous history fails", () => {
     expect(account.kind).toBe("authenticated");
 
     // Nothing moved, nothing half-moved: the anonymous history is intact and its cookie is still there to retry with.
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt)).get()).toMatchObject({ userId: ANON, attemptNumber: 1 });
-    expect(db.select().from(users).where(eq(users.id, ANON)).get()?.mergedIntoUserId).toBeNull();
+    expect(await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt)).get()).toMatchObject({ userId: ANON, attemptNumber: 1 });
+    expect((await db.select().from(users).where(eq(users.id, ANON)).get())?.mergedIntoUserId).toBeNull();
     expect(jar.get(USER_COOKIE_NAME)).toBe(ANON);
 
     // Retry: sign in again with the failure gone.
@@ -57,7 +57,7 @@ describe("when attaching anonymous history fails", () => {
     jar.set(USER_COOKIE_NAME, ANON);
     control.failMerge = false;
     expect((await signIn("retry@example.com", PASSWORD, { ip: "10.3.0.2" })).status).toBe(200);
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt)).get()?.userId).toBe(account.userId);
+    expect((await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt)).get())?.userId).toBe(account.userId);
     expect(jar.has(USER_COOKIE_NAME)).toBe(false);
   });
 });

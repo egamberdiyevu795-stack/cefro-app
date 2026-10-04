@@ -43,12 +43,12 @@ export const POST = withErrorHandling(async (request: Request) => {
   }
 
   // A session id is kept only if the server issued it to THIS user; anything else is stored as no session.
-  const sessions = ownedSessionIds(
+  const sessions = await ownedSessionIds(
     userId,
     parsed.data.events.flatMap((event) => (event.sessionId ? [event.sessionId] : [])),
   );
 
-  trackEvents(
+  await trackEvents(
     parsed.data.events.map((event) => ({
       name: event.name,
       source: "client" as const,

@@ -7,6 +7,6 @@ export const GET = withErrorHandling(
   async (_request: Request, ctx: RouteContext<"/api/speaking/attempts/[attemptId]">) => {
     const { attemptId } = await ctx.params;
     const userId = await getOrCreateCurrentUserId();
-    return Response.json({ attempt: getAttemptViewForUser(userId, attemptId) });
+    return Response.json({ attempt: await getAttemptViewForUser(userId, attemptId) });
   },
 );

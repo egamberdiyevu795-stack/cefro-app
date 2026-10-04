@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { getAuth } from "@/server/auth/auth";
 import { getDb } from "@/server/db/client";
+import { isDatabaseUnavailable } from "@/server/db/errors";
 import { users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
 import { newId } from "@/server/ids";
@@ -37,12 +38,12 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     if (account) return account;
   }
 
-  const db = getDb();
+  const db = await getDb();
   const presented = cookieStore.get(USER_COOKIE_NAME)?.value;
   if (presented && isValidUserId(presented)) {
-    const row = db.select({ kind: users.kind, mergedInto: users.mergedIntoUserId }).from(users).where(eq(users.id, presented)).get();
+    const row = await db.select({ kind: users.kind, mergedInto: users.mergedIntoUserId }).from(users).where(eq(users.id, presented)).get();
     if (!row) {
-      db.insert(users).values({ id: presented }).onConflictDoNothing().run();
+      await db.insert(users).values({ id: presented }).onConflictDoNothing().run();
       return { kind: "anonymous", userId: presented };
     }
     if (row.kind === "anonymous" && !row.mergedInto) return { kind: "anonymous", userId: presented };
@@ -51,7 +52,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
   }
 
   const userId = newId();
-  db.insert(users).values({ id: userId }).run();
+  await db.insert(users).values({ id: userId }).run();
   cookieStore.set(USER_COOKIE_NAME, userId, {
     httpOnly: true,
     sameSite: "lax",
@@ -64,9 +65,10 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
 async function readAuthenticatedUser(): Promise<CurrentUser | null> {
   try {
-    const session = await getAuth().api.getSession({ headers: await headers() });
+    const session = await (await getAuth()).api.getSession({ headers: await headers() });
     if (!session?.user?.id) return null;
-    const row = getDb()
+    const db = await getDb();
+    const row = await db
       .select({ kind: users.kind, email: users.email, mergedInto: users.mergedIntoUserId })
       .from(users)
       .where(eq(users.id, session.user.id))
@@ -75,6 +77,8 @@ async function readAuthenticatedUser(): Promise<CurrentUser | null> {
     if (!row || row.kind !== "registered" || row.mergedInto || !row.email) return null;
     return { kind: "authenticated", userId: session.user.id, email: row.email };
   } catch (error) {
+    // An unreachable database is NOT "not logged in": let it surface (503) rather than silently switching identity.
+    if (isDatabaseUnavailable(error)) throw error;
     // A broken or unverifiable session is "not logged in", never a 500 and never a different identity.
     logger.warn("Could not read the login session; treating the caller as anonymous", { error });
     return null;

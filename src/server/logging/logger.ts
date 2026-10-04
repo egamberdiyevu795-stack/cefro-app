@@ -9,6 +9,29 @@ type Context = Record<string, unknown>;
  * Technical error details belong here — never in responses to students.
  * Swap the implementation for a hosted logger later without changing callers.
  */
+/**
+ * Credentials must never reach a log line, whatever error carried them. Any configured secret (database token and
+ * address, signing secret, provider keys) is replaced in the serialised line.
+ */
+const SECRET_VARIABLES = ["TURSO_AUTH_TOKEN", "TURSO_DATABASE_URL", "AUTH_SECRET", "GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
+
+export function redactSecrets(line: string, env: NodeJS.ProcessEnv = process.env): string {
+  const secrets = new Set<string>();
+  for (const name of SECRET_VARIABLES) {
+    const value = env[name];
+    if (!value || value.length < 8) continue;
+    secrets.add(value);
+    if (name === "TURSO_DATABASE_URL") {
+      try {
+        secrets.add(new URL(value.replace(/^libsql:/, "https:")).host);
+      } catch {
+        /* not a URL */
+      }
+    }
+  }
+  return [...secrets].sort((a, b) => b.length - a.length).reduce((out, secret) => out.split(secret).join("[redacted]"), line);
+}
+
 function write(level: Level, message: string, context?: Context) {
   const entry = {
     level,
@@ -16,7 +39,7 @@ function write(level: Level, message: string, context?: Context) {
     message,
     ...(context ? serialiseContext(context) : {}),
   };
-  const line = JSON.stringify(entry);
+  const line = redactSecrets(JSON.stringify(entry));
   if (level === "error" || level === "warn") console.error(line);
   else console.log(line);
 }

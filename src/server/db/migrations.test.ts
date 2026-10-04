@@ -1,15 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import type { Client, ResultSet } from "@libsql/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", async () => (await import("../../../test/next-headers-mock")).nextHeadersMock);
 import { getSpeakingTask } from "@/content/speaking";
 import { findAttempt, findRecording, insertAttemptWithRecording, ensureTaskSnapshot } from "@/server/attempts/attempt-repository";
-import { MIGRATIONS_DIR, migrateDatabase, openDatabase, setDbForTesting } from "./client";
-import * as schema from "./schema";
+import { MIGRATIONS_DIR, createDatabase, migrateDatabase, openDatabase, setDbForTesting, type Db } from "./client";
 import { PASSWORD, signIn, signUp } from "../../../test/auth-helpers";
 import { jar } from "../../../test/next-headers-mock";
 import { getCurrentUser } from "@/server/identity/current-user";
@@ -52,11 +50,17 @@ function migrationsUpTo(count: number): string {
   return dir;
 }
 
-function openRaw(file: string) {
-  const sqlite = new Database(file);
-  sqlite.pragma("journal_mode = WAL");
-  return { sqlite, db: drizzle(sqlite, { schema }) };
+/** A database that is NOT migrated yet, plus its raw libSQL client for direct SQL. */
+async function openRaw(file: string): Promise<{ client: Client; db: Db }> {
+  const db = await createDatabase({ kind: "file", path: file });
+  return { client: db.$client, db };
 }
+
+/** Rows as plain objects (the client's Row objects also carry numeric indexes). */
+const plain = (result: ResultSet): Record<string, unknown>[] => result.rows.map((row) => Object.fromEntries(result.columns.map((column) => [column, row[column]])));
+const query = async (client: Client, sql: string, args: (string | number)[] = []) => plain(await client.execute({ sql, args }));
+const pragma = (client: Client, text: string) => query(client, `PRAGMA ${text}`);
+const count = async (client: Client, table: string) => Number((await query(client, `SELECT count(*) AS n FROM ${table}`))[0].n);
 
 const names = (rows: unknown[]) => (rows as { name: string }[]).map((r) => r.name).sort();
 
@@ -86,30 +90,31 @@ describe("migration history", () => {
 });
 
 describe("fresh database", () => {
-  it("builds the full schema from migrations, with foreign keys enforced afterwards", () => {
-    const db = openDatabase(":memory:");
-    const sqlite = (db as unknown as { $client: Database.Database }).$client;
-    expect(names(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite_%'").all())).toEqual([
+  it("builds the full schema from migrations, with foreign keys enforced afterwards", async () => {
+    const db = await openDatabase(":memory:");
+    const client = db.$client;
+    expect(names(await query(client, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '\\_\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite_%'"))).toEqual([
       "analytics_events",
       "auth_accounts",
       "auth_sessions",
       "auth_verifications",
       "evaluations",
       "practice_sessions",
+      "recording_blobs",
       "recordings",
       "speaking_attempts",
       "speaking_tasks",
       "transcripts",
       "users",
     ]);
-    expect(sqlite.pragma("foreign_keys", { simple: true })).toBe(1);
+    expect((await pragma(client, "foreign_keys"))[0]).toEqual({ foreign_keys: 1 });
 
-    const attemptFks = sqlite.pragma("foreign_key_list(speaking_attempts)") as { table: string; from: string }[];
+    const attemptFks = (await pragma(client, "foreign_key_list(speaking_attempts)")) as { table: string; from: string }[];
     expect(attemptFks.map((fk) => `${fk.from}→${fk.table}`).sort()).toEqual(
       ["previous_attempt_id→speaking_attempts", "session_id→practice_sessions", "task_id→speaking_tasks", "task_version→speaking_tasks", "user_id→users"].sort(),
     );
-    expect((sqlite.pragma("foreign_key_list(users)") as { from: string }[]).map((fk) => fk.from)).toEqual(["merged_into_user_id"]);
-    expect(names(sqlite.pragma("index_list(speaking_attempts)") as unknown[])).toEqual(
+    expect(((await pragma(client, "foreign_key_list(users)")) as { from: string }[]).map((fk) => fk.from)).toEqual(["merged_into_user_id"]);
+    expect(names(await pragma(client, "index_list(speaking_attempts)"))).toEqual(
       expect.arrayContaining([
         "speaking_attempts_user_task_number_uq",
         "speaking_attempts_user_task_idx",
@@ -117,40 +122,43 @@ describe("fresh database", () => {
         "speaking_attempts_created_idx",
       ]),
     );
-    expect(names(sqlite.pragma("table_info(analytics_events)") as unknown[])).toContain("session_id");
+    expect(names(await pragma(client, "table_info(analytics_events)"))).toContain("session_id");
   });
 
-  it("rejects dangling references once migrated", () => {
-    const db = openDatabase(":memory:");
-    const sqlite = (db as unknown as { $client: Database.Database }).$client;
-    expect(() =>
-      sqlite
-        .prepare("INSERT INTO speaking_attempts (id,user_id,task_id,task_version,attempt_number,status,updated_at) VALUES ('a','nobody','t',1,1,'uploaded','x')")
-        .run(),
-    ).toThrow(/FOREIGN KEY/);
+  it("rejects dangling references once migrated", async () => {
+    const db = await openDatabase(":memory:");
+    await expect(
+      db.$client.execute("INSERT INTO speaking_attempts (id,user_id,task_id,task_version,attempt_number,status,updated_at) VALUES ('a','nobody','t',1,1,'uploaded','x')"),
+    ).rejects.toThrow(/FOREIGN KEY/);
   });
 
-  it("is idempotent: migrating twice changes nothing", () => {
+  it("is idempotent: migrating twice changes nothing", async () => {
     const file = path.join(tempDir(), "db.sqlite");
-    const { sqlite, db } = openRaw(file);
-    migrateDatabase(sqlite, db);
-    const before = sqlite.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get() as { n: number };
-    migrateDatabase(sqlite, db);
-    const after = sqlite.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get() as { n: number };
-    expect(after.n).toBe(before.n);
-    expect(after.n).toBe(journal().entries.length);
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    const before = await count(client, "__drizzle_migrations");
+    await migrateDatabase(db);
+    const after = await count(client, "__drizzle_migrations");
+    expect(after).toBe(before);
+    expect(after).toBe(journal().entries.length);
+  });
+
+  it("the recording_blobs migration is additive: it only creates the table", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0004_recording_blobs.sql"), "utf8");
+    expect(sql).toContain("CREATE TABLE `recording_blobs`");
+    expect(sql).not.toMatch(/DROP|ALTER TABLE|DELETE|UPDATE/i);
   });
 });
 
 describe("upgrading a database created by an earlier release", () => {
   /** Rows as the pre-Stage-3 application wrote them (migrations 0000 and 0001 only). */
-  function seedOldDatabase(file: string) {
-    const { sqlite, db } = openRaw(file);
-    migrateDatabase(sqlite, db, migrationsUpTo(2));
-    expect(names(sqlite.pragma("table_info(speaking_attempts)") as unknown[])).not.toContain("session_id");
+  async function seedOldDatabase(file: string) {
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db, migrationsUpTo(2));
+    expect(names(await pragma(client, "table_info(speaking_attempts)"))).not.toContain("session_id");
 
     const content = JSON.stringify({ id: "b2-part2-technology-young-people", version: 1 });
-    sqlite.exec(`
+    await client.executeMultiple(`
       INSERT INTO users (id) VALUES ('u1'), ('u2');
       INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-technology-young-people', 1, 'B2', 2, 'Technology', '${content}');
       INSERT INTO speaking_attempts (id, user_id, task_id, task_version, attempt_number, previous_attempt_id, status, updated_at, created_at, retry_focus, metrics, processing_runs) VALUES
@@ -163,51 +171,49 @@ describe("upgrading a database created by an earlier release", () => {
         VALUES ('e1', 'a1', 't1', 'speaking-evaluator/2.4.0', 'b2-speaking-rubric/1.0.0', 2, 'abc', 'gemini', 'gemini-3.8-flash', 'B2', '{}');
       INSERT INTO analytics_events (id, name, source, user_id, occurred_at) VALUES ('ev1', 'practice_opened', 'client', 'u1', '2026-01-01T00:00:00.000Z');
     `);
-    return { sqlite, db };
+    return { client, db };
   }
 
-  it("keeps every row, repairs the dangling retry link, and leaves no foreign key violation", () => {
-    const { sqlite, db } = seedOldDatabase(path.join(tempDir(), "old.sqlite"));
+  it("keeps every row, repairs the dangling retry link, and leaves no foreign key violation", async () => {
+    const { client, db } = await seedOldDatabase(path.join(tempDir(), "old.sqlite"));
 
-    migrateDatabase(sqlite, db); // the real, full migration set
+    await migrateDatabase(db); // the real, full migration set
 
-    const attempts = sqlite.prepare("SELECT * FROM speaking_attempts ORDER BY id").all() as Record<string, unknown>[];
+    const attempts = await query(client, "SELECT * FROM speaking_attempts ORDER BY id");
     expect(attempts.map((a) => a.id)).toEqual(["a1", "a2", "a3"]);
     expect(attempts[0]).toMatchObject({ user_id: "u1", attempt_number: 1, status: "completed", metrics: '{"wordCount":120}', processing_runs: 1, session_id: null });
     expect(attempts[1]).toMatchObject({ previous_attempt_id: "a1", retry_focus: '[{"objective":"x"}]', processing_runs: 2, attempt_number: 2 });
     expect(attempts[2]).toMatchObject({ previous_attempt_id: null, status: "failed" }); // dangling link dropped, attempt kept
 
     // Child rows still resolve through the rebuilt table.
-    expect(sqlite.prepare("SELECT count(*) AS n FROM recordings r JOIN speaking_attempts a ON a.id = r.attempt_id").get()).toEqual({ n: 1 });
-    expect(sqlite.prepare("SELECT count(*) AS n FROM evaluations e JOIN transcripts t ON t.id = e.transcript_id JOIN speaking_attempts a ON a.id = e.attempt_id").get()).toEqual({ n: 1 });
-    expect(sqlite.prepare("SELECT session_id, merged FROM (SELECT session_id, NULL AS merged FROM analytics_events)").get()).toEqual({ session_id: null, merged: null });
-    expect(sqlite.prepare("SELECT merged_into_user_id AS m FROM users WHERE id='u1'").get()).toEqual({ m: null });
-    expect(sqlite.pragma("foreign_key_check")).toEqual([]);
+    expect(await query(client, "SELECT count(*) AS n FROM recordings r JOIN speaking_attempts a ON a.id = r.attempt_id")).toEqual([{ n: 1 }]);
+    expect(await query(client, "SELECT count(*) AS n FROM evaluations e JOIN transcripts t ON t.id = e.transcript_id JOIN speaking_attempts a ON a.id = e.attempt_id")).toEqual([{ n: 1 }]);
+    expect(await query(client, "SELECT session_id, merged FROM (SELECT session_id, NULL AS merged FROM analytics_events)")).toEqual([{ session_id: null, merged: null }]);
+    expect(await query(client, "SELECT merged_into_user_id AS m FROM users WHERE id='u1'")).toEqual([{ m: null }]);
+    expect(await pragma(client, "foreign_key_check")).toEqual([]);
 
     // The unique numbering rule survived the rebuild.
-    sqlite.pragma("foreign_keys = ON");
-    expect(() =>
-      sqlite
-        .prepare("INSERT INTO speaking_attempts (id,user_id,task_id,task_version,attempt_number,status,updated_at) VALUES ('dup','u1','b2-part2-technology-young-people',1,1,'uploaded','x')")
-        .run(),
-    ).toThrow(/UNIQUE/);
+    await client.execute("PRAGMA foreign_keys = ON");
+    await expect(
+      client.execute("INSERT INTO speaking_attempts (id,user_id,task_id,task_version,attempt_number,status,updated_at) VALUES ('dup','u1','b2-part2-technology-young-people',1,1,'uploaded','x')"),
+    ).rejects.toThrow(/UNIQUE/);
   });
 
-  it("lets the application read and write the important entities afterwards", () => {
+  it("lets the application read and write the important entities afterwards", async () => {
     const file = path.join(tempDir(), "old.sqlite");
-    const { sqlite, db } = seedOldDatabase(file);
-    migrateDatabase(sqlite, db);
-    sqlite.pragma("foreign_keys = ON");
+    const { client, db } = await seedOldDatabase(file);
+    await migrateDatabase(db);
+    await client.execute("PRAGMA foreign_keys = ON");
     setDbForTesting(db);
 
     // Read an attempt written by the old release.
-    expect(findAttempt("a2")).toMatchObject({ id: "a2", previousAttemptId: "a1", sessionId: null });
-    expect(findRecording("a1")).toMatchObject({ storageKey: "speaking/u1/a1.webm" });
+    expect(await findAttempt("a2")).toMatchObject({ id: "a2", previousAttemptId: "a1", sessionId: null });
+    expect(await findRecording("a1")).toMatchObject({ storageKey: "speaking/u1/a1.webm" });
 
     // Write a new one through the repository (a retry of the old attempt).
     const task = getSpeakingTask("b2-part2-technology-young-people")!;
-    ensureTaskSnapshot(task);
-    const created = insertAttemptWithRecording({
+    await ensureTaskSnapshot(task);
+    const created = await insertAttemptWithRecording({
       attemptId: "11111111-1111-4111-8111-111111111111",
       userId: "u1",
       sessionId: null,
@@ -218,52 +224,52 @@ describe("upgrading a database created by an earlier release", () => {
     });
     expect(created.attemptNumber).toBe(3);
     expect(created.previousAttemptId).toBe("a2");
-    expect(sqlite.pragma("foreign_key_check")).toEqual([]);
+    expect(await pragma(client, "foreign_key_check")).toEqual([]);
   });
 
-  it("fails loudly if a migration would leave a dangling reference", () => {
+  it("fails loudly if a migration would leave a dangling reference", async () => {
     const file = path.join(tempDir(), "bad.sqlite");
-    const { sqlite, db } = openRaw(file);
-    migrateDatabase(sqlite, db, migrationsUpTo(2));
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db, migrationsUpTo(2));
     // An attempt for a task version with no snapshot cannot satisfy the new composite foreign key.
-    sqlite.exec(`
+    await client.executeMultiple(`
       INSERT INTO users (id) VALUES ('u1');
       INSERT INTO speaking_attempts (id, user_id, task_id, task_version, attempt_number, status, updated_at) VALUES ('a1','u1','ghost-task',1,1,'completed','x');
     `);
-    expect(() => migrateDatabase(sqlite, db)).toThrow(/foreign key violation/i);
+    await expect(migrateDatabase(db)).rejects.toThrow(/foreign key violation/i);
   });
 });
 
 describe("Stage 4 (authentication) migration", () => {
   const ANON = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
 
-  it("adds the account tables, the users columns and the email uniqueness rule", () => {
-    const db = openDatabase(":memory:");
-    const sqlite = (db as unknown as { $client: Database.Database }).$client;
-    expect(names(sqlite.pragma("table_info(users)") as unknown[])).toEqual(
+  it("adds the account tables, the users columns and the email uniqueness rule", async () => {
+    const db = await openDatabase(":memory:");
+    const client = db.$client;
+    expect(names(await pragma(client, "table_info(users)"))).toEqual(
       expect.arrayContaining(["email", "name", "image", "email_verified", "updated_at", "merged_into_user_id", "kind"]),
     );
     for (const table of ["auth_sessions", "auth_accounts"]) {
-      const fks = sqlite.pragma(`foreign_key_list(${table})`) as { from: string; table: string }[];
+      const fks = (await pragma(client, `foreign_key_list(${table})`)) as { from: string; table: string }[];
       expect(fks.map((fk) => `${fk.from}→${fk.table}`)).toEqual(["user_id→users"]);
     }
-    expect(names(sqlite.pragma("index_list(users)") as unknown[])).toContain("users_email_uq");
-    expect(names(sqlite.pragma("index_list(auth_sessions)") as unknown[])).toContain("auth_sessions_token_uq");
+    expect(names(await pragma(client, "index_list(users)"))).toContain("users_email_uq");
+    expect(names(await pragma(client, "index_list(auth_sessions)"))).toContain("auth_sessions_token_uq");
 
     // Two accounts cannot share an email; any number of anonymous users (NULL email) can coexist.
-    sqlite.exec("INSERT INTO users (id) VALUES ('x1'), ('x2'), ('x3')");
-    sqlite.exec("UPDATE users SET email = 'a@example.com', kind = 'registered' WHERE id = 'x1'");
-    expect(() => sqlite.exec("UPDATE users SET email = 'a@example.com', kind = 'registered' WHERE id = 'x2'")).toThrow(/UNIQUE/);
+    await client.execute("INSERT INTO users (id) VALUES ('x1'), ('x2'), ('x3')");
+    await client.execute("UPDATE users SET email = 'a@example.com', kind = 'registered' WHERE id = 'x1'");
+    await expect(client.execute("UPDATE users SET email = 'a@example.com', kind = 'registered' WHERE id = 'x2'")).rejects.toThrow(/UNIQUE/);
     // A session needs a real user.
-    expect(() => sqlite.exec("INSERT INTO auth_sessions (id,user_id,token,expires_at,updated_at) VALUES ('s','ghost','t','x','x')")).toThrow(/FOREIGN KEY/);
+    await expect(client.execute("INSERT INTO auth_sessions (id,user_id,token,expires_at,updated_at) VALUES ('s','ghost','t','x','x')")).rejects.toThrow(/FOREIGN KEY/);
   });
 
   it("upgrades a database from the previous schema with anonymous users and data, then converts them to an account", async () => {
-    const { sqlite, db } = openRaw(path.join(tempDir(), "previous.sqlite"));
-    migrateDatabase(sqlite, db, migrationsUpTo(3)); // the schema before authentication existed
-    expect(names(sqlite.pragma("table_info(users)") as unknown[])).not.toContain("email");
+    const { client, db } = await openRaw(path.join(tempDir(), "previous.sqlite"));
+    await migrateDatabase(db, migrationsUpTo(3)); // the schema before authentication existed
+    expect(names(await pragma(client, "table_info(users)"))).not.toContain("email");
     const content = JSON.stringify({ id: "b2-part2-technology-young-people", version: 1 });
-    sqlite.exec(`
+    await client.executeMultiple(`
       INSERT INTO users (id) VALUES ('${ANON}'), ('a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2');
       INSERT INTO practice_sessions (id, user_id) VALUES ('5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', '${ANON}');
       INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-technology-young-people', 1, 'B2', 2, 'T', '${content}');
@@ -272,15 +278,15 @@ describe("Stage 4 (authentication) migration", () => {
       INSERT INTO analytics_events (id, name, source, user_id, session_id, occurred_at) VALUES ('ev1', 'practice_opened', 'client', '${ANON}', '5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', '2026-01-01T00:00:00.000Z');
     `);
 
-    migrateDatabase(sqlite, db); // the real, full set
-    sqlite.pragma("foreign_keys = ON");
+    await migrateDatabase(db); // the real, full set
+    await client.execute("PRAGMA foreign_keys = ON");
 
-    const users = sqlite.prepare("SELECT id, kind, email, name, email_verified, merged_into_user_id FROM users ORDER BY id").all();
+    const users = await query(client, "SELECT id, kind, email, name, email_verified, merged_into_user_id FROM users ORDER BY id");
     expect(users).toEqual([
       { id: ANON, kind: "anonymous", email: null, name: null, email_verified: 0, merged_into_user_id: null },
       { id: "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2", kind: "anonymous", email: null, name: null, email_verified: 0, merged_into_user_id: null },
     ]);
-    expect(sqlite.pragma("foreign_key_check")).toEqual([]);
+    expect(await pragma(client, "foreign_key_check")).toEqual([]);
 
     // Now authenticate on the upgraded database and attach the existing anonymous history.
     setDbForTesting(db);
@@ -290,17 +296,17 @@ describe("Stage 4 (authentication) migration", () => {
     expect((await signUp("upgraded@example.com", PASSWORD, { ip: "10.9.0.1" })).status).toBe(200);
     const account = await getCurrentUser();
     expect(account).toMatchObject({ kind: "authenticated", email: "upgraded@example.com" });
-    expect(sqlite.prepare("SELECT user_id FROM speaking_attempts WHERE id = 'd1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1'").get()).toEqual({ user_id: account.userId });
-    expect(sqlite.prepare("SELECT user_id FROM practice_sessions").get()).toEqual({ user_id: account.userId });
-    expect(sqlite.prepare("SELECT user_id FROM analytics_events WHERE id = 'ev1'").get()).toEqual({ user_id: account.userId });
-    expect(sqlite.prepare("SELECT merged_into_user_id AS m FROM users WHERE id = ?").get(ANON)).toEqual({ m: account.userId });
+    expect(await query(client, "SELECT user_id FROM speaking_attempts WHERE id = 'd1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1'")).toEqual([{ user_id: account.userId }]);
+    expect(await query(client, "SELECT user_id FROM practice_sessions")).toEqual([{ user_id: account.userId }]);
+    expect(await query(client, "SELECT user_id FROM analytics_events WHERE id = 'ev1'")).toEqual([{ user_id: account.userId }]);
+    expect(await query(client, "SELECT merged_into_user_id AS m FROM users WHERE id = ?", [ANON])).toEqual([{ m: account.userId }]);
 
     // A second sign-in with the same stale anonymous cookie changes nothing (idempotent).
     jar.clear();
     jar.set("cefro_uid", ANON);
     expect((await signIn("upgraded@example.com", PASSWORD, { ip: "10.9.0.2" })).status).toBe(200);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM speaking_attempts").get()).toEqual({ n: 1 });
-    expect(sqlite.pragma("foreign_key_check")).toEqual([]);
+    expect(await query(client, "SELECT count(*) AS n FROM speaking_attempts")).toEqual([{ n: 1 }]);
+    expect(await pragma(client, "foreign_key_check")).toEqual([]);
   });
 
   function folderWithBrokenMigration() {
@@ -313,23 +319,23 @@ describe("Stage 4 (authentication) migration", () => {
     return { dir, applied: entries.length };
   }
 
-  it("rolls a failing migration back completely: an existing database keeps its schema and its data", () => {
+  it("rolls a failing migration back completely: an existing database keeps its schema and its data", async () => {
     const { dir, applied } = folderWithBrokenMigration();
-    const { sqlite, db } = openRaw(path.join(tempDir(), "failing.sqlite"));
-    migrateDatabase(sqlite, db); // the real set is applied
-    sqlite.exec("INSERT INTO users (id, kind, email) VALUES ('keep-me', 'registered', 'keep@example.com')");
+    const { client, db } = await openRaw(path.join(tempDir(), "failing.sqlite"));
+    await migrateDatabase(db); // the real set is applied
+    await client.execute("INSERT INTO users (id, kind, email) VALUES ('keep-me', 'registered', 'keep@example.com')");
 
-    expect(() => migrateDatabase(sqlite, db, dir)).toThrow();
-    expect(names(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all())).not.toContain("half_done"); // its first statement was undone too
-    expect((sqlite.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get() as { n: number }).n).toBe(applied);
-    expect(sqlite.prepare("SELECT email FROM users WHERE id = 'keep-me'").get()).toEqual({ email: "keep@example.com" });
+    await expect(migrateDatabase(db, dir)).rejects.toThrow();
+    expect(names(await query(client, "SELECT name FROM sqlite_master WHERE type='table'"))).not.toContain("half_done"); // its first statement was undone too
+    expect(await count(client, "__drizzle_migrations")).toBe(applied);
+    expect(await query(client, "SELECT email FROM users WHERE id = 'keep-me'")).toEqual([{ email: "keep@example.com" }]);
   });
 
-  it("applies a batch of pending migrations all-or-nothing (a failure in the last one leaves a fresh database empty, not half-built)", () => {
+  it("applies a batch of pending migrations all-or-nothing (a failure in the last one leaves a fresh database empty, not half-built)", async () => {
     const { dir } = folderWithBrokenMigration();
-    const { sqlite, db } = openRaw(path.join(tempDir(), "fresh-failing.sqlite"));
-    expect(() => migrateDatabase(sqlite, db, dir)).toThrow();
-    const tables = names(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table'").all());
+    const { client, db } = await openRaw(path.join(tempDir(), "fresh-failing.sqlite"));
+    await expect(migrateDatabase(db, dir)).rejects.toThrow();
+    const tables = names(await query(client, "SELECT name FROM sqlite_master WHERE type='table'"));
     expect(tables).not.toContain("half_done");
     expect(tables).not.toContain("users"); // nothing from the earlier migrations in the same batch survived
   });

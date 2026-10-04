@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerEnv } from "./env";
 
 const state = vi.hoisted(() => ({ env: {} as Record<string, unknown>, throwOnParse: false }));
@@ -16,7 +16,7 @@ vi.mock("@/server/logging/logger", () => ({ logger: logs }));
 
 import { checkProvidersAtBoot } from "./boot-check";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
-import { describeProviderMode, validateAuthConfig, validateProviderConfig } from "./provider-config";
+import { describeProviderMode, validateAuthConfig, validateDatabaseConfig, validateProviderConfig } from "./provider-config";
 
 const env = (overrides: Record<string, unknown>) =>
   ({ NODE_ENV: "development", TRANSCRIPTION_PROVIDER: "openai", EVALUATION_PROVIDER: "gemini", SPEECH_GUARD: "off", ...overrides }) as unknown as ServerEnv;
@@ -140,3 +140,40 @@ describe("validateAuthConfig", () => {
   });
 });
 
+
+describe("validateDatabaseConfig", () => {
+  const TURSO = { TURSO_DATABASE_URL: "libsql://db-org.turso.io", TURSO_AUTH_TOKEN: "token-token", AUDIO_STORAGE_PROVIDER: "auto" };
+  const local = { AUDIO_STORAGE_PROVIDER: "auto" };
+  const vars = (e: Record<string, unknown>) => validateDatabaseConfig(env(e)).map((p) => p.variable);
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("accepts local development with no Turso variables, and a complete Turso pair", () => {
+    expect(vars(local)).toEqual([]);
+    expect(vars(TURSO)).toEqual([]);
+    expect(vars({ ...TURSO, TURSO_DATABASE_URL: "https://db-org.turso.io" })).toEqual([]);
+  });
+
+  it("names the missing half when only one of the two is set", () => {
+    expect(vars({ ...local, TURSO_DATABASE_URL: TURSO.TURSO_DATABASE_URL })).toEqual(["TURSO_AUTH_TOKEN"]);
+    expect(vars({ ...local, TURSO_AUTH_TOKEN: "token-token" })).toEqual(["TURSO_DATABASE_URL"]);
+  });
+
+  it("rejects an address that is not libsql:// or https://", () => {
+    expect(vars({ ...TURSO, TURSO_DATABASE_URL: "http://db-org.turso.io" })).toEqual(["TURSO_DATABASE_URL"]);
+    expect(vars({ ...TURSO, TURSO_DATABASE_URL: "file:./x.db" })).toEqual(["TURSO_DATABASE_URL"]);
+  });
+
+  it("never echoes the token in a message", () => {
+    const messages = validateDatabaseConfig(env({ ...TURSO, TURSO_DATABASE_URL: "http://x" })).map((p) => p.message).join(" ");
+    expect(messages).not.toContain("token-token");
+  });
+
+  it("requires the hosted database on Vercel, and refuses local recordings there", () => {
+    vi.stubEnv("VERCEL", "1");
+    expect(vars(local)).toContain("TURSO_DATABASE_URL");
+    expect(vars(TURSO)).toEqual([]);
+    expect(vars({ ...TURSO, AUDIO_STORAGE_PROVIDER: "local" })).toEqual(["AUDIO_STORAGE_PROVIDER"]);
+    expect(vars({ ...local, AUDIO_STORAGE_PROVIDER: "database" })).toContain("AUDIO_STORAGE_PROVIDER");
+  });
+});

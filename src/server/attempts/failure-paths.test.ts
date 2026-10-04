@@ -31,10 +31,10 @@ let llm: EvaluationModel & { evaluate: ReturnType<typeof vi.fn> };
 
 const goodOutput = () => ({ output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 10, outputTokens: 20 });
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
-  db.insert(users).values({ id: USER }).run();
+  await db.insert(users).values({ id: USER }).run();
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-failures-"));
   setAudioStorageForTesting(new LocalAudioStorage(dir));
   stt = { name: "fake-stt", model: "fake-stt-1", transcribe: vi.fn(async () => ({ text: FIXTURE_TRANSCRIPT, language: "en" })) };
@@ -42,7 +42,7 @@ beforeEach(() => {
   setTranscriptionProviderForTesting(stt);
   setEvaluationModelForTesting(llm);
 });
-afterEach(() => {
+afterEach(async () => {
   setDbForTesting(undefined);
   setAudioStorageForTesting(undefined);
   setTranscriptionProviderForTesting(undefined);
@@ -63,32 +63,32 @@ async function newAttempt() {
 
 /** What must be true after ANY failed run. */
 async function expectCleanFailure(attemptId: string, expected: { stage: "transcription" | "evaluation"; code: FailureCode }) {
-  const view = getAttemptViewForUser(USER, attemptId);
+  const view = await getAttemptViewForUser(USER, attemptId);
   expect(view).toMatchObject({ status: "failed", failure: expected, evaluation: null, isStalled: false });
 
-  const row = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get()!;
+  const row = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get())!;
   expect(row.failureStage).toBe(expected.stage);
   expect(row.processingDurationMs).not.toBeNull();
   expect(row.completedAt).toBeNull();
 
-  const recording = db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get()!;
+  const recording = (await db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get())!;
   expect(recording).toBeTruthy();
   await expect(new LocalAudioStorage(dir).read(recording.storageKey)).resolves.toBeInstanceOf(Buffer); // audio kept for the restart
-  expect(db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).all()).toHaveLength(0); // no half-written evaluation
-  expect((db as unknown as { $client: { pragma(s: string): unknown[] } }).$client.pragma("foreign_key_check")).toEqual([]);
+  expect(await db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).all()).toHaveLength(0); // no half-written evaluation
+  expect((await db.$client.execute("PRAGMA foreign_key_check")).rows).toEqual([]);
 }
 
 async function expectRestartCompletes(attemptId: string) {
   await processAttempt(attemptId);
-  expect(getAttemptViewForUser(USER, attemptId).status).toBe("completed");
-  expect(db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).all()).toHaveLength(1);
+  expect((await getAttemptViewForUser(USER, attemptId)).status).toBe("completed");
+  expect(await db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).all()).toHaveLength(1);
 }
 
 describe("transcription failures", () => {
   it("timeout (provider hangs): ends inside the budget as provider_timeout, restartable", async () => {
     stt.transcribe.mockImplementationOnce(never);
     const attempt = await newAttempt();
-    expect(claimAttempt(attempt.id)).toBe(true);
+    expect(await claimAttempt(attempt.id)).toBe(true);
     await runClaimedAttempt(attempt.id, { budgetMs: 120 });
     await expectCleanFailure(attempt.id, { stage: "transcription", code: "provider_timeout" });
     await expectRestartCompletes(attempt.id);
@@ -126,7 +126,7 @@ describe("transcription failures", () => {
     await processAttempt(attempt.id);
     await expectCleanFailure(attempt.id, { stage: "transcription", code: "transcription_empty" });
     expect(llm.evaluate).not.toHaveBeenCalled();
-    expect(db.select().from(transcripts).where(eq(transcripts.attemptId, attempt.id)).all()).toHaveLength(0); // no fabricated transcript stored
+    expect(await db.select().from(transcripts).where(eq(transcripts.attemptId, attempt.id)).all()).toHaveLength(0); // no fabricated transcript stored
   });
 });
 
@@ -134,10 +134,10 @@ describe("evaluation failures", () => {
   it("timeout (provider hangs): ends inside the budget as provider_timeout; the transcript is kept, not re-bought", async () => {
     llm.evaluate.mockImplementationOnce(never);
     const attempt = await newAttempt();
-    expect(claimAttempt(attempt.id)).toBe(true);
+    expect(await claimAttempt(attempt.id)).toBe(true);
     await runClaimedAttempt(attempt.id, { budgetMs: 120 });
     await expectCleanFailure(attempt.id, { stage: "evaluation", code: "provider_timeout" });
-    expect(db.select().from(transcripts).where(eq(transcripts.attemptId, attempt.id)).all()).toHaveLength(1);
+    expect(await db.select().from(transcripts).where(eq(transcripts.attemptId, attempt.id)).all()).toHaveLength(1);
     await expectRestartCompletes(attempt.id);
     expect(stt.transcribe).toHaveBeenCalledTimes(1);
   });
@@ -196,8 +196,8 @@ describe("evaluation failures", () => {
       .mockResolvedValueOnce(goodOutput());
     const attempt = await newAttempt();
     await processAttempt(attempt.id);
-    const row = db.select().from(evaluations).where(eq(evaluations.attemptId, attempt.id)).get()!;
-    expect(getAttemptViewForUser(USER, attempt.id).status).toBe("completed");
+    const row = (await db.select().from(evaluations).where(eq(evaluations.attemptId, attempt.id)).get())!;
+    expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
     expect(row.modelCalls).toBe(2);
     expect(row.inputTokens).toBe(15); // both calls are counted
     expect(JSON.stringify(row.qualityReport)).toContain("issue_without_evidence");

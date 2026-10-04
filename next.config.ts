@@ -2,11 +2,12 @@ import type { NextConfig } from "next";
 import { buildSecurityHeaders } from "./src/security-headers";
 
 const nextConfig: NextConfig = {
-  // Native SQLite driver and the static ffmpeg binary must be loaded from node_modules at runtime, not bundled.
-  serverExternalPackages: ["better-sqlite3", "ffmpeg-static"],
+  // The native libSQL module (local development database) and the static ffmpeg binary must be loaded from
+  // node_modules at runtime, not bundled. The hosted-database client (@libsql/client/web) is plain JavaScript.
+  serverExternalPackages: ["@libsql/client", "libsql", "ffmpeg-static"],
   // Files that are read at runtime without being imported, so the build's file tracing cannot see them. On Vercel only
-  // traced files are shipped with a function: the SQL migrations (every route that touches the database applies them on
-  // first use) and the ffmpeg binary used by the speech activity guard (only the two routes that process an attempt run it).
+  // traced files are shipped with a function: the SQL migrations (read by the start-up check that the hosted database is
+  // migrated) and the ffmpeg binary used by the speech activity guard (only the two routes that process an attempt run it).
   outputFileTracingIncludes: {
     "/**": ["./src/server/db/migrations/**/*"],
     "/api/speaking/attempts": ["./node_modules/ffmpeg-static/ffmpeg"],

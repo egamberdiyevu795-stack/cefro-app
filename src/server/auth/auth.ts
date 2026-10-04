@@ -78,7 +78,7 @@ function createAuth(db: Db) {
         const anonymousId = ctx.getCookie(USER_COOKIE_NAME);
         if (!anonymousId) return;
         try {
-          mergeAnonymousCookieIdentity(db, { anonymousUserId: anonymousId, accountUserId: session.user.id });
+          await mergeAnonymousCookieIdentity(db, { anonymousUserId: anonymousId, accountUserId: session.user.id });
           // The anonymous cookie must not outlive the conversion.
           ctx.setCookie(USER_COOKIE_NAME, "", { maxAge: 0, path: "/", httpOnly: true, sameSite: "lax" });
         } catch (error) {
@@ -96,8 +96,8 @@ export type Auth = ReturnType<typeof createAuth>;
 const cache = new WeakMap<Db, Auth>();
 
 /** The auth instance for the current database connection (tests swap the connection, so this follows it). */
-export function getAuth(): Auth {
-  const db = getDb();
+export async function getAuth(): Promise<Auth> {
+  const db = await getDb();
   let auth = cache.get(db);
   if (!auth) {
     auth = createAuth(db);

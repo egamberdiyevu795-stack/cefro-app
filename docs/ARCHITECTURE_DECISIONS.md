@@ -308,8 +308,9 @@ letting a second paid pipeline start for the same attempt. Observed latency is f
 
 ## 8. Storage and deployment limits
 
-Unchanged and still true: SQLite (`better-sqlite3`) and local-disk audio require a single Node host with a
-persistent disk. They do not work on ephemeral or serverless filesystems. Migrations are applied on first
+Superseded for hosting by section 12 (hosted libSQL/Turso plus recordings in the database). Still true for the local
+fallback: a SQLite file and local-disk audio require a single Node host with a persistent disk and do not work on
+ephemeral or serverless filesystems. Migrations are applied on first
 database use from `src/server/db/migrations` located via `process.cwd()`, which assumes the source tree is
 present at runtime. In-memory limiters are per process. For production, see the audit (section 7): a hosted
 database or a backed-up volume, object storage behind `AudioStorage`, migrations in the deploy pipeline, and a
@@ -495,10 +496,58 @@ migration batch rolls back completely).
   lost account; an address can be registered by someone who does not own it (no takeover path, since there is no reset, but
   squatting is possible). Registration reveals whether an email exists.
 - Sign-in/registration limits are in-memory and per process; with several instances or a restart they are weaker.
-- Everything still assumes one Node host with SQLite and local disk (section 8): the session table is local too.
+- The in-memory login limiters are per process (section 8); the session table itself is in the shared database (section 12).
 - A session slides for as long as it is used; there is no absolute maximum lifetime and no "sign out everywhere".
 - Merge trusts possession of the anonymous cookie, as all anonymous data always has: stealing an anonymous cookie
   lets the thief attach that anonymous history to their own new account.
 - The password hashing and session logic are the library's; they were not independently audited here.
 - No MFA, no account deletion, no account settings.
 
+---
+
+## 12. Persistent storage: Turso/libSQL (hosting)
+
+**Problem.** On Vercel each function instance has its own `/tmp`. A SQLite file and recordings there are invisible to
+other instances and are wiped on cold starts and redeploys, so attempts "disappeared" (the API answered 404 for an
+attempt created moments earlier).
+
+**Decision.** One data layer for both situations, the official Drizzle + libSQL stack:
+
+- *Same schema, same migrations.* The Drizzle `sqlite-core` schema and the SQL migrations are unchanged in kind
+  (migration 0004 adds `recording_blobs`). libSQL is SQLite-compatible, so there is no second database design.
+- *Chosen at runtime from configuration alone* (`src/server/db/target.ts`): `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`
+  both set select the hosted database over HTTPS (`@libsql/client/web`: no native module, no websocket, one bounded
+  `fetch` per request with `DATABASE_TIMEOUT_MS`); neither set selects a local SQLite file through the node libSQL
+  client (single connection, operations serialised by a small FIFO lock, WAL, foreign keys on). Only one of the two is a
+  configuration error, never a silent fallback. On Vercel the hosted database is mandatory.
+- *Everything is asynchronous.* Every repository and service function awaits its queries. `.changes` became
+  `rowsAffected`; the attempt claim is still one conditional `UPDATE` whose `rowsAffected === 1` decides the winner.
+  Multi-row writes (attempt + recording, transcript, evaluation + completion) are `db.transaction` blocks that contain
+  only database calls; slow provider calls (transcription, evaluation) never run inside a transaction, because hosted
+  transactions are HTTP streams that expire after a short idle time and hold a write lock.
+- *Recordings live in the database* (`recording_blobs`, bytes + content type + size) behind the unchanged `AudioStorage`
+  interface (`DatabaseAudioStorage`). A recording is about 2 MB and the database is the one thing all instances share.
+  Access is only through the ownership-checked audio route. `AUDIO_STORAGE_PROVIDER` can select `local` (development) or
+  a future object-storage implementation (Vercel Blob, R2) without touching callers. Upload path: browser → route
+  (Vercel's 4.5 MB body limit applies) → recording stored in the database → Speech Activity Guard → Gemini
+  transcription → Gemini evaluation → completed.
+- *Migrations run at deploy time*, not in whichever instance starts first: `vercel-build` runs `npm run db:migrate`
+  (`scripts/migrate.mjs`: Drizzle's libSQL migrator, then `PRAGMA foreign_key_check`; any failure fails the build, so a
+  deployment never goes live against a half-migrated database). A running hosted instance only checks that the schema is
+  current and reports a clear error otherwise. Local files are migrated when opened, as before.
+- *Infrastructure errors are not "not found".* A database that cannot be opened or reached becomes
+  `DatabaseUnavailableError` and a retryable `503 database_unavailable`; only a genuinely missing or foreign attempt is
+  `404 attempt_not_found`. Credentials never appear in errors or logs (message redaction in the database layer and in
+  the logger).
+- *Credentials are server-only.* They are read in `src/server/config/env.ts` (a `server-only` module), never use the
+  `NEXT_PUBLIC_` prefix and are checked absent from the client bundle by the build verification.
+
+**Not verified here.** No real Turso database could be reached from the development environment, so behaviour that
+depends on the hosted service has not been observed: latency of the ~20 statements of one attempt, behaviour of
+migration 0004 and the BLOB round trip on the hosted engine, foreign-key enforcement defaults on hosted connections,
+and write contention between simultaneous instances. Tests use the same code against local libSQL files (including two
+connections to one file standing in for two instances) and a fake HTTP server for client initialisation. The exact
+steps to validate against a real database are in `docs/DEPLOY_VERCEL.md`.
+
+**Risks and later options.** Recordings in the database grow it by ~2 MB per attempt (move to object storage when
+volume matters); login rate limiters remain per instance; each request pays hosted-database latency.

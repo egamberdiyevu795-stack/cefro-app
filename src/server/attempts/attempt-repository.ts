@@ -18,8 +18,9 @@ export type RecordingRow = typeof recordings.$inferSelect;
 export type TranscriptRow = typeof transcripts.$inferSelect;
 export type EvaluationRow = typeof evaluations.$inferSelect;
 
-export function ensureTaskSnapshot(task: SpeakingTask): void {
-  getDb()
+export async function ensureTaskSnapshot(task: SpeakingTask): Promise<void> {
+  const db = await getDb();
+  await db
     .insert(speakingTasks)
     .values({
       id: task.id,
@@ -33,7 +34,7 @@ export function ensureTaskSnapshot(task: SpeakingTask): void {
     .run();
 }
 
-export function insertAttemptWithRecording(input: {
+export async function insertAttemptWithRecording(input: {
   attemptId: string;
   userId: string;
   /** The practice session this response belongs to (null only in tests of legacy rows). */
@@ -48,16 +49,18 @@ export function insertAttemptWithRecording(input: {
     sizeBytes: number;
     durationMs: number;
   };
-}): AttemptRow {
-  const db = getDb();
-  return db.transaction((tx) => {
-    const current = tx
+}): Promise<AttemptRow> {
+  const db = await getDb();
+  // Everything inside a transaction uses `tx` only, and nothing slow (no provider call) happens inside one: the
+  // transaction is a write transaction (BEGIN IMMEDIATE), so concurrent submissions get distinct attempt numbers.
+  return db.transaction(async (tx) => {
+    const current = await tx
       .select({ value: max(speakingAttempts.attemptNumber) })
       .from(speakingAttempts)
       .where(and(eq(speakingAttempts.userId, input.userId), eq(speakingAttempts.taskId, input.task.id)))
       .get();
     const now = nowIso();
-    const attempt = tx
+    const attempt = await tx
       .insert(speakingAttempts)
       .values({
         id: input.attemptId,
@@ -74,19 +77,22 @@ export function insertAttemptWithRecording(input: {
       })
       .returning()
       .get();
-    tx.insert(recordings)
+    await tx
+      .insert(recordings)
       .values({ id: newId(), attemptId: attempt.id, ...input.recording, createdAt: now })
       .run();
     return attempt;
   });
 }
 
-export function findAttempt(attemptId: string): AttemptRow | undefined {
-  return getDb().select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
+export async function findAttempt(attemptId: string): Promise<AttemptRow | undefined> {
+  const db = await getDb();
+  return db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
 }
 
-export function listAttemptsForUserTask(userId: string, taskId: string): AttemptRow[] {
-  return getDb()
+export async function listAttemptsForUserTask(userId: string, taskId: string): Promise<AttemptRow[]> {
+  const db = await getDb();
+  return db
     .select()
     .from(speakingAttempts)
     .where(and(eq(speakingAttempts.userId, userId), eq(speakingAttempts.taskId, taskId)))
@@ -94,12 +100,14 @@ export function listAttemptsForUserTask(userId: string, taskId: string): Attempt
     .all();
 }
 
-export function findRecording(attemptId: string): RecordingRow | undefined {
-  return getDb().select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();
+export async function findRecording(attemptId: string): Promise<RecordingRow | undefined> {
+  const db = await getDb();
+  return db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();
 }
 
-export function findLatestTranscript(attemptId: string): TranscriptRow | undefined {
-  return getDb()
+export async function findLatestTranscript(attemptId: string): Promise<TranscriptRow | undefined> {
+  const db = await getDb();
+  return db
     .select()
     .from(transcripts)
     .where(eq(transcripts.attemptId, attemptId))
@@ -107,8 +115,9 @@ export function findLatestTranscript(attemptId: string): TranscriptRow | undefin
     .get();
 }
 
-export function findLatestEvaluation(attemptId: string): EvaluationRow | undefined {
-  return getDb()
+export async function findLatestEvaluation(attemptId: string): Promise<EvaluationRow | undefined> {
+  const db = await getDb();
+  return db
     .select()
     .from(evaluations)
     .where(eq(evaluations.attemptId, attemptId))
@@ -117,10 +126,11 @@ export function findLatestEvaluation(attemptId: string): EvaluationRow | undefin
 }
 
 /** Latest evaluation per attempt, for list views. */
-export function findLatestEvaluationsFor(attemptIds: string[]): Map<string, EvaluationRow> {
+export async function findLatestEvaluationsFor(attemptIds: string[]): Promise<Map<string, EvaluationRow>> {
   const map = new Map<string, EvaluationRow>();
   if (attemptIds.length === 0) return map;
-  const rows = getDb()
+  const db = await getDb();
+  const rows = await db
     .select()
     .from(evaluations)
     .where(inArray(evaluations.attemptId, attemptIds))
@@ -136,9 +146,10 @@ export function findLatestEvaluationsFor(attemptIds: string[]): Map<string, Eval
  * processing runs — this is what prevents two concurrent pipelines for the
  * same attempt and unbounded restarts.
  */
-export function claimAttemptForProcessing(attemptId: string, staleBefore: string, maxProcessingRuns: number): boolean {
+export async function claimAttemptForProcessing(attemptId: string, staleBefore: string, maxProcessingRuns: number): Promise<boolean> {
   const now = nowIso();
-  const result = getDb()
+  const db = await getDb();
+  const result = await db
     .update(speakingAttempts)
     .set({
       status: "processing",
@@ -163,31 +174,33 @@ export function claimAttemptForProcessing(attemptId: string, staleBefore: string
       ),
     )
     .run();
-  return result.changes === 1;
+  return result.rowsAffected === 1;
 }
 
-export function setAttemptStatus(attemptId: string, status: AttemptStatus): void {
-  getDb()
+export async function setAttemptStatus(attemptId: string, status: AttemptStatus): Promise<void> {
+  const db = await getDb();
+  await db
     .update(speakingAttempts)
     .set({ status, updatedAt: nowIso() })
     .where(eq(speakingAttempts.id, attemptId))
     .run();
 }
 
-export function markAttemptFailed(
+export async function markAttemptFailed(
   attemptId: string,
   stage: ProcessingStage | null,
   code: FailureCode,
   processingDurationMs: number,
-): void {
-  getDb()
+): Promise<void> {
+  const db = await getDb();
+  await db
     .update(speakingAttempts)
     .set({ status: "failed", failureStage: stage, failureCode: code, processingDurationMs, updatedAt: nowIso() })
     .where(eq(speakingAttempts.id, attemptId))
     .run();
 }
 
-export function saveTranscript(input: {
+export async function saveTranscript(input: {
   attemptId: string;
   provider: string;
   model: string;
@@ -195,10 +208,10 @@ export function saveTranscript(input: {
   language: string | null;
   latencyMs: number;
   metrics: SpeechMetrics;
-}): TranscriptRow {
-  const db = getDb();
-  return db.transaction((tx) => {
-    const row = tx
+}): Promise<TranscriptRow> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const row = await tx
       .insert(transcripts)
       .values({
         id: newId(),
@@ -212,7 +225,8 @@ export function saveTranscript(input: {
       })
       .returning()
       .get();
-    tx.update(speakingAttempts)
+    await tx
+      .update(speakingAttempts)
       .set({ metrics: input.metrics, updatedAt: nowIso() })
       .where(eq(speakingAttempts.id, input.attemptId))
       .run();
@@ -220,19 +234,20 @@ export function saveTranscript(input: {
   });
 }
 
-export function saveEvaluationAndComplete(
+export async function saveEvaluationAndComplete(
   input: Omit<typeof evaluations.$inferInsert, "id" | "createdAt">,
   processingDurationMs: number,
-): EvaluationRow {
-  const db = getDb();
-  return db.transaction((tx) => {
+): Promise<EvaluationRow> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
     const now = nowIso();
-    const row = tx
+    const row = await tx
       .insert(evaluations)
       .values({ ...input, id: newId(), createdAt: now })
       .returning()
       .get();
-    tx.update(speakingAttempts)
+    await tx
+      .update(speakingAttempts)
       .set({ status: "completed", completedAt: now, processingDurationMs, updatedAt: now })
       .where(eq(speakingAttempts.id, input.attemptId))
       .run();
@@ -241,17 +256,19 @@ export function saveEvaluationAndComplete(
 }
 
 /** Attempts created since `sinceIso`, for one user or (userId null) for everyone. Used by the usage limits. */
-export function countAttemptsSince(userId: string | null, sinceIso: string): number {
+export async function countAttemptsSince(userId: string | null, sinceIso: string): Promise<number> {
   const where = userId
     ? and(eq(speakingAttempts.userId, userId), gte(speakingAttempts.createdAt, sinceIso))
     : gte(speakingAttempts.createdAt, sinceIso);
-  return getDb().select({ value: count() }).from(speakingAttempts).where(where).get()?.value ?? 0;
+  const db = await getDb();
+  return (await db.select({ value: count() }).from(speakingAttempts).where(where).get())?.value ?? 0;
 }
 
 /** The user's attempts that are being processed right now (stalled ones no longer count). */
-export function countInProgressAttempts(userId: string, processingStaleBefore: string, uploadStaleBefore: string): number {
+export async function countInProgressAttempts(userId: string, processingStaleBefore: string, uploadStaleBefore: string): Promise<number> {
+  const db = await getDb();
   return (
-    getDb()
+    (await db
       .select({ value: count() })
       .from(speakingAttempts)
       .where(
@@ -266,6 +283,6 @@ export function countInProgressAttempts(userId: string, processingStaleBefore: s
           ),
         ),
       )
-      .get()?.value ?? 0
+      .get())?.value ?? 0
   );
 }

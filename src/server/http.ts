@@ -1,5 +1,6 @@
 import "server-only";
 import { HttpError } from "./errors";
+import { isDatabaseUnavailable, safeDatabaseMessage } from "./db/errors";
 import { logger } from "./logging/logger";
 
 /** Standard error body for every API route: `{ error: { code, message } }`. */
@@ -24,6 +25,11 @@ export function withErrorHandling<Args extends unknown[]>(
     } catch (error) {
       if (error instanceof HttpError) {
         return errorResponse(error.status, error.code, error.publicMessage, error.retryAfterSeconds);
+      }
+      if (isDatabaseUnavailable(error)) {
+        // The database (or the connection to it) failed: say so, and say it is temporary. It is never reported as a missing record.
+        logger.error("Database unavailable", { detail: safeDatabaseMessage(error) });
+        return errorResponse(503, "database_unavailable", "CEFRO can't reach its data store right now. Please try again in a moment.", 5);
       }
       logger.error("Unhandled API error", { error });
       return errorResponse(500, "internal_error", "Something went wrong on our side. Please try again.");

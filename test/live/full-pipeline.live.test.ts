@@ -8,7 +8,7 @@ import { compareAttempts } from "@/domain/speaking/comparison";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import { MAX_AUDIO_BYTES, createAttempt, getAttemptViewForUser } from "@/server/attempts/attempt-service";
 import { processAttempt } from "@/server/attempts/attempt-processing";
-import { openDatabase, setDbForTesting } from "@/server/db/client";
+import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import { analyticsEvents, evaluations, practiceSessions, recordings, speakingAttempts, transcripts, users } from "@/server/db/schema";
 import { getEvaluationModel, setEvaluationModelForTesting, type EvaluationModel } from "@/server/evaluation";
 import { EVALUATOR_VERSION } from "@/server/evaluation/versions";
@@ -81,9 +81,9 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
   const rows: Row[] = [];
   const sttCalls: { ms: number; usage?: Record<string, number | string>; ok: boolean }[] = [];
   const evalCalls: { ms: number; ok: boolean }[] = [];
-  const attemptBySample = new Map<string, { id: string; sessionId: string; view: ReturnType<typeof getAttemptViewForUser> }>();
+  const attemptBySample = new Map<string, { id: string; sessionId: string; view: Awaited<ReturnType<typeof getAttemptViewForUser>> }>();
   let storage: LocalAudioStorage;
-  let db: ReturnType<typeof openDatabase>;
+  let db: Db;
   let provider: TranscriptionProvider;
   let model: EvaluationModel;
 
@@ -112,13 +112,13 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     return out;
   }
 
-  it("sets up a throwaway database and storage, with the real providers wrapped for measurement", () => {
+  it("sets up a throwaway database and storage, with the real providers wrapped for measurement", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-pipeline-"));
-    db = openDatabase(path.join(dir, "pipeline.db"));
+    db = await openDatabase(path.join(dir, "pipeline.db"));
     setDbForTesting(db);
     storage = new LocalAudioStorage(path.join(dir, "audio"));
     setAudioStorageForTesting(storage);
-    db.insert(users).values({ id: USER }).run();
+    await db.insert(users).values({ id: USER }).run();
 
     const realStt = getTranscriptionProvider();
     provider = {
@@ -186,7 +186,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
       row.failure = `its first attempt ${sample.retryOf} did not complete`;
       return;
     }
-    const sessionId = previous?.sessionId ?? createPracticeSession(USER);
+    const sessionId = previous?.sessionId ?? await createPracticeSession(USER);
 
     const startedAt = Date.now();
     const created = await createAttempt({
@@ -203,7 +203,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     row.totalMs = Date.now() - startedAt;
 
     // Read it back the way the API does.
-    const view = getAttemptViewForUser(USER, created.id);
+    const view = await getAttemptViewForUser(USER, created.id);
     row.status = view.status;
     row.transcript = view.transcript?.text;
     row.metrics = view.metrics;
@@ -211,7 +211,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     if (view.transcript) row.wer = wordErrorRate(text, view.transcript.text);
     if (view.status !== "completed" || !view.evaluation) {
       row.failure = `${view.failure?.stage ?? "?"}/${view.failure?.code ?? "unknown"}`;
-      checkRecordsAfterFailure(row, created.id);
+      await checkRecordsAfterFailure(row, created.id);
       return;
     }
     attemptBySample.set(sample.id, { id: created.id, sessionId, view });
@@ -248,11 +248,11 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
 
   async function checkPersistence(row: Row, attemptId: string, sessionId: string, audio: Buffer, previousId: string | null) {
     const bad = (message: string) => row.integrity.push(message);
-    const attempt = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
-    const session = db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId)).get();
-    const recording = db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();
-    const transcript = db.select().from(transcripts).where(eq(transcripts.attemptId, attemptId)).get();
-    const evaluation = db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).get();
+    const attempt = await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
+    const session = await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId)).get();
+    const recording = await db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();
+    const transcript = await db.select().from(transcripts).where(eq(transcripts.attemptId, attemptId)).get();
+    const evaluation = await db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).get();
     if (!attempt || !session || !recording || !transcript || !evaluation) return bad("a linked record is missing (user → session → attempt → recording → transcript → evaluation)");
 
     if (attempt.userId !== USER || session.userId !== USER) bad("session/attempt not owned by the user");
@@ -281,7 +281,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     if (!evaluation.modelCalls || evaluation.modelCalls < 1 || evaluation.modelCalls > 2) bad(`model calls ${evaluation.modelCalls}`);
     if (!evaluation.latencyMs) bad("evaluation latency not stored");
 
-    const events = db.select().from(analyticsEvents).where(eq(analyticsEvents.attemptId, attemptId)).all();
+    const events = await db.select().from(analyticsEvents).where(eq(analyticsEvents.attemptId, attemptId)).all();
     const names = events.map((e) => e.name);
     for (const expected of ["recording_submitted", "transcription_started", "transcription_completed", "evaluation_started", "evaluation_completed"]) {
       if (!names.includes(expected)) bad(`analytics event ${expected} missing`);
@@ -302,10 +302,10 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
   }
 
   /** A failed attempt must be a clean, restartable state: audio kept, no half-written evaluation, nothing dangling. */
-  function checkRecordsAfterFailure(row: Row, attemptId: string) {
-    const attempt = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
-    const recording = db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();
-    const evaluation = db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).get();
+  async function checkRecordsAfterFailure(row: Row, attemptId: string) {
+    const attempt = await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
+    const recording = await db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();
+    const evaluation = await db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).get();
     if (!attempt || attempt.status !== "failed" || !attempt.failureCode) row.integrity.push("failed attempt not stored as failed with a code");
     if (!recording) row.integrity.push("failed attempt lost its recording");
     if (evaluation) row.integrity.push("failed attempt has an evaluation row");
@@ -337,12 +337,12 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
       mimeType: MIME_BY_FORMAT.webm,
       durationMs: 8000,
       previousAttemptId: null,
-      sessionId: createPracticeSession(USER),
+      sessionId: await createPracticeSession(USER),
     });
     await processAttempt(created.id);
-    const view = getAttemptViewForUser(USER, created.id);
-    const transcriptRows = db.select().from(transcripts).where(eq(transcripts.attemptId, created.id)).all();
-    const evaluationRows = db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).all();
+    const view = await getAttemptViewForUser(USER, created.id);
+    const transcriptRows = await db.select().from(transcripts).where(eq(transcripts.attemptId, created.id)).all();
+    const evaluationRows = await db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).all();
     guardRows.push(
       `${label}: transcription requests ${sttCalls.length - sttBefore}, evaluation requests ${evalCalls.length - evalBefore}, failure ${view.failure?.stage}/${view.failure?.code}, transcript rows ${transcriptRows.length}, evaluation rows ${evaluationRows.length}`,
     );

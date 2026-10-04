@@ -32,8 +32,8 @@ let dir: string;
 let ip = 0;
 const freshIp = () => `10.2.0.${++ip}`;
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
   jar.clear();
   resetAuthLimitersForTesting();
@@ -46,7 +46,7 @@ beforeEach(() => {
   };
   setEvaluationModelForTesting(llm);
 });
-afterEach(() => {
+afterEach(async () => {
   setDbForTesting(undefined);
   setAudioStorageForTesting(undefined);
   setTranscriptionProviderForTesting(undefined);
@@ -56,19 +56,19 @@ afterEach(() => {
 
 /** A full anonymous practice (session, attempt, recording, transcript, evaluation, analytics) for `userId`. */
 async function practise(userId: string, previousAttemptId: string | null = null) {
-  db.insert(users).values({ id: userId }).onConflictDoNothing().run();
+  await db.insert(users).values({ id: userId }).onConflictDoNothing().run();
   const attempt = await createAttempt({ userId, taskId: TASK_ID, audio: fakeWebm(), mimeType: "audio/webm;codecs=opus", durationMs: 90_000, previousAttemptId });
   await processAttempt(attempt.id);
   return attempt.id;
 }
 
-const counts = () => ({
-  attempts: db.select().from(speakingAttempts).all().length,
-  recordings: db.select().from(recordings).all().length,
-  transcripts: db.select().from(transcripts).all().length,
-  evaluations: db.select().from(evaluations).all().length,
-  sessions: db.select().from(practiceSessions).all().length,
-  events: db.select().from(analyticsEvents).all().length,
+const counts = async () => ({
+  attempts: (await db.select().from(speakingAttempts).all()).length,
+  recordings: (await db.select().from(recordings).all()).length,
+  transcripts: (await db.select().from(transcripts).all()).length,
+  evaluations: (await db.select().from(evaluations).all()).length,
+  sessions: (await db.select().from(practiceSessions).all()).length,
+  events: (await db.select().from(analyticsEvents).all()).length,
 });
 const userId = async () => (await getCurrentUser()).userId;
 
@@ -76,9 +76,9 @@ describe("anonymous → account conversion at sign-up", () => {
   it("moves the whole anonymous history to the account, without copying anything", async () => {
     const first = await practise(ANON_1);
     const second = await practise(ANON_1, first);
-    const before = counts();
-    const recordingIds = db.select({ id: recordings.id }).from(recordings).all().map((r) => r.id);
-    const evaluationIds = db.select({ id: evaluations.id }).from(evaluations).all().map((r) => r.id);
+    const before = await counts();
+    const recordingIds = (await db.select({ id: recordings.id }).from(recordings).all()).map((r) => r.id);
+    const evaluationIds = (await db.select({ id: evaluations.id }).from(evaluations).all()).map((r) => r.id);
     jar.set(USER_COOKIE_NAME, ANON_1);
 
     const response = await signUp("new@example.com", PASSWORD, { ip: freshIp() });
@@ -87,30 +87,30 @@ describe("anonymous → account conversion at sign-up", () => {
     expect((await getCurrentUser()).kind).toBe("authenticated");
 
     // Nothing was duplicated: same rows, same ids, now owned by the account.
-    expect(counts()).toEqual(before);
-    expect(db.select({ id: recordings.id }).from(recordings).all().map((r) => r.id)).toEqual(recordingIds);
-    expect(db.select({ id: evaluations.id }).from(evaluations).all().map((r) => r.id)).toEqual(evaluationIds);
-    for (const row of db.select().from(speakingAttempts).all()) expect(row.userId).toBe(accountId);
-    for (const row of db.select().from(practiceSessions).all()) expect(row.userId).toBe(accountId);
-    for (const row of db.select().from(analyticsEvents).all()) expect(row.userId).toBe(accountId);
+    expect(await counts()).toEqual(before);
+    expect((await db.select({ id: recordings.id }).from(recordings).all()).map((r) => r.id)).toEqual(recordingIds);
+    expect((await db.select({ id: evaluations.id }).from(evaluations).all()).map((r) => r.id)).toEqual(evaluationIds);
+    for (const row of await db.select().from(speakingAttempts).all()) expect(row.userId).toBe(accountId);
+    for (const row of await db.select().from(practiceSessions).all()) expect(row.userId).toBe(accountId);
+    for (const row of await db.select().from(analyticsEvents).all()) expect(row.userId).toBe(accountId);
 
     // Everything is reachable through the canonical account id, including audio and the retry chain.
-    expect(getAttemptViewForUser(accountId, first)).toMatchObject({ status: "completed", attemptNumber: 1 });
-    expect(getAttemptViewForUser(accountId, second)).toMatchObject({ status: "completed", attemptNumber: 2, previousAttemptId: first });
-    expect(getAttemptViewForUser(accountId, second).evaluation).not.toBeNull();
+    expect(await getAttemptViewForUser(accountId, first)).toMatchObject({ status: "completed", attemptNumber: 1 });
+    expect(await getAttemptViewForUser(accountId, second)).toMatchObject({ status: "completed", attemptNumber: 2, previousAttemptId: first });
+    expect((await getAttemptViewForUser(accountId, second)).evaluation).not.toBeNull();
     expect((await getRecordingAudio(accountId, first)).data.byteLength).toBeGreaterThan(0);
-    expect(listAttemptSummaries(accountId, TASK_ID).map((a) => a.attemptNumber)).toEqual([2, 1]);
+    expect((await listAttemptSummaries(accountId, TASK_ID)).map((a) => a.attemptNumber)).toEqual([2, 1]);
 
     // The anonymous identity is a tombstone and has no access any more.
-    expect(db.select().from(users).where(eq(users.id, ANON_1)).get()).toMatchObject({ kind: "anonymous", mergedIntoUserId: accountId });
-    expect(() => getAttemptViewForUser(ANON_1, first)).toThrow(/could not be found/);
+    expect(await db.select().from(users).where(eq(users.id, ANON_1)).get()).toMatchObject({ kind: "anonymous", mergedIntoUserId: accountId });
+    await expect(getAttemptViewForUser(ANON_1, first)).rejects.toThrow(/could not be found/);
     await expect(getRecordingAudio(ANON_1, first)).rejects.toThrow();
-    expect(listAttemptSummaries(ANON_1, TASK_ID)).toEqual([]);
+    expect(await listAttemptSummaries(ANON_1, TASK_ID)).toEqual([]);
 
     // The anonymous cookie was cleared in the response, and practice continues on the account.
     expect(jar.has(USER_COOKIE_NAME)).toBe(false);
     const third = await practise(accountId, second);
-    expect(getAttemptViewForUser(accountId, third)).toMatchObject({ attemptNumber: 3, previousAttemptId: second, status: "completed" });
+    expect(await getAttemptViewForUser(accountId, third)).toMatchObject({ attemptNumber: 3, previousAttemptId: second, status: "completed" });
   });
 
   it("works with nothing to convert (no cookie, a stale cookie, an unknown id)", async () => {
@@ -121,7 +121,7 @@ describe("anonymous → account conversion at sign-up", () => {
     jar.clear();
     jar.set(USER_COOKIE_NAME, ANON_3); // well-formed but never seen by the server
     expect((await signUp("c@example.com", PASSWORD, { ip: freshIp() })).status).toBe(200);
-    expect(db.select().from(users).where(eq(users.id, ANON_3)).all()).toHaveLength(0);
+    expect(await db.select().from(users).where(eq(users.id, ANON_3)).all()).toHaveLength(0);
   });
 });
 
@@ -142,8 +142,8 @@ describe("anonymous → existing account (sign-in)", () => {
     expect(response.status).toBe(200);
 
     expect(await userId()).toBe(accountId);
-    expect(listAttemptSummaries(accountId, TASK_ID).map((a) => [a.id, a.attemptNumber])).toEqual([[other, 2], [existing, 1]]);
-    expect(db.select().from(users).where(eq(users.id, ANON_2)).get()?.mergedIntoUserId).toBe(accountId);
+    expect((await listAttemptSummaries(accountId, TASK_ID)).map((a) => [a.id, a.attemptNumber])).toEqual([[other, 2], [existing, 1]]);
+    expect((await db.select().from(users).where(eq(users.id, ANON_2)).get())?.mergedIntoUserId).toBe(accountId);
     expect(jar.has(USER_COOKIE_NAME)).toBe(false);
   });
 
@@ -158,8 +158,8 @@ describe("anonymous → existing account (sign-in)", () => {
       await signIn("multi@example.com", PASSWORD, { ip: freshIp() });
       await signOut();
     }
-    expect(listAttemptSummaries(accountId, TASK_ID).map((a) => a.attemptNumber).sort()).toEqual([1, 2, 3]);
-    expect(counts().attempts).toBe(3);
+    expect((await listAttemptSummaries(accountId, TASK_ID)).map((a) => a.attemptNumber).sort()).toEqual([1, 2, 3]);
+    expect((await counts()).attempts).toBe(3);
   });
 
   it("is idempotent: signing in again with the same anonymous cookie changes nothing", async () => {
@@ -168,13 +168,13 @@ describe("anonymous → existing account (sign-in)", () => {
     await signUp("again@example.com", PASSWORD, { ip: freshIp() });
     const accountId = await userId();
     await signOut();
-    const before = counts();
+    const before = await counts();
 
     jar.set(USER_COOKIE_NAME, ANON_1); // a retried login still carrying the stale cookie
     expect((await signIn("again@example.com", PASSWORD, { ip: freshIp() })).status).toBe(200);
-    expect(counts()).toEqual(before);
-    expect(listAttemptSummaries(accountId, TASK_ID)).toHaveLength(1);
-    expect(mergeUsers(db, { fromUserId: ANON_1, intoUserId: accountId })).toMatchObject({ alreadyMerged: true, attemptsMoved: 0 });
+    expect(await counts()).toEqual(before);
+    expect(await listAttemptSummaries(accountId, TASK_ID)).toHaveLength(1);
+    expect(await mergeUsers(db, { fromUserId: ANON_1, intoUserId: accountId })).toMatchObject({ alreadyMerged: true, attemptsMoved: 0 });
   });
 });
 
@@ -198,11 +198,11 @@ describe("a presented anonymous cookie cannot be used to take someone else's dat
       expect((await signUp(attackerEmail, PASSWORD, { ip: freshIp() })).status).toBe(200);
       const attackerId = await userId();
       expect(attackerId).not.toBe(victimId);
-      expect(getAttemptViewForUser(victimId, victimAttempt).status).toBe("completed"); // still the victim's
-      expect(() => getAttemptViewForUser(attackerId, victimAttempt)).toThrow(/could not be found/);
+      expect((await getAttemptViewForUser(victimId, victimAttempt)).status).toBe("completed"); // still the victim's
+      await expect(getAttemptViewForUser(attackerId, victimAttempt)).rejects.toThrow(/could not be found/);
       await signOut();
     }
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, victimAttempt)).get()?.userId).toBe(victimId);
+    expect((await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, victimAttempt)).get())?.userId).toBe(victimId);
 
     // An id supplied in the request body is never read.
     jar.clear();
@@ -211,8 +211,8 @@ describe("a presented anonymous cookie cannot be used to take someone else's dat
     applySetCookies(response);
     expect(response.status).toBe(200);
     const bodyUser = await userId();
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.userId, ANON_2)).all()).toHaveLength(1);
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.userId, bodyUser)).all()).toHaveLength(0);
+    expect(await db.select().from(speakingAttempts).where(eq(speakingAttempts.userId, ANON_2)).all()).toHaveLength(1);
+    expect(await db.select().from(speakingAttempts).where(eq(speakingAttempts.userId, bodyUser)).all()).toHaveLength(0);
   });
 
   it("an old anonymous cookie does not authenticate as the account after conversion", async () => {
@@ -228,6 +228,6 @@ describe("a presented anonymous cookie cannot be used to take someone else's dat
     expect(caller.kind).toBe("anonymous");
     expect(caller.userId).not.toBe(accountId);
     expect(caller.userId).not.toBe(ANON_1);
-    expect(() => getAttemptViewForUser(caller.userId, attemptId)).toThrow(/could not be found/);
+    await expect(getAttemptViewForUser(caller.userId, attemptId)).rejects.toThrow(/could not be found/);
   });
 });

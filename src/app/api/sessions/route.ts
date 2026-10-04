@@ -17,5 +17,5 @@ export const POST = withErrorHandling(async () => {
   if (!verdict.allowed) {
     throw new HttpError(429, "session_rate_limited", "Too many practice sessions started. Please try again later.", verdict.retryAfterSeconds);
   }
-  return Response.json({ sessionId: createPracticeSession(userId) }, { status: 201 });
+  return Response.json({ sessionId: await createPracticeSession(userId) }, { status: 201 });
 });

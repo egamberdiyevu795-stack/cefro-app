@@ -29,6 +29,13 @@
       "when": 1791017696312,
       "tag": "0003_stage4_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791107540719,
+      "tag": "0004_recording_blobs",
+      "breakpoints": true
     }
   ]
 }

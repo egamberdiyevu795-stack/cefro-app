@@ -6,7 +6,7 @@
 | -------------- | ------------------------------------------------- | ------------------------------------------------------------------- |
 | Framework      | Next.js 16 (App Router), React 19, TypeScript     | One deployable for UI and API; strong typing end to end             |
 | Styling        | Tailwind CSS v4 with tokens in `globals.css`      | No component library dependency; palette changes in one place       |
-| Database       | SQLite (better-sqlite3) via Drizzle ORM           | Zero-ops for now; Drizzle also supports Postgres                    |
+| Database       | libSQL (Turso hosted; SQLite file locally) via Drizzle ORM | One schema and migration set for both; async API; see decisions section 12 |
 | Validation     | Zod                                               | Shared schemas for API input and AI output                          |
 | Speech-to-text | OpenAI transcription REST API (`gpt-4o-transcribe` default) | Accurate; a single `fetch`, no SDK needed                  |
 | Evaluation     | Gemini (official `@google/genai`) or Claude (`@anthropic-ai/sdk`), selected by `EVALUATION_PROVIDER`; structured JSON output | Schema-shaped JSON, validated server-side |

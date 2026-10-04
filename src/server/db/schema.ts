@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { customType, foreignKey, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { blob, customType, foreignKey, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
 /**
  * Database schema (SQLite via Drizzle ORM).
@@ -218,6 +218,20 @@ export const recordings = sqliteTable(
   },
   (table) => [uniqueIndex("recordings_attempt_uq").on(table.attemptId)],
 );
+
+/**
+ * Recording bytes for the database audio storage (server/storage/database-audio-storage.ts), used when the app runs on
+ * a hosted database (Turso) because serverless instances share no filesystem. `recordings.storage_key` points here when
+ * `recordings.storage_provider` is "database". Deliberately no foreign key: the bytes are written before the attempt row
+ * (so a failed attempt insert leaves an orphan that the service deletes), and only authorised server code reads them.
+ */
+export const recordingBlobs = sqliteTable("recording_blobs", {
+  storageKey: text("storage_key").primaryKey(),
+  data: blob("data", { mode: "buffer" }).notNull(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  ...timestamps,
+});
 
 export const transcripts = sqliteTable(
   "transcripts",

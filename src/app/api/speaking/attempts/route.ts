@@ -64,7 +64,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     sessionId: fields.data.sessionId ?? null,
   });
 
-  if (claimAttempt(attempt.id)) {
+  if (await claimAttempt(attempt.id)) {
     after(() => runClaimedAttempt(attempt.id));
   }
   return Response.json({ attempt: { ...attempt, status: "processing" } }, { status: 201 });

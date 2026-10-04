@@ -1,6 +1,7 @@
 import "server-only";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
 import { isFfmpegAvailable, isSpeechGuardEnabled } from "@/server/audio/speech-guard";
+import { isTursoConfigured, isTursoUrl } from "@/server/db/target";
 import type { ServerEnv } from "./env";
 
 /**
@@ -17,11 +18,6 @@ export interface ProviderMode {
   evaluation: ServerEnv["EVALUATION_PROVIDER"];
   /** "real" = both providers are real services; "development_mock" = at least one is a mock. */
   mode: "real" | "development_mock";
-}
-
-/** True when the configured database and recordings live in Vercel's temporary directory (not durable). */
-export function usesTemporaryStorage(env: Pick<ServerEnv, "DATABASE_PATH" | "AUDIO_STORAGE_DIR">): boolean {
-  return Boolean(process.env.VERCEL) && (env.DATABASE_PATH.startsWith("/tmp/") || env.AUDIO_STORAGE_DIR.startsWith("/tmp/"));
 }
 
 export function describeProviderMode(env: ServerEnv): ProviderMode {
@@ -63,6 +59,34 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
     problems.push({ variable: "FFMPEG_PATH", message: "ffmpeg is required by the speech activity guard (install ffmpeg, set FFMPEG_PATH, or SPEECH_GUARD=off for development)" });
   }
 
+  problems.push(...validateDatabaseConfig(env));
+  return problems;
+}
+
+/**
+ * Database and storage configuration. The hosted database needs both its variables and an https address; and on
+ * Vercel it is mandatory, because a function's filesystem belongs to a single instance and is wiped on cold starts and
+ * redeploys, so a local SQLite file or local recordings would make attempts vanish between requests.
+ */
+export function validateDatabaseConfig(env: ServerEnv): ConfigProblem[] {
+  const problems: ConfigProblem[] = [];
+  const url = env.TURSO_DATABASE_URL;
+  const token = env.TURSO_AUTH_TOKEN;
+  if (url && !token) problems.push({ variable: "TURSO_AUTH_TOKEN", message: "required when TURSO_DATABASE_URL is set" });
+  if (token && !url) problems.push({ variable: "TURSO_DATABASE_URL", message: "required when TURSO_AUTH_TOKEN is set" });
+  if (url && !isTursoUrl(url)) problems.push({ variable: "TURSO_DATABASE_URL", message: "must be a libsql:// or https:// address" });
+  if (process.env.VERCEL && !isTursoConfigured(env)) {
+    problems.push({
+      variable: "TURSO_DATABASE_URL",
+      message: "required on Vercel together with TURSO_AUTH_TOKEN: function instances share no filesystem, so a local database would lose attempts",
+    });
+  }
+  if (env.AUDIO_STORAGE_PROVIDER === "database" && !isTursoConfigured(env) && process.env.VERCEL) {
+    problems.push({ variable: "AUDIO_STORAGE_PROVIDER", message: "recordings in the database need the hosted database on Vercel" });
+  }
+  if (env.AUDIO_STORAGE_PROVIDER === "local" && process.env.VERCEL) {
+    problems.push({ variable: "AUDIO_STORAGE_PROVIDER", message: "local recordings are lost between Vercel function instances; use auto or database" });
+  }
   return problems;
 }
 

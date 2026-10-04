@@ -47,8 +47,8 @@ const URL_BASE = "http://localhost";
 let db: Db;
 let storageDir: string;
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
   storageDir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-routes-"));
   setAudioStorageForTesting(new LocalAudioStorage(storageDir));
@@ -56,7 +56,7 @@ beforeEach(() => {
   jar.set("cefro_uid", USER);
   afterTasks.length = 0;
 });
-afterEach(() => {
+afterEach(async () => {
   setDbForTesting(undefined);
   setAudioStorageForTesting(undefined);
   fs.rmSync(storageDir, { recursive: true, force: true });
@@ -86,7 +86,7 @@ describe("POST /api/sessions", () => {
     expect(response.status).toBe(201);
     const { sessionId } = await json(response);
     expect(sessionId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId)).get()).toMatchObject({ userId: USER, kind: "single_task" });
+    expect(await db.select().from(practiceSessions).where(eq(practiceSessions.id, sessionId)).get()).toMatchObject({ userId: USER, kind: "single_task" });
   });
 
   it("creates the anonymous user when the browser has no cookie yet", async () => {
@@ -110,24 +110,24 @@ describe("POST /api/analytics/events: session correlation", () => {
   const event = (extra: Record<string, unknown> = {}) => ({ name: "practice_opened", occurredAt: new Date().toISOString(), taskId: TASK_ID, ...extra });
   const send = (events: unknown[]) =>
     postAnalytics(post("/api/analytics/events", { headers: { "content-type": "application/json" }, body: JSON.stringify({ events }) }));
-  const stored = () => db.select().from(analyticsEvents).all();
+  const stored = async () => await db.select().from(analyticsEvents).all();
 
   it("keeps a session id that was issued to this user", async () => {
-    seedUsers(db, USER);
-    const sessionId = seedSession(db, USER, "33333333-3333-4333-8333-333333333333");
+    await seedUsers(db, USER);
+    const sessionId = await seedSession(db, USER, "33333333-3333-4333-8333-333333333333");
     expect((await send([event({ sessionId })])).status).toBe(204);
-    expect(stored()).toMatchObject([{ userId: USER, sessionId, name: "practice_opened" }]);
+    expect(await stored()).toMatchObject([{ userId: USER, sessionId, name: "practice_opened" }]);
   });
 
   it("never stores another user's session id (the event is kept, without a session)", async () => {
-    seedUsers(db, USER, OTHER);
-    const foreign = seedSession(db, OTHER, "44444444-4444-4444-8444-444444444444");
+    await seedUsers(db, USER, OTHER);
+    const foreign = await seedSession(db, OTHER, "44444444-4444-4444-8444-444444444444");
     expect((await send([event({ sessionId: foreign })])).status).toBe(204);
-    expect(stored()).toMatchObject([{ userId: USER, sessionId: null }]);
+    expect(await stored()).toMatchObject([{ userId: USER, sessionId: null }]);
   });
 
   it("treats unknown, malformed and missing session ids as no session", async () => {
-    seedUsers(db, USER);
+    await seedUsers(db, USER);
     const ok = await send([
       event({ sessionId: "55555555-5555-4555-8555-555555555555" }), // well-formed but never issued
       event({ sessionId: "not-a-session" }),
@@ -135,13 +135,13 @@ describe("POST /api/analytics/events: session correlation", () => {
       event({ sessionId: null }),
     ]);
     expect(ok.status).toBe(204);
-    expect(stored().map((e) => e.sessionId)).toEqual([null, null, null, null]);
+    expect((await stored()).map((e) => e.sessionId)).toEqual([null, null, null, null]);
   });
 
   it("still ignores a client-supplied user id", async () => {
-    seedUsers(db, USER);
+    await seedUsers(db, USER);
     await send([event({ userId: OTHER })]);
-    expect(stored()[0].userId).toBe(USER);
+    expect((await stored())[0].userId).toBe(USER);
   });
 
   it("rate-limits an event flood per user", async () => {
@@ -159,22 +159,22 @@ describe("POST /api/speaking/attempts: upload size and validation", () => {
     const response = await postAttempt(post("/api/speaking/attempts", { body: uploadForm() }));
     expect(response.status).toBe(201);
     const { attempt } = await json(response);
-    const row = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get()!;
+    const row = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, attempt.id)).get())!;
     expect(row.sessionId).not.toBeNull();
-    expect(db.select().from(practiceSessions).get()?.id).toBe(row.sessionId);
+    expect((await db.select().from(practiceSessions).get())?.id).toBe(row.sessionId);
     expect(afterTasks).toHaveLength(1); // background processing was scheduled
   });
 
   it("uses the client's session id only when it belongs to the user", async () => {
-    seedUsers(db, USER, OTHER);
-    const mine = seedSession(db, USER, "66666666-6666-4666-8666-666666666666");
-    const theirs = seedSession(db, OTHER, "77777777-7777-4777-8777-777777777777");
+    await seedUsers(db, USER, OTHER);
+    const mine = await seedSession(db, USER, "66666666-6666-4666-8666-666666666666");
+    const theirs = await seedSession(db, OTHER, "77777777-7777-4777-8777-777777777777");
 
     const a = await json(await postAttempt(post("/api/speaking/attempts", { body: uploadForm({ sessionId: mine }) })));
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, a.attempt.id)).get()?.sessionId).toBe(mine);
+    expect((await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, a.attempt.id)).get())?.sessionId).toBe(mine);
 
     const b = await json(await postAttempt(post("/api/speaking/attempts", { body: uploadForm({ sessionId: theirs }) })));
-    const bSession = db.select().from(speakingAttempts).where(eq(speakingAttempts.id, b.attempt.id)).get()?.sessionId;
+    const bSession = (await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, b.attempt.id)).get())?.sessionId;
     expect(bSession).not.toBe(theirs);
     expect(bSession).not.toBeNull();
   });
@@ -185,7 +185,7 @@ describe("POST /api/speaking/attempts: upload size and validation", () => {
     const response = await postAttempt(post("/api/speaking/attempts", { body: uploadForm({}, big) }));
     expect(response.status).toBe(413);
     expect((await json(response)).error.code).toBe("audio_too_large");
-    expect(db.select().from(speakingAttempts).all()).toHaveLength(0);
+    expect(await db.select().from(speakingAttempts).all()).toHaveLength(0);
   });
 
   it("stops reading an oversized chunked upload that has NO Content-Length, long before the end", async () => {
@@ -234,15 +234,15 @@ describe("POST /api/speaking/attempts: upload size and validation", () => {
     const body = await json(response);
     expect(body.error.code).toBe("service_not_configured");
     expect(JSON.stringify(body)).not.toContain("GEMINI"); // no configuration detail reaches the browser
-    expect(db.select().from(speakingAttempts).all()).toHaveLength(0);
+    expect(await db.select().from(speakingAttempts).all()).toHaveLength(0);
     expect(fs.readdirSync(storageDir)).toHaveLength(0);
   });
 
   it("enforces the submission limits with their stable error codes", async () => {
-    seedUsers(db, USER);
+    await seedUsers(db, USER);
     // Two answers still being processed (the default concurrent limit).
     for (let i = 0; i < 2; i++) {
-      seedAttempt(db, { userId: USER, attemptNumber: i + 1, status: "processing", processingStartedAt: new Date().toISOString() });
+      await seedAttempt(db, { userId: USER, attemptNumber: i + 1, status: "processing", processingStartedAt: new Date().toISOString() });
     }
     const response = await postAttempt(post("/api/speaking/attempts", { body: uploadForm() }));
     expect(response.status).toBe(429);
@@ -257,16 +257,16 @@ describe("POST /api/speaking/attempts/:id/process: restart limit", () => {
   const ID = "aaaaaaaa-0000-4000-8000-000000000001";
 
   it("restarts a failed attempt that still has runs left", async () => {
-    seedUsers(db, USER);
-    seedAttempt(db, { id: ID, userId: USER, attemptNumber: 1, status: "failed", processingRuns: 1 });
+    await seedUsers(db, USER);
+    await seedAttempt(db, { id: ID, userId: USER, attemptNumber: 1, status: "failed", processingRuns: 1 });
     const response = await postProcess(post(`/api/speaking/attempts/${ID}/process`, {}), ctx(ID));
     expect(response.status).toBe(202);
     expect(afterTasks).toHaveLength(1);
   });
 
   it("refuses with restart_limit_reached once the attempt is out of runs, and runs nothing", async () => {
-    seedUsers(db, USER);
-    seedAttempt(db, { id: ID, userId: USER, attemptNumber: 1, status: "failed", processingRuns: 3 });
+    await seedUsers(db, USER);
+    await seedAttempt(db, { id: ID, userId: USER, attemptNumber: 1, status: "failed", processingRuns: 3 });
     const response = await postProcess(post(`/api/speaking/attempts/${ID}/process`, {}), ctx(ID));
     expect(response.status).toBe(429);
     expect((await json(response)).error.code).toBe("restart_limit_reached");
@@ -274,8 +274,8 @@ describe("POST /api/speaking/attempts/:id/process: restart limit", () => {
   });
 
   it("does not let one user restart another user's attempt", async () => {
-    seedUsers(db, USER, OTHER);
-    seedAttempt(db, { id: ID, userId: OTHER, attemptNumber: 1, status: "failed", processingRuns: 1 });
+    await seedUsers(db, USER, OTHER);
+    await seedAttempt(db, { id: ID, userId: OTHER, attemptNumber: 1, status: "failed", processingRuns: 1 });
     const response = await postProcess(post(`/api/speaking/attempts/${ID}/process`, {}), ctx(ID));
     expect(response.status).toBe(404);
   });

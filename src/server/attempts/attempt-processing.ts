@@ -25,16 +25,16 @@ const MIN_TRANSCRIPT_WORDS = 5;
  * already being processed (and not stalled) or already completed, which is
  * what prevents two concurrent pipelines for the same attempt.
  */
-export function claimAttempt(attemptId: string): boolean {
+export async function claimAttempt(attemptId: string): Promise<boolean> {
   const staleBefore = new Date(Date.now() - PROCESSING_STALE_AFTER_MS).toISOString();
-  const claimed = repo.claimAttemptForProcessing(attemptId, staleBefore, getEnv().LIMIT_PROCESSING_RUNS_PER_ATTEMPT);
+  const claimed = await repo.claimAttemptForProcessing(attemptId, staleBefore, getEnv().LIMIT_PROCESSING_RUNS_PER_ATTEMPT);
   if (!claimed) logger.info("Attempt not claimable; skipping processing", { attemptId });
   return claimed;
 }
 
 /** Claim and process in one call (used by tests and scripts). */
 export async function processAttempt(attemptId: string): Promise<void> {
-  if (claimAttempt(attemptId)) await runClaimedAttempt(attemptId);
+  if (await claimAttempt(attemptId)) await runClaimedAttempt(attemptId);
 }
 
 /**
@@ -45,7 +45,7 @@ export async function processAttempt(attemptId: string): Promise<void> {
  * Never throws — failures are stored on the attempt.
  */
 export async function runClaimedAttempt(attemptId: string, options: { budgetMs?: number } = {}): Promise<void> {
-  const attempt = repo.findAttempt(attemptId);
+  const attempt = await repo.findAttempt(attemptId);
   if (!attempt) return;
   const context = { userId: attempt.userId, sessionId: attempt.sessionId, taskId: attempt.taskId, attemptId };
   let stage: ProcessingStage = "transcription";
@@ -59,16 +59,16 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
   try {
     const task = getSpeakingTask(attempt.taskId);
     if (!task) throw new Error(`Task ${attempt.taskId} no longer exists`);
-    const recording = repo.findRecording(attemptId);
+    const recording = await repo.findRecording(attemptId);
     if (!recording) throw new ProviderError("audio_unavailable", "Recording row missing", { retryable: false });
 
     // ── Transcription ───────────────────────────────────────────────
-    let transcript = repo.findLatestTranscript(attemptId);
+    let transcript = await repo.findLatestTranscript(attemptId);
     let metrics = attempt.metrics as SpeechMetrics | null;
     if (!transcript || !metrics) {
-      repo.setAttemptStatus(attemptId, "transcribing");
+      await repo.setAttemptStatus(attemptId, "transcribing");
       const provider = getTranscriptionProvider();
-      trackServerEvent({ name: "transcription_started", ...context, properties: { provider: provider.name } });
+      await trackServerEvent({ name: "transcription_started", ...context, properties: { provider: provider.name } });
 
       const audio = await readAudio(recording.storageKey);
 
@@ -86,7 +86,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
           analyseMs: activity.analyseMs,
         });
         if (!activity.hasSpeech) {
-          trackServerEvent({
+          await trackServerEvent({
             name: "speech_guard_blocked",
             ...context,
             properties: {
@@ -114,7 +114,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
           retryable: false,
         });
       }
-      transcript = repo.saveTranscript({
+      transcript = await repo.saveTranscript({
         attemptId,
         provider: provider.name,
         model: provider.model,
@@ -123,7 +123,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
         latencyMs,
         metrics,
       });
-      trackServerEvent({
+      await trackServerEvent({
         name: "transcription_completed",
         ...context,
         properties: { provider: provider.name, model: provider.model, latencyMs, wordCount: metrics.wordCount },
@@ -133,9 +133,9 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
     // ── Evaluation ──────────────────────────────────────────────────
     stage = "evaluation";
     stageStartedAt = Date.now();
-    repo.setAttemptStatus(attemptId, "evaluating");
+    await repo.setAttemptStatus(attemptId, "evaluating");
     const model = getEvaluationModel();
-    trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
+    await trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
 
     const evaluationInput = {
       task,
@@ -148,7 +148,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
         mimeType: recording.mimeType,
         durationMs: recording.durationMs,
       },
-      previousAttempt: loadPreviousAttemptContext(attempt),
+      previousAttempt: await loadPreviousAttemptContext(attempt),
     };
     const evaluation = await withDeadline(
       evaluateSpeaking(evaluationInput, model, { deadlineAt }),
@@ -158,7 +158,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
 
     const processingDurationMs = Date.now() - runStartedAt;
     const qualityWarnings = evaluation.quality.violations.map((v) => v.code);
-    repo.saveEvaluationAndComplete({
+    await repo.saveEvaluationAndComplete({
       attemptId,
       transcriptId: transcript.id,
       evaluatorVersion: evaluation.evaluatorVersion,
@@ -193,7 +193,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       qualityWarnings,
     });
 
-    trackServerEvent({
+    await trackServerEvent({
       name: "evaluation_completed",
       ...context,
       properties: {
@@ -211,7 +211,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       },
     });
     if (attempt.previousAttemptId) {
-      trackServerEvent({
+      await trackServerEvent({
         name: "retry_completed",
         ...context,
         properties: {
@@ -225,12 +225,18 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
     const code = toFailureCode(error, stage);
     const processingDurationMs = Date.now() - runStartedAt;
     logger.error("Attempt processing failed", { ...context, stage, code, processingDurationMs, error });
-    repo.markAttemptFailed(attemptId, stage, code, processingDurationMs);
-    trackServerEvent({
-      name: stage === "transcription" ? "transcription_failed" : "evaluation_failed",
-      ...context,
-      properties: { code, stageMs: Date.now() - stageStartedAt, processingDurationMs },
-    });
+    try {
+      await repo.markAttemptFailed(attemptId, stage, code, processingDurationMs);
+      await trackServerEvent({
+        name: stage === "transcription" ? "transcription_failed" : "evaluation_failed",
+        ...context,
+        properties: { code, stageMs: Date.now() - stageStartedAt, processingDurationMs },
+      });
+    } catch (persistError) {
+      // The database itself is failing, so the failure cannot be stored. The run must still never throw: the attempt
+      // stays "processing" until it is detected as stalled, after which the student can restart it from the stored audio.
+      logger.error("Could not record the processing failure", { ...context, error: persistError });
+    }
   }
 }
 
@@ -245,11 +251,11 @@ async function readAudio(storageKey: string): Promise<Buffer> {
   }
 }
 
-function loadPreviousAttemptContext(attempt: repo.AttemptRow) {
+async function loadPreviousAttemptContext(attempt: repo.AttemptRow) {
   if (!attempt.previousAttemptId) return null;
-  const previous = repo.findAttempt(attempt.previousAttemptId);
-  const previousTranscript = previous && repo.findLatestTranscript(previous.id);
-  const previousEvaluation = previous && repo.findLatestEvaluation(previous.id);
+  const previous = await repo.findAttempt(attempt.previousAttemptId);
+  const previousTranscript = previous && await repo.findLatestTranscript(previous.id);
+  const previousEvaluation = previous && await repo.findLatestEvaluation(previous.id);
   if (!previous || !previousTranscript || !previousEvaluation) return null;
   const evaluation = parseStoredEvaluation(previousEvaluation.schemaVersion, previousEvaluation.result);
   if (!evaluation) return null;

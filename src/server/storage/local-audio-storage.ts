@@ -31,6 +31,10 @@ export class LocalAudioStorage implements AudioStorage {
     }
   }
 
+  async delete(key: string): Promise<void> {
+    await fs.rm(this.resolve(key), { force: true });
+  }
+
   private resolve(key: string): string {
     if (!/^[a-zA-Z0-9/_.-]+$/.test(key) || key.includes("..")) {
       throw new Error(`Invalid storage key: ${key}`);

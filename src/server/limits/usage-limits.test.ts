@@ -25,18 +25,18 @@ const ago = (ms: number) => new Date(NOW - ms).toISOString();
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
-  seedUsers(db, U, V);
+  await seedUsers(db, U, V);
 });
 
 let n = 100;
-const done = (userId: string, ageMs: number) => seedAttempt(db, { userId, attemptNumber: n++, createdAt: ago(ageMs), status: "completed" });
+const done = async (userId: string, ageMs: number) => await seedAttempt(db, { userId, attemptNumber: n++, createdAt: ago(ageMs), status: "completed" });
 
-const code = (fn: () => void) => {
+const code = async (fn: () => unknown) => {
   try {
-    fn();
+    await fn();
   } catch (e) {
     return { code: (e as { code?: string }).code, status: (e as { status?: number }).status, retryAfter: (e as { retryAfterSeconds?: number }).retryAfterSeconds };
   }
@@ -44,73 +44,73 @@ const code = (fn: () => void) => {
 };
 
 describe("submission limits", () => {
-  it("allows normal practice", () => {
-    done(U, 5 * MIN);
-    done(U, 30 * MIN);
-    expect(code(() => assertCanSubmitAttempt(U, NOW))).toBeNull();
+  it("allows normal practice", async () => {
+    await done(U, 5 * MIN);
+    await done(U, 30 * MIN);
+    expect(await code(() => assertCanSubmitAttempt(U, NOW))).toBeNull();
   });
 
-  it("limits submissions per hour, with a stable code and a retry hint", () => {
-    for (let i = 0; i < 4; i++) done(U, (i + 1) * 10 * MIN);
-    expect(code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "hourly_limit_reached", status: 429 });
-    expect(code(() => assertCanSubmitAttempt(U, NOW))?.retryAfter).toBeGreaterThan(0);
+  it("limits submissions per hour, with a stable code and a retry hint", async () => {
+    for (let i = 0; i < 4; i++) await done(U, (i + 1) * 10 * MIN);
+    expect(await code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "hourly_limit_reached", status: 429 });
+    expect((await code(() => assertCanSubmitAttempt(U, NOW)))?.retryAfter).toBeGreaterThan(0);
     // Another user is unaffected.
-    expect(code(() => assertCanSubmitAttempt(V, NOW))).toBeNull();
+    expect(await code(() => assertCanSubmitAttempt(V, NOW))).toBeNull();
   });
 
-  it("limits submissions per day once the hourly window has moved on", () => {
-    for (let i = 0; i < 6; i++) done(U, 2 * HOUR + i * HOUR); // 6 attempts spread over the last 8 hours, none in the last hour
-    expect(code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "daily_limit_reached", status: 429 });
+  it("limits submissions per day once the hourly window has moved on", async () => {
+    for (let i = 0; i < 6; i++) await done(U, 2 * HOUR + i * HOUR); // 6 attempts spread over the last 8 hours, none in the last hour
+    expect(await code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "daily_limit_reached", status: 429 });
   });
 
-  it("stops counting attempts after the window passes", () => {
-    for (let i = 0; i < 4; i++) done(U, HOUR + (i + 1) * MIN);
-    expect(code(() => assertCanSubmitAttempt(U, NOW))).toBeNull();
+  it("stops counting attempts after the window passes", async () => {
+    for (let i = 0; i < 4; i++) await done(U, HOUR + (i + 1) * MIN);
+    expect(await code(() => assertCanSubmitAttempt(U, NOW))).toBeNull();
   });
 
-  it("limits answers being processed at the same time, but not stalled ones", () => {
-    seedAttempt(db, { userId: U, attemptNumber: n++, status: "evaluating", processingStartedAt: ago(20_000), createdAt: ago(60_000) });
-    seedAttempt(db, { userId: U, attemptNumber: n++, status: "transcribing", processingStartedAt: ago(10_000), createdAt: ago(60_000) });
-    expect(code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "too_many_in_progress", status: 429 });
-    expect(code(() => assertCanSubmitAttempt(V, NOW))).toBeNull();
+  it("limits answers being processed at the same time, but not stalled ones", async () => {
+    await seedAttempt(db, { userId: U, attemptNumber: n++, status: "evaluating", processingStartedAt: ago(20_000), createdAt: ago(60_000) });
+    await seedAttempt(db, { userId: U, attemptNumber: n++, status: "transcribing", processingStartedAt: ago(10_000), createdAt: ago(60_000) });
+    expect(await code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "too_many_in_progress", status: 429 });
+    expect(await code(() => assertCanSubmitAttempt(V, NOW))).toBeNull();
 
     // The same two attempts, 20 minutes later, are stalled (no progress for > 6 min) and no longer block.
-    expect(code(() => assertCanSubmitAttempt(U, NOW + 20 * MIN))).toBeNull();
+    expect(await code(() => assertCanSubmitAttempt(U, NOW + 20 * MIN))).toBeNull();
   });
 
-  it("has a global ceiling that does not depend on who is asking", () => {
+  it("has a global ceiling that does not depend on who is asking", async () => {
     // Ten different anonymous identities, each well within their own limits.
     for (let i = 0; i < 10; i++) {
       const id = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
-      seedUsers(db, id);
-      done(id, 5 * MIN);
+      await seedUsers(db, id);
+      await done(id, 5 * MIN);
     }
-    expect(code(() => assertCanSubmitAttempt(V, NOW))).toMatchObject({ code: "capacity_reached", status: 503 });
+    expect(await code(() => assertCanSubmitAttempt(V, NOW))).toMatchObject({ code: "capacity_reached", status: 503 });
   });
 });
 
 describe("restart limits", () => {
-  it("allows restarts only while the attempt has processing runs left", () => {
-    expect(code(() => assertCanRestart({ processingRuns: 2 }))).toBeNull();
-    expect(code(() => assertCanRestart({ processingRuns: 3 }))).toMatchObject({ code: "restart_limit_reached", status: 429 });
+  it("allows restarts only while the attempt has processing runs left", async () => {
+    expect(await code(() => assertCanRestart({ processingRuns: 2 }))).toBeNull();
+    expect(await code(() => assertCanRestart({ processingRuns: 3 }))).toMatchObject({ code: "restart_limit_reached", status: 429 });
   });
 
-  it("enforces the cap atomically when claiming, so it cannot be bypassed by the client", () => {
-    const id = seedAttempt(db, { userId: U, attemptNumber: n++, status: "uploaded" });
-    const fail = () => db.update(speakingAttempts).set({ status: "failed" }).where(eq(speakingAttempts.id, id)).run();
-    expect(claimAttempt(id)).toBe(true); // run 1
-    fail();
-    expect(claimAttempt(id)).toBe(true); // run 2
-    fail();
-    expect(claimAttempt(id)).toBe(true); // run 3
-    fail();
-    expect(claimAttempt(id)).toBe(false); // out of runs
-    expect(db.select().from(speakingAttempts).where(eq(speakingAttempts.id, id)).get()).toMatchObject({ status: "failed", processingRuns: 3 });
+  it("enforces the cap atomically when claiming, so it cannot be bypassed by the client", async () => {
+    const id = await seedAttempt(db, { userId: U, attemptNumber: n++, status: "uploaded" });
+    const fail = async () => await db.update(speakingAttempts).set({ status: "failed" }).where(eq(speakingAttempts.id, id)).run();
+    expect(await claimAttempt(id)).toBe(true); // run 1
+    await fail();
+    expect(await claimAttempt(id)).toBe(true); // run 2
+    await fail();
+    expect(await claimAttempt(id)).toBe(true); // run 3
+    await fail();
+    expect(await claimAttempt(id)).toBe(false); // out of runs
+    expect(await db.select().from(speakingAttempts).where(eq(speakingAttempts.id, id)).get()).toMatchObject({ status: "failed", processingRuns: 3 });
   });
 });
 
 describe("FixedWindowLimiter", () => {
-  it("allows up to the maximum per key and window, then reports when to retry", () => {
+  it("allows up to the maximum per key and window, then reports when to retry", async () => {
     const limiter = new FixedWindowLimiter(3, 60_000);
     expect(limiter.hit("a", 1, 0)).toEqual({ allowed: true });
     expect(limiter.hit("a", 2, 1_000)).toEqual({ allowed: true });
@@ -119,7 +119,7 @@ describe("FixedWindowLimiter", () => {
     expect(limiter.hit("a", 1, 61_000)).toEqual({ allowed: true }); // new window
   });
 
-  it("rejects a single request heavier than the whole allowance", () => {
+  it("rejects a single request heavier than the whole allowance", async () => {
     expect(new FixedWindowLimiter(5, 1000).hit("a", 6, 0)).toMatchObject({ allowed: false });
   });
 });

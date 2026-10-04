@@ -8,9 +8,22 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
+  /** Local SQLite file, used when no Turso database is configured (development, tests, self-hosting with a disk). */
   DATABASE_PATH: z.string().default("./data/cefro.db"),
+  /**
+   * Hosted database (Turso/libSQL). When BOTH are set the app uses it instead of the local file: this is what makes
+   * state and recordings visible to every serverless instance. Server-side only: never prefix with NEXT_PUBLIC_.
+   */
+  TURSO_DATABASE_URL: z.string().min(1).optional(),
+  TURSO_AUTH_TOKEN: z.string().min(1).optional(),
+  /** Upper bound for one request to the hosted database (a stalled connection must end in an error, not hang). */
+  DATABASE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 
-  AUDIO_STORAGE_PROVIDER: z.enum(["local"]).default("local"),
+  /**
+   * Where recordings are kept. "auto": the database (table recording_blobs) when a hosted database is configured,
+   * otherwise files under AUDIO_STORAGE_DIR. "database" and "local" force one of them.
+   */
+  AUDIO_STORAGE_PROVIDER: z.enum(["auto", "local", "database"]).default("auto"),
   AUDIO_STORAGE_DIR: z.string().default("./data/audio"),
 
   TRANSCRIPTION_PROVIDER: z.enum(["openai", "gemini", "mock"]).default("openai"),
@@ -101,24 +114,16 @@ const envSchema = z.object({
 
 export type ServerEnv = z.infer<typeof envSchema>;
 
-/** Where Vercel lets a function write: only /tmp, which is per-instance and lost on cold starts and redeploys. */
-export const VERCEL_TEMP_DIR = "/tmp/cefro";
-
 /**
  * Defaults that depend on the hosting platform, applied only for values that are not set explicitly.
- * On Vercel the project directory is read-only, so the database and recordings go to the temporary directory, and the
- * public origin is taken from the platform's own variables so no APP_URL has to be configured for a test deployment.
- * This is a TEST-DEPLOYMENT arrangement, not durable storage (docs/DEPLOY_VERCEL.md).
+ * On Vercel the public origin is taken from the platform's own variables, so no APP_URL has to be configured.
+ * Storage is deliberately NOT defaulted here: a function's filesystem is private to one instance and is lost, so
+ * Vercel requires the hosted database (see validateDatabaseConfig).
  */
 export function applyHostingDefaults(raw: Record<string, string | undefined>): Record<string, string | undefined> {
   if (!raw.VERCEL) return raw;
   const host = raw.VERCEL_PROJECT_PRODUCTION_URL || raw.VERCEL_URL;
-  return {
-    ...raw,
-    DATABASE_PATH: raw.DATABASE_PATH ?? `${VERCEL_TEMP_DIR}/cefro.db`,
-    AUDIO_STORAGE_DIR: raw.AUDIO_STORAGE_DIR ?? `${VERCEL_TEMP_DIR}/audio`,
-    ...(raw.APP_URL || !host ? {} : { APP_URL: `https://${host}` }),
-  };
+  return { ...raw, ...(raw.APP_URL || !host ? {} : { APP_URL: `https://${host}` }) };
 }
 
 let cached: ServerEnv | undefined;

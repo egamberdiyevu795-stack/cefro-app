@@ -9,17 +9,19 @@ import { newId } from "@/server/ids";
  * key for attempts and analytics events; it grants no access to anything by itself, and a client that
  * sends someone else's (or an unknown) id is simply treated as having no session.
  */
-export function createPracticeSession(userId: string): string {
+export async function createPracticeSession(userId: string): Promise<string> {
   const id = newId();
-  getDb().insert(practiceSessions).values({ id, userId, kind: "single_task" }).run();
+  const db = await getDb();
+  await db.insert(practiceSessions).values({ id, userId, kind: "single_task" }).run();
   return id;
 }
 
 /** The subset of `candidates` that are sessions owned by `userId`. */
-export function ownedSessionIds(userId: string, candidates: readonly string[]): Set<string> {
+export async function ownedSessionIds(userId: string, candidates: readonly string[]): Promise<Set<string>> {
   const unique = [...new Set(candidates)];
   if (unique.length === 0) return new Set();
-  const rows = getDb()
+  const db = await getDb();
+  const rows = await db
     .select({ id: practiceSessions.id })
     .from(practiceSessions)
     .where(and(eq(practiceSessions.userId, userId), inArray(practiceSessions.id, unique)))
@@ -28,7 +30,7 @@ export function ownedSessionIds(userId: string, candidates: readonly string[]): 
 }
 
 /** `candidate` if it is one of the user's sessions, otherwise null. */
-export function resolveOwnedSessionId(userId: string, candidate: string | null | undefined): string | null {
+export async function resolveOwnedSessionId(userId: string, candidate: string | null | undefined): Promise<string | null> {
   if (!candidate) return null;
-  return ownedSessionIds(userId, [candidate]).has(candidate) ? candidate : null;
+  return (await ownedSessionIds(userId, [candidate])).has(candidate) ? candidate : null;
 }

@@ -2,7 +2,7 @@ import { getAuth } from "@/server/auth/auth";
 import { authLimiters, clientIp } from "@/server/auth/auth-limits";
 import { getEnv } from "@/server/config/env";
 import { HttpError } from "@/server/errors";
-import { errorResponse, readBodyWithLimit } from "@/server/http";
+import { errorResponse, readBodyWithLimit, withErrorHandling } from "@/server/http";
 
 /**
  * The only authentication endpoints CEFRO exposes, served by the auth library (see server/auth/auth.ts):
@@ -47,7 +47,7 @@ function isCrossSite(request: Request): boolean {
   return site !== null && site !== "same-origin" && site !== "none";
 }
 
-export async function POST(original: Request) {
+async function handlePost(original: Request) {
   const path = allowedPath(original);
   if (!path) return notFound();
   if (isCrossSite(original)) return errorResponse(403, "cross_site_request", "This request was not made from CEFRO.");
@@ -67,7 +67,7 @@ export async function POST(original: Request) {
     if (!perIp.allowed) return limited("registration_rate_limited", "Too many accounts were created from this connection. Please try again later.", perIp.retryAfterSeconds);
     const total = limits.registerGlobal.hit("all");
     if (!total.allowed) return limited("registration_rate_limited", "Registration is temporarily unavailable. Please try again later.", total.retryAfterSeconds);
-    return withoutSessionToken(await getAuth().handler(request));
+    return withoutSessionToken(await (await getAuth()).handler(request));
   }
 
   if (path === "/sign-in/email") {
@@ -78,7 +78,7 @@ export async function POST(original: Request) {
         return limited("login_rate_limited", "Too many failed sign-in attempts. Please wait a few minutes and try again.", state.retryAfterSeconds);
       }
     }
-    const response = await getAuth().handler(request);
+    const response = await (await getAuth()).handler(request);
     if (response.status >= 400) {
       limits.loginByEmail.hit(email);
       limits.loginByIp.hit(ip);
@@ -86,8 +86,11 @@ export async function POST(original: Request) {
     return withoutSessionToken(response);
   }
 
-  return getAuth().handler(request);
+  return (await getAuth()).handler(request);
 }
+
+/** Wrapped so an unreachable database answers 503 (with the standard error body) instead of an unhandled 500. */
+export const POST = withErrorHandling(handlePost);
 
 /** The lower-cased email from a JSON sign-in body, or a constant when it cannot be read (the library rejects such requests itself). */
 async function emailOf(request: Request): Promise<string> {

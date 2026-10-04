@@ -17,12 +17,12 @@ import { analyticsEvents, practiceSessions, speakingAttempts, users } from "@/se
  */
 
 /** Follow `merged_into_user_id` to the surviving user. Unknown ids resolve to themselves. */
-export function resolveCanonicalUserId(db: Db, userId: string): string {
+export async function resolveCanonicalUserId(db: Db, userId: string): Promise<string> {
   let current = userId;
   const seen = new Set<string>();
   while (!seen.has(current)) {
     seen.add(current);
-    const row = db.select({ next: users.mergedIntoUserId }).from(users).where(eq(users.id, current)).get();
+    const row = await db.select({ next: users.mergedIntoUserId }).from(users).where(eq(users.id, current)).get();
     if (!row?.next) return current;
     current = row.next;
   }
@@ -48,13 +48,13 @@ export interface MergeResult {
  * - Audio keys embed the old user id but are stored per recording, so no file moves.
  * - Analytics rows are re-attributed so the person's history is continuous.
  */
-export function mergeUsers(db: Db, input: { fromUserId: string; intoUserId: string }): MergeResult {
+export async function mergeUsers(db: Db, input: { fromUserId: string; intoUserId: string }): Promise<MergeResult> {
   const { fromUserId, intoUserId } = input;
   if (fromUserId === intoUserId) throw new Error("Cannot merge a user into itself");
 
-  return db.transaction((tx) => {
-    const from = tx.select().from(users).where(eq(users.id, fromUserId)).get();
-    const into = tx.select().from(users).where(eq(users.id, intoUserId)).get();
+  return db.transaction(async (tx) => {
+    const from = await tx.select().from(users).where(eq(users.id, fromUserId)).get();
+    const into = await tx.select().from(users).where(eq(users.id, intoUserId)).get();
     if (!from || !into) throw new Error("Both users must exist to be merged");
     if (from.mergedIntoUserId === intoUserId) return { attemptsMoved: 0, sessionsMoved: 0, alreadyMerged: true };
     if (from.mergedIntoUserId) throw new Error("The source user was already merged into a different user");
@@ -62,46 +62,44 @@ export function mergeUsers(db: Db, input: { fromUserId: string; intoUserId: stri
     if (from.kind !== "anonymous") throw new Error("Only an anonymous user can be merged into another user");
 
     // 1. Park the incoming attempts on negative numbers so the move cannot collide with existing ones.
-    tx.update(speakingAttempts)
+    await tx
+      .update(speakingAttempts)
       .set({ attemptNumber: sql`-${speakingAttempts.attemptNumber}` })
       .where(eq(speakingAttempts.userId, fromUserId))
       .run();
-    const attemptsMoved = tx
-      .update(speakingAttempts)
-      .set({ userId: intoUserId })
-      .where(eq(speakingAttempts.userId, fromUserId))
-      .run().changes;
-    const sessionsMoved = tx
-      .update(practiceSessions)
-      .set({ userId: intoUserId })
-      .where(eq(practiceSessions.userId, fromUserId))
-      .run().changes;
-    tx.update(analyticsEvents).set({ userId: intoUserId }).where(eq(analyticsEvents.userId, fromUserId)).run();
+    const attemptsMoved = (
+      await tx.update(speakingAttempts).set({ userId: intoUserId }).where(eq(speakingAttempts.userId, fromUserId)).run()
+    ).rowsAffected;
+    const sessionsMoved = (
+      await tx.update(practiceSessions).set({ userId: intoUserId }).where(eq(practiceSessions.userId, fromUserId)).run()
+    ).rowsAffected;
+    await tx.update(analyticsEvents).set({ userId: intoUserId }).where(eq(analyticsEvents.userId, fromUserId)).run();
 
     // 2. One sequence per task: first to temporary distinct negatives, then to the final 1..n.
-    const taskIds = tx
-      .selectDistinct({ taskId: speakingAttempts.taskId })
-      .from(speakingAttempts)
-      .where(eq(speakingAttempts.userId, intoUserId))
-      .all()
-      .map((row) => row.taskId);
+    const taskIds = (
+      await tx
+        .selectDistinct({ taskId: speakingAttempts.taskId })
+        .from(speakingAttempts)
+        .where(eq(speakingAttempts.userId, intoUserId))
+        .all()
+    ).map((row) => row.taskId);
     for (const taskId of taskIds) {
-      const ordered = tx
+      const ordered = await tx
         .select({ id: speakingAttempts.id })
         .from(speakingAttempts)
         .where(and(eq(speakingAttempts.userId, intoUserId), eq(speakingAttempts.taskId, taskId)))
         .orderBy(asc(speakingAttempts.createdAt), asc(speakingAttempts.id))
         .all();
-      ordered.forEach((row, i) =>
-        tx.update(speakingAttempts).set({ attemptNumber: -(1_000_000 + i) }).where(eq(speakingAttempts.id, row.id)).run(),
-      );
-      ordered.forEach((row, i) =>
-        tx.update(speakingAttempts).set({ attemptNumber: i + 1 }).where(eq(speakingAttempts.id, row.id)).run(),
-      );
+      for (const [i, row] of ordered.entries()) {
+        await tx.update(speakingAttempts).set({ attemptNumber: -(1_000_000 + i) }).where(eq(speakingAttempts.id, row.id)).run();
+      }
+      for (const [i, row] of ordered.entries()) {
+        await tx.update(speakingAttempts).set({ attemptNumber: i + 1 }).where(eq(speakingAttempts.id, row.id)).run();
+      }
     }
 
     // 3. Leave a tombstone so a browser holding the old cookie keeps resolving to the survivor.
-    tx.update(users).set({ mergedIntoUserId: intoUserId }).where(eq(users.id, fromUserId)).run();
+    await tx.update(users).set({ mergedIntoUserId: intoUserId }).where(eq(users.id, fromUserId)).run();
     return { attemptsMoved, sessionsMoved };
   });
 }

@@ -18,8 +18,8 @@ let db: Db;
 let ipCounter = 0;
 const freshIp = () => `10.0.0.${++ipCounter}`;
 
-beforeEach(() => {
-  db = openDatabase(":memory:");
+beforeEach(async () => {
+  db = await openDatabase(":memory:");
   setDbForTesting(db);
   jar.clear();
   resetAuthLimitersForTesting();
@@ -27,21 +27,21 @@ beforeEach(() => {
 afterEach(() => setDbForTesting(undefined));
 
 const json = (response: Response) => response.json() as Promise<Record<string, unknown>>;
-const userRows = () => db.select().from(users).all();
+const userRows = async () => await db.select().from(users).all();
 
 describe("registration", () => {
   it("creates a registered account, hashes the password, and signs the user in with an HttpOnly cookie", async () => {
     const response = await signUp("Student@Example.com", PASSWORD, { ip: freshIp() });
     expect(response.status).toBe(200);
 
-    const [user] = userRows();
+    const [user] = await userRows();
     expect(user).toMatchObject({ kind: "registered", email: "student@example.com", emailVerified: false, mergedIntoUserId: null }); // email lower-cased
-    const account = db.select().from(authAccounts).get()!;
+    const account = (await db.select().from(authAccounts).get())!;
     expect(account).toMatchObject({ userId: user.id, providerId: "credential" });
     expect(account.password).toBeTruthy();
     expect(account.password).not.toContain(PASSWORD); // never plaintext
     expect(account.password!.length).toBeGreaterThan(60); // a salted hash, not the password
-    expect(db.select().from(authSessions).all()).toHaveLength(1);
+    expect(await db.select().from(authSessions).all()).toHaveLength(1);
 
     const cookie = response.headers.getSetCookie().find((c) => c.startsWith(SESSION_COOKIE))!;
     expect(cookie).toMatch(/HttpOnly/i);
@@ -54,10 +54,10 @@ describe("registration", () => {
   it("does not put the session token, the user record or the password in the response body", async () => {
     const body = await json(await signUp("a@example.com", PASSWORD, { ip: freshIp() }));
     expect(body).toEqual({ ok: true });
-    const [user] = userRows();
+    const [user] = await userRows();
     expect(JSON.stringify(body)).not.toContain(user.id);
     expect(JSON.stringify(body)).not.toContain(PASSWORD);
-    const session = db.select().from(authSessions).get()!;
+    const session = (await db.select().from(authSessions).get())!;
     expect(JSON.stringify(body)).not.toContain(session.token);
   });
 
@@ -67,9 +67,9 @@ describe("registration", () => {
     const again = await signUp("DUP@example.com", "another password 123", { ip: freshIp() });
     expect(again.status).toBeGreaterThanOrEqual(400);
     expect(again.headers.getSetCookie().some((c) => c.startsWith(SESSION_COOKIE))).toBe(false);
-    expect(userRows()).toHaveLength(1);
-    expect(db.select().from(authAccounts).all()).toHaveLength(1);
-    expect(db.select().from(authSessions).all()).toHaveLength(1);
+    expect(await userRows()).toHaveLength(1);
+    expect(await db.select().from(authAccounts).all()).toHaveLength(1);
+    expect(await db.select().from(authSessions).all()).toHaveLength(1);
   });
 
   it("rejects invalid input: malformed email, short or oversized password, missing fields", async () => {
@@ -85,14 +85,14 @@ describe("registration", () => {
       const response = await authRequest("/sign-up/email", body, { ip: freshIp() });
       expect(response.status, JSON.stringify(Object.keys(body))).toBeGreaterThanOrEqual(400);
     }
-    expect(userRows()).toHaveLength(0);
-    expect(db.select().from(authSessions).all()).toHaveLength(0);
+    expect(await userRows()).toHaveLength(0);
+    expect(await db.select().from(authSessions).all()).toHaveLength(0);
   });
 
   it("cannot be used to choose the new account's kind or id", async () => {
     const response = await authRequest("/sign-up/email", { email: "x@example.com", password: PASSWORD, name: "x", kind: "anonymous", id: "11111111-1111-4111-8111-111111111111" }, { ip: freshIp() });
     expect(response.status).toBe(200);
-    const [user] = userRows();
+    const [user] = await userRows();
     expect(user.kind).toBe("registered");
     expect(user.id).not.toBe("11111111-1111-4111-8111-111111111111");
   });
@@ -108,7 +108,7 @@ describe("sign-in", () => {
     const response = await signIn("USER@example.com", PASSWORD, { ip: freshIp() });
     expect(response.status).toBe(200);
     expect(response.headers.getSetCookie().some((c) => c.startsWith(SESSION_COOKIE))).toBe(true);
-    expect(db.select().from(authSessions).all()).toHaveLength(2); // the one from sign-up and this one
+    expect(await db.select().from(authSessions).all()).toHaveLength(2); // the one from sign-up and this one
   });
 
   it("refuses a wrong password and an unknown email with the same answer, and creates no session", async () => {
@@ -117,13 +117,13 @@ describe("sign-in", () => {
     expect(wrong.status).toBe(401);
     expect(unknown.status).toBe(401);
     expect(await json(wrong)).toEqual(await json(unknown)); // no account enumeration at sign-in
-    expect(db.select().from(authSessions).all()).toHaveLength(1);
+    expect(await db.select().from(authSessions).all()).toHaveLength(1);
   });
 
   it("rotates the session on every sign-in and never adopts a token chosen by the client (no session fixation)", async () => {
     const first = await signIn("user@example.com", PASSWORD, { ip: freshIp(), cookie: `${SESSION_COOKIE}=attacker-chosen-token` });
     const second = await signIn("user@example.com", PASSWORD, { ip: freshIp(), cookie: `${SESSION_COOKIE}=attacker-chosen-token` });
-    const tokens = db.select({ token: authSessions.token }).from(authSessions).all().map((s) => s.token);
+    const tokens = (await db.select({ token: authSessions.token }).from(authSessions).all()).map((s) => s.token);
     expect(tokens).toHaveLength(3);
     expect(new Set(tokens).size).toBe(3);
     expect(tokens).not.toContain("attacker-chosen-token");
@@ -162,17 +162,17 @@ describe("registration abuse limit", () => {
     const blocked = await signUp("bulk5@example.com", PASSWORD, { ip });
     expect(blocked.status).toBe(429);
     expect((await json(blocked)).error).toMatchObject({ code: "registration_rate_limited" });
-    expect(userRows()).toHaveLength(4);
+    expect(await userRows()).toHaveLength(4);
   });
 });
 
 describe("sign-out", () => {
   it("deletes the server-side session and clears the cookie", async () => {
     await signUp("out@example.com", PASSWORD, { ip: freshIp() });
-    expect(db.select().from(authSessions).all()).toHaveLength(1);
+    expect(await db.select().from(authSessions).all()).toHaveLength(1);
     const response = await signOut();
     expect(response.status).toBe(200);
-    expect(db.select().from(authSessions).all()).toHaveLength(0);
+    expect(await db.select().from(authSessions).all()).toHaveLength(0);
     expect(jar.has(SESSION_COOKIE)).toBe(false);
   });
 });
@@ -187,14 +187,14 @@ describe("request hygiene", () => {
     const signInResponse = await cross("/sign-in/email", { email: "csrf@example.com", password: PASSWORD });
     expect(signInResponse.status).toBeGreaterThanOrEqual(400);
     expect(signInResponse.headers.getSetCookie().some((c) => c.startsWith(SESSION_COOKIE))).toBe(false);
-    expect(db.select().from(authSessions).all()).toHaveLength(1); // only the one created at registration
+    expect(await db.select().from(authSessions).all()).toHaveLength(1); // only the one created at registration
 
     // Sign-out (forced logout) and sign-up are protected the same way; a browser-marked cross-site request without Origin too.
     jar.clear();
     await signIn("csrf@example.com", PASSWORD, { ip: freshIp() });
     const logout = await cross("/sign-out", {});
     expect(logout.status).toBe(403);
-    expect(db.select().from(authSessions).all()).toHaveLength(2); // the session survived
+    expect(await db.select().from(authSessions).all()).toHaveLength(2); // the session survived
     const noOrigin = await POST(new Request("http://localhost/api/auth/sign-in/email", { method: "POST", headers: { "content-type": "application/json", "sec-fetch-site": "cross-site", "x-forwarded-for": freshIp() }, body: JSON.stringify({ email: "csrf@example.com", password: PASSWORD }) }));
     expect(noOrigin.status).toBe(403);
     // Same-origin requests, and non-browser clients (no Origin, no Fetch-Metadata), still work.
@@ -212,7 +212,7 @@ describe("request hygiene", () => {
     const chunked = await POST(new Request("http://localhost/api/auth/sign-in/email", { method: "POST", headers: { "content-type": "application/json", origin: "http://localhost" }, body: stream, duplex: "half" } as RequestInit));
     expect(chunked.status).toBe(413);
     expect(chunks).toBeLessThan(10);
-    expect(userRows()).toHaveLength(0);
+    expect(await userRows()).toHaveLength(0);
   });
 });
 
@@ -233,7 +233,7 @@ describe("surface area and secrets", () => {
       await signIn("log@example.com", "wrong-password-4412", { ip: freshIp() });
       await signIn("log@example.com", secretPassword, { ip: freshIp() });
       const logged = spies.flatMap((spy) => spy.mock.calls.map((call) => call.map(String).join(" "))).join("\n");
-      const tokens = db.select({ token: authSessions.token }).from(authSessions).all().map((s) => s.token);
+      const tokens = (await db.select({ token: authSessions.token }).from(authSessions).all()).map((s) => s.token);
       for (const secret of [secretPassword, "wrong-password-4412", ...tokens]) expect(logged).not.toContain(secret);
     } finally {
       spies.forEach((spy) => spy.mockRestore());

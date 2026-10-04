@@ -206,6 +206,6 @@ export async function assertSchemaCurrent(db: Db, migrationsFolder: string = MIG
     applied = 0; // table missing: never migrated
   }
   if (applied < expected) {
-    throw new Error(`The database has ${applied} of ${expected} migrations applied. Run "npm run db:migrate" against it (the Vercel build does this automatically).`);
+    throw new Error(`The database has ${applied} of ${expected} migrations applied. Run "npm run db:migrate" against it (it is a separate step from the build, run once before deploying a change that adds migrations).`);
   }
 }

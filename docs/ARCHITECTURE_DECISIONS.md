@@ -531,10 +531,13 @@ attempt created moments earlier).
   a future object-storage implementation (Vercel Blob, R2) without touching callers. Upload path: browser → route
   (Vercel's 4.5 MB body limit applies) → recording stored in the database → Speech Activity Guard → Gemini
   transcription → Gemini evaluation → completed.
-- *Migrations run at deploy time*, not in whichever instance starts first: `vercel-build` runs `npm run db:migrate`
-  (`scripts/migrate.mjs`: Drizzle's libSQL migrator, then `PRAGMA foreign_key_check`; any failure fails the build, so a
-  deployment never goes live against a half-migrated database). A running hosted instance only checks that the schema is
-  current and reports a clear error otherwise. Local files are migrated when opened, as before.
+- *Migrations are an explicit step*, not part of the build and not run by whichever instance starts first:
+  `npm run db:migrate` (`scripts/migrate.mjs`: Drizzle's libSQL migrator in one transaction, then
+  `PRAGMA foreign_key_check`) is run once from a trusted machine before deploying a change that adds migrations. The
+  Vercel build is only `next build`, so a build never depends on the database being reachable, and a Preview build can
+  never write to the shared database (the script also refuses to run in a Vercel Preview build). A failure prints the
+  underlying cause with credentials redacted. A running hosted instance only checks that the schema is current and
+  reports a clear error otherwise. Local files are migrated when opened, as before.
 - *Infrastructure errors are not "not found".* A database that cannot be opened or reached becomes
   `DatabaseUnavailableError` and a retryable `503 database_unavailable`; only a genuinely missing or foreign attempt is
   `404 attempt_not_found`. Credentials never appear in errors or logs (message redaction in the database layer and in

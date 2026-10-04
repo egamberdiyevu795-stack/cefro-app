@@ -12,7 +12,7 @@ deployed app uses Turso automatically; nothing else in the code needs to change.
 1. **Create the database** (Turso dashboard or CLI): a database in a region close to your Vercel functions. Copy its
    URL (`libsql://<name>-<org>.turso.io`) and create an auth token for it. Treat the token as a password.
 2. **Import the project** in Vercel (*Add New… → Project*, the GitHub repository). Framework, build command
-   (`vercel-build`, which runs the migrations and then `next build`) and Node version come from the repository.
+   (`vercel-build` = `next build`, which never touches the database) and Node version come from the repository.
 3. **Add the environment variables** (*Settings → Environment Variables*; mark the secrets *Sensitive*; never prefix any
    of them with `NEXT_PUBLIC_`):
 
@@ -27,9 +27,20 @@ deployed app uses Turso automatically; nothing else in the code needs to change.
 
    Optional: `DATABASE_TIMEOUT_MS` (default 15000), `AUDIO_STORAGE_PROVIDER` (default `auto`: recordings in the database
    when Turso is configured), `APP_URL` (derived from Vercel's own variables unless you use a custom domain).
-4. **Deploy.** The build runs `npm run db:migrate` against the hosted database first. If the variables are missing the
-   build fails with a message naming them; if a migration fails (or leaves a foreign-key violation) the build fails and
-   the previous deployment keeps serving. Credentials are never printed.
+4. **Migrate the database once, from your machine, before the first deploy** (and again before deploying any change
+   that adds a migration). Export the two values in your shell (do not put them in a committed file) and run:
+
+   ```bash
+   export TURSO_DATABASE_URL='libsql://<name>-<org>.turso.io'
+   export TURSO_AUTH_TOKEN='<token>'
+   npm run db:migrate
+   ```
+
+   Expect `db:migrate: OK. 5 migrations applied, foreign key check clean`. It is idempotent. On failure it prints the
+   underlying reason (authentication, permission, network, address, database error) with credentials redacted.
+5. **Deploy.** The build is only `next build`: it needs no database access, so Preview and Production builds cannot fail
+   on Turso and a Preview build can never write to the shared database. At run time an instance whose database has not
+   been migrated answers with a clear "run `npm run db:migrate`" error instead of failing silently.
 
 Keep **Fluid Compute** enabled (default for new projects): the processing routes declare a 300-second limit. A typical
 attempt takes 15 to 30 seconds.
@@ -41,7 +52,7 @@ attempt takes 15 to 30 seconds.
 | Database | `@libsql/client/web` over HTTPS (no native module, no websocket), one request timeout of `DATABASE_TIMEOUT_MS`. Drizzle schema and migrations are the same as local SQLite. |
 | Selection | Both Turso variables set → hosted. Neither → local SQLite file (development). Only one → configuration error. On Vercel the hosted database is mandatory (the boot check and the build say so). |
 | Recordings | Stored in table `recording_blobs` behind the `AudioStorage` interface; served only through the ownership-checked `/api/speaking/attempts/:id/audio`. No dependency on any function's filesystem. |
-| Migrations | Run by `vercel-build` (`scripts/migrate.mjs`), once per deployment, before the new code serves traffic; includes `PRAGMA foreign_key_check`. Running instances only verify the schema is current. |
+| Migrations | Explicit: `npm run db:migrate` (`scripts/migrate.mjs`), run once from a trusted machine before deploying a schema change; idempotent; includes `PRAGMA foreign_key_check`; refuses to run in a Vercel Preview build. Running instances only verify the schema is current. |
 | Errors | An unreachable or timed-out database is a retryable `503 database_unavailable`, never `404 attempt_not_found`. Database credentials are redacted from errors and logs. |
 | Speech guard | Unchanged. ffmpeg comes from the `ffmpeg-static` binary, traced into the two processing routes. It runs before every Gemini transcription and fails closed. |
 | Processing | The submit route stores the recording, then processing continues after the response (`after()`); the browser polls. No slow provider call runs inside a database transaction. |
@@ -62,7 +73,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
 
 ### How to validate once the variables are in Vercel
 
-1. Deploy and read the build log: it must contain `db:migrate: OK. 5 migrations applied, foreign key check clean`.
+1. Run `npm run db:migrate` (step 4 above) and confirm `db:migrate: OK. 5 migrations applied, foreign key check clean`, then deploy.
 2. Open the deployment URL, record an answer of at least ~30 seconds, and watch it complete. The function logs show
    `Provider configuration OK`, the database kind (`turso`), `Speech activity checked`, then completion.
 3. Cross-instance check: submit several attempts, reload the page and open the history (requests land on different

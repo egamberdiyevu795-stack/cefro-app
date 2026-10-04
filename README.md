@@ -107,7 +107,8 @@ The app is ready for serverless hosting (Vercel) once two variables are provided
 - `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` select the hosted libSQL (Turso) database. Attempts, accounts, sessions
   **and the recordings** (table `recording_blobs`, behind the `AudioStorage` interface) live there, so every function
   instance sees the same data. They are server-only variables.
-- The Vercel build runs `npm run db:migrate`, which migrates the hosted database before the new code serves traffic.
+- The Vercel build (`next build`) never connects to the database. Migrate the hosted database explicitly, once, with
+  `npm run db:migrate` (credentials exported in your shell) before deploying a change that adds migrations.
 - Without those variables (local development, tests, a host with a persistent disk) the app uses a SQLite file and
   local audio, as before.
 

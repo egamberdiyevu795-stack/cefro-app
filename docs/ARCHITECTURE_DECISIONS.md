@@ -531,13 +531,18 @@ attempt created moments earlier).
   a future object-storage implementation (Vercel Blob, R2) without touching callers. Upload path: browser → route
   (Vercel's 4.5 MB body limit applies) → recording stored in the database → Speech Activity Guard → Gemini
   transcription → Gemini evaluation → completed.
-- *Migrations are an explicit step*, not part of the build and not run by whichever instance starts first:
+- *Migrations are a pipeline stage*, not part of the build and not run by whichever instance starts first.
   `npm run db:migrate` (`scripts/migrate.mjs`: Drizzle's libSQL migrator in one transaction, then
-  `PRAGMA foreign_key_check`) is run once from a trusted machine before deploying a change that adds migrations. The
-  Vercel build is only `next build`, so a build never depends on the database being reachable, and a Preview build can
-  never write to the shared database (the script also refuses to run in a Vercel Preview build). A failure prints the
-  underlying cause with credentials redacted. A running hosted instance only checks that the schema is current and
-  reports a clear error otherwise. Local files are migrated when opened, as before.
+  `PRAGMA foreign_key_check`) is run by the GitHub Actions *Migrate* job (`.github/workflows/deploy.yml`) after the
+  checks pass and before the deployment, one run at a time. The Vercel build is only `next build`, so a build never
+  depends on the database, and a Preview can never write to the shared database (the script also refuses to run in a
+  Vercel Preview build). Vercel's own Git deployment of `main` is switched off in `vercel.json`, so the workflow is the
+  only production deployer; Preview deployments keep Vercel's Git integration and never receive the production
+  credentials (the pipeline's preflight verifies that through the Vercel API). Because the migration precedes the
+  deployment, migrations must be backward compatible with the previous release (expand, then contract); CI enforces it
+  and the immutability of applied migrations. A failure prints the underlying cause with credentials redacted. A running
+  hosted instance only checks that the schema is current and reports a clear error otherwise. Local files are migrated
+  when opened, as before.
 - *Infrastructure errors are not "not found".* A database that cannot be opened or reached becomes
   `DatabaseUnavailableError` and a retryable `503 database_unavailable`; only a genuinely missing or foreign attempt is
   `404 attempt_not_found`. Credentials never appear in errors or logs (message redaction in the database layer and in

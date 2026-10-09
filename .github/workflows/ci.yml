@@ -3,11 +3,17 @@
 # Deliberately free of secrets and of any real provider call: the unit/integration tests use fakes, and
 # the browser tests run against the mock providers. The live Gemini validation is a separate, manual
 # workflow (live-evaluation.yml) because it spends API budget and needs the GEMINI_API_KEY secret.
+#
+# It is also the first stage of the production pipeline (deploy.yml calls it with `workflow_call`), so a push to main
+# is validated by exactly these jobs and by nothing weaker. Pushes to main are not validated twice: main is excluded
+# from the plain `push` trigger below because deploy.yml runs this workflow for it.
 name: CI
 
 on:
   push:
+    branches-ignore: [main]
   pull_request:
+  workflow_call:
 
 # A newer push to the same branch makes the older run pointless.
 concurrency:
@@ -25,11 +31,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the migration check compares with the commit before this change
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Migrations reach the production database before the new code is deployed, so they must be backward compatible
+      # and applied migrations must never be edited. No database access, no secrets.
+      - name: Migration safety (journal, immutability of applied migrations, backward compatibility)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ci/check-migrations.mjs --base "$BASE_SHA"
       # The speech activity guard decodes audio with ffmpeg; its tests must run, not be skipped.
       - name: Install ffmpeg (needed by the speech activity guard tests)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg

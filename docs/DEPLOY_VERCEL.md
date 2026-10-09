@@ -7,40 +7,108 @@ deployed app uses Turso automatically; nothing else in the code needs to change.
 > **Status: implemented and tested locally, not yet validated against a real Turso database.** See "Real Turso
 > validation: NOT RUN" below for what that means and exactly how to do it.
 
-## What you do (once)
+## Automatic deployment (GitHub Actions)
 
-1. **Create the database** (Turso dashboard or CLI): a database in a region close to your Vercel functions. Copy its
-   URL (`libsql://<name>-<org>.turso.io`) and create an auth token for it. Treat the token as a password.
-2. **Import the project** in Vercel (*Add New… → Project*, the GitHub repository). Framework, build command
-   (`vercel-build` = `next build`, which never touches the database) and Node version come from the repository.
-3. **Add the environment variables** (*Settings → Environment Variables*; mark the secrets *Sensitive*; never prefix any
-   of them with `NEXT_PUBLIC_`):
+Nothing is deployed or migrated by hand. A push to `main` runs `.github/workflows/deploy.yml`:
 
-   | Name | Value |
+```
+push to main
+  └─ Validate    lint, typecheck, tests (incl. migration tests), build, browser tests, migration safety   (CI, no secrets)
+      └─ Preflight   secrets present · Vercel project settings safe · this commit is still the head of main
+          └─ Migrate     npm run db:migrate against the production Turso database (idempotent, one run at a time)
+              └─ Deploy      vercel deploy --prod of exactly this commit (Vercel builds it with `next build`)
+```
+
+Every stage needs the one before it. A failed check, a failed migration, a stale run or a bad Vercel setting stops
+everything after it, so nothing is migrated before the checks pass and nothing is deployed before the migration succeeds.
+
+**Production and Preview are separate.**
+
+| | Production | Preview |
+|---|---|---|
+| Trigger | push to `main` (or a manual run of the workflow, which still only deploys the head of `main`) | any other branch and every pull request |
+| Who deploys | the workflow, via the Vercel CLI | Vercel's Git integration, as before |
+| Migrates the database | yes, in the *Migrate* job, after the checks | never (the build is `next build`; `db:migrate` refuses to run in a Vercel Preview build) |
+| Has the Turso credentials | yes (Vercel: Production only; GitHub: the `production` environment only) | no. The workflow refuses to deploy if Vercel gives them to Preview or Development |
+| Sees the GitHub secrets | yes | no (the workflow never runs for pull requests) |
+
+`vercel.json` switches off Vercel's own automatic deployment of `main` (`git.deploymentEnabled.main = false`). Without
+that, Vercel would build and publish every push to `main` on its own, immediately and unmigrated, regardless of the
+workflow. With it, the workflow is the only thing that deploys production.
+
+A Preview has no Turso credentials, so it shows the "database not configured" error instead of reading or writing real
+data. That is deliberate. If you want working Previews, create a **second** Turso database for them, give Preview its own
+`TURSO_*` values in Vercel, and set the repository variable `CEFRO_ALLOW_PREVIEW_TURSO=true` to tell the guard that the
+Preview credentials are a different database. (Migrating that second database is then your decision; the pipeline does not
+touch it.)
+
+### One-time setup
+
+1. **Create the Turso database** and a token for it (Turso dashboard or CLI). Treat the token as a password.
+2. **Vercel project** (*Settings*):
+   - *Environment Variables*: add `GEMINI_API_KEY`, `TRANSCRIPTION_PROVIDER=gemini`, `EVALUATION_PROVIDER=gemini`,
+     `AUTH_SECRET` (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Mark the secrets
+     *Sensitive*. Never prefix any of them with `NEXT_PUBLIC_`. **Tick only *Production* for the two `TURSO_*` variables**
+     (untick Preview and Development); if they are already set for all environments, edit them.
+   - *Git → Production Branch* (or *Environments → Production → Branch Tracking*): `main`.
+   - Create a token: vercel.com *Account Settings → Tokens*, scope it to the team that owns the project.
+   - Note the **Project ID** (*Settings → General*) and the **Team/Org ID** (the team's *Settings → General*, starts with `team_`).
+3. **GitHub** (*Settings → Environments → New environment*): create `production`. Optionally add *Required reviewers* to
+   approve each production deployment, and restrict *Deployment branches* to `main`. In that environment add these
+   **environment secrets** (repository secrets of the same names also work, but are visible to every workflow):
+
+   | Secret | Value |
    |---|---|
-   | `GEMINI_API_KEY` | your Gemini API key |
-   | `TRANSCRIPTION_PROVIDER` | `gemini` |
-   | `EVALUATION_PROVIDER` | `gemini` |
-   | `AUTH_SECRET` | a random string of 32+ characters (`openssl rand -base64 48`) |
    | `TURSO_DATABASE_URL` | `libsql://<name>-<org>.turso.io` |
-   | `TURSO_AUTH_TOKEN` | the database auth token |
+   | `TURSO_AUTH_TOKEN` | the Turso token |
+   | `VERCEL_TOKEN` | the Vercel token |
+   | `VERCEL_ORG_ID` | the Vercel team/org id |
+   | `VERCEL_PROJECT_ID` | the Vercel project id |
 
-   Optional: `DATABASE_TIMEOUT_MS` (default 15000), `AUDIO_STORAGE_PROVIDER` (default `auto`: recordings in the database
-   when Turso is configured), `APP_URL` (derived from Vercel's own variables unless you use a custom domain).
-4. **Migrate the database once, from your machine, before the first deploy** (and again before deploying any change
-   that adds a migration). Export the two values in your shell (do not put them in a committed file) and run:
+   Never paste them into a chat, an issue or a commit. GitHub masks them in logs, and the workflow passes them only to the
+   steps that need them.
+4. **Recommended**: protect `main` (*Settings → Branches*): require a pull request and the *Validate* checks, so the
+   pipeline cannot be skipped by pushing straight to `main`.
+5. Get the code to `main` (merge the pull request). The first run migrates the database and deploys.
 
-   ```bash
-   export TURSO_DATABASE_URL='libsql://<name>-<org>.turso.io'
-   export TURSO_AUTH_TOKEN='<token>'
-   npm run db:migrate
-   ```
+Keep **Fluid Compute** enabled (default for new projects): the processing routes declare a 300-second limit.
 
-   Expect `db:migrate: OK. 5 migrations applied, foreign key check clean`. It is idempotent. On failure it prints the
-   underlying reason (authentication, permission, network, address, database error) with credentials redacted.
-5. **Deploy.** The build is only `next build`: it needs no database access, so Preview and Production builds cannot fail
-   on Turso and a Preview build can never write to the shared database. At run time an instance whose database has not
-   been migrated answers with a clear "run `npm run db:migrate`" error instead of failing silently.
+### Migration rules (the old release runs against the new schema)
+
+The migration runs before the new release is live, so for a while the **previous release** runs against the **new**
+schema (and for longer if the deployment fails after the migration). Therefore migrations are *backward compatible*:
+add tables, columns (nullable or with a default) and indexes first; remove or rename things in a later release, once no
+running code uses them. CI enforces it (`scripts/ci/check-migrations.mjs`):
+
+- applied migrations (0000–0004 and every later one once merged) are immutable; editing or deleting one fails the check,
+- timestamps in `meta/_journal.json` must increase (Drizzle would silently skip an older one),
+- a new migration with `DROP`, `RENAME`, `DELETE FROM`, `TRUNCATE`, `PRAGMA foreign_keys` or `ADD … NOT NULL` without a
+  default fails unless it carries a reviewed `-- cefro:destructive-approved: <reason>` line.
+
+Migrations are tracked by Drizzle, so running the pipeline again re-applies nothing. The pending migrations run in one
+transaction: a failed run leaves them unapplied. No step resets or deletes data.
+
+### Running the migration by hand (rarely needed)
+
+If you ever need to, from a trusted machine, with the values exported in your shell (the script never prints them):
+
+```bash
+export TURSO_DATABASE_URL='libsql://<name>-<org>.turso.io'
+export TURSO_AUTH_TOKEN='<token>'
+npm run db:migrate
+```
+
+Expect `db:migrate: OK. 5 migrations applied, foreign key check clean`. On failure it prints the underlying reason
+(authentication, permission, network, address, database error) with credentials redacted. Do not run it while the
+pipeline is running.
+
+### What can still bypass the pipeline
+
+- A person clicking *Redeploy*/*Promote* in Vercel, running `vercel --prod`, or creating a Vercel Deploy Hook.
+- Vercel's production branch set to something other than `main` (the workflow checks and refuses to continue, but a push
+  to that other branch would already have been deployed by Vercel).
+- Pushing straight to `main` (the pipeline still runs and gates the deployment; protect the branch to require review).
+- Running `npm run db:migrate` by hand with the production credentials.
 
 Keep **Fluid Compute** enabled (default for new projects): the processing routes declare a 300-second limit. A typical
 attempt takes 15 to 30 seconds.
@@ -52,7 +120,7 @@ attempt takes 15 to 30 seconds.
 | Database | `@libsql/client/web` over HTTPS (no native module, no websocket), one request timeout of `DATABASE_TIMEOUT_MS`. Drizzle schema and migrations are the same as local SQLite. |
 | Selection | Both Turso variables set → hosted. Neither → local SQLite file (development). Only one → configuration error. On Vercel the hosted database is mandatory (the boot check and the build say so). |
 | Recordings | Stored in table `recording_blobs` behind the `AudioStorage` interface; served only through the ownership-checked `/api/speaking/attempts/:id/audio`. No dependency on any function's filesystem. |
-| Migrations | Explicit: `npm run db:migrate` (`scripts/migrate.mjs`), run once from a trusted machine before deploying a schema change; idempotent; includes `PRAGMA foreign_key_check`; refuses to run in a Vercel Preview build. Running instances only verify the schema is current. |
+| Migrations | `npm run db:migrate` (`scripts/migrate.mjs`), run by the pipeline's *Migrate* job after the checks and before the deployment; idempotent; includes `PRAGMA foreign_key_check`; refuses to run in a Vercel Preview build. Running instances only verify the schema is current. |
 | Errors | An unreachable or timed-out database is a retryable `503 database_unavailable`, never `404 attempt_not_found`. Database credentials are redacted from errors and logs. |
 | Speech guard | Unchanged. ffmpeg comes from the `ffmpeg-static` binary, traced into the two processing routes. It runs before every Gemini transcription and fails closed. |
 | Processing | The submit route stores the recording, then processing continues after the response (`after()`); the browser polls. No slow provider call runs inside a database transaction. |
@@ -73,7 +141,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
 
 ### How to validate once the variables are in Vercel
 
-1. Run `npm run db:migrate` (step 4 above) and confirm `db:migrate: OK. 5 migrations applied, foreign key check clean`, then deploy.
+1. Merge to `main`, open the *Deploy production* run in the Actions tab, and confirm the *Migrate* job printed `db:migrate: OK. 5 migrations applied, foreign key check clean` and *Deploy* printed the production URL.
 2. Open the deployment URL, record an answer of at least ~30 seconds, and watch it complete. The function logs show
    `Provider configuration OK`, the database kind (`turso`), `Speech activity checked`, then completion.
 3. Cross-instance check: submit several attempts, reload the page and open the history (requests land on different

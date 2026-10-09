@@ -1,24 +1,41 @@
-# Production pipeline: validate -> check the Vercel project -> migrate the production database -> deploy.
+# Production pipeline: validate -> check the Vercel project -> migrate the production database -> verify -> deploy -> health check.
 #
-#   ci        lint, typecheck, unit/integration tests (incl. migration tests), build, browser tests   (no secrets)
-#   preflight secrets present, Vercel project settings safe, this commit is still the head of main
-#   migrate   `npm run db:migrate` against the production Turso database (idempotent, one run at a time)
-#   deploy    `vercel deploy --prod` of exactly this commit
+#   ci        lint, typecheck, unit/integration tests (incl. migration tests), build, browser tests, migration safety (no secrets)
+#   preflight secrets present, Vercel project settings safe (production branch, credential scope), this commit is the head of main
+#   check     (manual stage only) READ-ONLY look at the production database: reachable, applied vs pending migrations
+#   migrate   `npm run db:migrate -- --require-remote` against the production Turso database (idempotent, one run at a time)
+#   verify    READ-ONLY: every shipped migration is applied to the database about to be served
+#   deploy    `vercel deploy --prod` of exactly this commit, then a health check of the production domain
 #
-# Each stage needs the one before it, so a failed check, a failed migration or a stale run stops everything after it.
-# Vercel's own automatic deployment of `main` is switched off in vercel.json; this workflow is the only thing that
-# deploys production. Preview deployments (every other branch and pull request) stay with Vercel's Git integration:
+# A push to main runs everything, in order. A manual run picks ONE stage (default `check`, which never writes):
+#   check   no CI needed (it cannot change anything); preflight, then the read-only database check
+#   migrate CI + preflight, then migrate. Never deploys.
+#   deploy  CI + preflight, then verify (fails unless the database is already fully migrated), then deploy. Never migrates.
+#   full    exactly what a push to main does
+# Every stage that writes anything needs CI and the preflight to pass first, and only the head of main can ever be used.
+#
+# Each stage needs the one before it, so a failed check, a failed migration, a stale run or a bad Vercel setting stops
+# everything after it. Vercel's own automatic deployment of `main` is switched off in vercel.json; this workflow is the only
+# thing that deploys production. Preview deployments (every other branch and pull request) stay with Vercel's Git integration:
 # they never run this workflow, never receive these secrets and never migrate anything.
 #
-# One-time setup: docs/DEPLOY_VERCEL.md ("Automatic deployment"). Secrets live in the `production` GitHub environment:
-#   TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# A failed health check does NOT roll anything back; see docs/DEPLOY_VERCEL.md ("When a deployment fails").
+#
+# One-time setup: docs/DEPLOY_VERCEL.md. Secrets live in the `production` GitHub environment (restrict its deployment
+# branch to main): TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
 # They are passed to steps only through `env:` (never interpolated into a script), and GitHub masks their values in logs.
 name: Deploy production
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: # re-run after fixing a secret or a Vercel setting; only the head of main is ever deployed
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Which stage to run. `check` is read-only and the safe default."
+        type: choice
+        options: [check, migrate, deploy, full]
+        default: check
 
 # Read-only token. Nothing here writes to the repository.
 permissions:
@@ -33,13 +50,16 @@ concurrency:
 jobs:
   ci:
     name: Validate
-    if: github.ref == 'refs/heads/main'
+    # The read-only `check` stage changes nothing, so it does not wait for CI. Every other stage does.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.stage != 'check')
     uses: ./.github/workflows/ci.yml
 
   preflight:
     name: Preflight
     needs: ci
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      always() && github.ref == 'refs/heads/main' &&
+      (needs.ci.result == 'success' || (needs.ci.result == 'skipped' && inputs.stage == 'check'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
@@ -76,18 +96,42 @@ jobs:
             exit 1
           fi
 
-      - name: Vercel project is safe to deploy to (database credentials Production-only, production branch is main)
+      - name: Vercel project is safe (production branch is main, database credentials Production-only, no deploy hooks)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           CEFRO_ALLOW_PREVIEW_TURSO: ${{ vars.CEFRO_ALLOW_PREVIEW_TURSO }}
         run: node scripts/ci/check-vercel-project.mjs
+
+  check:
+    name: Check production database (read-only)
+    needs: preflight
+    if: github.ref == 'refs/heads/main' && needs.preflight.result == 'success' && inputs.stage == 'check'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev --ignore-scripts
+      # SELECT and PRAGMA foreign_key_check only. Reports applied vs pending migrations; refuses an unmanaged or newer database.
+      - name: npm run db:migrate -- --check
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npm run db:migrate -- --check --require-remote
 
   migrate:
     name: Migrate production database
     needs: preflight
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && needs.preflight.result == 'success' &&
+      (github.event_name == 'push' || inputs.stage == 'migrate' || inputs.stage == 'full')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -107,11 +151,35 @@ jobs:
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
-        run: npm run db:migrate
+        run: npm run db:migrate -- --require-remote
+
+  verify:
+    name: Verify the database is fully migrated (read-only)
+    needs: [preflight, migrate]
+    if: >-
+      always() && github.ref == 'refs/heads/main' && needs.preflight.result == 'success' &&
+      (needs.migrate.result == 'success' || (needs.migrate.result == 'skipped' && inputs.stage == 'deploy')) &&
+      (github.event_name == 'push' || inputs.stage == 'deploy' || inputs.stage == 'full')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev --ignore-scripts
+      # The deploy stage never migrates: it proceeds only if the database it is about to serve already has every migration.
+      - name: npm run db:migrate -- --check --require-current
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npm run db:migrate -- --check --require-remote --require-current
 
   deploy:
     name: Deploy to Vercel (production)
-    needs: migrate
+    needs: verify
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -131,17 +199,26 @@ jobs:
         with:
           node-version: 22
       # Deploys exactly the checked-out commit; Vercel builds it (`npm run vercel-build` = `next build`, no database access).
-      # The CLI reads VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID from the environment.
+      # The CLI reads VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID from the environment. No database credentials here.
       - name: vercel deploy --prod
+        id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           url="$(npx --yes vercel@63.1.0 deploy --prod --yes --meta githubCommitSha="$GITHUB_SHA")"
-          echo "Production deployment: $url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
           {
             echo "### Production deployed"
             echo "Commit \`$GITHUB_SHA\`"
             echo "Deployment: $url"
           } >> "$GITHUB_STEP_SUMMARY"
+      # Asks the public /api/health of the production domain whether the new release reaches its database and finds it migrated.
+      # A failure here does NOT roll anything back (neither the database nor the release): see the message it prints.
+      - name: Health check of the new release
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: node scripts/ci/post-deploy-check.mjs "$DEPLOYMENT_URL"

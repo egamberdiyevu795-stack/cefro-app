@@ -532,17 +532,23 @@ attempt created moments earlier).
   (Vercel's 4.5 MB body limit applies) → recording stored in the database → Speech Activity Guard → Gemini
   transcription → Gemini evaluation → completed.
 - *Migrations are a pipeline stage*, not part of the build and not run by whichever instance starts first.
-  `npm run db:migrate` (`scripts/migrate.mjs`: Drizzle's libSQL migrator in one transaction, then
+  `npm run db:migrate -- --require-remote` (`scripts/migrate.mjs`: Drizzle's libSQL migrator in one transaction, then
   `PRAGMA foreign_key_check`) is run by the GitHub Actions *Migrate* job (`.github/workflows/deploy.yml`) after the
-  checks pass and before the deployment, one run at a time. The Vercel build is only `next build`, so a build never
-  depends on the database, and a Preview can never write to the shared database (the script also refuses to run in a
-  Vercel Preview build). Vercel's own Git deployment of `main` is switched off in `vercel.json`, so the workflow is the
-  only production deployer; Preview deployments keep Vercel's Git integration and never receive the production
-  credentials (the pipeline's preflight verifies that through the Vercel API). Because the migration precedes the
-  deployment, migrations must be backward compatible with the previous release (expand, then contract); CI enforces it
-  and the immutability of applied migrations. A failure prints the underlying cause with credentials redacted. A running
-  hosted instance only checks that the schema is current and reports a clear error otherwise. Local files are migrated
-  when opened, as before.
+  checks pass and before the deployment, one run at a time, followed by a read-only *Verify* (`--check --require-current`)
+  and, after the deployment, a health check of `GET /api/health`. The script fails closed: missing credentials, an
+  `http://` address, a Preview build, a database without CEFRO's migration history, or a history this code does not know
+  all stop it before any write; `--check` is strictly read-only. Manual runs pick one stage (`check` is the default and
+  writes nothing; `migrate` never deploys; `deploy` never migrates and requires a fully migrated database).
+  The Vercel build is only `next build`, so a build never depends on the database. Vercel's own Git deployment of `main`
+  is switched off in `vercel.json`, so the workflow is the only production deployer. Preview deployments keep Vercel's Git
+  integration and must not hold the production credentials: the pipeline's preflight verifies the variable scoping and the
+  production branch through the Vercel API (failing closed), and the running app itself refuses to open Turso in a Preview
+  unless `CEFRO_ALLOW_PREVIEW_TURSO=true`. Because the migration precedes the deployment, migrations must be backward
+  compatible with the previous release (expand, then contract). CI keeps applied migrations immutable and flags the
+  risky kinds of statement for explicit review; that is a text scan and does not prove compatibility. A failed health check
+  does not roll back the release or the database; the runbook is `vercel rollback`. A failure prints the underlying cause
+  with credentials redacted. A running hosted instance only checks that the schema is current and reports a clear error
+  otherwise. Local files are migrated when opened, as before.
 - *Infrastructure errors are not "not found".* A database that cannot be opened or reached becomes
   `DatabaseUnavailableError` and a retryable `503 database_unavailable`; only a genuinely missing or foreign attempt is
   `404 attempt_not_found`. Credentials never appear in errors or logs (message redaction in the database layer and in

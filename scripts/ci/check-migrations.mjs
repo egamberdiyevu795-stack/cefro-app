@@ -11,10 +11,17 @@
 //     timestamp is older than the newest one already applied - silently.)
 //  2. A migration that has already been committed is never edited, deleted or renamed (--base): the production database
 //     recorded it, and editing it would make the repository disagree with the data.
-//  3. New migrations (after the grandfathered ones, which are already applied) contain no destructive or old-code-breaking
-//     statement - DROP TABLE/COLUMN/INDEX, RENAME, DELETE FROM, TRUNCATE, ADD COLUMN ... NOT NULL without a DEFAULT, PRAGMA
-//     foreign_keys - unless the file carries an explicit, reviewed approval line:
-//         -- cefro:destructive-approved: <why this is safe for the old code and for existing data>
+//  3. New migrations (after the grandfathered ones, which are already applied) must not contain a statement that is
+//     destructive or commonly breaks the previous release - DROP, RENAME, DELETE FROM, TRUNCATE, ADD COLUMN ... NOT NULL
+//     without a DEFAULT, PRAGMA foreign_keys - nor one that needs a human decision about existing data or old code -
+//     UPDATE, CREATE UNIQUE INDEX, CREATE TRIGGER, CHECK constraints - unless the file carries an explicit approval line:
+//         -- cefro:reviewed: <why this is safe for the old code and for existing data>
+//     (-- cefro:destructive-approved: is accepted as a synonym.)
+//
+// WHAT THIS DOES NOT PROVE. It is a text scan, not an analysis. It cannot know which columns and tables the running
+// release uses, how large the tables are, how long a statement will lock them, or whether data already violates a new
+// constraint. A file that passes is not thereby backward compatible; a file with an approval line is only as good as
+// the review behind it. The rule is a tripwire that forces a person to look at the risky kinds of change, nothing more.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -29,7 +36,13 @@ const RULES = [
   [/\bDELETE\s+FROM\b/i, "deletes data"],
   [/\bTRUNCATE\b/i, "deletes data"],
   [/\bPRAGMA\s+foreign_keys\b/i, "changes foreign-key enforcement (table rebuilds belong in a reviewed, approved migration)"],
+  [/\bCREATE\s+UNIQUE\s+INDEX\b/i, "adds a unique index (fails if existing rows already collide, and the previous release may insert duplicates) and needs review"],
+  [/\bCREATE\s+(TEMP\s+|TEMPORARY\s+)?TRIGGER\b/i, "adds a trigger (it runs for the previous release's writes too) and needs review"],
+  [/\bCHECK\s*\(/i, "adds a CHECK constraint (the previous release's writes must satisfy it, and existing rows may not) and needs review"],
 ];
+
+/** UPDATE as a statement of its own (not the `ON UPDATE` of a foreign key): it rewrites existing data. */
+const rewritesData = (sql) => sql.split(";").some((statement) => /^\s*UPDATE\b/i.test(statement));
 
 /** Statement-level rule: ALTER TABLE ... ADD ... NOT NULL with no DEFAULT anywhere in the same statement. */
 const addsRequiredColumnWithoutDefault = (sql) =>
@@ -65,12 +78,13 @@ export function checkMigrations(dir, { base, cwd = process.cwd() } = {}) {
     const file = `${entry.tag}.sql`;
     if (!files.includes(file)) continue;
     const raw = fs.readFileSync(path.join(dir, file), "utf8");
-    if (/^\s*--\s*cefro:destructive-approved:\s*\S/im.test(raw)) continue;
+    if (/^\s*--\s*cefro:(reviewed|destructive-approved):[ \t]*\S/im.test(raw)) continue;
     const sql = stripComments(raw);
     const hints = RULES.filter(([pattern]) => pattern.test(sql)).map(([, why]) => why);
+    if (rewritesData(sql)) hints.push("rewrites existing data (UPDATE) and needs review");
     if (addsRequiredColumnWithoutDefault(sql)) hints.push("adds a NOT NULL column without a DEFAULT (fails on existing rows; the previous release does not write it)");
     for (const why of hints) {
-      problems.push(`${file}: ${why}. Make it backward compatible, or add "-- cefro:destructive-approved: <reason>" after review.`);
+      problems.push(`${file}: ${why}. Make it backward compatible, or add "-- cefro:reviewed: <reason>" once a person has checked it against the previous release and the existing data.`);
     }
   }
 
@@ -99,5 +113,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     for (const p of problems) console.error(`check-migrations: ${p}`);
     process.exit(1);
   }
-  console.log("check-migrations: OK (journal consistent, applied migrations untouched, new migrations backward compatible).");
+  console.log("check-migrations: OK (journal consistent, applied migrations untouched, no new migration statement needs review). This is a text scan: it does not prove backward compatibility.");
 }

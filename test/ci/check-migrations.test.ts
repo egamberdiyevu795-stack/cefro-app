@@ -46,6 +46,10 @@ describe("check-migrations", () => {
     ["DELETE FROM `users`;", /deletes data/],
     ["ALTER TABLE `users` ADD `plan` text NOT NULL;", /NOT NULL column without a DEFAULT/],
     ["PRAGMA foreign_keys=OFF;", /foreign-key enforcement/],
+    ["UPDATE `users` SET `kind` = 'registered' WHERE `email` IS NOT NULL;", /rewrites existing data \(UPDATE\)/],
+    ["CREATE UNIQUE INDEX `users_name_unique` ON `users` (`name`);", /unique index/],
+    ["CREATE TRIGGER block_users BEFORE INSERT ON users BEGIN SELECT RAISE(ABORT, 'no'); END;", /trigger/],
+    ["CREATE TABLE `scores` (`id` text PRIMARY KEY NOT NULL, `value` integer CHECK (`value` >= 0));", /CHECK constraint/],
   ])("refuses a migration that is not backward compatible: %s", (sql, why) => {
     const { dir } = copyOfMigrations();
     addMigration(dir, sql);
@@ -59,6 +63,23 @@ describe("check-migrations", () => {
     const { dir } = copyOfMigrations();
     addMigration(dir, "-- DROP TABLE users (not done here)\nALTER TABLE `users` ADD `plan` text DEFAULT 'free' NOT NULL;");
     expect(checkMigrations(dir)).toEqual([]);
+  });
+
+  it("does not mistake a foreign key's ON UPDATE clause for an UPDATE statement", () => {
+    const { dir } = copyOfMigrations();
+    addMigration(dir, "CREATE TABLE `notes` (`id` text PRIMARY KEY NOT NULL, `user_id` text, FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action);");
+    expect(checkMigrations(dir)).toEqual([]);
+  });
+
+  it("accepts a risky statement once a reviewer's approval line is present (cefro:reviewed, or the older cefro:destructive-approved)", () => {
+    for (const marker of ["cefro:reviewed", "cefro:destructive-approved"]) {
+      const { dir } = copyOfMigrations();
+      addMigration(dir, `-- ${marker}: backfill checked against the running release and a copy of the data\nUPDATE \`users\` SET \`kind\` = 'registered' WHERE \`email\` IS NOT NULL;`);
+      expect(checkMigrations(dir), marker).toEqual([]);
+    }
+    const { dir } = copyOfMigrations();
+    addMigration(dir, "-- cefro:reviewed:\nUPDATE `users` SET `kind` = 'x';"); // an empty reason does not count
+    expect(checkMigrations(dir)).toHaveLength(1);
   });
 
   it("allows a destructive migration only with an explicit reviewed approval line", () => {

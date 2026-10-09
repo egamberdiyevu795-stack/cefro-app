@@ -9,14 +9,21 @@
 //     Set CEFRO_ALLOW_PREVIEW_TURSO=true only if Preview deliberately uses a different, separate Turso database.
 //  2. Vercel's production branch is `main`, the only branch whose automatic Git deployments vercel.json switches off.
 //     Any other production branch would deploy straight from a push, bypassing the checks and the migration.
+//     Fail closed: if the API does not say which branch is the production branch, Vercel is using the repository's
+//     default branch, so that is accepted ONLY if GitHub reports it to be `main` (GITHUB_DEFAULT_BRANCH). Otherwise
+//     the production branch is unknown and nothing is migrated or deployed.
+//  3. No Deploy Hook exists: a hook builds a branch on request, outside the pipeline.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const KEYS = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"];
 const targetsOf = (env) => (Array.isArray(env.target) ? env.target : env.target ? [env.target] : []);
 
-/** @returns {{ problems: string[], warnings: string[] }} */
-export function evaluateVercelProject({ project, envs, productionBranch = "main", allowPreviewTurso = false }) {
+/**
+ * @param {{ project?: any, envs: any[], productionBranch?: string, githubDefaultBranch?: string, allowPreviewTurso?: boolean }} input
+ * @returns {{ problems: string[], warnings: string[] }}
+ */
+export function evaluateVercelProject({ project, envs, productionBranch = "main", githubDefaultBranch, allowPreviewTurso = false }) {
   const problems = [];
   const warnings = [];
   for (const key of KEYS) {
@@ -37,10 +44,18 @@ export function evaluateVercelProject({ project, envs, productionBranch = "main"
     }
   }
   const branch = project?.link?.productionBranch;
-  if (!branch) {
-    warnings.push(`Could not read the project's production branch from the Vercel API; confirm in Vercel (Settings > Environments > Production > Branch Tracking) that it is "${productionBranch}".`);
-  } else if (branch !== productionBranch) {
-    problems.push(`The Vercel production branch is "${branch}", not "${productionBranch}". Pushes to "${branch}" would deploy to production directly, without the checks and the migration. Set Branch Tracking to "${productionBranch}".`);
+  if (branch) {
+    if (branch !== productionBranch) {
+      problems.push(`The Vercel production branch is "${branch}", not "${productionBranch}". Pushes to "${branch}" would deploy to production directly, without the checks and the migration. Set Branch Tracking to "${productionBranch}".`);
+    }
+  } else if (githubDefaultBranch === productionBranch) {
+    warnings.push(`The Vercel API did not report a production branch; Vercel then uses the repository's default branch, which GitHub reports as "${productionBranch}". Setting Branch Tracking to "${productionBranch}" explicitly in Vercel removes this warning.`);
+  } else {
+    problems.push(`The Vercel production branch cannot be determined, and the GitHub default branch is ${githubDefaultBranch ? `"${githubDefaultBranch}"` : "unknown"}, not "${productionBranch}". Refusing to migrate or deploy. Make "${productionBranch}" the default branch on GitHub and set Branch Tracking to "${productionBranch}" in Vercel.`);
+  }
+  const hooks = project?.link?.deployHooks;
+  if (Array.isArray(hooks) && hooks.length > 0) {
+    problems.push(`The Vercel project has ${hooks.length} Deploy Hook(s). A hook builds a branch on request, outside this pipeline; delete them (Settings > Git > Deploy Hooks).`);
   }
   return { problems, warnings };
 }
@@ -65,6 +80,7 @@ async function main() {
     const { problems, warnings } = evaluateVercelProject({
       project,
       envs: list.envs ?? [],
+      githubDefaultBranch: process.env.GITHUB_DEFAULT_BRANCH,
       allowPreviewTurso: process.env.CEFRO_ALLOW_PREVIEW_TURSO === "true",
     });
     for (const w of warnings) console.warn(`::warning::check-vercel-project: ${w}`);
@@ -72,7 +88,7 @@ async function main() {
       for (const p of problems) console.error(`::error::check-vercel-project: ${p}`);
       process.exit(1);
     }
-    console.log("check-vercel-project: OK (database credentials are Production-only; production branch is main).");
+    console.log("check-vercel-project: OK (database credentials are Production-only; production branch is main; no deploy hooks).");
   } catch (error) {
     // Messages above never contain the token; nothing else from the request is printed.
     console.error(`::error::check-vercel-project: ${error instanceof Error ? error.message : "request failed"}`);

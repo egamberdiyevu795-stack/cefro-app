@@ -41,23 +41,52 @@ describe("evaluateVercelProject", () => {
     expect(problems.join("\n")).toMatch(/TURSO_AUTH_TOKEN is not set for the Production/);
   });
 
+  describe("fail-closed production branch", () => {
+    const unknown = { link: { type: "github" } };
+
+    it("an unknown production branch is accepted only when the GitHub default branch is verified to be main (Vercel then uses the default branch)", () => {
+      const accepted = evaluateVercelProject({ ...ok, project: unknown, githubDefaultBranch: "main" });
+      expect(accepted.problems).toEqual([]);
+      expect(accepted.warnings.join("\n")).toMatch(/did not report a production branch/);
+    });
+
+    it.each([
+      ["a different default branch", "claude/zen-darwin-5vgl0z"],
+      ["an unknown default branch", undefined],
+      ["an empty default branch", ""],
+    ])("an unknown production branch with %s is refused", (_label, githubDefaultBranch) => {
+      const { problems } = evaluateVercelProject({ ...ok, project: unknown, githubDefaultBranch });
+      expect(problems.join("\n")).toMatch(/production branch cannot be determined/);
+      expect(problems.join("\n")).toMatch(/Refusing to migrate or deploy/);
+    });
+
+    it("a project with no Git link at all is treated the same way", () => {
+      expect(evaluateVercelProject({ ...ok, project: {}, githubDefaultBranch: "master" }).problems.join("\n")).toMatch(/cannot be determined/);
+    });
+
+    it("an explicit production branch is not rescued by a default branch of main", () => {
+      const { problems } = evaluateVercelProject({ ...ok, project: { link: { productionBranch: "staging" } }, githubDefaultBranch: "main" });
+      expect(problems.join("\n")).toMatch(/production branch is "staging", not "main"/);
+    });
+
+    it("Deploy Hooks are refused (they build a branch outside the pipeline)", () => {
+      const { problems } = evaluateVercelProject({ ...ok, project: { link: { productionBranch: "main", deployHooks: [{ id: "h", name: "x", ref: "main" }] } } });
+      expect(problems.join("\n")).toMatch(/1 Deploy Hook/);
+    });
+  });
+
   it("refuses a production branch other than main (it would deploy from a push, bypassing the pipeline)", () => {
     const { problems } = evaluateVercelProject({ ...ok, project: { link: { productionBranch: "claude/zen-darwin-5vgl0z" } } });
     expect(problems.join("\n")).toMatch(/production branch is "claude\/zen-darwin-5vgl0z", not "main"/);
   });
 
-  it("warns, but does not fail, when the API does not expose the production branch", () => {
-    const { problems, warnings } = evaluateVercelProject({ ...ok, project: {} });
-    expect(problems).toEqual([]);
-    expect(warnings.join("\n")).toMatch(/Branch Tracking/);
-  });
 });
 
 /** The real script, against a local stand-in for the Vercel API. */
 describe("scripts/ci/check-vercel-project.mjs", () => {
   const TOKEN = "vercel-token-secret-0123456789";
 
-  function run(handler: (url: string, auth: string | undefined) => { status: number; body: unknown }) {
+  function run(handler: (url: string, auth: string | undefined) => { status: number; body: unknown }, extraEnv?: Record<string, string>) {
     const seen: string[] = [];
     const server = http.createServer((req, res) => {
       seen.push(`${req.url} ${req.headers.authorization === `Bearer ${TOKEN}` ? "authorised" : "no-auth"}`);
@@ -73,7 +102,7 @@ describe("scripts/ci/check-vercel-project.mjs", () => {
         execFile(
           process.execPath,
           ["--import", `data:text/javascript,${encodeURIComponent(preload)}`, path.join(process.cwd(), "scripts/ci/check-vercel-project.mjs")],
-          { env: { PATH: process.env.PATH, VERCEL_TOKEN: TOKEN, VERCEL_PROJECT_ID: "prj_123", VERCEL_ORG_ID: "team_456" } as unknown as NodeJS.ProcessEnv, timeout: 30_000 },
+          { env: { PATH: process.env.PATH, VERCEL_TOKEN: TOKEN, VERCEL_PROJECT_ID: "prj_123", VERCEL_ORG_ID: "team_456", ...(extraEnv ?? {}) } as unknown as NodeJS.ProcessEnv, timeout: 30_000 },
           (error, stdout, stderr) => {
             server.close();
             resolve({ code: error ? ((error as { code?: number }).code ?? 1) : 0, out: `${stdout}${stderr}`, seen });
@@ -99,6 +128,18 @@ describe("scripts/ci/check-vercel-project.mjs", () => {
     expect(result.code).toBe(1);
     expect(result.out).toMatch(/untick everything except Production/);
     expect(result.out).not.toContain(TOKEN);
+  });
+
+  it("fails closed when the production branch is unknown and GitHub's default branch is not main", async () => {
+    const unknownBranch = (url: string) => ({ status: 200, body: url.includes("/env") ? { envs: ok.envs } : { link: { type: "github" } } });
+    const refused = await run(unknownBranch, { GITHUB_DEFAULT_BRANCH: "claude/zen-darwin-5vgl0z" });
+    expect(refused.code).toBe(1);
+    expect(refused.out).toMatch(/cannot be determined/);
+    const missing = await run(unknownBranch); // no GITHUB_DEFAULT_BRANCH at all
+    expect(missing.code).toBe(1);
+    const accepted = await run(unknownBranch, { GITHUB_DEFAULT_BRANCH: "main" });
+    expect(accepted.code).toBe(0);
+    expect(accepted.out).toMatch(/did not report a production branch/);
   });
 
   it("fails closed on an API error without printing the token", async () => {

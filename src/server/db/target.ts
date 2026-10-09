@@ -13,7 +13,21 @@ export type DatabaseTarget =
   | { kind: "turso"; url: string; authToken: string; timeoutMs: number }
   | { kind: "file"; path: string };
 
-type DatabaseEnv = Pick<ServerEnv, "TURSO_DATABASE_URL" | "TURSO_AUTH_TOKEN" | "DATABASE_PATH" | "DATABASE_TIMEOUT_MS">;
+type DatabaseEnv = Pick<ServerEnv, "TURSO_DATABASE_URL" | "TURSO_AUTH_TOKEN" | "DATABASE_PATH" | "DATABASE_TIMEOUT_MS"> &
+  Partial<Pick<ServerEnv, "VERCEL_ENV" | "CEFRO_ALLOW_PREVIEW_TURSO">>;
+
+/**
+ * A Vercel Preview deployment must not hold the production database credentials: it would read and write real user
+ * data from code nobody has reviewed. The Vercel project is configured so Preview has none; this refuses to proceed if it
+ * has them anyway (a variable ticked for the wrong environment), unless Preview deliberately has its OWN separate
+ * database and CEFRO_ALLOW_PREVIEW_TURSO=true says so.
+ */
+export function previewMayNotUseTurso(env: Pick<DatabaseEnv, "TURSO_DATABASE_URL" | "TURSO_AUTH_TOKEN" | "VERCEL_ENV" | "CEFRO_ALLOW_PREVIEW_TURSO">): boolean {
+  return env.VERCEL_ENV === "preview" && env.CEFRO_ALLOW_PREVIEW_TURSO !== "true" && Boolean(env.TURSO_DATABASE_URL || env.TURSO_AUTH_TOKEN);
+}
+
+export const PREVIEW_TURSO_MESSAGE =
+  "Database credentials are present in a Vercel Preview deployment, which is refused so a Preview can never touch the production database. Remove TURSO_DATABASE_URL and TURSO_AUTH_TOKEN from the Preview environment (or set CEFRO_ALLOW_PREVIEW_TURSO=true only if Preview uses its own separate database).";
 
 /** The HTTP client talks https; `libsql://` is the same server addressed with Turso's own scheme. */
 export function normalizeTursoUrl(url: string): string {
@@ -31,6 +45,7 @@ export function isTursoUrl(url: string): boolean {
 }
 
 export function resolveDatabaseTarget(env: DatabaseEnv): DatabaseTarget {
+  if (previewMayNotUseTurso(env)) throw new Error(PREVIEW_TURSO_MESSAGE);
   const url = env.TURSO_DATABASE_URL;
   const authToken = env.TURSO_AUTH_TOKEN;
   if (url && authToken) return { kind: "turso", url: normalizeTursoUrl(url), authToken, timeoutMs: env.DATABASE_TIMEOUT_MS };

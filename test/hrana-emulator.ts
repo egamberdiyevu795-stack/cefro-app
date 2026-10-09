@@ -18,9 +18,10 @@ type Arg = { type: string; value?: string; base64?: string };
 type Stmt = { sql: string; args?: Arg[] };
 type Cond = { type: string; step?: number; cond?: Cond; conds?: Cond[] } | undefined;
 
-export async function startHranaEmulator(options: { token: string; status?: number }): Promise<Emulator> {
+export async function startHranaEmulator(options: { token: string; status?: number; initialSql?: string }): Promise<Emulator> {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys=ON");
+  if (options.initialSql) db.exec(options.initialSql); // a database that already has content (not recorded in `requests`)
   const requests: string[] = [];
 
   const toValue = (v: unknown) =>

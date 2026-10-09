@@ -14,104 +14,178 @@ Nothing is deployed or migrated by hand. A push to `main` runs `.github/workflow
 ```
 push to main
   └─ Validate    lint, typecheck, tests (incl. migration tests), build, browser tests, migration safety   (CI, no secrets)
-      └─ Preflight   secrets present · Vercel project settings safe · this commit is still the head of main
-          └─ Migrate     npm run db:migrate against the production Turso database (idempotent, one run at a time)
-              └─ Deploy      vercel deploy --prod of exactly this commit (Vercel builds it with `next build`)
+      └─ Preflight   secrets present · Vercel project safe (production branch, credential scope, no deploy hooks) · head of main
+          └─ Migrate     npm run db:migrate -- --require-remote   (production Turso database, idempotent, one run at a time)
+              └─ Verify      db:migrate --check --require-current   (read-only: every migration is applied)
+                  └─ Deploy      vercel deploy --prod of exactly this commit, then a health check of the production domain
 ```
 
 Every stage needs the one before it. A failed check, a failed migration, a stale run or a bad Vercel setting stops
-everything after it, so nothing is migrated before the checks pass and nothing is deployed before the migration succeeds.
+everything after it, so nothing is migrated before the checks pass and nothing is deployed before the migration is
+verified.
+
+### Manual stages (first rollout, retries)
+
+*Actions → Deploy production → Run workflow* (on `main`) offers one stage at a time. The default is the harmless one.
+
+| Stage | Runs | Writes | Never |
+|---|---|---|---|
+| `check` (default) | preflight, then `db:migrate --check` | nothing: only `SELECT` and `PRAGMA foreign_key_check` | migrates, deploys, needs CI |
+| `migrate` | CI, preflight, then `db:migrate` | the migrations | deploys |
+| `deploy` | CI, preflight, `db:migrate --check --require-current`, then deploy + health check | the deployment | migrates; it stops unless the database is already fully migrated |
+| `full` | everything, as a push does | both | |
+
+Every stage that writes needs CI and the preflight to pass first, and only the head of `main` can be used. A run started
+from any other branch does nothing.
+
+### What the safety checks refuse
+
+- **`db:migrate`** refuses: missing or incomplete credentials when `--require-remote` is given (the pipeline always gives
+  it, so a missing secret can never turn into "nothing to migrate" followed by a deployment); an `http://` address (only a
+  loopback test endpoint may use it); a Vercel Preview build; a database that has tables but no CEFRO migration history
+  (probably the wrong database); and a database whose migration history this code does not know (it is ahead of this
+  version, or unrelated). None of these prints a credential, an address or a table name.
+- **The Vercel check** refuses: a production branch other than `main`; an unknown production branch, unless GitHub reports
+  that its default branch is `main` (Vercel then uses the default branch); database credentials that Preview or Development
+  can read; and Deploy Hooks.
+- **The running app** refuses, in a Vercel Preview deployment, to connect to Turso when it holds Turso credentials (unless
+  `CEFRO_ALLOW_PREVIEW_TURSO=true`). That is enforced where the connection is opened, not only in scripts, so a variable
+  ticked for the wrong environment cannot expose the production database to code nobody has reviewed.
 
 **Production and Preview are separate.**
 
 | | Production | Preview |
 |---|---|---|
-| Trigger | push to `main` (or a manual run of the workflow, which still only deploys the head of `main`) | any other branch and every pull request |
+| Trigger | push to `main` (or a manual run of the workflow, which still only uses the head of `main`) | any other branch and every pull request |
 | Who deploys | the workflow, via the Vercel CLI | Vercel's Git integration, as before |
 | Migrates the database | yes, in the *Migrate* job, after the checks | never (the build is `next build`; `db:migrate` refuses to run in a Vercel Preview build) |
-| Has the Turso credentials | yes (Vercel: Production only; GitHub: the `production` environment only) | no. The workflow refuses to deploy if Vercel gives them to Preview or Development |
-| Sees the GitHub secrets | yes | no (the workflow never runs for pull requests) |
+| Has the Turso credentials | yes (Vercel: Production only; GitHub: the `production` environment only) | no; the pipeline refuses to continue if Vercel gives them to Preview, and a Preview refuses to use them |
+| Sees the GitHub secrets | yes | no (the workflow never runs for pull requests, and the environment is restricted to `main`) |
 
 `vercel.json` switches off Vercel's own automatic deployment of `main` (`git.deploymentEnabled.main = false`). Without
 that, Vercel would build and publish every push to `main` on its own, immediately and unmigrated, regardless of the
 workflow. With it, the workflow is the only thing that deploys production.
 
-A Preview has no Turso credentials, so it shows the "database not configured" error instead of reading or writing real
-data. That is deliberate. If you want working Previews, create a **second** Turso database for them, give Preview its own
-`TURSO_*` values in Vercel, and set the repository variable `CEFRO_ALLOW_PREVIEW_TURSO=true` to tell the guard that the
-Preview credentials are a different database. (Migrating that second database is then your decision; the pipeline does not
-touch it.)
+A Preview has no Turso credentials, so it answers "data store unavailable" instead of reading or writing real data. That
+is deliberate. If you want working Previews, create a **second** Turso database for them, give Preview its own `TURSO_*`
+values in Vercel, and set `CEFRO_ALLOW_PREVIEW_TURSO=true` for Preview in Vercel and the repository variable
+`CEFRO_ALLOW_PREVIEW_TURSO=true` in GitHub, to say that the Preview credentials are a different database. (Migrating that
+second database is then your decision; the pipeline does not touch it.)
 
 ### One-time setup
 
-1. **Create the Turso database** and a token for it (Turso dashboard or CLI). Treat the token as a password.
-2. **Vercel project** (*Settings*):
-   - *Environment Variables*: add `GEMINI_API_KEY`, `TRANSCRIPTION_PROVIDER=gemini`, `EVALUATION_PROVIDER=gemini`,
-     `AUTH_SECRET` (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Mark the secrets
-     *Sensitive*. Never prefix any of them with `NEXT_PUBLIC_`. **Tick only *Production* for the two `TURSO_*` variables**
-     (untick Preview and Development); if they are already set for all environments, edit them.
-   - *Git → Production Branch* (or *Environments → Production → Branch Tracking*): `main`.
-   - Create a token: vercel.com *Account Settings → Tokens*, scope it to the team that owns the project.
-   - Note the **Project ID** (*Settings → General*) and the **Team/Org ID** (the team's *Settings → General*, starts with `team_`).
-3. **GitHub** (*Settings → Environments → New environment*): create `production`. Optionally add *Required reviewers* to
-   approve each production deployment, and restrict *Deployment branches* to `main`. In that environment add these
-   **environment secrets** (repository secrets of the same names also work, but are visible to every workflow):
+Required:
 
-   | Secret | Value |
-   |---|---|
-   | `TURSO_DATABASE_URL` | `libsql://<name>-<org>.turso.io` |
-   | `TURSO_AUTH_TOKEN` | the Turso token |
-   | `VERCEL_TOKEN` | the Vercel token |
-   | `VERCEL_ORG_ID` | the Vercel team/org id |
-   | `VERCEL_PROJECT_ID` | the Vercel project id |
+1. **Create the Turso database** and a token for it (Turso dashboard or CLI). Treat the token as a password.
+2. **GitHub → Settings → General → Default branch**: `main` (after `main` exists, see the first-rollout sequence).
+3. **GitHub → Settings → Environments → New environment** `production`:
+   - *Deployment branches and tags*: **Selected branches → `main`** only. This is what keeps every other branch (and any
+     workflow edited on one) away from the secrets.
+   - *Environment secrets* (not repository secrets, which every workflow can read):
+
+     | Secret | Value |
+     |---|---|
+     | `TURSO_DATABASE_URL` | `libsql://<name>-<org>.turso.io` |
+     | `TURSO_AUTH_TOKEN` | the Turso token, with write access |
+     | `VERCEL_TOKEN` | a Vercel token (vercel.com → Account Settings → Tokens), scoped to the team that owns the project |
+     | `VERCEL_ORG_ID` | the team/org id (the team's *Settings → General*; starts with `team_`) |
+     | `VERCEL_PROJECT_ID` | the project id (*Project → Settings → General*) |
 
    Never paste them into a chat, an issue or a commit. GitHub masks them in logs, and the workflow passes them only to the
    steps that need them.
-4. **Recommended**: protect `main` (*Settings → Branches*): require a pull request and the *Validate* checks, so the
-   pipeline cannot be skipped by pushing straight to `main`.
-5. Get the code to `main` (merge the pull request). The first run migrates the database and deploys.
+4. **Vercel → project → Settings**:
+   - *Environments → Production → Branch Tracking*: `main`.
+   - *Environment Variables*: `GEMINI_API_KEY`, `TRANSCRIPTION_PROVIDER=gemini`, `EVALUATION_PROVIDER=gemini`, `AUTH_SECRET`
+     (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Mark the secrets
+     *Sensitive*; never prefix any with `NEXT_PUBLIC_`. **Tick only *Production* for the two `TURSO_*` variables** (untick
+     Preview and Development; edit them if they were set for all environments).
+   - *Git → Deploy Hooks*: none.
+
+Optional improvements:
+
+- Protect `main` (*Settings → Branches*): require a pull request and the *Validate* checks, so the pipeline cannot be
+  skipped by pushing straight to `main`, and so a migration's review line (see below) is a real review.
+- *Required reviewers* on the `production` environment: a person approves each stage of each production run.
+- A second Turso database for Previews (above).
+- A Turso backup or point-in-time restore point before the first migration, if the database holds data.
 
 Keep **Fluid Compute** enabled (default for new projects): the processing routes declare a 300-second limit.
 
+### First rollout (safe sequence)
+
+Do this once. Each step stops at the first problem and nothing after it has happened.
+
+1. **Create `main` only** (push the commits to `refs/heads/main`; do not push the old working branch, which might be
+   Vercel's production branch). The pipeline runs Validate, then stops at the Preflight because the secrets and settings do
+   not exist yet. Nothing is migrated or deployed.
+2. Do the one-time setup above.
+3. **Run the workflow, stage `check`.** It verifies the connection, the token, and that the database is empty or already
+   CEFRO's. Expected: `connected (read-only). 0 of 5 migrations applied, 5 pending`. It writes nothing.
+4. **Run stage `migrate`.** Expected: `db:migrate: OK. 5 migrations applied, foreign key check clean`. This is the first
+   write to the database and is a single transaction.
+5. **Run stage `deploy`.** It first confirms the database is fully migrated, deploys, and checks `/api/health`.
+6. Open the production URL and run through "How to validate" below.
+7. From here on, every push to `main` runs the whole pipeline.
+
+### When a deployment fails
+
+The migration runs before the new release is live, so for a while the **previous release** runs on the **new** schema.
+
+- **Migration succeeded, deployment failed:** Vercel keeps serving the previous production deployment, which now runs on
+  the migrated database. This is safe only if the migration was backward compatible (see below). The pipeline run is red;
+  fix the problem and run stage `deploy` (or push again). The migration is not repeated.
+- **The health check failed:** the new release is live but cannot use its database (for example the credentials in Vercel
+  point at a different database than the one the pipeline migrated, or the release is broken). **Nothing is rolled back,
+  neither the release nor the database.** Restore the previous release with `vercel rollback` (or *Instant Rollback* in
+  the Vercel dashboard). The previous release keeps working on the migrated database if the migration was backward
+  compatible. The database stays migrated; rolling a schema back is a deliberate manual operation, never automatic.
+- `GET /api/health` returns only `{"status":"ok"}` (200) or `{"status":"unavailable"}` (503). It needs no sign-in, shows no
+  error text, version, address or data, and caches its answer for 5 seconds.
+
 ### Migration rules (the old release runs against the new schema)
 
-The migration runs before the new release is live, so for a while the **previous release** runs against the **new**
-schema (and for longer if the deployment fails after the migration). Therefore migrations are *backward compatible*:
-add tables, columns (nullable or with a default) and indexes first; remove or rename things in a later release, once no
-running code uses them. CI enforces it (`scripts/ci/check-migrations.mjs`):
+Migrations are *backward compatible*: add tables, columns (nullable or with a default) and indexes first; remove or rename
+things in a later release, once no running code uses them. CI helps (`scripts/ci/check-migrations.mjs`):
 
 - applied migrations (0000–0004 and every later one once merged) are immutable; editing or deleting one fails the check,
 - timestamps in `meta/_journal.json` must increase (Drizzle would silently skip an older one),
-- a new migration with `DROP`, `RENAME`, `DELETE FROM`, `TRUNCATE`, `PRAGMA foreign_keys` or `ADD … NOT NULL` without a
-  default fails unless it carries a reviewed `-- cefro:destructive-approved: <reason>` line.
+- a new migration containing `DROP`, `RENAME`, `DELETE FROM`, `TRUNCATE`, `PRAGMA foreign_keys`, `ADD … NOT NULL` without a
+  default, `UPDATE`, `CREATE UNIQUE INDEX`, `CREATE TRIGGER` or a `CHECK` constraint fails unless it carries a
+  `-- cefro:reviewed: <reason>` line.
+
+**This is a text scan, not proof.** It cannot know what the running release reads or writes, how large the tables are, how
+long a statement locks them, or whether existing rows break a new constraint. A file that passes is not thereby backward
+compatible, and a review line is only as good as the review behind it (protect `main` so that a person actually gives
+it). Treat the check as a tripwire that makes someone look at the risky kinds of change.
 
 Migrations are tracked by Drizzle, so running the pipeline again re-applies nothing. The pending migrations run in one
 transaction: a failed run leaves them unapplied. No step resets or deletes data.
 
 ### Running the migration by hand (rarely needed)
 
-If you ever need to, from a trusted machine, with the values exported in your shell (the script never prints them):
+From a trusted machine, with the values exported in your shell (the script never prints them), and not while the pipeline
+is running:
 
 ```bash
 export TURSO_DATABASE_URL='libsql://<name>-<org>.turso.io'
 export TURSO_AUTH_TOKEN='<token>'
-npm run db:migrate
+npm run db:migrate -- --check --require-remote     # read-only report
+npm run db:migrate -- --require-remote             # apply
 ```
 
-Expect `db:migrate: OK. 5 migrations applied, foreign key check clean`. On failure it prints the underlying reason
-(authentication, permission, network, address, database error) with credentials redacted. Do not run it while the
-pipeline is running.
+On failure it prints the underlying reason (authentication, permission, network, address, database error) with
+credentials redacted.
 
 ### What can still bypass the pipeline
 
-- A person clicking *Redeploy*/*Promote* in Vercel, running `vercel --prod`, or creating a Vercel Deploy Hook.
-- Vercel's production branch set to something other than `main` (the workflow checks and refuses to continue, but a push
-  to that other branch would already have been deployed by Vercel).
+- A person clicking *Redeploy*/*Promote* in Vercel, running `vercel --prod`, or creating a Deploy Hook (the pipeline
+  refuses to continue if hooks exist, but cannot prevent someone creating one afterwards).
+- Vercel's production branch set to something other than `main` (the pipeline checks and refuses to continue, but a push to
+  that other branch would already have been deployed by Vercel).
 - Pushing straight to `main` (the pipeline still runs and gates the deployment; protect the branch to require review).
 - Running `npm run db:migrate` by hand with the production credentials.
-
-Keep **Fluid Compute** enabled (default for new projects): the processing routes declare a 300-second limit. A typical
-attempt takes 15 to 30 seconds.
+- Two pipeline-external migrations at once: GitHub serialises the pipeline's runs, not a hand-run. A conflicting schema
+  change then fails and rolls back, but a migration that only moves data could be applied twice.
 
 ## How it works on Vercel
 
@@ -141,7 +215,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
 
 ### How to validate once the variables are in Vercel
 
-1. Merge to `main`, open the *Deploy production* run in the Actions tab, and confirm the *Migrate* job printed `db:migrate: OK. 5 migrations applied, foreign key check clean` and *Deploy* printed the production URL.
+1. Follow the first-rollout sequence above: stage `check`, then `migrate` (it must print `db:migrate: OK. 5 migrations applied, foreign key check clean`), then `deploy` (it must print the production URL and `post-deploy-check: OK`).
 2. Open the deployment URL, record an answer of at least ~30 seconds, and watch it complete. The function logs show
    `Provider configuration OK`, the database kind (`turso`), `Speech activity checked`, then completion.
 3. Cross-instance check: submit several attempts, reload the page and open the history (requests land on different

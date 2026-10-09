@@ -169,6 +169,13 @@ describe("validateDatabaseConfig", () => {
     expect(messages).not.toContain("token-token");
   });
 
+  it("flags Turso credentials in a Vercel Preview unless Preview has its own database", () => {
+    expect(vars({ ...TURSO, VERCEL_ENV: "preview" })).toContain("TURSO_DATABASE_URL");
+    expect(validateDatabaseConfig(env({ ...TURSO, VERCEL_ENV: "preview" })).map((p) => p.message).join(" ")).toMatch(/Preview/);
+    expect(vars({ ...TURSO, VERCEL_ENV: "preview", CEFRO_ALLOW_PREVIEW_TURSO: "true" })).toEqual([]);
+    expect(vars({ ...TURSO, VERCEL_ENV: "production" })).toEqual([]);
+  });
+
   it("requires the hosted database on Vercel, and refuses local recordings there", () => {
     vi.stubEnv("VERCEL", "1");
     expect(vars(local)).toContain("TURSO_DATABASE_URL");

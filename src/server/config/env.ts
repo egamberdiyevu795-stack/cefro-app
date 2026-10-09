@@ -17,6 +17,13 @@ const envSchema = z.object({
   TURSO_DATABASE_URL: z.string().min(1).optional(),
   TURSO_AUTH_TOKEN: z.string().min(1).optional(),
   /** Upper bound for one request to the hosted database (a stalled connection must end in an error, not hang). */
+  /**
+   * Set by Vercel: "production", "preview" or "development". A Preview deployment is refused the Turso credentials
+   * (see db/target.ts) unless CEFRO_ALLOW_PREVIEW_TURSO is "true", so a Preview can never read or write the production database.
+   */
+  VERCEL_ENV: z.string().optional(),
+  /** "true" only when Preview deployments deliberately use their own, separate Turso database. */
+  CEFRO_ALLOW_PREVIEW_TURSO: z.string().optional(),
   DATABASE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 
   /**

@@ -542,8 +542,9 @@ attempt created moments earlier).
   The Vercel build is only `next build`, so a build never depends on the database. Vercel's own Git deployment of `main`
   is switched off in `vercel.json`, so the workflow is the only production deployer. Preview deployments keep Vercel's Git
   integration and must not hold the production credentials: the pipeline's preflight verifies the variable scoping and the
-  production branch through the Vercel API (failing closed), and the running app itself refuses to open Turso in a Preview
-  unless `CEFRO_ALLOW_PREVIEW_TURSO=true`. Because the migration precedes the deployment, migrations must be backward
+  production branch through the Vercel API (failing closed), and the running app itself refuses to open Turso in a Vercel Preview or
+  Development environment unless `CEFRO_ALLOW_PREVIEW_TURSO=true` (a Preview that has them does not start: the boot check
+  fails and every route returns 500). Because the migration precedes the deployment, migrations must be backward
   compatible with the previous release (expand, then contract). CI keeps applied migrations immutable and flags the
   risky kinds of statement for explicit review; that is a text scan and does not prove compatibility. A failed health check
   does not roll back the release or the database; the runbook is `vercel rollback`. A failure prints the underlying cause

@@ -5,8 +5,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { evaluateVercelProject } from "../../scripts/ci/check-vercel-project.mjs";
 
+const REPO = { githubRepository: "Owner/Cefro-App", githubRepositoryId: "123456" };
 const ok = {
-  project: { link: { type: "github", productionBranch: "main" } },
+  ...REPO,
+  project: { link: { type: "github", org: "owner", repo: "cefro-app", repoId: 123456, productionBranch: "main" } },
   envs: [
     { key: "TURSO_DATABASE_URL", target: ["production"] },
     { key: "TURSO_AUTH_TOKEN", target: ["production"] },
@@ -41,8 +43,63 @@ describe("evaluateVercelProject", () => {
     expect(problems.join("\n")).toMatch(/TURSO_AUTH_TOKEN is not set for the Production/);
   });
 
+  describe("the Vercel project belongs to this repository", () => {
+    const withLink = (link: object, extra: object = {}) => evaluateVercelProject({ ...ok, ...extra, project: { link: { type: "github", productionBranch: "main", ...link } } });
+
+    it("passes when the repository id matches, or the organisation and repository name match (case-insensitively)", () => {
+      expect(withLink({ repoId: 123456 }).problems).toEqual([]);
+      expect(withLink({ repoId: "123456" }).problems).toEqual([]);
+      expect(withLink({ org: "OWNER", repo: "cefro-APP" }).problems).toEqual([]);
+    });
+
+    it("refuses a project connected to another repository (by id or by name), even if the other identifier matches", () => {
+      expect(withLink({ repoId: 999 }).problems.join("\n")).toMatch(/different GitHub repository/);
+      expect(withLink({ org: "someone-else", repo: "cefro-app" }).problems.join("\n")).toMatch(/connected to "someone-else\/cefro-app", not "owner\/cefro-app"/);
+      expect(withLink({ repoId: 123456, org: "owner", repo: "other-app" }).problems.join("\n")).toMatch(/other-app/);
+      expect(withLink({ repoId: 999, org: "owner", repo: "cefro-app" }).problems.join("\n")).toMatch(/repository id mismatch/);
+    });
+
+    it("refuses a project connected to another Git provider", () => {
+      expect(withLink({ type: "gitlab", repoId: 123456 }).problems.join("\n")).toMatch(/not GitHub/);
+    });
+
+    it("does not treat a missing repository in the API response as success: it stops unless a person recorded the confirmation", () => {
+      const refused = withLink({});
+      expect(refused.problems.join("\n")).toMatch(/cannot be verified that this is the right project/);
+      expect(refused.problems.join("\n")).toMatch(/CEFRO_VERCEL_PROJECT_REPO/);
+      const noLink = evaluateVercelProject({ ...ok, project: {}, githubDefaultBranch: "main" });
+      expect(noLink.problems.join("\n")).toMatch(/cannot be verified/);
+    });
+
+    it("accepts the recorded manual confirmation only when it names exactly this repository, and still warns", () => {
+      const accepted = withLink({}, { acknowledgedRepository: "owner/cefro-app" });
+      expect(accepted.problems).toEqual([]);
+      expect(accepted.warnings.join("\n")).toMatch(/relying on the recorded manual confirmation/);
+      for (const wrong of ["owner/other", "", undefined, "true", "yes"]) {
+        expect(withLink({}, { acknowledgedRepository: wrong }).problems.join("\n"), String(wrong)).toMatch(/cannot be verified/);
+      }
+    });
+
+    it("a manual confirmation never overrides a repository the API says is different", () => {
+      expect(withLink({ repoId: 999 }, { acknowledgedRepository: "owner/cefro-app" }).problems.join("\n")).toMatch(/different GitHub repository/);
+      expect(withLink({ org: "x", repo: "y" }, { acknowledgedRepository: "owner/cefro-app" }).problems.join("\n")).toMatch(/not "owner\/cefro-app"/);
+    });
+
+    it("keeps every other check in force (branch, credential scope, deploy hooks)", () => {
+      const all = evaluateVercelProject({
+        ...ok,
+        envs: [{ key: "TURSO_DATABASE_URL", target: ["production", "preview"] }, { key: "TURSO_AUTH_TOKEN", target: ["production"] }],
+        project: { link: { type: "github", repoId: 123456, productionBranch: "staging", deployHooks: [{ id: "h" }] } },
+      });
+      const text = all.problems.join("\n");
+      expect(text).toMatch(/also available to preview/);
+      expect(text).toMatch(/production branch is "staging"/);
+      expect(text).toMatch(/Deploy Hook/);
+    });
+  });
+
   describe("fail-closed production branch", () => {
-    const unknown = { link: { type: "github" } };
+    const unknown = { link: { type: "github", org: "owner", repo: "cefro-app", repoId: 123456 } };
 
     it("an unknown production branch is accepted only when the GitHub default branch is verified to be main (Vercel then uses the default branch)", () => {
       const accepted = evaluateVercelProject({ ...ok, project: unknown, githubDefaultBranch: "main" });
@@ -65,18 +122,18 @@ describe("evaluateVercelProject", () => {
     });
 
     it("an explicit production branch is not rescued by a default branch of main", () => {
-      const { problems } = evaluateVercelProject({ ...ok, project: { link: { productionBranch: "staging" } }, githubDefaultBranch: "main" });
+      const { problems } = evaluateVercelProject({ ...ok, project: { link: { ...ok.project.link, productionBranch: "staging" } }, githubDefaultBranch: "main" });
       expect(problems.join("\n")).toMatch(/production branch is "staging", not "main"/);
     });
 
     it("Deploy Hooks are refused (they build a branch outside the pipeline)", () => {
-      const { problems } = evaluateVercelProject({ ...ok, project: { link: { productionBranch: "main", deployHooks: [{ id: "h", name: "x", ref: "main" }] } } });
+      const { problems } = evaluateVercelProject({ ...ok, project: { link: { ...ok.project.link, deployHooks: [{ id: "h", name: "x", ref: "main" }] } } });
       expect(problems.join("\n")).toMatch(/1 Deploy Hook/);
     });
   });
 
   it("refuses a production branch other than main (it would deploy from a push, bypassing the pipeline)", () => {
-    const { problems } = evaluateVercelProject({ ...ok, project: { link: { productionBranch: "claude/zen-darwin-5vgl0z" } } });
+    const { problems } = evaluateVercelProject({ ...ok, project: { link: { ...ok.project.link, productionBranch: "claude/zen-darwin-5vgl0z" } } });
     expect(problems.join("\n")).toMatch(/production branch is "claude\/zen-darwin-5vgl0z", not "main"/);
   });
 
@@ -102,7 +159,7 @@ describe("scripts/ci/check-vercel-project.mjs", () => {
         execFile(
           process.execPath,
           ["--import", `data:text/javascript,${encodeURIComponent(preload)}`, path.join(process.cwd(), "scripts/ci/check-vercel-project.mjs")],
-          { env: { PATH: process.env.PATH, VERCEL_TOKEN: TOKEN, VERCEL_PROJECT_ID: "prj_123", VERCEL_ORG_ID: "team_456", ...(extraEnv ?? {}) } as unknown as NodeJS.ProcessEnv, timeout: 30_000 },
+          { env: { PATH: process.env.PATH, VERCEL_TOKEN: TOKEN, VERCEL_PROJECT_ID: "prj_123", VERCEL_ORG_ID: "team_456", CEFRO_GITHUB_REPOSITORY: "Owner/Cefro-App", CEFRO_GITHUB_REPOSITORY_ID: "123456", ...(extraEnv ?? {}) } as unknown as NodeJS.ProcessEnv, timeout: 30_000 },
           (error, stdout, stderr) => {
             server.close();
             resolve({ code: error ? ((error as { code?: number }).code ?? 1) : 0, out: `${stdout}${stderr}`, seen });
@@ -130,8 +187,22 @@ describe("scripts/ci/check-vercel-project.mjs", () => {
     expect(result.out).not.toContain(TOKEN);
   });
 
+  it("fails when the project is connected to a different repository, and when the API does not say (without a recorded confirmation)", async () => {
+    const other = await run((url) => ({ status: 200, body: url.includes("/env") ? { envs: ok.envs } : { link: { type: "github", repoId: 999, productionBranch: "main" } } }));
+    expect(other.code).toBe(1);
+    expect(other.out).toMatch(/different GitHub repository/);
+    const silent = (url: string) => ({ status: 200, body: url.includes("/env") ? { envs: ok.envs } : { link: { type: "github", productionBranch: "main" } } });
+    const refused = await run(silent);
+    expect(refused.code).toBe(1);
+    expect(refused.out).toMatch(/CEFRO_VERCEL_PROJECT_REPO/);
+    const confirmed = await run(silent, { CEFRO_VERCEL_PROJECT_REPO: "owner/cefro-app" });
+    expect(confirmed.code).toBe(0);
+    expect(confirmed.out).toMatch(/manual confirmation/);
+    expect(refused.out + confirmed.out + other.out).not.toContain(TOKEN);
+  });
+
   it("fails closed when the production branch is unknown and GitHub's default branch is not main", async () => {
-    const unknownBranch = (url: string) => ({ status: 200, body: url.includes("/env") ? { envs: ok.envs } : { link: { type: "github" } } });
+    const unknownBranch = (url: string) => ({ status: 200, body: url.includes("/env") ? { envs: ok.envs } : { link: { type: "github", org: "owner", repo: "cefro-app", repoId: 123456 } } });
     const refused = await run(unknownBranch, { GITHUB_DEFAULT_BRANCH: "claude/zen-darwin-5vgl0z" });
     expect(refused.code).toBe(1);
     expect(refused.out).toMatch(/cannot be determined/);

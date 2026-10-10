@@ -5,7 +5,7 @@ vi.mock("@/server/config/env", () => ({ getEnv: () => state.env }));
 
 import { getDb, setDbForTesting } from "./client";
 import { DatabaseUnavailableError } from "./errors";
-import { PREVIEW_TURSO_MESSAGE, previewMayNotUseTurso, resolveDatabaseTarget } from "./target";
+import { NON_PRODUCTION_TURSO_MESSAGE, resolveDatabaseTarget, vercelEnvironmentMayNotUseTurso } from "./target";
 import { DatabaseAudioStorage } from "@/server/storage/database-audio-storage";
 
 const TOKEN = "preview-leak-token-0123456789";
@@ -13,10 +13,22 @@ const URL_ = "libsql://prod-db-someorg.turso.io";
 const base = { DATABASE_PATH: ":memory:", DATABASE_TIMEOUT_MS: 5000 };
 const withTurso = { ...base, TURSO_DATABASE_URL: URL_, TURSO_AUTH_TOKEN: TOKEN };
 
-describe("a Vercel Preview deployment is kept away from the production database", () => {
+describe("a Vercel Preview or Development environment is kept away from the production database", () => {
   describe("target resolution", () => {
+    it("refuses Turso credentials in a Vercel Development environment by default (vercel dev / vercel env pull)", () => {
+      expect(() => resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "development" })).toThrow(NON_PRODUCTION_TURSO_MESSAGE);
+      expect(() => resolveDatabaseTarget({ ...base, TURSO_DATABASE_URL: URL_, VERCEL_ENV: "development" })).toThrow(/Development/);
+      expect(resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "development", CEFRO_ALLOW_PREVIEW_TURSO: "true" })).toMatchObject({ kind: "turso" });
+    });
+
+    it("keeps local development working: SQLite without credentials, and a Turso test database when VERCEL_ENV is not set", () => {
+      expect(resolveDatabaseTarget({ ...base, VERCEL_ENV: "development" })).toEqual({ kind: "file", path: ":memory:" });
+      expect(resolveDatabaseTarget(base)).toEqual({ kind: "file", path: ":memory:" });
+      expect(resolveDatabaseTarget(withTurso)).toMatchObject({ kind: "turso" }); // .env.local on a laptop that never ran vercel env pull
+    });
+
     it("refuses Turso credentials in Preview by default", () => {
-      expect(() => resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "preview" })).toThrow(PREVIEW_TURSO_MESSAGE);
+      expect(() => resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "preview" })).toThrow(NON_PRODUCTION_TURSO_MESSAGE);
       expect(() => resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "preview", CEFRO_ALLOW_PREVIEW_TURSO: "false" })).toThrow(/Preview/);
       // Either variable is enough to refuse: the credentials are in the wrong place.
       expect(() => resolveDatabaseTarget({ ...base, TURSO_AUTH_TOKEN: TOKEN, VERCEL_ENV: "preview" })).toThrow(/Preview/);
@@ -28,15 +40,14 @@ describe("a Vercel Preview deployment is kept away from the production database"
 
     it("does not affect production, development, or a Preview without credentials", () => {
       expect(resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "production" })).toMatchObject({ kind: "turso" });
-      expect(resolveDatabaseTarget({ ...withTurso, VERCEL_ENV: "development" })).toMatchObject({ kind: "turso" });
       expect(resolveDatabaseTarget(withTurso)).toMatchObject({ kind: "turso" }); // not on Vercel at all
       expect(resolveDatabaseTarget({ ...base, VERCEL_ENV: "preview" })).toEqual({ kind: "file", path: ":memory:" });
     });
 
     it("the message names the remedy and carries no credential", () => {
-      expect(PREVIEW_TURSO_MESSAGE).not.toContain(TOKEN);
-      expect(PREVIEW_TURSO_MESSAGE).not.toContain("turso.io");
-      expect(previewMayNotUseTurso({ ...withTurso, VERCEL_ENV: "preview" })).toBe(true);
+      expect(NON_PRODUCTION_TURSO_MESSAGE).not.toContain(TOKEN);
+      expect(NON_PRODUCTION_TURSO_MESSAGE).not.toContain("turso.io");
+      expect(vercelEnvironmentMayNotUseTurso({ ...withTurso, VERCEL_ENV: "preview" })).toBe(true);
     });
   });
 
@@ -61,6 +72,15 @@ describe("a Vercel Preview deployment is kept away from the production database"
       // A refusal is not remembered as a connection: fixing the configuration works on the next request.
       state.env = { ...base, DATABASE_PATH: ":memory:" };
       await expect(getDb()).resolves.toBeTruthy();
+    });
+
+    it("a Vercel Development environment holding credentials is refused in the same path, without any network request", async () => {
+      state.env = { ...withTurso, VERCEL_ENV: "development" };
+      const error = await getDb().catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(DatabaseUnavailableError);
+      expect(String((error as Error).message)).toMatch(/Development/);
+      expect(JSON.stringify([(error as Error).message, (error as Error).stack])).not.toContain(TOKEN);
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it("recordings in the database are refused the same way (they use the same connection)", async () => {

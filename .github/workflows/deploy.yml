@@ -41,10 +41,12 @@ on:
 permissions:
   contents: read
 
-# One production run at a time, queued (never cancelled halfway through a migration or a deployment). While one run is
-# active, only the newest waiting run is kept: older waiting runs are superseded by it.
+# Runs that can WRITE (a push, or a manual migrate / deploy / full) share one group: one at a time, queued, and never
+# cancelled halfway through a migration or a deployment. GitHub keeps only the newest WAITING run of a group, so an older
+# waiting run is superseded by it; every run acts on the head of main (stale runs refuse), so nothing is lost by that.
+# The read-only manual `check` has a group of its own: it can neither replace a waiting production run nor wait behind one.
 concurrency:
-  group: production-deploy
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.stage == 'check' && 'production-check' || 'production-deploy' }}
   cancel-in-progress: false
 
 jobs:
@@ -57,8 +59,10 @@ jobs:
   preflight:
     name: Preflight
     needs: ci
+    # !cancelled(), not always(): always() keeps running jobs after the run was cancelled. The explicit result tests below
+    # decide what an upstream failure, skip or cancellation means; this only lets a job evaluate them once upstream is done.
     if: >-
-      always() && github.ref == 'refs/heads/main' &&
+      !cancelled() && github.ref == 'refs/heads/main' &&
       (needs.ci.result == 'success' || (needs.ci.result == 'skipped' && inputs.stage == 'check'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -96,12 +100,15 @@ jobs:
             exit 1
           fi
 
-      - name: Vercel project is safe (production branch is main, database credentials Production-only, no deploy hooks)
+      - name: Vercel project is safe (this repository, production branch is main, database credentials Production-only, no deploy hooks)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          CEFRO_GITHUB_REPOSITORY: ${{ github.repository }}
+          CEFRO_GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
+          CEFRO_VERCEL_PROJECT_REPO: ${{ vars.CEFRO_VERCEL_PROJECT_REPO }}
           CEFRO_ALLOW_PREVIEW_TURSO: ${{ vars.CEFRO_ALLOW_PREVIEW_TURSO }}
         run: node scripts/ci/check-vercel-project.mjs
 
@@ -141,6 +148,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+      - name: The checked-out commit is the tested commit
+        run: node scripts/ci/assert-checked-out-commit.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -157,7 +166,7 @@ jobs:
     name: Verify the database is fully migrated (read-only)
     needs: [preflight, migrate]
     if: >-
-      always() && github.ref == 'refs/heads/main' && needs.preflight.result == 'success' &&
+      !cancelled() && github.ref == 'refs/heads/main' && needs.preflight.result == 'success' &&
       (needs.migrate.result == 'success' || (needs.migrate.result == 'skipped' && inputs.stage == 'deploy')) &&
       (github.event_name == 'push' || inputs.stage == 'deploy' || inputs.stage == 'full')
     runs-on: ubuntu-latest
@@ -165,6 +174,8 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - name: The checked-out commit is the tested commit
+        run: node scripts/ci/assert-checked-out-commit.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -198,8 +209,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Everything the CLI uploads is the working tree, so it must be exactly the tested commit. Nothing runs in between.
+      - name: The checked-out commit is the tested commit
+        run: node scripts/ci/assert-checked-out-commit.mjs
       # Deploys exactly the checked-out commit; Vercel builds it (`npm run vercel-build` = `next build`, no database access).
       # The CLI reads VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID from the environment. No database credentials here.
+      # Only stdout is captured; the URL is picked out of it and validated (one https *.vercel.app host) before it is written
+      # to $GITHUB_OUTPUT, so extra output lines or an unexpected host can neither break nor poison the run.
       - name: vercel deploy --prod
         id: deploy
         env:
@@ -207,7 +223,8 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          url="$(npx --yes vercel@63.1.0 deploy --prod --yes --meta githubCommitSha="$GITHUB_SHA")"
+          cli_output="$(npx --yes vercel@63.1.0 deploy --prod --yes --meta githubCommitSha="$GITHUB_SHA")"
+          url="$(printf '%s\n' "$cli_output" | node scripts/ci/parse-deploy-url.mjs)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           {
             echo "### Production deployed"

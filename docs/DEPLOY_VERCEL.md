@@ -38,6 +38,14 @@ verified.
 Every stage that writes needs CI and the preflight to pass first, and only the head of `main` can be used. A run started
 from any other branch does nothing.
 
+**Concurrency and cancellation.** A push and the manual `migrate`, `deploy` and `full` stages share one queue
+(`production-deploy`): one at a time, and a run that has started is never cancelled by a newer one. GitHub keeps only the
+newest *waiting* run of a queue, so an older waiting run is replaced by a newer one; every run acts on the head of `main`
+and stale runs refuse, so nothing is lost by that. The read-only `check` has its own queue (`production-check`): it cannot
+replace a waiting production run and does not wait behind one. If you cancel a run, no job that has not yet started will
+start (the conditions use `!cancelled()`, never `always()`), and a job whose upstream job failed, was skipped or was
+cancelled does not run.
+
 ### What the safety checks refuse
 
 - **`db:migrate`** refuses: missing or incomplete credentials when `--require-remote` is given (the pipeline always gives
@@ -47,10 +55,18 @@ from any other branch does nothing.
   version, or unrelated). None of these prints a credential, an address or a table name.
 - **The Vercel check** refuses: a production branch other than `main`; an unknown production branch, unless GitHub reports
   that its default branch is `main` (Vercel then uses the default branch); database credentials that Preview or Development
-  can read; and Deploy Hooks.
-- **The running app** refuses, in a Vercel Preview deployment, to connect to Turso when it holds Turso credentials (unless
-  `CEFRO_ALLOW_PREVIEW_TURSO=true`). That is enforced where the connection is opened, not only in scripts, so a variable
-  ticked for the wrong environment cannot expose the production database to code nobody has reviewed.
+  can read; Deploy Hooks; and a Vercel project that is not connected to this repository (see "Is it the right Vercel
+  project?" below).
+- **The deploy job** refuses to migrate, verify or deploy unless the checked-out files are exactly commit `GITHUB_SHA` and
+  the working tree is clean (`scripts/ci/assert-checked-out-commit.mjs`; the Vercel CLI uploads the working tree). It takes
+  the deployment URL out of the CLI's output with `scripts/ci/parse-deploy-url.mjs`, which accepts only a plain
+  `https://<name>.vercel.app` line (extra output lines are ignored; any other host, a port, credentials, a path or empty
+  output is an error that does not echo the output) before anything is written to `$GITHUB_OUTPUT`.
+- **The running app** refuses, in a Vercel **Preview or Development** environment (`VERCEL_ENV`), to connect to Turso when
+  it holds Turso credentials (unless `CEFRO_ALLOW_PREVIEW_TURSO=true`). That is enforced where the connection is opened,
+  not only in scripts, so a variable ticked for the wrong environment cannot expose the production database to code nobody
+  has reviewed or to a laptop that ran `vercel env pull` / `vercel dev`. Plain local development (no `VERCEL_ENV`; SQLite,
+  or a Turso test database in `.env.local`) is not affected.
 
 **Production and Preview are separate.**
 
@@ -59,18 +75,29 @@ from any other branch does nothing.
 | Trigger | push to `main` (or a manual run of the workflow, which still only uses the head of `main`) | any other branch and every pull request |
 | Who deploys | the workflow, via the Vercel CLI | Vercel's Git integration, as before |
 | Migrates the database | yes, in the *Migrate* job, after the checks | never (the build is `next build`; `db:migrate` refuses to run in a Vercel Preview build) |
-| Has the Turso credentials | yes (Vercel: Production only; GitHub: the `production` environment only) | no; the pipeline refuses to continue if Vercel gives them to Preview, and a Preview refuses to use them |
+| Has the Turso credentials | yes (Vercel: Production only; GitHub: the `production` environment only) | no; the pipeline refuses to continue if Vercel gives them to Preview, and a Preview that has them does not start (below) |
 | Sees the GitHub secrets | yes | no (the workflow never runs for pull requests, and the environment is restricted to `main`) |
 
 `vercel.json` switches off Vercel's own automatic deployment of `main` (`git.deploymentEnabled.main = false`). Without
 that, Vercel would build and publish every push to `main` on its own, immediately and unmigrated, regardless of the
 workflow. With it, the workflow is the only thing that deploys production.
 
-A Preview has no Turso credentials, so it answers "data store unavailable" instead of reading or writing real data. That
-is deliberate. If you want working Previews, create a **second** Turso database for them, give Preview its own `TURSO_*`
-values in Vercel, and set `CEFRO_ALLOW_PREVIEW_TURSO=true` for Preview in Vercel and the repository variable
-`CEFRO_ALLOW_PREVIEW_TURSO=true` in GitHub, to say that the Preview credentials are a different database. (Migrating that
-second database is then your decision; the pipeline does not touch it.)
+**What a Preview does.** A Vercel Preview runs the production build (`NODE_ENV=production`), so the start-up configuration
+check (`src/server/config/boot-check.ts`) applies to it, and it fails in either direction:
+
+- *With Turso credentials* (a variable ticked for Preview by mistake): the boot check reports "Database credentials are
+  present in a Vercel Preview or Development environment…" (variable names and that sentence only, never a value) and the
+  application **does not start normally**: Next.js reports "Failed to prepare server" and **every route, pages and
+  `/api/health` included, returns HTTP 500**. The database initialisation (`getDb`) also refuses the same configuration
+  before any network request, as a second layer.
+- *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the same
+  boot check fails ("required on Vercel…") and the Preview also returns HTTP 500 on every route.
+
+So a Preview of this application is **not usable as a running app** unless it has its own database. That is deliberate:
+the Preview is kept away from real data rather than half-working. If you want working Previews, create a **second** Turso
+database for them, migrate it yourself (the pipeline does not touch it), give Preview its own `TURSO_*` values in Vercel,
+and set `CEFRO_ALLOW_PREVIEW_TURSO=true` for Preview in Vercel and the repository variable `CEFRO_ALLOW_PREVIEW_TURSO=true`
+in GitHub, to say that the Preview credentials are a different database. The same flag covers a Development environment.
 
 ### One-time setup
 
@@ -93,6 +120,9 @@ Required:
 
    Never paste them into a chat, an issue or a commit. GitHub masks them in logs, and the workflow passes them only to the
    steps that need them.
+   - *Repository variable* (*Settings → Secrets and variables → Actions → Variables*; not a secret):
+     `CEFRO_VERCEL_PROJECT_REPO` = `<owner>/<repo>` of this repository, **after** confirming in Vercel (*Project → Settings →
+     Git*) that the project is connected to exactly that repository. See "Is it the right Vercel project?" below.
 4. **Vercel → project → Settings**:
    - *Environments → Production → Branch Tracking*: `main`.
    - *Environment Variables*: `GEMINI_API_KEY`, `TRANSCRIPTION_PROVIDER=gemini`, `EVALUATION_PROVIDER=gemini`, `AUTH_SECRET`
@@ -110,6 +140,16 @@ Optional improvements:
 - A Turso backup or point-in-time restore point before the first migration, if the database holds data.
 
 Keep **Fluid Compute** enabled (default for new projects): the processing routes declare a 300-second limit.
+
+### Is it the right Vercel project?
+
+The Vercel project and organisation ids are secrets, so a wrong value would deploy this code into another project. The
+preflight reads the project from the Vercel API and compares its Git link (`link.repoId`, or `link.org` + `link.repo`) with
+this GitHub repository: a different repository is refused. **Not verified:** whether the real API response carries those
+fields. Absence is never treated as success. If the response does not name the repository, the pipeline stops, unless the
+repository variable `CEFRO_VERCEL_PROJECT_REPO` equals `<owner>/<repo>`, which records that you confirmed the connection in
+the Vercel dashboard (the run then shows a warning saying it relies on that confirmation). The check cannot prove more than
+the API shows: if you set the variable without looking, nothing can catch it.
 
 ### First rollout (safe sequence)
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
 import { isFfmpegAvailable, isSpeechGuardEnabled } from "@/server/audio/speech-guard";
-import { PREVIEW_TURSO_MESSAGE, isTursoConfigured, isTursoUrl, previewMayNotUseTurso } from "@/server/db/target";
+import { NON_PRODUCTION_TURSO_MESSAGE, isTursoConfigured, isTursoUrl, vercelEnvironmentMayNotUseTurso } from "@/server/db/target";
 import type { ServerEnv } from "./env";
 
 /**
@@ -75,7 +75,7 @@ export function validateDatabaseConfig(env: ServerEnv): ConfigProblem[] {
   if (url && !token) problems.push({ variable: "TURSO_AUTH_TOKEN", message: "required when TURSO_DATABASE_URL is set" });
   if (token && !url) problems.push({ variable: "TURSO_DATABASE_URL", message: "required when TURSO_AUTH_TOKEN is set" });
   if (url && !isTursoUrl(url)) problems.push({ variable: "TURSO_DATABASE_URL", message: "must be a libsql:// or https:// address" });
-  if (previewMayNotUseTurso(env)) problems.push({ variable: "TURSO_DATABASE_URL", message: PREVIEW_TURSO_MESSAGE });
+  if (vercelEnvironmentMayNotUseTurso(env)) problems.push({ variable: "TURSO_DATABASE_URL", message: NON_PRODUCTION_TURSO_MESSAGE });
   if (process.env.VERCEL && !isTursoConfigured(env)) {
     problems.push({
       variable: "TURSO_DATABASE_URL",

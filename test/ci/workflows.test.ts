@@ -32,8 +32,8 @@ describe("production pipeline (deploy.yml)", () => {
     expect(deploy.jobs.deploy.if).toBe("github.ref == 'refs/heads/main'"); // nothing but a successful verify lets it run
   });
 
-  it("allows one production run at a time and never cancels a run halfway", () => {
-    expect(deploy.concurrency).toEqual({ group: "production-deploy", "cancel-in-progress": false });
+  it("never cancels a run halfway, and keeps the migration under its own second lock", () => {
+    expect(deploy.concurrency["cancel-in-progress"]).toBe(false);
     expect(deploy.jobs.migrate.concurrency).toEqual({ group: "production-database-migration", "cancel-in-progress": false });
   });
 
@@ -115,24 +115,36 @@ describe("production pipeline (deploy.yml)", () => {
 });
 
 /**
- * Evaluates the real `if:` conditions of deploy.yml with GitHub's semantics (a job without always() also needs all of its
- * `needs` to have succeeded; a skipped job counts as not succeeded), so the stage logic is tested rather than assumed.
+ * Evaluates the real `if:` conditions of deploy.yml with GitHub's semantics: a job whose condition has no status function
+ * (always/cancelled/failure/success) also needs every `needs` job to have succeeded; one that uses always() or
+ * !cancelled() decides for itself. A job that did not run has the result "skipped".
+ *
+ * Cancellation: once the run is cancelled GitHub starts no new job except those whose condition says always(), so
+ * `cancelAfter` names the last job that completed before the cancel; every later job is evaluated with cancelled() = true,
+ * and one that has no status function is cancelled by the runner (modelled as not running).
  */
-function simulate(scenario: { event: "push" | "workflow_dispatch"; ref?: string; stage?: string; failing?: string[] }) {
+type Scenario = { event: "push" | "workflow_dispatch"; ref?: string; stage?: string; failing?: string[]; cancelledJobs?: string[]; cancelAfter?: string };
+const STATUS_FUNCTION = /\b(always|cancelled|failure|success)\(\)/;
+
+function simulate(scenario: Scenario, jobs: Record<string, Job> = deploy.jobs) {
   const results: Record<string, string> = {};
   const ran: string[] = [];
-  for (const [name, job] of Object.entries(deploy.jobs)) {
+  let cancelled = false;
+  for (const [name, job] of Object.entries(jobs)) {
     const expression = typeof job.if === "string" ? job.if : "true";
     const context = {
       github: { ref: scenario.ref ?? "refs/heads/main", event_name: scenario.event },
       inputs: { stage: scenario.event === "push" ? undefined : (scenario.stage ?? "check") },
       needs: Object.fromEntries(needs(job).map((n) => [n, { result: results[n] }])),
     };
-    const condition = new Function("github", "inputs", "needs", "always", `return Boolean(${expression.replace(/\s+/g, " ")});`);
+    const condition = new Function("github", "inputs", "needs", "always", "cancelled", `return Boolean(${expression.replace(/\s+/g, " ")});`);
+    const usesStatusFunction = STATUS_FUNCTION.test(expression);
     const needsOk = needs(job).every((n) => results[n] === "success");
-    const run = (/always\(\)/.test(expression) || needsOk) && condition(context.github, context.inputs, context.needs, () => true);
-    results[name] = !run ? "skipped" : scenario.failing?.includes(name) ? "failure" : "success";
+    let run = (usesStatusFunction || needsOk) && condition(context.github, context.inputs, context.needs, () => true, () => cancelled);
+    if (cancelled && !usesStatusFunction) run = false; // the runner cancels jobs that are still waiting
+    results[name] = !run ? "skipped" : scenario.cancelledJobs?.includes(name) ? "cancelled" : scenario.failing?.includes(name) ? "failure" : "success";
     if (run) ran.push(name);
+    if (scenario.cancelAfter === name) cancelled = true;
   }
   return { ran, results };
 }
@@ -190,6 +202,156 @@ describe("manual stages and the automatic pipeline behave as documented (simulat
       const { ran } = simulate({ event: "workflow_dispatch", stage });
       expect(ran.slice(0, 2)).toEqual(["ci", "preflight"]);
     }
+  });
+});
+
+describe("cancellation and upstream failure never start a later production operation", () => {
+  const writers = ["migrate", "verify", "deploy"];
+
+  it("no condition uses always(): a cancelled run must not keep starting jobs", () => {
+    expect(read(".github/workflows/deploy.yml").replace(/#.*$/gm, "")).not.toMatch(/\balways\(\)/);
+    for (const name of ["preflight", "verify"]) expect(String(deploy.jobs[name].if), name).toContain("!cancelled()");
+  });
+
+  it("every job that decides for itself is false once the run is cancelled, whatever its upstream results are", () => {
+    for (const [name, job] of Object.entries(deploy.jobs)) {
+      const expression = String(job.if ?? "true");
+      if (!STATUS_FUNCTION.test(expression)) continue;
+      const condition = new Function("github", "inputs", "needs", "always", "cancelled", `return Boolean(${expression.replace(/\s+/g, " ")});`);
+      for (const stage of ["check", "migrate", "deploy", "full", undefined]) {
+        const needsAllGreen = Object.fromEntries(needs(job).map((n) => [n, { result: "success" }]));
+        const event = stage ? "workflow_dispatch" : "push";
+        expect(condition({ ref: "refs/heads/main", event_name: event }, { stage }, needsAllGreen, () => true, () => true), `${name} / ${stage}`).toBe(false);
+      }
+    }
+  });
+
+  it.each([
+    ["push", undefined, ["ci", "preflight", "migrate", "verify"]],
+    ["workflow_dispatch", "full", ["ci", "preflight", "migrate", "verify"]],
+    ["workflow_dispatch", "deploy", ["ci", "preflight", "verify"]],
+    ["workflow_dispatch", "migrate", ["ci", "preflight", "migrate"]],
+    ["workflow_dispatch", "check", ["preflight", "check"]],
+  ] as const)("cancelling a %s %s run at any point stops everything after that point", (event, stage, order) => {
+    const full = simulate({ event, stage }).ran;
+    expect(full).toEqual(expect.arrayContaining([...order]));
+    for (const [index, last] of full.entries()) {
+      const { ran } = simulate({ event, stage, cancelAfter: last });
+      expect(ran, `cancelled after ${last}`).toEqual(full.slice(0, index + 1));
+      expect(ran.filter((job) => !full.slice(0, index + 1).includes(job))).toEqual([]);
+    }
+  });
+
+  it("the old always() condition WOULD have continued after a cancel (this test detects that regression)", () => {
+    const mutated = JSON.parse(JSON.stringify(deploy.jobs)) as Record<string, Job>;
+    for (const name of ["preflight", "verify"]) mutated[name].if = String(mutated[name].if).replace("!cancelled()", "always()");
+    // Cancelled after the preflight of a deploy-only run: with always(), verify still starts.
+    const { ran } = simulate({ event: "workflow_dispatch", stage: "deploy", cancelAfter: "preflight" }, mutated);
+    expect(ran).toContain("verify");
+    expect(simulate({ event: "workflow_dispatch", stage: "deploy", cancelAfter: "preflight" }).ran).not.toContain("verify");
+  });
+
+  it("a failed, skipped or cancelled upstream job blocks every later stage", () => {
+    const stages: [Scenario["event"], string | undefined][] = [["push", undefined], ["workflow_dispatch", "full"]];
+    const upstream: Record<string, string[]> = { ci: ["preflight", "migrate", "verify", "deploy"], preflight: ["migrate", "verify", "deploy"], migrate: ["verify", "deploy"], verify: ["deploy"] };
+    for (const [event, stage] of stages) {
+      for (const [job, blocked] of Object.entries(upstream)) {
+        for (const how of ["failing", "cancelledJobs"] as const) {
+          const { ran } = simulate({ event, stage, [how]: [job] });
+          expect(ran, `${job} ${how}`).not.toEqual(expect.arrayContaining([blocked[0]]));
+          for (const later of blocked) expect(ran, `${job} ${how} -> ${later}`).not.toContain(later);
+        }
+      }
+    }
+  });
+
+  it("deploy-only needs a verify that succeeded; a cancelled or failed verify never reaches the deployment", () => {
+    for (const how of ["failing", "cancelledJobs"] as const) {
+      expect(simulate({ event: "workflow_dispatch", stage: "deploy", [how]: ["verify"] }).ran).not.toContain("deploy");
+    }
+    expect(writers.every((w) => deploy.jobs[w] !== undefined)).toBe(true);
+  });
+});
+
+describe("concurrency", () => {
+  const groupOf = (event: "push" | "workflow_dispatch", stage?: string) => {
+    const expression = deploy.concurrency.group.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+    return new Function("github", "inputs", `return ${expression};`)({ event_name: event }, { stage }) as string;
+  };
+
+  it("a push and every manual writing stage share one group, so migrations and deployments are serialised", () => {
+    const group = groupOf("push");
+    expect(group).toBe("production-deploy");
+    for (const stage of ["migrate", "deploy", "full"]) expect(groupOf("workflow_dispatch", stage), stage).toBe(group);
+  });
+
+  it("the manual read-only check has its own group: it cannot cancel or replace a waiting production run, nor wait behind one", () => {
+    expect(groupOf("workflow_dispatch", "check")).toBe("production-check");
+    expect(groupOf("workflow_dispatch", "check")).not.toBe(groupOf("push"));
+  });
+
+  it("a dispatch that names no stage gets the declared default, check, so it can never be a writing run", () => {
+    const stage = (deploy.on.workflow_dispatch as { inputs: { stage: { default: string } } }).inputs.stage;
+    expect(stage.default).toBe("check");
+  });
+
+  it("the check stage never runs a job that writes, so isolating it cannot create a migration/deploy race", () => {
+    const { ran } = simulate({ event: "workflow_dispatch", stage: "check" });
+    expect(ran).toEqual(["preflight", "check"]);
+    for (const writer of ["migrate", "verify", "deploy"]) expect(ran).not.toContain(writer);
+  });
+
+  it("the called CI workflow's own group never equals a caller group (a shared name deadlocks reusable workflows)", () => {
+    const ciText = read(".github/workflows/ci.yml");
+    const group = /group:\s*(ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\})/.exec(ciText)?.[1];
+    expect(group).toBeTruthy();
+    // Inside a called workflow, github.workflow is the CALLER's name.
+    const resolved = group!.replace("${{ github.workflow }}", "Deploy production").replace("${{ github.ref }}", "refs/heads/main");
+    expect(["production-deploy", "production-check", "production-database-migration"]).not.toContain(resolved);
+  });
+});
+
+describe("the deployment uses exactly the tested commit and a validated URL", () => {
+  const stepsOf = (job: string) => deploy.jobs[job].steps ?? [];
+  const indexOf = (job: string, needle: string) => stepsOf(job).findIndex((s) => (s.run ?? "").includes(needle));
+
+  it("asserts the checked-out commit equals GITHUB_SHA before any migration command and before the deployment CLI", () => {
+    for (const job of ["migrate", "verify", "deploy"]) {
+      const assertAt = indexOf(job, "scripts/ci/assert-checked-out-commit.mjs");
+      expect(assertAt, job).toBeGreaterThan(-1);
+      const checkoutAt = stepsOf(job).findIndex((s) => s.uses === "actions/checkout@v4");
+      expect(checkoutAt, job).toBeLessThan(assertAt);
+      const firstUse = stepsOf(job).findIndex((s) => /db:migrate|vercel@|npm ci/.test(s.run ?? ""));
+      expect(assertAt, `${job}: assertion before the first command that uses the files`).toBeLessThan(firstUse);
+    }
+    const deployAssert = indexOf("deploy", "assert-checked-out-commit");
+    const deployCli = indexOf("deploy", "deploy --prod");
+    expect(deployAssert).toBeLessThan(deployCli);
+    expect(deployCli - deployAssert, "nothing else runs between the assertion and the CLI").toBe(1);
+  });
+
+  it("the assertion step has no secrets and the script reads GITHUB_SHA, which GitHub sets for the run", () => {
+    for (const job of ["migrate", "verify", "deploy"]) {
+      const step = stepsOf(job).find((s) => (s.run ?? "").includes("assert-checked-out-commit"));
+      expect(step?.env).toBeUndefined();
+    }
+    expect(read("scripts/ci/assert-checked-out-commit.mjs")).toContain("process.env.GITHUB_SHA");
+  });
+
+  it("the deployment URL is parsed and validated by the script before it is written to $GITHUB_OUTPUT", () => {
+    const step = stepsOf("deploy").find((s) => (s.run ?? "").includes("deploy --prod"));
+    const run = step?.run ?? "";
+    expect(run).toContain("node scripts/ci/parse-deploy-url.mjs");
+    expect(run.indexOf("parse-deploy-url")).toBeLessThan(run.indexOf("GITHUB_OUTPUT"));
+    expect(run).not.toMatch(/url="\$\(npx/); // the raw CLI output is not what lands in GITHUB_OUTPUT
+    expect(run).not.toMatch(/\$\{\{/);
+  });
+
+  it("the Vercel check receives the repository identity and the recorded manual confirmation", () => {
+    const step = stepsOf("preflight").find((s) => (s.run ?? "").includes("check-vercel-project"));
+    expect(step?.env?.CEFRO_GITHUB_REPOSITORY).toBe("${{ github.repository }}");
+    expect(step?.env?.CEFRO_GITHUB_REPOSITORY_ID).toBe("${{ github.repository_id }}");
+    expect(step?.env?.CEFRO_VERCEL_PROJECT_REPO).toBe("${{ vars.CEFRO_VERCEL_PROJECT_REPO }}");
   });
 });
 

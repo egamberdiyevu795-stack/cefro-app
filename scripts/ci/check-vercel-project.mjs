@@ -13,6 +13,13 @@
 //     default branch, so that is accepted ONLY if GitHub reports it to be `main` (GITHUB_DEFAULT_BRANCH). Otherwise
 //     the production branch is unknown and nothing is migrated or deployed.
 //  3. No Deploy Hook exists: a hook builds a branch on request, outside the pipeline.
+//  4. The Vercel project is the one for THIS repository. The project and organisation ids come from secrets, so a wrong
+//     value would otherwise deploy this code into someone else's project (or migrate-and-deploy against the wrong app).
+//     The project's `link` object is compared with the GitHub repository when it carries the repository (`repoId`, or
+//     `org` + `repo`); a mismatch is refused. The API response was NOT available while this was written, so absence is not
+//     treated as success: if the link does not name the repository, the pipeline stops unless the repository variable
+//     CEFRO_VERCEL_PROJECT_REPO equals "<owner>/<repo>", which records that a person confirmed in Vercel (Project >
+//     Settings > Git) that the project is connected to this repository.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,10 +27,10 @@ const KEYS = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"];
 const targetsOf = (env) => (Array.isArray(env.target) ? env.target : env.target ? [env.target] : []);
 
 /**
- * @param {{ project?: any, envs: any[], productionBranch?: string, githubDefaultBranch?: string, allowPreviewTurso?: boolean }} input
+ * @param {{ project?: any, envs: any[], productionBranch?: string, githubDefaultBranch?: string, allowPreviewTurso?: boolean, githubRepository?: string, githubRepositoryId?: string, acknowledgedRepository?: string }} input
  * @returns {{ problems: string[], warnings: string[] }}
  */
-export function evaluateVercelProject({ project, envs, productionBranch = "main", githubDefaultBranch, allowPreviewTurso = false }) {
+export function evaluateVercelProject({ project, envs, productionBranch = "main", githubDefaultBranch, allowPreviewTurso = false, githubRepository, githubRepositoryId, acknowledgedRepository }) {
   const problems = [];
   const warnings = [];
   for (const key of KEYS) {
@@ -57,6 +64,33 @@ export function evaluateVercelProject({ project, envs, productionBranch = "main"
   if (Array.isArray(hooks) && hooks.length > 0) {
     problems.push(`The Vercel project has ${hooks.length} Deploy Hook(s). A hook builds a branch on request, outside this pipeline; delete them (Settings > Git > Deploy Hooks).`);
   }
+
+  // 4. Is this Vercel project connected to this repository?
+  const link = project?.link;
+  if (link?.type && link.type !== "github") {
+    problems.push(`The Vercel project is connected to ${String(link.type).slice(0, 20)}, not GitHub. Refusing to deploy into it.`);
+  }
+  const apiRepoId = link?.repoId != null ? String(link.repoId) : undefined;
+  const apiRepo = typeof link?.org === "string" && typeof link?.repo === "string" ? `${link.org}/${link.repo}`.toLowerCase() : undefined;
+  const mismatches = [];
+  let confirmed = false;
+  if (apiRepoId && githubRepositoryId) {
+    if (apiRepoId === String(githubRepositoryId)) confirmed = true;
+    else mismatches.push("The Vercel project is connected to a different GitHub repository than this one (repository id mismatch). The project id / organisation id secrets may point at the wrong project.");
+  }
+  if (apiRepo && githubRepository) {
+    if (apiRepo === githubRepository.toLowerCase()) confirmed = true;
+    else mismatches.push(`The Vercel project is connected to "${apiRepo}", not "${githubRepository.toLowerCase()}". The project id / organisation id secrets may point at the wrong project.`);
+  }
+  if (mismatches.length > 0) {
+    problems.push(...mismatches); // any contradiction wins over a match
+  } else if (!confirmed) {
+    if (githubRepository && acknowledgedRepository && acknowledgedRepository.toLowerCase() === githubRepository.toLowerCase()) {
+      warnings.push(`The Vercel API did not show which repository the project is connected to; relying on the recorded manual confirmation (CEFRO_VERCEL_PROJECT_REPO=${githubRepository}).`);
+    } else {
+      problems.push(`The Vercel API did not show which repository the project is connected to, so it cannot be verified that this is the right project. Confirm in Vercel (Project > Settings > Git) that it is connected to "${githubRepository ?? "this repository"}", then set the GitHub repository variable CEFRO_VERCEL_PROJECT_REPO to that value.`);
+    }
+  }
   return { problems, warnings };
 }
 
@@ -81,6 +115,9 @@ async function main() {
       project,
       envs: list.envs ?? [],
       githubDefaultBranch: process.env.GITHUB_DEFAULT_BRANCH,
+      githubRepository: process.env.CEFRO_GITHUB_REPOSITORY,
+      githubRepositoryId: process.env.CEFRO_GITHUB_REPOSITORY_ID,
+      acknowledgedRepository: process.env.CEFRO_VERCEL_PROJECT_REPO,
       allowPreviewTurso: process.env.CEFRO_ALLOW_PREVIEW_TURSO === "true",
     });
     for (const w of warnings) console.warn(`::warning::check-vercel-project: ${w}`);
@@ -88,7 +125,7 @@ async function main() {
       for (const p of problems) console.error(`::error::check-vercel-project: ${p}`);
       process.exit(1);
     }
-    console.log("check-vercel-project: OK (database credentials are Production-only; production branch is main; no deploy hooks).");
+    console.log("check-vercel-project: OK (database credentials are Production-only; production branch is main; no deploy hooks; project is linked to this repository).");
   } catch (error) {
     // Messages above never contain the token; nothing else from the request is printed.
     console.error(`::error::check-vercel-project: ${error instanceof Error ? error.message : "request failed"}`);

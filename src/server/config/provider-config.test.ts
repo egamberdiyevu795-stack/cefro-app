@@ -173,6 +173,7 @@ describe("validateDatabaseConfig", () => {
     expect(vars({ ...TURSO, VERCEL_ENV: "preview" })).toContain("TURSO_DATABASE_URL");
     expect(validateDatabaseConfig(env({ ...TURSO, VERCEL_ENV: "preview" })).map((p) => p.message).join(" ")).toMatch(/Preview/);
     expect(vars({ ...TURSO, VERCEL_ENV: "preview", CEFRO_ALLOW_PREVIEW_TURSO: "true" })).toEqual([]);
+    expect(vars({ ...TURSO, VERCEL_ENV: "development" })).toContain("TURSO_DATABASE_URL"); // vercel dev / vercel env pull
     expect(vars({ ...TURSO, VERCEL_ENV: "production" })).toEqual([]);
   });
 

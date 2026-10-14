@@ -123,7 +123,7 @@ describe("production pipeline (deploy.yml)", () => {
  * `cancelAfter` names the last job that completed before the cancel; every later job is evaluated with cancelled() = true,
  * and one that has no status function is cancelled by the runner (modelled as not running).
  */
-type Scenario = { event: "push" | "workflow_dispatch"; ref?: string; stage?: string; failing?: string[]; cancelledJobs?: string[]; cancelAfter?: string };
+type Scenario = { event: "push" | "workflow_dispatch"; ref?: string; stage?: string; failing?: string[]; cancelledJobs?: string[]; cancelAfter?: string; armed?: string | false };
 const STATUS_FUNCTION = /\b(always|cancelled|failure|success)\(\)/;
 
 function simulate(scenario: Scenario, jobs: Record<string, Job> = deploy.jobs) {
@@ -135,12 +135,14 @@ function simulate(scenario: Scenario, jobs: Record<string, Job> = deploy.jobs) {
     const context = {
       github: { ref: scenario.ref ?? "refs/heads/main", event_name: scenario.event },
       inputs: { stage: scenario.event === "push" ? undefined : (scenario.stage ?? "check") },
+      // The repository variable that arms push-triggered runs; armed by default so the pipeline tests below exercise it.
+      vars: { CEFRO_AUTO_DEPLOY: scenario.armed === false ? undefined : (scenario.armed ?? "true") },
       needs: Object.fromEntries(needs(job).map((n) => [n, { result: results[n] }])),
     };
-    const condition = new Function("github", "inputs", "needs", "always", "cancelled", `return Boolean(${expression.replace(/\s+/g, " ")});`);
+    const condition = new Function("github", "inputs", "needs", "always", "cancelled", "vars", `return Boolean(${expression.replace(/\s+/g, " ")});`);
     const usesStatusFunction = STATUS_FUNCTION.test(expression);
     const needsOk = needs(job).every((n) => results[n] === "success");
-    let run = (usesStatusFunction || needsOk) && condition(context.github, context.inputs, context.needs, () => true, () => cancelled);
+    let run = (usesStatusFunction || needsOk) && condition(context.github, context.inputs, context.needs, () => true, () => cancelled, context.vars);
     if (cancelled && !usesStatusFunction) run = false; // the runner cancels jobs that are still waiting
     results[name] = !run ? "skipped" : scenario.cancelledJobs?.includes(name) ? "cancelled" : scenario.failing?.includes(name) ? "failure" : "success";
     if (run) ran.push(name);
@@ -148,6 +150,35 @@ function simulate(scenario: Scenario, jobs: Record<string, Job> = deploy.jobs) {
   }
   return { ran, results };
 }
+
+describe("the automatic pipeline must be armed; the first rollout is manual", () => {
+  it("an unarmed push to main runs no job at all, so the first push cannot migrate or deploy anything", () => {
+    for (const armed of [false, "", "false", "TRUE", "1", "yes"] as const) {
+      expect(simulate({ event: "push", armed }).ran, String(armed)).toEqual([]);
+    }
+  });
+
+  it("only the exact value true arms it, and then a push runs the whole pipeline", () => {
+    expect(simulate({ event: "push", armed: "true" }).ran).toEqual(["ci", "preflight", "migrate", "verify", "deploy"]);
+  });
+
+  it("setting the variable back to anything else stops automatic deployments again (emergency stop)", () => {
+    expect(simulate({ event: "push", armed: "false" }).ran).toEqual([]);
+  });
+
+  it("manual stages are not gated by the variable: they work unarmed, in the required order, each isolated", () => {
+    expect(simulate({ event: "workflow_dispatch", stage: "check", armed: false }).ran).toEqual(["preflight", "check"]);
+    expect(simulate({ event: "workflow_dispatch", stage: "migrate", armed: false }).ran).toEqual(["ci", "preflight", "migrate"]);
+    expect(simulate({ event: "workflow_dispatch", stage: "deploy", armed: false }).ran).toEqual(["ci", "preflight", "verify", "deploy"]);
+    expect(simulate({ event: "workflow_dispatch", stage: "full", armed: false }).ran).toEqual(["ci", "preflight", "migrate", "verify", "deploy"]);
+  });
+
+  it("the variable is a repository variable (not a secret) read only by the ci job's condition", () => {
+    const text = read(".github/workflows/deploy.yml").replace(/#.*$/gm, "");
+    expect(text.match(/vars\.CEFRO_AUTO_DEPLOY/g)).toHaveLength(1);
+    expect(String(deploy.jobs.ci.if)).toContain("vars.CEFRO_AUTO_DEPLOY == 'true'");
+  });
+});
 
 describe("manual stages and the automatic pipeline behave as documented (simulated from the real conditions)", () => {
   it("a push to main runs everything except the manual-only check, in order", () => {
@@ -217,11 +248,11 @@ describe("cancellation and upstream failure never start a later production opera
     for (const [name, job] of Object.entries(deploy.jobs)) {
       const expression = String(job.if ?? "true");
       if (!STATUS_FUNCTION.test(expression)) continue;
-      const condition = new Function("github", "inputs", "needs", "always", "cancelled", `return Boolean(${expression.replace(/\s+/g, " ")});`);
+      const condition = new Function("github", "inputs", "needs", "always", "cancelled", "vars", `return Boolean(${expression.replace(/\s+/g, " ")});`);
       for (const stage of ["check", "migrate", "deploy", "full", undefined]) {
         const needsAllGreen = Object.fromEntries(needs(job).map((n) => [n, { result: "success" }]));
         const event = stage ? "workflow_dispatch" : "push";
-        expect(condition({ ref: "refs/heads/main", event_name: event }, { stage }, needsAllGreen, () => true, () => true), `${name} / ${stage}`).toBe(false);
+        expect(condition({ ref: "refs/heads/main", event_name: event }, { stage }, needsAllGreen, () => true, () => true, { CEFRO_AUTO_DEPLOY: "true" }), `${name} / ${stage}`).toBe(false);
       }
     }
   });

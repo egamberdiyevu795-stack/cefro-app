@@ -108,7 +108,8 @@ The app is ready for serverless hosting (Vercel) once two variables are provided
   **and the recordings** (table `recording_blobs`, behind the `AudioStorage` interface) live there, so every function
   instance sees the same data. They are server-only variables.
 - Deployment is automatic: a push to `main` runs `.github/workflows/deploy.yml` (checks → migrate the hosted database →
-  verify → `vercel deploy --prod` → health check at `/api/health`). The Vercel build itself (`next build`) never connects to the database, and Preview
+  verify → `vercel deploy --prod` → health check at `/api/health`) once the repository variable `CEFRO_AUTO_DEPLOY=true`
+  arms it after the first, manual, rollout. The Vercel build itself (`next build`) never connects to the database, and Preview
   deployments never migrate anything. One-time setup and the safety rules: `docs/DEPLOY_VERCEL.md`.
 - Without those variables (local development, tests, a host with a persistent disk) the app uses a SQLite file and
   local audio, as before.

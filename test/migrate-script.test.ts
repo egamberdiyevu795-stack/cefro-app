@@ -1,8 +1,11 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { startHranaEmulator, type Emulator } from "./hrana-emulator";
+
+// These tests start real child processes (node, git); give them room when the whole suite is running in parallel.
+vi.setConfig({ testTimeout: 30_000 });
 
 const ROOT = process.cwd();
 const TOKEN = "emu-secret-token-0123456789abcdef";

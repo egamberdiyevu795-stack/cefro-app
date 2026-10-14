@@ -2,8 +2,11 @@ import { execFile } from "node:child_process";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { evaluateVercelProject } from "../../scripts/ci/check-vercel-project.mjs";
+
+// These tests start real child processes (node, git); give them room when the whole suite is running in parallel.
+vi.setConfig({ testTimeout: 30_000 });
 
 const REPO = { githubRepository: "Owner/Cefro-App", githubRepositoryId: "123456" };
 const ok = {

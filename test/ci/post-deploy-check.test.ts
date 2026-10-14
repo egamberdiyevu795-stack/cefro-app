@@ -5,6 +5,9 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isHealthyBody, waitForHealthy } from "../../scripts/ci/post-deploy-check.mjs";
 
+// These tests start real child processes (node, git); give them room when the whole suite is running in parallel.
+vi.setConfig({ testTimeout: 30_000 });
+
 const TOKEN = "vercel-token-secret-0123456789";
 const DEPLOYMENT = "https://cefro-abc123-team.vercel.app";
 const ALIAS = "cefro.example.test";

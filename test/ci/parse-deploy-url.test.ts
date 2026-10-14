@@ -1,7 +1,10 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { extractDeploymentUrl } from "../../scripts/ci/parse-deploy-url.mjs";
+
+// These tests start real child processes (node, git); give them room when the whole suite is running in parallel.
+vi.setConfig({ testTimeout: 30_000 });
 
 const URL1 = "https://cefro-abc123xyz-team.vercel.app";
 

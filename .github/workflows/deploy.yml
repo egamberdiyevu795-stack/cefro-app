@@ -7,7 +7,8 @@
 #   verify    READ-ONLY: every shipped migration is applied to the database about to be served
 #   deploy    `vercel deploy --prod` of exactly this commit, then a health check of the production domain
 #
-# A push to main runs everything, in order. A manual run picks ONE stage (default `check`, which never writes):
+# A push to main runs everything, in order, once the pipeline is armed (repository variable CEFRO_AUTO_DEPLOY=true; until
+# then a push runs nothing). A manual run picks ONE stage (default `check`, which never writes):
 #   check   no CI needed (it cannot change anything); preflight, then the read-only database check
 #   migrate CI + preflight, then migrate. Never deploys.
 #   deploy  CI + preflight, then verify (fails unless the database is already fully migrated), then deploy. Never migrates.
@@ -52,8 +53,15 @@ concurrency:
 jobs:
   ci:
     name: Validate
-    # The read-only `check` stage changes nothing, so it does not wait for CI. Every other stage does.
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.stage != 'check')
+    # A push starts the pipeline only once it has been ARMED (repository variable CEFRO_AUTO_DEPLOY = true), which is done after
+    # the first rollout has been completed by hand, stage by stage (check -> migrate -> deploy). Until then, and whenever the
+    # variable is anything else, a push to main runs nothing: this is also the emergency stop for automatic deployments.
+    # Manual runs are never gated by the variable. The read-only `check` stage changes nothing, so it does not wait for CI;
+    # every other stage does.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'push' && vars.CEFRO_AUTO_DEPLOY == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.stage != 'check'))
     uses: ./.github/workflows/ci.yml
 
   preflight:

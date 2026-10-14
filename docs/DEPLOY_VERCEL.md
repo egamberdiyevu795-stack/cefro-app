@@ -9,7 +9,7 @@ deployed app uses Turso automatically; nothing else in the code needs to change.
 
 ## Automatic deployment (GitHub Actions)
 
-Nothing is deployed or migrated by hand. A push to `main` runs `.github/workflows/deploy.yml`:
+Once it is armed (below), nothing is deployed or migrated by hand. A push to `main` runs `.github/workflows/deploy.yml`:
 
 ```
 push to main
@@ -23,6 +23,14 @@ push to main
 Every stage needs the one before it. A failed check, a failed migration, a stale run or a bad Vercel setting stops
 everything after it, so nothing is migrated before the checks pass and nothing is deployed before the migration is
 verified.
+
+### Arming the automatic pipeline
+
+A push to `main` does **nothing** until the GitHub repository variable `CEFRO_AUTO_DEPLOY` is exactly `true`
+(*Settings → Secrets and variables → Actions → Variables*). That is deliberate: the first rollout is done by hand, stage by
+stage (`check`, `migrate`, `deploy`), so the first real migration and deployment are watched. Set the variable only after
+that has succeeded. Setting it to anything else (or deleting it) switches automatic deployments off again at any time; manual
+runs are never affected by it. An unarmed push shows a run with every job skipped.
 
 ### Manual stages (first rollout, retries)
 
@@ -155,17 +163,20 @@ the API shows: if you set the variable without looking, nothing can catch it.
 
 Do this once. Each step stops at the first problem and nothing after it has happened.
 
-1. **Create `main` only** (push the commits to `refs/heads/main`; do not push the old working branch, which might be
-   Vercel's production branch). The pipeline runs Validate, then stops at the Preflight because the secrets and settings do
-   not exist yet. Nothing is migrated or deployed.
-2. Do the one-time setup above.
-3. **Run the workflow, stage `check`.** It verifies the connection, the token, and that the database is empty or already
-   CEFRO's. Expected: `connected (read-only). 0 of 5 migrations applied, 5 pending`. It writes nothing.
-4. **Run stage `migrate`.** Expected: `db:migrate: OK. 5 migrations applied, foreign key check clean`. This is the first
+1. **Get the commits onto `main` while the pipeline is unarmed.** The push runs nothing (no CI, no migration, no deployment),
+   and `vercel.json` stops Vercel from deploying `main` by itself. Do not push any other branch.
+2. Do the one-time setup above (it can also be done before step 1).
+3. **Run the workflow, stage `check`.** It verifies the preflight (secrets, Vercel project, production branch, credential
+   scope), the connection, the token, and that the database is empty or already CEFRO's. Expected:
+   `connected (read-only). 0 of 5 migrations applied, 5 pending`. It writes nothing.
+4. **Back up if the database holds data.** The check stage refuses a database that has tables but no CEFRO migration history,
+   so a database it accepts is either empty or already CEFRO's; for a CEFRO database with data, take a Turso backup first.
+5. **Run stage `migrate`.** Expected: `db:migrate: OK. 5 migrations applied, foreign key check clean`. This is the first
    write to the database and is a single transaction.
-5. **Run stage `deploy`.** It first confirms the database is fully migrated, deploys, and checks `/api/health`.
-6. Open the production URL and run through "How to validate" below.
-7. From here on, every push to `main` runs the whole pipeline.
+6. **Run stage `deploy`.** It first confirms the database is fully migrated, deploys exactly the run's commit, and checks
+   `/api/health` on the production domain.
+7. Open the production URL and run through "How to validate" below.
+8. **Arm the pipeline:** set `CEFRO_AUTO_DEPLOY` to `true`. From here on, every push to `main` runs the whole pipeline.
 
 ### When a deployment fails
 

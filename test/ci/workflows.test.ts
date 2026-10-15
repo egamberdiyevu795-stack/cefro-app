@@ -29,7 +29,7 @@ describe("production pipeline (deploy.yml)", () => {
     expect(needs(deploy.jobs.migrate)).toEqual(["preflight"]);
     expect(needs(deploy.jobs.verify)).toEqual(["preflight", "migrate"]);
     expect(needs(deploy.jobs.deploy)).toEqual(["verify"]);
-    expect(deploy.jobs.deploy.if).toBe("github.ref == 'refs/heads/main'"); // nothing but a successful verify lets it run
+    expect(String(deploy.jobs.deploy.if)).toContain("needs.verify.result == 'success'"); // nothing but a successful verify lets it run
   });
 
   it("never cancels a run halfway, and keeps the migration under its own second lock", () => {
@@ -126,6 +126,16 @@ describe("production pipeline (deploy.yml)", () => {
 type Scenario = { event: "push" | "workflow_dispatch"; ref?: string; stage?: string; failing?: string[]; cancelledJobs?: string[]; cancelAfter?: string; armed?: string | false };
 const STATUS_FUNCTION = /\b(always|cancelled|failure|success)\(\)/;
 
+function ancestorsOf(name: string, jobs: Record<string, Job>, seen = new Set<string>()): string[] {
+  for (const parent of needs(jobs[name])) {
+    if (!seen.has(parent)) {
+      seen.add(parent);
+      ancestorsOf(parent, jobs, seen);
+    }
+  }
+  return [...seen];
+}
+
 function simulate(scenario: Scenario, jobs: Record<string, Job> = deploy.jobs) {
   const results: Record<string, string> = {};
   const ran: string[] = [];
@@ -141,7 +151,9 @@ function simulate(scenario: Scenario, jobs: Record<string, Job> = deploy.jobs) {
     };
     const condition = new Function("github", "inputs", "needs", "always", "cancelled", "vars", `return Boolean(${expression.replace(/\s+/g, " ")});`);
     const usesStatusFunction = STATUS_FUNCTION.test(expression);
-    const needsOk = needs(job).every((n) => results[n] === "success");
+    // GitHub's implicit success() looks at every ANCESTOR job, not only the direct `needs`: a skipped ancestor skips a job that
+    // has no status function (observed on the real service: the manual `check` stage skipped a job whose only direct need had succeeded).
+    const needsOk = ancestorsOf(name, jobs).every((n) => results[n] === "success");
     let run = (usesStatusFunction || needsOk) && condition(context.github, context.inputs, context.needs, () => true, () => cancelled, context.vars);
     if (cancelled && !usesStatusFunction) run = false; // the runner cancels jobs that are still waiting
     results[name] = !run ? "skipped" : scenario.cancelledJobs?.includes(name) ? "cancelled" : scenario.failing?.includes(name) ? "failure" : "success";
@@ -241,7 +253,9 @@ describe("cancellation and upstream failure never start a later production opera
 
   it("no condition uses always(): a cancelled run must not keep starting jobs", () => {
     expect(read(".github/workflows/deploy.yml").replace(/#.*$/gm, "")).not.toMatch(/\balways\(\)/);
-    for (const name of ["preflight", "verify"]) expect(String(deploy.jobs[name].if), name).toContain("!cancelled()");
+    // These jobs have an ancestor that is skipped in some stage (ci in `check`, migrate in `deploy`), so GitHub's implicit
+    // success() would skip them; they must decide for themselves, with explicit result tests (checked by the scenario tests).
+    for (const name of ["preflight", "check", "verify", "deploy"]) expect(String(deploy.jobs[name].if), name).toContain("!cancelled()");
   });
 
   it("every job that decides for itself is false once the run is cancelled, whatever its upstream results are", () => {

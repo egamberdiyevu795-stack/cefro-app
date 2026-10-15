@@ -123,7 +123,10 @@ jobs:
   check:
     name: Check production database (read-only)
     needs: preflight
-    if: github.ref == 'refs/heads/main' && needs.preflight.result == 'success' && inputs.stage == 'check'
+    # !cancelled(): without a status function GitHub also requires every ANCESTOR job (here `ci`, which is skipped in this
+    # stage) to have succeeded, and would skip this job. The explicit result test below is what actually gates it.
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && needs.preflight.result == 'success' && inputs.stage == 'check'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
@@ -199,7 +202,10 @@ jobs:
   deploy:
     name: Deploy to Vercel (production)
     needs: verify
-    if: github.ref == 'refs/heads/main'
+    # !cancelled(): the manual `deploy` stage skips `migrate`, which is an ancestor of this job, and GitHub would otherwise
+    # skip this job too. Only a verify that succeeded lets a deployment start.
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && needs.verify.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production

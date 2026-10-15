@@ -3,7 +3,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { evaluateVercelProject } from "../../scripts/ci/check-vercel-project.mjs";
+import { describeVercelProject, evaluateVercelProject } from "../../scripts/ci/check-vercel-project.mjs";
 
 // These tests start real child processes (node, git); give them room when the whole suite is running in parallel.
 vi.setConfig({ testTimeout: 30_000 });
@@ -142,6 +142,30 @@ describe("evaluateVercelProject", () => {
 
 });
 
+describe("describeVercelProject (what the log shows so a person can find the project that was inspected)", () => {
+  it("shows the project name, the reported production branch, and each database variable's environments", () => {
+    const lines = describeVercelProject({
+      project: { name: "cefro-app", link: { productionBranch: "claude/zen-darwin-5vgl0z" } },
+      envs: [{ key: "TURSO_DATABASE_URL", target: ["production", "preview"], value: "libsql://SECRET-HOST.turso.io" }, { key: "GEMINI_API_KEY", target: ["production"], value: "SECRET-KEY" }],
+    }).join("\n");
+    expect(lines).toContain('"cefro-app"');
+    expect(lines).toContain('"claude/zen-darwin-5vgl0z"');
+    expect(lines).toContain("TURSO_DATABASE_URL: [production, preview]");
+    expect(lines).toContain("TURSO_AUTH_TOKEN: not found in this project");
+  });
+
+  it("never includes values, ids or unrelated variables", () => {
+    const lines = describeVercelProject({
+      project: { id: "prj_SECRETID", name: "cefro-app", accountId: "team_SECRET", link: {} },
+      envs: [{ key: "TURSO_AUTH_TOKEN", target: "production", value: "SECRET-TOKEN-VALUE", id: "env_SECRET" }, { key: "GEMINI_API_KEY", target: ["production"], value: "SECRET-KEY" }],
+    }).join("\n");
+    expect(lines).toContain("TURSO_AUTH_TOKEN: [production]");
+    expect(lines).not.toMatch(/SECRET/);
+    expect(lines).not.toContain("GEMINI");
+    expect(lines).toContain("(none reported)");
+  });
+});
+
 /** The real script, against a local stand-in for the Vercel API. */
 describe("scripts/ci/check-vercel-project.mjs", () => {
   const TOKEN = "vercel-token-secret-0123456789";
@@ -173,6 +197,12 @@ describe("scripts/ci/check-vercel-project.mjs", () => {
   }
 
   const good = (url: string) => ({ status: 200, body: url.includes("/env") ? { envs: ok.envs } : ok.project });
+
+  it("the script prints it on every run, success or failure, without the token", async () => {
+    const bad = await run(() => ({ status: 200, body: {} }));
+    expect(bad.out).toMatch(/Vercel project looked at/);
+    expect(bad.out).not.toContain(TOKEN);
+  });
 
   it("passes for a safe project, authenticating with the bearer token and addressing the team", async () => {
     const result = await run(good);

@@ -27,6 +27,23 @@ const KEYS = ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"];
 const targetsOf = (env) => (Array.isArray(env.target) ? env.target : env.target ? [env.target] : []);
 
 /**
+ * Non-secret facts that let a person see WHICH Vercel project the pipeline looked at and what it found there: the
+ * project's name, its reported production branch, and for each database variable only its name and the environments it
+ * is assigned to. Never values, ids or tokens.
+ * @param {{ project?: any, envs: any[] }} input
+ * @returns {string[]}
+ */
+export function describeVercelProject({ project, envs }) {
+  const lines = [`Vercel project looked at: "${String(project?.name ?? "(name not returned)").slice(0, 80)}"`];
+  lines.push(`Production branch reported by Vercel: ${project?.link?.productionBranch ? `"${String(project.link.productionBranch).slice(0, 80)}"` : "(none reported)"}`);
+  for (const key of KEYS) {
+    const entries = envs.filter((e) => e.key === key);
+    lines.push(entries.length === 0 ? `${key}: not found in this project` : `${key}: ${entries.map((e) => `[${targetsOf(e).join(", ") || "no environment"}]`).join(" ")}`);
+  }
+  return lines;
+}
+
+/**
  * @param {{ project?: any, envs: any[], productionBranch?: string, githubDefaultBranch?: string, allowPreviewTurso?: boolean, githubRepository?: string, githubRepositoryId?: string, acknowledgedRepository?: string }} input
  * @returns {{ problems: string[], warnings: string[] }}
  */
@@ -120,6 +137,7 @@ async function main() {
       acknowledgedRepository: process.env.CEFRO_VERCEL_PROJECT_REPO,
       allowPreviewTurso: process.env.CEFRO_ALLOW_PREVIEW_TURSO === "true",
     });
+    for (const line of describeVercelProject({ project, envs: list.envs ?? [] })) console.log(`check-vercel-project: ${line}`);
     for (const w of warnings) console.warn(`::warning::check-vercel-project: ${w}`);
     if (problems.length > 0) {
       for (const p of problems) console.error(`::error::check-vercel-project: ${p}`);

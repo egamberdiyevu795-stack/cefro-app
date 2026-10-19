@@ -1,0 +1,31 @@
+# Browser-like smoke test of a deployed CEFRO (manual). It needs NO credentials: it only does what any visitor does, over
+# https, against a *.vercel.app address (scripts/ci/production-smoke.mjs refuses anything else). It writes what a visitor
+# writes (an anonymous user, a practice session, one failed attempt with a tiny recording) and prints statuses only,
+# never cookie values. Use it to tell "the server loses the attempt" from "the browser's identity changed".
+name: Production smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Address to test (https://<name>.vercel.app)."
+        type: string
+        default: "https://cefro-app-mgm6.vercel.app"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Visitor flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the visitor flow
+        env:
+          SMOKE_URL: ${{ inputs.url }}
+        run: node scripts/ci/production-smoke.mjs "$SMOKE_URL"

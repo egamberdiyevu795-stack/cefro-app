@@ -204,6 +204,46 @@ describe("npm run db:migrate (scripts/migrate.mjs)", () => {
     });
   });
 
+  describe("--check also reports what the database holds, without identifying anything", () => {
+    it("prints row counts, attempts by status and the newest attempts, still read-only", async () => {
+      emulator = await startHranaEmulator({ token: TOKEN });
+      const env = { TURSO_DATABASE_URL: emulator.url, TURSO_AUTH_TOKEN: TOKEN };
+      expect((await runMigrate(env, "--require-remote")).code).toBe(0); // migrate an empty database first
+      const empty = await runMigrate(env, "--check", "--require-remote");
+      expect(empty.out).toMatch(/rows: users=0, speaking_attempts=0, recordings=0, recording_blobs=0/);
+      expect(empty.out).toMatch(/users created in the last 24 hours: 0/);
+      expect(empty.out).not.toMatch(/attempts by status/);
+      expect(empty.out).not.toContain(TOKEN);
+    });
+
+    it("with data: counts, statuses and failure codes only, never ids, emails or text", async () => {
+      emulator = await startHranaEmulator({ token: TOKEN });
+      const env = { TURSO_DATABASE_URL: emulator.url, TURSO_AUTH_TOKEN: TOKEN };
+      expect((await runMigrate(env, "--require-remote")).code).toBe(0);
+      // Seed one attempt through the emulator's own database via a second script run is not possible, so use the protocol.
+      const seed = await fetch(`${emulator.url}/v2/pipeline`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          requests: [
+            { type: "execute", stmt: { sql: "INSERT INTO users (id, email) VALUES ('11111111-1111-4111-8111-111111111111', 'secret.person@example.com')" } },
+            { type: "execute", stmt: { sql: "INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('t1', 1, 'B2', 2, 'T', '{}')" } },
+            { type: "execute", stmt: { sql: "INSERT INTO speaking_attempts (id, user_id, task_id, task_version, attempt_number, status, failure_code, updated_at) VALUES ('22222222-2222-4222-8222-222222222222', '11111111-1111-4111-8111-111111111111', 't1', 1, 1, 'failed', 'transcription_failed', '2026-01-01T00:00:00.000Z')" } },
+            { type: "close" },
+          ],
+        }),
+      });
+      expect(seed.status).toBe(200);
+      const result = await runMigrate(env, "--check", "--require-remote");
+      expect(result.code).toBe(0);
+      expect(result.out).toMatch(/rows: users=1, speaking_attempts=1/);
+      expect(result.out).toMatch(/attempts by status: failed=1/);
+      expect(result.out).toMatch(/recent attempt: status=failed, failure_code=transcription_failed, created /);
+      for (const secret of ["secret.person", "11111111-1111", "22222222-2222"]) expect(result.out).not.toContain(secret);
+      expect(emulator.requests.filter((sql) => !/^\s*(SELECT|PRAGMA foreign_key_check|INSERT INTO (users|speaking_tasks|speaking_attempts))/i.test(sql) && !isRead(sql) && !/^(CREATE|ALTER|DROP|BEGIN|COMMIT|INSERT INTO "__drizzle|PRAGMA|--)/i.test(sql.trim()))).toEqual([]);
+    });
+  });
+
   describe("an unintended database is never touched", () => {
     it("refuses a database that has tables but no CEFRO migration history, for migrate and for check", async () => {
       emulator = await startHranaEmulator({ token: TOKEN, initialSql: "CREATE TABLE customers (id integer primary key, email text); INSERT INTO customers (email) VALUES ('a@example.com');" });

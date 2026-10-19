@@ -152,6 +152,39 @@ async function assertForeignKeysClean() {
   }
 }
 
+/**
+ * Read-only, non-identifying summary of what the database holds, printed by --check: row counts, attempts by status, and the
+ * newest attempt's status and failure code. No ids, emails, text or audio. It answers "is anything being written here, and
+ * how far does an attempt get?" without opening the database by hand. A table that does not exist yet is skipped.
+ */
+async function summariseData() {
+  const lines = [];
+  const scalar = async (sql) => {
+    try {
+      return Number((await client.execute(sql)).rows[0]?.n ?? 0);
+    } catch {
+      return null;
+    }
+  };
+  const counts = [];
+  for (const table of ["users", "speaking_attempts", "recordings", "recording_blobs", "transcripts", "evaluations", "practice_sessions"]) {
+    const n = await scalar(`SELECT count(*) AS n FROM ${table}`);
+    if (n !== null) counts.push(`${table}=${n}`);
+  }
+  if (counts.length > 0) lines.push(`rows: ${counts.join(", ")}`);
+  const recentUsers = await scalar("SELECT count(*) AS n FROM users WHERE created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')");
+  if (recentUsers !== null) lines.push(`users created in the last 24 hours: ${recentUsers}`);
+  try {
+    const byStatus = (await client.execute("SELECT status, count(*) AS n FROM speaking_attempts GROUP BY status ORDER BY n DESC")).rows;
+    if (byStatus.length > 0) lines.push(`attempts by status: ${byStatus.map((r) => `${String(r.status)}=${Number(r.n)}`).join(", ")}`);
+    const newest = (await client.execute("SELECT status, failure_code, created_at FROM speaking_attempts ORDER BY created_at DESC LIMIT 3")).rows;
+    for (const r of newest) lines.push(`recent attempt: status=${String(r.status)}, failure_code=${r.failure_code ? String(r.failure_code) : "none"}, created ${String(r.created_at)}`);
+  } catch {
+    /* no attempts table yet */
+  }
+  return lines;
+}
+
 try {
   const started = Date.now();
   const before = await inspect();
@@ -161,6 +194,7 @@ try {
     await assertForeignKeysClean();
     const applied = shipped.length - before.pending;
     console.log(`db:migrate --check: connected (read-only). ${applied} of ${shipped.length} migrations applied, ${before.pending} pending; foreign key check clean.`);
+    for (const line of await summariseData()) console.log(`db:migrate --check: ${line}`);
     if (requireCurrent && before.pending > 0) {
       die(`${before.pending} migration(s) are not applied yet. Run the migrate stage (or \`npm run db:migrate -- --require-remote\`) first; nothing was deployed.`);
     }

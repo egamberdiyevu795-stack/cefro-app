@@ -16,6 +16,7 @@ const fieldsSchema = z.object({
   durationMs: z.coerce.number().int().min(0).max(30 * 60 * 1000),
   previousAttemptId: z.string().uuid().optional(),
   sessionId: z.string().uuid().optional(),
+  clientAttemptId: z.string().uuid().optional(),
 });
 
 /** The audio limit plus room for the multipart framing and the small text fields. */
@@ -51,6 +52,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     durationMs: form.get("durationMs"),
     previousAttemptId: form.get("previousAttemptId") || undefined,
     sessionId: form.get("sessionId") || undefined,
+    clientAttemptId: form.get("clientAttemptId") || undefined,
   });
   if (!fields.success) throw new HttpError(400, "invalid_fields", "The upload was missing information.");
 
@@ -62,10 +64,11 @@ export const POST = withErrorHandling(async (request: Request) => {
     durationMs: fields.data.durationMs,
     previousAttemptId: fields.data.previousAttemptId ?? null,
     sessionId: fields.data.sessionId ?? null,
+    clientAttemptId: fields.data.clientAttemptId ?? null,
   });
 
-  if (await claimAttempt(attempt.id)) {
-    after(() => runClaimedAttempt(attempt.id));
-  }
-  return Response.json({ attempt: { ...attempt, status: "processing" } }, { status: 201 });
+  // A resent recording returns the existing attempt; claiming is a no-op unless it never started processing.
+  const claimed = await claimAttempt(attempt.id);
+  if (claimed) after(() => runClaimedAttempt(attempt.id));
+  return Response.json({ attempt: claimed ? { ...attempt, status: "processing" } : attempt }, { status: 201 });
 });

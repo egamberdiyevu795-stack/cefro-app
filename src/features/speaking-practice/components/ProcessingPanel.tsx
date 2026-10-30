@@ -58,8 +58,9 @@ export function ProcessingPanel({
         </Alert>
       )}
       {connectionError && (
-        <Alert tone="warning" title="Connection problem">
-          {connectionError} We&apos;ll keep checking automatically.
+        <Alert tone="warning" title="Reconnecting…">
+          {connectionError} Your recording is saved on our side, so nothing is lost. We&apos;ll keep checking automatically and
+          continue as soon as the connection is back.
         </Alert>
       )}
     </Card>

@@ -3,7 +3,8 @@ import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 /**
  * Typed browser-side client for the speaking API. Every failure becomes an
  * ApiError carrying a student-friendly message; raw errors are logged to
- * the console for developers.
+ * the console for developers. Requests that are safe to repeat are retried
+ * with backoff, so a dropped packet or a cold start never reaches the student.
  */
 export class ApiError extends Error {
   constructor(
@@ -11,6 +12,8 @@ export class ApiError extends Error {
     readonly code: string,
     readonly userMessage: string,
     readonly status?: number,
+    /** Seconds from the server's Retry-After header, when it sent one. */
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(userMessage);
     this.name = "ApiError";
@@ -19,7 +22,47 @@ export class ApiError extends Error {
 
 const NETWORK_MESSAGE = "We couldn't reach CEFRO. Check your internet connection and try again.";
 
-async function request<T>(input: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
+/** Statuses that mean "try again shortly" (gateways, cold starts, a briefly unavailable database). */
+const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+/** A server asking us to wait longer than this means a real limit, not a blip: report it instead of retrying. */
+const MAX_RETRY_AFTER_MS = 10_000;
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_MAX_MS = 8_000;
+
+interface RequestOptions extends RequestInit {
+  timeoutMs?: number;
+  /** Extra tries after a network error, timeout or temporary server error. Only for requests safe to repeat. */
+  retries?: number;
+}
+
+/** Wait before the next try; returns early when the browser reports the connection is back. */
+export function waitBeforeRetry(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      if (typeof window !== "undefined") window.removeEventListener("online", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    if (typeof window !== "undefined") window.addEventListener("online", done);
+  });
+}
+
+export function backoffDelayMs(attempt: number, retryAfterSeconds?: number | null): number {
+  if (retryAfterSeconds != null && retryAfterSeconds > 0) return retryAfterSeconds * 1000;
+  const exponential = Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** attempt);
+  return exponential / 2 + Math.random() * (exponential / 2);
+}
+
+/** Whether an error is a temporary condition that the same request may get past. */
+export function isRetryable(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  if (error.kind !== "http") return true;
+  if (!error.status || !RETRYABLE_STATUSES.has(error.status)) return false;
+  return error.retryAfterSeconds == null || error.retryAfterSeconds * 1000 <= MAX_RETRY_AFTER_MS;
+}
+
+async function requestOnce<T>(input: string, init?: RequestOptions): Promise<T> {
   let response: Response;
   try {
     response = await fetch(input, {
@@ -37,6 +80,8 @@ async function request<T>(input: string, init?: RequestInit & { timeoutMs?: numb
     );
   }
 
+  const retryAfter = Number(response.headers.get("retry-after"));
+  const retryAfterSeconds = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null;
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
     console.error("[cefro] API error", input, response.status, body);
@@ -45,14 +90,33 @@ async function request<T>(input: string, init?: RequestInit & { timeoutMs?: numb
       body?.error?.code ?? "http_error",
       body?.error?.message ?? "Something went wrong. Please try again.",
       response.status,
+      retryAfterSeconds,
     );
   }
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    // A cut-off body or a proxy's HTML page instead of our JSON: a transient transport problem.
+    console.error("[cefro] unreadable response", input, error);
+    throw new ApiError("network", "network", NETWORK_MESSAGE);
+  }
+}
+
+async function request<T>(input: string, init?: RequestOptions): Promise<T> {
+  const retries = init?.retries ?? 0;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await requestOnce<T>(input, init);
+    } catch (error) {
+      if (attempt >= retries || !isRetryable(error)) throw error;
+      await waitBeforeRetry(backoffDelayMs(attempt, error instanceof ApiError ? error.retryAfterSeconds : null));
+    }
+  }
 }
 
 /** Ask the server for a practice session id (a correlation key; the flow works without one). */
 export function startSession(): Promise<{ sessionId: string }> {
-  return request("/api/sessions", { method: "POST" });
+  return request("/api/sessions", { method: "POST", retries: 2 });
 }
 
 export function submitRecording(input: {
@@ -61,6 +125,8 @@ export function submitRecording(input: {
   audio: Blob;
   durationMs: number;
   previousAttemptId: string | null;
+  /** Idempotency key for this recording: resending with the same key never creates a second attempt. */
+  clientAttemptId: string;
 }): Promise<{ attempt: AttemptView }> {
   const form = new FormData();
   const extension = input.audio.type.includes("mp4") ? "mp4" : input.audio.type.includes("ogg") ? "ogg" : "webm";
@@ -69,19 +135,22 @@ export function submitRecording(input: {
   form.append("durationMs", String(Math.round(input.durationMs)));
   if (input.previousAttemptId) form.append("previousAttemptId", input.previousAttemptId);
   if (input.sessionId) form.append("sessionId", input.sessionId);
-  return request("/api/speaking/attempts", { method: "POST", body: form, timeoutMs: 120_000 });
+  form.append("clientAttemptId", input.clientAttemptId);
+  // Safe to resend thanks to clientAttemptId; slow mobile uploads get a generous timeout per try.
+  return request("/api/speaking/attempts", { method: "POST", body: form, timeoutMs: 180_000, retries: 4 });
 }
 
 export function fetchAttempt(attemptId: string): Promise<{ attempt: AttemptView }> {
-  return request(`/api/speaking/attempts/${encodeURIComponent(attemptId)}`);
+  return request(`/api/speaking/attempts/${encodeURIComponent(attemptId)}`, { timeoutMs: 20_000, retries: 3 });
 }
 
 export function restartProcessing(attemptId: string): Promise<{ started: boolean; attempt: AttemptView }> {
-  return request(`/api/speaking/attempts/${encodeURIComponent(attemptId)}/process`, { method: "POST" });
+  // The endpoint is idempotent (an attempt already processing is left alone), so it is safe to repeat.
+  return request(`/api/speaking/attempts/${encodeURIComponent(attemptId)}/process`, { method: "POST", retries: 3 });
 }
 
 export function fetchTaskAttempts(taskId: string): Promise<{ attempts: AttemptSummary[] }> {
-  return request(`/api/speaking/tasks/${encodeURIComponent(taskId)}/attempts`);
+  return request(`/api/speaking/tasks/${encodeURIComponent(taskId)}/attempts`, { retries: 3 });
 }
 
 export function attemptAudioUrl(attemptId: string): string {

@@ -11,6 +11,7 @@ import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { useDeadline } from "../hooks/useDeadline";
 import { setAnalyticsSession, track } from "../lib/analytics";
 import { ApiError, fetchAttempt, fetchTaskAttempts, restartProcessing, startSession, submitRecording } from "../lib/api-client";
+import { shouldAutoRestart } from "../lib/failure-messages";
 import { initialPracticeState, practiceReducer } from "../lib/practice-machine";
 import { AttemptHistory } from "./AttemptHistory";
 import { BriefPanel } from "./BriefPanel";
@@ -25,6 +26,16 @@ import { RetryBriefPanel } from "./RetryBriefPanel";
 import { ReviewPanel } from "./ReviewPanel";
 import { TaskHeader } from "./TaskHeader";
 import { UploadFailedPanel } from "./UploadFailedPanel";
+
+function newClientAttemptId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // Older browsers / non-secure contexts: a v4 UUID from getRandomValues.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 /**
  * The B2 Part 2 practice loop: brief → prepare → record → submit →
@@ -150,9 +161,17 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
   });
 
   // ── Submission ───────────────────────────────────────────────────
+  // One idempotency key per recording: resending the same audio (automatic retries, "Try sending again")
+  // can never create a second attempt or count against the limits twice.
+  const uploadKeyRef = useRef<{ blob: Blob; id: string } | null>(null);
+  const submittingRef = useRef(false);
   const submit = useCallback(async () => {
     const recording = recorder.recording;
-    if (!recording) return;
+    if (!recording || submittingRef.current) return;
+    if (uploadKeyRef.current?.blob !== recording.blob) {
+      uploadKeyRef.current = { blob: recording.blob, id: newClientAttemptId() };
+    }
+    submittingRef.current = true;
     dispatch({ type: "uploadStarted" });
     try {
       const { attempt } = await submitRecording({
@@ -161,6 +180,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
         audio: recording.blob,
         durationMs: recording.durationMs,
         previousAttemptId: retryOfId,
+        clientAttemptId: uploadKeyRef.current.id,
       });
       dispatch({ type: "uploadSucceeded", attempt });
       recorder.discard();
@@ -169,15 +189,41 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
       const message = error instanceof ApiError ? error.userMessage : "Something went wrong while sending your answer.";
       track("upload_failed", { taskId, properties: { code: error instanceof ApiError ? error.code : "unknown" } });
       dispatch({ type: "uploadFailed", message });
+    } finally {
+      submittingRef.current = false;
     }
   }, [recorder, taskId, retryOfId]);
 
+  // An upload that failed because the device went offline is sent again as soon as it is back online.
+  useEffect(() => {
+    if (phase.kind !== "uploadFailed") return;
+    const resend = () => void submit();
+    window.addEventListener("online", resend);
+    return () => window.removeEventListener("online", resend);
+  }, [phase.kind, submit]);
+
   // ── Processing ───────────────────────────────────────────────────
   const processingId = phase.kind === "processing" ? phase.attemptId : null;
+  const autoRestartedRef = useRef(new Set<string>());
+  const [pollRestartKey, setPollRestartKey] = useState(0);
   const polling = useAttemptPolling(processingId, (attempt) => {
+    // A temporary provider hiccup or a stalled run gets one silent retry from the saved recording.
+    if (shouldAutoRestart(attempt) && !autoRestartedRef.current.has(attempt.id)) {
+      autoRestartedRef.current.add(attempt.id);
+      restartProcessing(attempt.id)
+        .then(({ attempt: restarted }) => {
+          dispatch({ type: "processingRestarted", attempt: restarted });
+          setPollRestartKey((key) => key + 1);
+        })
+        .catch(() => {
+          dispatch({ type: "attemptUpdated", attempt });
+          void loadHistory();
+        });
+      return;
+    }
     dispatch({ type: "attemptUpdated", attempt });
     void loadHistory();
-  });
+  }, pollRestartKey);
 
   const restart = useCallback(async (attemptId: string) => {
     setIsRestarting(true);

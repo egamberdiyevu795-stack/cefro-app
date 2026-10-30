@@ -297,4 +297,30 @@ describe("speaking attempt pipeline", () => {
       expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
     });
   });
+
+  it("returns the same attempt when a recording is resent with the same clientAttemptId", async () => {
+    const clientAttemptId = "33333333-3333-4333-8333-333333333333";
+    const input = {
+      userId: USER,
+      taskId: TASK_ID,
+      audio: fakeWebm(),
+      mimeType: "audio/webm",
+      durationMs: 95_000,
+      previousAttemptId: null,
+      clientAttemptId,
+    };
+    const first = await createAttempt(input);
+    const resent = await createAttempt(input);
+    expect(first.id).toBe(clientAttemptId);
+    expect(resent.id).toBe(first.id);
+    expect(await db.select().from(speakingAttempts).all()).toHaveLength(1);
+  });
+
+  it("refuses a clientAttemptId that belongs to another user", async () => {
+    const clientAttemptId = "44444444-4444-4444-8444-444444444444";
+    const base = { taskId: TASK_ID, audio: fakeWebm(), mimeType: "audio/webm", durationMs: 95_000, previousAttemptId: null, clientAttemptId };
+    await createAttempt({ ...base, userId: USER });
+    await expect(createAttempt({ ...base, userId: OTHER_USER })).rejects.toMatchObject({ status: 409 });
+    await expect(createAttempt({ ...base, userId: USER, clientAttemptId: "not-a-uuid" })).rejects.toMatchObject({ status: 400 });
+  });
 });

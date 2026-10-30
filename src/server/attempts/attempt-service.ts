@@ -29,6 +29,21 @@ export interface CreateAttemptInput {
   previousAttemptId: string | null;
   /** Session id supplied by the client. Used only if it is one of the user's own; otherwise a new one is made. */
   sessionId?: string | null;
+  /**
+   * Idempotency key chosen by the browser (a UUID, used as the attempt id). Sending the same recording again
+   * after a lost response returns the attempt that was already created instead of making a second one.
+   */
+  clientAttemptId?: string | null;
+}
+
+/** The attempt already created for this idempotency key, or undefined. Someone else's id is a conflict. */
+async function findResubmittedAttempt(userId: string, clientAttemptId: string | null | undefined) {
+  if (!clientAttemptId) return undefined;
+  const existing = await repo.findAttempt(clientAttemptId);
+  if (existing && !ownsResource(userId, existing)) {
+    throw new HttpError(409, "attempt_conflict", "This recording could not be sent. Please record your answer again.");
+  }
+  return existing;
 }
 
 /**
@@ -39,6 +54,13 @@ export interface CreateAttemptInput {
 export async function createAttempt(input: CreateAttemptInput): Promise<AttemptView> {
   const task = getSpeakingTask(input.taskId);
   if (!task) throw new HttpError(404, "task_not_found", "This task does not exist.");
+  if (input.clientAttemptId && !UUID_PATTERN.test(input.clientAttemptId)) {
+    throw new HttpError(400, "invalid_fields", "The upload was missing information.");
+  }
+
+  // A resend of a recording that already arrived (the first response was lost): no second attempt, no limit hit.
+  const resubmitted = await findResubmittedAttempt(input.userId, input.clientAttemptId);
+  if (resubmitted) return getAttemptViewForUser(input.userId, resubmitted.id);
 
   const baseMime = input.mimeType.split(";")[0].trim().toLowerCase();
   if (!ACCEPTED_AUDIO_TYPES.includes(baseMime)) {
@@ -70,7 +92,7 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
       : null;
   }
 
-  const attemptId = newId();
+  const attemptId = input.clientAttemptId ?? newId();
   const storage = getAudioStorage();
   // Extension comes from the validated container, never from client input.
   const extension = containerForMime(baseMime) ?? "bin";
@@ -104,6 +126,9 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
     },
   });
   } catch (error) {
+    // Two sends of the same recording raced and the other one created the attempt: its audio is this key, keep it.
+    const raced = await findResubmittedAttempt(input.userId, input.clientAttemptId).catch(() => undefined);
+    if (raced) return getAttemptViewForUser(input.userId, raced.id);
     // The attempt row was not created, so the stored bytes would be orphaned: remove them (best effort).
     await storage.delete?.(storageKey).catch((cleanupError) => logger.warn("Could not remove an orphaned recording", { error: cleanupError, attemptId }));
     throw error;

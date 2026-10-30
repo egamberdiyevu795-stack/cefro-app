@@ -1,4 +1,19 @@
-import type { AttemptFailure } from "@/domain/speaking/attempt";
+import type { AttemptFailure, AttemptView, FailureCode } from "@/domain/speaking/attempt";
+
+/** Failures that are usually temporary on the provider side: processing is restarted once automatically. */
+const AUTO_RESTART_FAILURES: FailureCode[] = [
+  "provider_timeout",
+  "processing_stalled",
+  "transcription_failed",
+  "evaluation_failed",
+  "evaluation_invalid_output",
+];
+
+/** Whether a settled attempt should be restarted automatically (once) instead of showing the failure screen. */
+export function shouldAutoRestart(attempt: Pick<AttemptView, "status" | "isStalled" | "failure">): boolean {
+  if (attempt.isStalled) return true;
+  return attempt.status === "failed" && Boolean(attempt.failure && AUTO_RESTART_FAILURES.includes(attempt.failure.code));
+}
 
 export interface FailureCopy {
   title: string;

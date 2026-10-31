@@ -30,6 +30,7 @@ name: Deploy production
 on:
   push:
     branches: [main]
+    paths-ignore: ['**.md']
   workflow_dispatch:
     inputs:
       stage:

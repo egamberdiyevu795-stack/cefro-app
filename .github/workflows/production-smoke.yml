@@ -12,6 +12,11 @@ on:
         type: string
         default: "https://cefro-app-mgm6.vercel.app"
 
+# Starting a new run of this workflow on the same ref cancels the older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

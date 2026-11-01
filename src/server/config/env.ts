@@ -73,8 +73,11 @@ const envSchema = z.object({
   GEMINI_TRANSCRIPTION_MODEL: z.string().min(1).default("gemini-3.8-flash"),
   /** Thinking models spend output tokens on reasoning, so keep this generous. */
   GEMINI_EVALUATION_MAX_TOKENS: z.coerce.number().int().min(4000).max(65_000).default(24_000),
-  /** Unset = model default. Only set this for models that support thinking levels. */
-  GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).optional(),
+  /**
+   * How much the Gemini evaluator reasons before answering. "high" by default: assessment quality matters more than a
+   * few seconds of waiting. Only valid for models that support thinking levels.
+   */
+  GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).default("high"),
   /**
    * "schema": send the JSON schema to the API (constrained decoding) and in the prompt.
    * "json": only request JSON and describe the shape in the prompt. Escape hatch if the API

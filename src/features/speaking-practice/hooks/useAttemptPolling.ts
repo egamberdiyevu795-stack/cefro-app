@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attempt";
 import { fetchAttempt } from "../lib/api-client";
 
-const POLL_INTERVAL_MS = 2000;
+/** Short enough that finished feedback appears almost at once; each poll is one small read. */
+const POLL_INTERVAL_MS = 1000;
 /** After this long without a final state, show the "taking longer" message. */
 const SLOW_AFTER_MS = 90_000;
 /**

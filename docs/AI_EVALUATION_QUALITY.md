@@ -211,7 +211,7 @@ evaluations:
 | **Gemini** key | `GEMINI_API_KEY` | — |
 | Gemini model | `GEMINI_EVALUATION_MODEL` | `gemini-3.8-flash` (pinned; the ID the API reported, confirmed by live runs) |
 | Gemini max output tokens | `GEMINI_EVALUATION_MAX_TOKENS` | `24000` |
-| Gemini thinking level | `GEMINI_THINKING_LEVEL` | unset (model default) |
+| Gemini thinking level | `GEMINI_THINKING_LEVEL` | `high` |
 | Gemini structured-output mode | `GEMINI_STRUCTURED_OUTPUT` (`schema`, `json`) | `schema` |
 | Timeout (both) | `EVALUATION_TIMEOUT_MS` | `180000` |
 | Transcription provider / model | `TRANSCRIPTION_PROVIDER` / `OPENAI_TRANSCRIPTION_MODEL` | `openai` / `gpt-4o-transcribe` |

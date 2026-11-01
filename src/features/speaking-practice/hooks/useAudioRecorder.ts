@@ -15,6 +15,13 @@ export interface Recording {
 /** Preferred formats, best first. Chrome/Firefox use WebM/Opus, Safari uses MP4/AAC. */
 const MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
 
+/**
+ * Speech needs far less than the browser default (often 128 kbps): at 32 kbps a 2-minute answer is about 0.5 MB
+ * instead of about 2 MB, so it uploads several times faster on a slow mobile connection. Opus and AAC both keep
+ * speech clearly intelligible at this rate. A browser that ignores the hint simply records at its default.
+ */
+const AUDIO_BITS_PER_SECOND = 32_000;
+
 function pickMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return undefined;
   return MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type));
@@ -97,7 +104,10 @@ export function useAudioRecorder() {
     }
     try {
       const mimeType = pickMimeType();
-      const recorder = new MediaRecorder(media, mimeType ? { mimeType } : undefined);
+      const recorder = new MediaRecorder(media, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+      });
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data);

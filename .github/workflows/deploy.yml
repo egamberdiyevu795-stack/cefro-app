@@ -30,7 +30,7 @@ name: Deploy production
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', 'LICENSE']
   workflow_dispatch:
     inputs:
       stage:
@@ -208,7 +208,7 @@ jobs:
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' && needs.verify.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     environment: production
     steps:
       - uses: actions/checkout@v4

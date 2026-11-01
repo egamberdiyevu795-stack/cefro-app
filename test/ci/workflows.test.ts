@@ -17,7 +17,7 @@ const needs = (job: Job) => ([] as string[]).concat(job.needs ?? []);
 describe("production pipeline (deploy.yml)", () => {
   it("runs only for main (push) or a manual run, never for pull requests or forks", () => {
     expect(Object.keys(deploy.on).sort()).toEqual(["push", "workflow_dispatch"]);
-    expect(deploy.on.push).toEqual({ branches: ["main"] });
+    expect(deploy.on.push).toEqual({ branches: ["main"], "paths-ignore": ["**.md", "docs/**", ".gitignore", "LICENSE"] });
     expect(read(".github/workflows/deploy.yml")).not.toMatch(/pull_request/);
     for (const [name, job] of Object.entries(deploy.jobs)) expect(String(job.if), name).toContain("github.ref == 'refs/heads/main'");
   });
@@ -401,9 +401,9 @@ describe("the deployment uses exactly the tested commit and a validated URL", ()
 });
 
 describe("validation stage (ci.yml)", () => {
-  it("is reusable by the pipeline, and main is not validated twice", () => {
-    expect(Object.keys(ci.on).sort()).toEqual(["pull_request", "push", "workflow_call"]);
-    expect(ci.on.push).toEqual({ "branches-ignore": ["main"] });
+  it("is reusable by the pipeline, and main is not validated twice (no plain push trigger)", () => {
+    expect(Object.keys(ci.on).sort()).toEqual(["pull_request", "workflow_call", "workflow_dispatch"]);
+    expect(ci.on.push).toBeUndefined();
   });
 
   it("has no secrets, only a read-only token, and runs lint, typecheck, tests, build, migration safety and browser tests", () => {

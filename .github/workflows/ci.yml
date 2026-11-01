@@ -5,16 +5,17 @@
 # workflow (live-evaluation.yml) because it spends API budget and needs the GEMINI_API_KEY secret.
 #
 # It is also the first stage of the production pipeline (deploy.yml calls it with `workflow_call`), so a push to main
-# is validated by exactly these jobs and by nothing weaker. Pushes to main are not validated twice: main is excluded
-# from the plain `push` trigger below because deploy.yml runs this workflow for it.
+# is validated by exactly this job and by nothing weaker. Pushes to main are not validated twice: there is no plain
+# `push` trigger, because deploy.yml runs this workflow for main.
+#
+# Actions-minutes budget: feature branches are validated by their pull_request run (a branch push without a PR runs
+# nothing; use "Run workflow" if needed), docs-only changes are skipped, and everything runs in ONE job so checkout +
+# npm ci happen once. A commit message containing [skip ci] skips the run (GitHub built-in).
 name: CI
 
 on:
-  push:
-    branches-ignore: [main]
-    paths-ignore: ['**.md']
   pull_request:
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', 'LICENSE']
   workflow_call:
   workflow_dispatch:
 
@@ -29,7 +30,7 @@ permissions:
 
 jobs:
   validate:
-    name: Lint, typecheck, test, build
+    name: Lint, typecheck, test, build, browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -56,22 +57,19 @@ jobs:
         run: npm test
         env:
           REQUIRE_FFMPEG: "1"
-      - name: Build
-        run: npm run build
-
-  browser:
-    name: Browser tests (mock providers)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Browser tests (mock providers) run against `next dev`, before the production build touches .next.
+      - name: Cache the Playwright browser
+        id: pw-cache
+        uses: actions/cache@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+      - name: Install Chromium system dependencies (browser restored from cache)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - name: Browser tests
         run: npm run test:e2e
       - name: Keep the Playwright traces of a failed run
@@ -82,3 +80,5 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Build
+        run: npm run build

@@ -95,7 +95,7 @@ real feedback, run the validation steps in `docs/AI_EVALUATION_QUALITY.md` §6.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and pull request: lint, typecheck, unit and integration tests
+`.github/workflows/ci.yml` runs on every pull request and as the first stage of every production deploy (in one job): lint, typecheck, unit and integration tests
 (including the migration tests), the production build, and the browser tests (mock providers, fake
 microphone). It uses no secrets and makes no real provider call. The real-Gemini validation is a separate,
 manual workflow (`live-evaluation.yml`) because it spends API budget; `live-pipeline.yml` is the manual workflow for real OpenAI transcription and the full pipeline (needs the `OPENAI_API_KEY` and `GEMINI_API_KEY` secrets).

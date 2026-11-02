@@ -103,6 +103,24 @@ test("a failed evaluation shows a friendly message and can be retried without re
   await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
 });
 
+test("an attempt the server can no longer find stops polling and offers a new recording", async ({ page }) => {
+  // Every status poll answers 404, as the server does for a missing (or another visitor's) attempt.
+  let polls = 0;
+  await page.route(/\/api\/speaking\/attempts\/[0-9a-f-]+$/, (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    polls++;
+    return route.fulfill({ status: 404, json: { error: { code: "attempt_not_found", message: "This attempt could not be found." } } });
+  });
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page, 1500);
+  await expect(page.getByText("We couldn't find this answer")).toBeVisible({ timeout: 30_000 });
+  const pollsWhenShown = polls;
+  await page.waitForTimeout(3000);
+  expect(polls).toBe(pollsWhenShown); // polling has stopped
+  await page.getByRole("button", { name: "Record a new answer" }).click();
+  await expect(page.getByRole("button", { name: "Start preparation" })).toBeVisible();
+});
+
 test("mobile layout has no horizontal scroll", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
   const page = await context.newPage();

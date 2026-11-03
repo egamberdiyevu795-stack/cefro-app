@@ -44,7 +44,10 @@ describe("GeminiTranscriptionProvider", () => {
   });
 
   it("tells the model not to correct anything, and contains no sample utterance to echo", () => {
-    expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/Do NOT correct/);
+    expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/Do NOT correct, normalise/);
+    expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/verbatim, disfluent/);
+    expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/extra or missing -s, -ing or -ed ending/);
+    expect(GEMINI_TRANSCRIPTION_PROMPT).not.toMatch(/nobody|helps/i);
     expect(GEMINI_TRANSCRIPTION_PROMPT).toMatch(/Never guess/);
     expect(GEMINI_TRANSCRIPTION_PROMPT).not.toMatch(/exam/i); // the exam framing primed the model to invent an answer on silence
     expect(GEMINI_TRANSCRIPTION_PROMPT).not.toMatch(/"[^"]{12,}"/); // no quoted example sentence

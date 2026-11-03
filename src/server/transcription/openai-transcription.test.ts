@@ -29,6 +29,18 @@ describe("OpenAITranscriptionProvider", () => {
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer sk-test-not-real");
   });
 
+  it("asks for a verbatim, disfluent transcript and never alters a learner's agreement error", async () => {
+    // Regression: "nobody will helps" once came back as "nobody helps".
+    expect(VERBATIM_TRANSCRIPTION_PROMPT).toMatch(/verbatim, disfluent/i);
+    expect(VERBATIM_TRANSCRIPTION_PROMPT).toMatch(/extra or missing -s, -ing or -ed ending/);
+    expect(VERBATIM_TRANSCRIPTION_PROMPT).toMatch(/Never correct, normalise/);
+    // No sample utterance (it could be echoed on silent audio).
+    expect(VERBATIM_TRANSCRIPTION_PROMPT).not.toMatch(/nobody|helps|talking/i);
+    const spoken = "When you have a problem, nobody will helps you, because they don't talking.";
+    const result = await provider((async () => Response.json({ text: spoken })) as unknown as typeof fetch).transcribe(audio);
+    expect(result.text).toBe(spoken);
+  });
+
   it.each([
     [401, "provider_not_configured"],
     [429, "provider_rate_limited"],

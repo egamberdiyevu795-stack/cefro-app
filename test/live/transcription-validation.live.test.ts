@@ -152,12 +152,13 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
 
     const transcript = row.transcript!;
     row.wer = wordErrorRate(sample.ref!, transcript);
-    row.keptErrors = (sample.keep ?? []).map((phrase) => ({ phrase, kept: isQuoteInTranscript(phrase, transcript) }));
+    row.keptErrors = (sample.keep ?? []).map((phrase) => ({ phrase, kept: isQuoteInTranscript(phrase, transcript, { strict: true }) }));
     row.metricsFromTranscript = computeSpeechMetrics(transcript, row.audioSeconds * 1000, task.speakingSeconds);
     row.metricsFromRef = computeSpeechMetrics(sample.ref!, row.audioSeconds * 1000, task.speakingSeconds);
 
     const lost = row.keptErrors.filter((k) => !k.kept).map((k) => k.phrase);
     if (lost.length) row.findings.push(`Learner errors NOT preserved: ${lost.join("; ")}`);
+    if (sample.mustKeep) expect(lost, `${sample.id}: the transcript changed the learner's words (got: "${transcript}")`).toEqual([]);
     const refFillers = (sample.ref!.match(FILLER_RE) ?? []).length;
     const gotFillers = (transcript.match(FILLER_RE) ?? []).length;
     if (refFillers > 0) row.findings.push(`Fillers: ${gotFillers} transcribed of ${refFillers} spoken (metrics report ${row.metricsFromTranscript.fillerCount}).`);

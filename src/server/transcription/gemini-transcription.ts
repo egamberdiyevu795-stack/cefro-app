@@ -26,8 +26,9 @@ export const GEMINI_TRANSCRIPTION_PROMPT =
   "Many recordings contain no speech at all: only silence, a quiet room, hiss or background noise. " +
   "If you cannot clearly hear a person speaking, set speech_detected to false and transcript to an empty string. " +
   "Never guess, never invent words, and never produce a sentence that is not clearly audible. " +
-  "The speaker may be an English learner: keep every grammar mistake, wrong verb form, missing word, wrong word choice, repetition, false start, self-correction and hesitation sound (um, uh, er) exactly as said. " +
-  "Do NOT correct, improve, complete, summarise or translate anything, and do not add words that were not spoken. " +
+  "The speaker may be an English learner: keep every grammar mistake, wrong verb form, wrong agreement, extra or missing -s, -ing or -ed ending, wrong or extra auxiliary verb, missing word, wrong word choice, repetition, false start, self-correction and hesitation sound (um, uh, er) exactly as said. " +
+  "This is a verbatim, disfluent transcript: an ungrammatical sentence must stay ungrammatical. " +
+  "Do NOT correct, normalise, tidy, improve, complete, summarise or translate anything, and do not add or remove words. " +
   "In transcript write plain text only: no timestamps, no speaker labels, no notes and no introduction.";
 
 const RESPONSE_SCHEMA = {

@@ -15,6 +15,9 @@ export interface TranscriptionOutput {
    * Not persisted: used for cost/latency validation only. Never contains transcript text or credentials.
    */
   usage?: Record<string, number | string>;
+  /** Set when a fallback provider produced the text (see FallbackTranscriptionProvider); otherwise the provider's own name/model apply. */
+  provider?: string;
+  model?: string;
 }
 
 /**

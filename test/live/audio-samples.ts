@@ -11,6 +11,8 @@ export interface AudioSample {
   ref?: string;
   /** Learner mistakes that must survive transcription (checked with the same normalisation as evidence quotes). */
   keep?: string[];
+  /** Regression sample: losing any `keep` phrase FAILS the run (otherwise losses are only reported). */
+  mustKeep?: boolean;
   kind: "speech" | "silence" | "near_silence" | "noise";
   seconds?: number;
   /** Speech split into parts with silence before, between and after (pauses must not stop transcription). */
@@ -85,6 +87,17 @@ export const TRANSCRIPTION_SAMPLES: AudioSample[] = [
       "Me and my friend is discussing about this problem many times. In my opinion the phones is very usefull for study, " +
       "but too much of them are dangerous for the eyes.",
     keep: ["I have went", "I buy two bread", "he don't like", "it make people lazy", "Me and my friend is", "discussing about", "the phones is"],
+  },
+  {
+    id: "T12-verbatim-regression",
+    description:
+      "Regression: speech-to-text once 'corrected' a learner's 'nobody will helps' to 'nobody helps'. These phrases must come back word for word, or the run fails.",
+    kind: "speech",
+    ref:
+      "In my opinion, social media is making young people less sociable. They sit together but they don't talking to each other, " +
+      "they only look at their phones. And when you have a real problem, nobody will helps you, because everybody is busy with the screen.",
+    keep: ["nobody will helps", "they don't talking", "less sociable"],
+    mustKeep: true,
   },
   { id: "T06-silence", description: "Eight seconds of digital silence.", kind: "silence", seconds: 8 },
   { id: "T07-near-silence", description: "Eight seconds of very quiet noise (open microphone, no speech).", kind: "near_silence", seconds: 8 },

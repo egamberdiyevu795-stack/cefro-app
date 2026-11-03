@@ -158,6 +158,8 @@ describe.skipIf(!configured)(`LIVE: ${selection.provider} transcription on contr
 
     const lost = row.keptErrors.filter((k) => !k.kept).map((k) => k.phrase);
     if (lost.length) row.findings.push(`Learner errors NOT preserved: ${lost.join("; ")}`);
+    const lostWatched = (sample.watch ?? []).filter((phrase) => !isQuoteInTranscript(phrase, transcript, { strict: true }));
+    if (lostWatched.length) row.findings.push(`Other learner errors changed (review): ${lostWatched.join("; ")}`);
     if (sample.mustKeep) expect(lost, `${sample.id}: the transcript changed the learner's words (got: "${transcript}")`).toEqual([]);
     const refFillers = (sample.ref!.match(FILLER_RE) ?? []).length;
     const gotFillers = (transcript.match(FILLER_RE) ?? []).length;

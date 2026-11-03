@@ -5,6 +5,8 @@ import { MockEvaluationModel } from "@/server/evaluation/mock-evaluation-model";
 import { buildMultilevelEvaluationPrompt } from "@/server/evaluation/prompts/multilevel-evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking } from "@/server/evaluation/speaking-evaluator";
+import { isQuoteInTranscript } from "@/domain/evaluation/evidence";
+import { TRANSCRIPTION_SAMPLES } from "../live/audio-samples";
 import { B2_PART2_SAMPLES } from "./b2-part2-samples";
 
 const task = getSpeakingTask("b2-part2-technology-young-people")!;
@@ -55,6 +57,13 @@ describe("B2 Part 2 evaluation sample set", () => {
     expect(evaluation.result.scoring.band).toBeGreaterThanOrEqual(0);
     expect(evaluation.result.scoring.band).toBeLessThanOrEqual(5);
   }, 10_000);
+
+  it("the verbatim regression sample (owner's real answer) contains every phrase it checks, word for word", () => {
+    const t12 = TRANSCRIPTION_SAMPLES.find((x) => x.id.startsWith("T12"))!;
+    expect(t12.mustKeep).toBe(true);
+    for (const phrase of [...t12.keep!, ...t12.watch!]) expect(isQuoteInTranscript(phrase, t12.ref!, { strict: true }), phrase).toBe(true);
+    expect(byId["S15-owner-real-answer"].transcript).toBe(t12.ref);
+  });
 
   it("the injection sample stays inside the escaped transcript section", () => {
     const prompt = buildMultilevelEvaluationPrompt(inputFor("S13-prompt-injection"));

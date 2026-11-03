@@ -1,4 +1,4 @@
-import { B2_PART2_SAMPLES } from "../evaluation-samples/b2-part2-samples";
+import { B2_PART2_SAMPLES, OWNER_SAMPLE_ANSWER } from "../evaluation-samples/b2-part2-samples";
 
 /**
  * Controlled audio samples for the real-transcription validation. Every `ref` is the exact text that is spoken
@@ -13,6 +13,8 @@ export interface AudioSample {
   keep?: string[];
   /** Regression sample: losing any `keep` phrase FAILS the run (otherwise losses are only reported). */
   mustKeep?: boolean;
+  /** Further learner errors that should survive; losses are reported for review, never fatal. */
+  watch?: string[];
   kind: "speech" | "silence" | "near_silence" | "noise";
   seconds?: number;
   /** Speech split into parts with silence before, between and after (pauses must not stop transcription). */
@@ -91,12 +93,25 @@ export const TRANSCRIPTION_SAMPLES: AudioSample[] = [
   {
     id: "T12-verbatim-regression",
     description:
-      "Regression: speech-to-text once 'corrected' a learner's 'nobody will helps' to 'nobody helps'. These phrases must come back word for word, or the run fails.",
+      "Regression on the project owner's real answer: speech-to-text once 'corrected' 'nobody will helps' to 'nobody helps'. The three keep phrases must come back word for word, or the run fails; the other errors are reported.",
     kind: "speech",
-    ref:
-      "In my opinion, social media is making young people less sociable. They sit together but they don't talking to each other, " +
-      "they only look at their phones. And when you have a real problem, nobody will helps you, because everybody is busy with the screen.",
+    ref: OWNER_SAMPLE_ANSWER,
     keep: ["nobody will helps", "they don't talking", "less sociable"],
+    watch: [
+      "social media is making",
+      "it help people",
+      "both things is true",
+      "spend many times",
+      "everyone looking at their phone",
+      "nobody talk with each other",
+      "They just watching videos",
+      "social media make people think",
+      "these people very good",
+      "is not same like real friendship",
+      "technology have some advantages",
+      "if your friend live in another country",
+      "Young people should using it less",
+    ],
     mustKeep: true,
   },
   { id: "T06-silence", description: "Eight seconds of digital silence.", kind: "silence", seconds: 8 },

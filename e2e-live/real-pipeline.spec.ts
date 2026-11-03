@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { evidenceViolations, wordErrorRate } from "../test/live/checks";
 import { BROWSER_ANSWER_TEXT, LEAD_IN_SECONDS } from "./global-setup";
-import type { EvaluationResult } from "../src/domain/evaluation/schema";
+import type { MultilevelResult } from "../src/domain/evaluation/multilevel/result";
 
 /**
  * One real-provider browser flow: the real recorder path → upload → real transcription → real evaluation →
@@ -54,7 +54,7 @@ test("browser → real recording path → real transcription → real evaluation
 
   const wer = wordErrorRate(BROWSER_ANSWER_TEXT, attempt.transcript.text);
   expect(wer, "the transcript of what the browser recorded must correspond to the speech that was played").toBeLessThan(0.4);
-  const violations = evidenceViolations(attempt.evaluation.result as EvaluationResult, attempt.transcript.text);
+  const violations = evidenceViolations(attempt.evaluation.result as MultilevelResult, attempt.transcript.text);
   expect(violations).toEqual([]);
   expect(attempt.metrics.wordCount).toBeGreaterThan(40);
 
@@ -68,7 +68,7 @@ test("browser → real recording path → real transcription → real evaluation
     words: attempt.metrics.wordCount,
     recordedSeconds: attempt.recordingDurationMs / 1000,
     endToEndSecondsAfterFinish: Number((endToEndMs / 1000).toFixed(1)),
-    level: attempt.evaluation.result.overall_level,
+    band: (attempt.evaluation.result as MultilevelResult).scoring.band,
   };
   fs.writeFileSync("eval-reports/browser-real-pipeline.json", JSON.stringify(summary, null, 2));
   console.log(`\nBROWSER REAL-PROVIDER RESULT ${JSON.stringify(summary)}\n`);

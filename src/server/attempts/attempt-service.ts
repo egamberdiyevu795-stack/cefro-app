@@ -1,6 +1,5 @@
 import "server-only";
-import type { EvaluationResult } from "@/domain/evaluation/schema";
-import { parseStoredEvaluation } from "@/domain/evaluation/stored";
+import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import { getSpeakingTask } from "@/content/speaking";
 import { trackServerEvent } from "@/server/analytics/track";
@@ -80,7 +79,7 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
   await assertCanSubmitAttempt(input.userId);
 
   // Retry: the previous attempt must be the user's own, for the same task, and evaluated.
-  let retryFocus: EvaluationResult["retry_focus"] | null = null;
+  let retryFocus: RetryFocusItem[] | null = null;
   if (input.previousAttemptId) {
     const previous = await repo.findAttempt(input.previousAttemptId);
     if (!previous || !ownsResource(input.userId, previous) || previous.taskId !== task.id) {

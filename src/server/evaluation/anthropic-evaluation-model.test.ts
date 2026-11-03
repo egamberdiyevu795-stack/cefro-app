@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeEvaluation } from "../../../test/fixtures";
+import { makeModelOutput } from "../../../test/fixtures";
 import { AnthropicEvaluationModel } from "./anthropic-evaluation-model";
 import type { EvaluationInput } from "./types";
 
@@ -39,11 +39,11 @@ function modelWith(fetchImpl: typeof fetch, overrides: Partial<ConstructorParame
 
 describe("AnthropicEvaluationModel", () => {
   it("sends the configured request server-side and returns output, model and token usage", async () => {
-    const fetchMock = vi.fn(async () => json(200, message(JSON.stringify(makeEvaluation()))));
+    const fetchMock = vi.fn(async () => json(200, message(JSON.stringify(makeModelOutput()))));
     const result = await modelWith(fetchMock as unknown as typeof fetch).evaluate(prompt, input);
 
     expect(result).toMatchObject({ provider: "anthropic", model: "claude-opus-5-5", inputTokens: 1200, outputTokens: 800 });
-    expect(result.output).toMatchObject({ overall_level: "B1+" });
+    expect(result.output).toMatchObject({ memorized_or_irrelevant: false });
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     const body = JSON.parse(String(init.body));
@@ -59,7 +59,7 @@ describe("AnthropicEvaluationModel", () => {
   });
 
   it("omits the fallback beta when disabled in configuration", async () => {
-    const fetchMock = vi.fn(async () => json(200, message(JSON.stringify(makeEvaluation()))));
+    const fetchMock = vi.fn(async () => json(200, message(JSON.stringify(makeModelOutput()))));
     await modelWith(fetchMock as unknown as typeof fetch, { serverFallbacks: false }).evaluate(prompt, input);
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(JSON.parse(String(init.body)).fallbacks).toBeUndefined();
@@ -84,7 +84,7 @@ describe("AnthropicEvaluationModel", () => {
     const refused = modelWith((async () => json(200, message("", "refusal"))) as unknown as typeof fetch);
     await expect(refused.evaluate(prompt, input)).rejects.toMatchObject({ failureCode: "evaluation_refused" });
 
-    const truncated = modelWith((async () => json(200, message('{"overall_level":', "max_tokens"))) as unknown as typeof fetch);
+    const truncated = modelWith((async () => json(200, message('{"questions":', "max_tokens"))) as unknown as typeof fetch);
     await expect(truncated.evaluate(prompt, input)).rejects.toMatchObject({ failureCode: "evaluation_invalid_output" });
   });
 

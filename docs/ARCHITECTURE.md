@@ -98,30 +98,39 @@ the claim/restart design already makes it safe to re-run.
 
 Full methodology, quality checks, test set and findings: [`AI_EVALUATION_QUALITY.md`](AI_EVALUATION_QUALITY.md).
 
-`server/evaluation/speaking-evaluator.ts` runs the methodology:
+`server/evaluation/speaking-evaluator.ts` runs the Multilevel (UZBMB CEFR) methodology. **The model judges; code
+scores.** Part 2 = official Question 7 (three questions on one topic, target B2, band 0–5).
 
-1. Build the prompt (`prompts/speaking-evaluation-v2.ts`): system prompt = role,
-   rubric (`rubrics/`), prioritisation, evidence rules, feedback method; user
-   message = task + task points, examiner guidance, speech metrics, escaped
-   transcript, and for retries the previous transcript/issues/focus.
-2. Call the configured `EvaluationModel`: `AnthropicEvaluationModel`, `GeminiEvaluationModel`, or the dev mock.
-   Each only turns the shared prompt into raw model output; everything after this step is provider-independent.
-3. Validate against the Zod schema (`domain/evaluation/schema.ts`, v2).
-4. Run the quality gate (`quality-gate.ts`): verifies quotes against the
-   transcript, rejects pronunciation claims, generic advice, meaning-changing
-   "improved" examples, duplicates and unlinked retry focus; repairs minor issues.
-5. On an invalid, empty, truncated or rejected draft, regenerate **once** with a revision request;
-   otherwise fail with `evaluation_invalid_output` / `evaluation_quality_rejected`.
+1. Rubric: `server/evaluation/rubrics/multilevel_q7.json` (version `multilevel-q7/2.0.0`): band labels, the official
+   B2/B1 descriptors (verbatim), a below-B1 reference, and the scoring caps. Validated at load by
+   `domain/evaluation/multilevel/rubric-config.ts`. Another part = another JSON file + a registry entry.
+2. Prompt (`prompts/multilevel-evaluation.ts`): the descriptors and evidence rules; the user message numbers the
+   questions 1–3. The model returns judgements only (`domain/evaluation/multilevel/model-output.ts`): per question
+   on_topic / partial / missing / off_topic, per feature a level (above_B2 / B2 / B1 / below_B1) with exact quotes,
+   memorised flag, errors with corrections, up to two strengths. **No band, score or overall level.**
+3. Call the configured `EvaluationModel` (Anthropic, Gemini or the dev mock), validate with Zod.
+4. Quality gate (`quality-gate.ts`): question ids exactly 1..n; every quote checked **strictly** against the
+   verbatim transcript (a "corrected" quote is fabricated evidence); concrete fix per feature; no pronunciation
+   claims from text; no internal field names; strengths only for features at B2+. One regeneration, then a clean failure.
+5. In parallel, the audio step (`audio-assessment.ts`, `AUDIO_ASSESSMENT`): Gemini listens to the recording and
+   judges pronunciation and pausing against the same descriptors. If it is off or fails, pronunciation is
+   `not_assessed` and the result is provisional; it never fails the attempt.
+6. Band (`domain/evaluation/multilevel/band-scoring.ts`, unit-tested): on-topic count (partial counts), language
+   level = mean of assessed features rounded to nearest (.5 down); band 0 when memorised, nothing on topic or
+   below B1; otherwise `min(topic cap, language cap)`. Also "the biggest thing to fix" (the first unanswered question
+   when coverage limits the band, else the lowest feature) and up to two retry focus items (`result.ts`).
 
-Nothing unvalidated is stored. Pronunciation is always "not assessed"
-(transcript-only evaluator).
+Stored as schema v3 (`MultilevelResult`). The UI shows only the Part band (`Part 2: 3/5 · Lower B2`) and the B2
+target, never an overall exam level. Schema 1–2 rows (old analytic /10 scores) are shown as "scored with an older
+method" without a level, and are not compared with band results.
 
 ### Providers
 
 | Role | Providers | Selected by |
 | --- | --- | --- |
 | Evaluation | Anthropic, **Gemini**, mock | `EVALUATION_PROVIDER` |
-| Transcription | OpenAI, mock (no Gemini: see the quality doc for why) | `TRANSCRIPTION_PROVIDER` |
+| Transcription | OpenAI, Gemini, mock (optional fallback) | `TRANSCRIPTION_PROVIDER`, `TRANSCRIPTION_FALLBACK_PROVIDER` |
+| Audio step (pronunciation, pausing) | Gemini, off | `AUDIO_ASSESSMENT` |
 
 Gemini (`server/evaluation/gemini-evaluation-model.ts`) uses the official `@google/genai` SDK with JSON-schema
 output (`gemini-json-schema.ts` derives it from the Zod schema), but never trusts API-side enforcement.
@@ -140,10 +149,9 @@ in `server/evaluation/versions.ts` and the quality doc.
 
 ### Honest comparison
 
-`domain/speaking/comparison.ts` derives every delta from stored scores.
-One-point (or one sub-band) differences are labelled *slight* and never
-presented as progress; the verdict is conservative; attempts scored with
-different methodology versions are flagged.
+`domain/speaking/comparison.ts` compares the Part band, the questions on topic and each feature level. A one-band
+difference is labelled *slight* and never presented as progress; attempts scored with different methodology versions
+are flagged; pre-band attempts are not compared.
 
 ## Data model
 

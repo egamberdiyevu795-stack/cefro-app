@@ -1,5 +1,5 @@
 import "server-only";
-import type { EvaluationResult, RetryFocusItem } from "@/domain/evaluation/schema";
+import type { RetryFocusItem } from "@/domain/evaluation/stored";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";
 import type { Rubric } from "./rubrics";
@@ -10,17 +10,13 @@ export interface EvaluationInput {
   rubric: Rubric;
   transcript: string;
   metrics: SpeechMetrics;
-  /**
-   * Reference to the stored audio. The v1 evaluator is transcript-based and
-   * does not use it; it is passed so audio-capable evaluators can be added
-   * without changing the pipeline.
-   */
+  /** Reference to the stored audio (the audio itself is passed to the audio step separately). */
   audio: { storageProvider: string; storageKey: string; mimeType: string; durationMs: number };
   /** Present when this attempt is a retry. */
   previousAttempt: {
     attemptNumber: number;
     transcript: string;
-    evaluation: EvaluationResult;
+    /** The focus the student was given for this attempt. */
     retryFocus: RetryFocusItem[];
   } | null;
 }
@@ -52,4 +48,11 @@ export interface EvaluationModel {
   /** Request settings that can affect results (effort, token limit…). Stored with each evaluation. */
   readonly config: Record<string, string | number | boolean>;
   evaluate(prompt: EvaluationPrompt, input: EvaluationInput): Promise<ModelEvaluationOutput>;
+}
+
+/** A model that listens to the recording and judges pronunciation and pausing (see audio-assessment.ts). */
+export interface AudioAssessor {
+  readonly provider: string;
+  readonly model: string;
+  assess(request: { prompt: string; audio: Buffer; mimeType: string }): Promise<ModelEvaluationOutput>;
 }

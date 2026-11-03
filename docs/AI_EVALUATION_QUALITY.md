@@ -1,5 +1,21 @@
 # AI evaluation quality (B2 Part 2)
 
+> **Evaluator 3.0.0 (Multilevel band scale).** CEFRO now scores Part 2 as the official UZBMB Multilevel
+> **Question 7**: three questions on one topic, target B2, holistic band 0–5 (5 Above B2, 4 Higher B2, 3 Lower B2,
+> 2 Higher B1, 1 Lower B1, 0 Below B1; "meets B2" = band 3+). The model no longer gives scores: it judges each
+> question and each feature (grammar, vocabulary, fluency, cohesion; pronunciation and pausing from the audio step)
+> against the official descriptors, with strictly verified quotes, and the band is computed in code. Current design:
+> [`ARCHITECTURE.md` → AI evaluation](ARCHITECTURE.md#ai-evaluation). **Not yet validated against real providers:**
+> the 3.0.0 prompt, the audio step and the band distribution on the sample set (`npm run eval:live`, now with band
+> ranges per sample). Sections below about the 0–10 analytic evaluator (issues, improved examples, `overall_level`)
+> describe versions ≤ 2.4.1 and are kept as history; their real-run findings informed the 3.0.0 rules (evidence,
+> plain-language numbers, honest retry review).
+>
+> **Verbatim transcription regression.** A live run turned a learner's "nobody will helps" into "nobody helps".
+> Both transcription prompts now ask for a verbatim, disfluent transcript and name the error types models "fix".
+> `T12-verbatim-regression` (`TRANSCRIPTION_SAMPLES=T12 npm run eval:transcription:controlled`) FAILS if "nobody
+> will helps", "they don't talking" or "less sociable" do not come back word for word.
+
 This document describes how CEFRO evaluates spoken answers, how evaluation
 quality is checked, and what we know about its weaknesses. It is a working
 document: add a row to the [findings log](#findings-log) whenever a review

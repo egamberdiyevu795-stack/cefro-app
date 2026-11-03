@@ -1,7 +1,5 @@
 import "server-only";
-import { CEFR_LEVELS, type CefrLevel } from "@/domain/cefr";
-import type { RetryFocusItem } from "@/domain/evaluation/schema";
-import { parseStoredEvaluation } from "@/domain/evaluation/stored";
+import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView, FailureCode } from "@/domain/speaking/attempt";
 import { FAILURE_CODES, IN_PROGRESS_STATUSES } from "@/domain/speaking/attempt";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
@@ -79,13 +77,19 @@ export function toAttemptSummary(attempt: AttemptRow, evaluation: EvaluationRow 
     id: attempt.id,
     attemptNumber: attempt.attemptNumber,
     status: attempt.status,
-    overallLevel:
-      evaluation && (CEFR_LEVELS as readonly string[]).includes(evaluation.overallLevel)
-        ? (evaluation.overallLevel as CefrLevel)
-        : null,
+    band: bandOf(evaluation),
     createdAt: attempt.createdAt,
     previousAttemptId: attempt.previousAttemptId,
   };
+}
+
+/** Band headline for history lists. Old (schema 1–2) results have none: they were not scored on the band scale. */
+function bandOf(evaluation: EvaluationRow | undefined): AttemptSummary["band"] {
+  if (!evaluation) return null;
+  const parsed = parseStoredEvaluation(evaluation.schemaVersion, evaluation.result);
+  if (!parsed || parsed.kind !== "multilevel") return null;
+  const { band, band_max, label, provisional } = parsed.scoring;
+  return { band, bandMax: band_max, label, provisional };
 }
 
 function toFailureCode(value: string | null): FailureCode {

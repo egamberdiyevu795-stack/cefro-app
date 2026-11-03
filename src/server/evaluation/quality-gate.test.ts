@@ -1,198 +1,164 @@
 import { describe, expect, it } from "vitest";
-import type { EvaluationResult } from "@/domain/evaluation/schema";
-import { FIXTURE_TRANSCRIPT, makeEvaluation } from "../../../test/fixtures";
-import { applyQualityGate, compareImprovedExample, isGeneric, makesPronunciationClaim } from "./quality-gate";
+import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { FIXTURE_TRANSCRIPT, makeModelOutput } from "../../../test/fixtures";
+import { applyQualityGate, findPronunciationClaim, findUnmetTarget, isGeneric } from "./quality-gate";
 
-const context = { transcript: FIXTURE_TRANSCRIPT, taskPromptCount: 3, hasPreviousAttempt: false };
+const context = { transcript: FIXTURE_TRANSCRIPT, questionCount: 3, hasPreviousAttempt: false };
 
-function gate(result: EvaluationResult, overrides: Partial<typeof context> = {}) {
-  return applyQualityGate(result, { ...context, ...overrides });
+function gate(output: MultilevelModelOutput, overrides: Partial<typeof context> & { metrics?: { speakingSeconds: number; wordCount: number } } = {}) {
+  return applyQualityGate(output, { ...context, ...overrides });
 }
-function codes(result: EvaluationResult, overrides: Partial<typeof context> = {}) {
-  return gate(result, overrides).report.violations.map((v) => `${v.severity}:${v.code}`);
-}
-function withIssue(patch: Partial<EvaluationResult["issues"][number]>, index = 0): EvaluationResult {
-  const base = makeEvaluation();
-  base.issues[index] = { ...base.issues[index], ...patch };
-  return base;
+function codes(output: MultilevelModelOutput, overrides: Partial<typeof context> = {}) {
+  return gate(output, overrides).report.violations.map((v) => `${v.severity}:${v.code}`);
 }
 
-describe("quality gate", () => {
-  it("passes a clean, evidence-based evaluation unchanged", () => {
-    const { result, report } = gate(makeEvaluation());
+describe("quality gate (Multilevel)", () => {
+  it("passes a clean, evidence-based output unchanged", () => {
+    const { result, report } = gate(makeModelOutput());
     expect(report).toEqual({ passed: true, violations: [] });
-    expect(result).toEqual(makeEvaluation());
+    expect(result).toEqual(makeModelOutput());
   });
 
-  describe("Test A — evidence must exist in the transcript", () => {
-    it("rejects an issue whose only quote is hallucinated", () => {
-      const { report } = gate(withIssue({ evidence_quotes: ["I have gone to Bukhara"] }));
-      expect(report.passed).toBe(false);
-      expect(report.violations.map((v) => v.code)).toContain("issue_without_evidence");
+  describe("question numbering is 1-based and complete", () => {
+    it("rejects 0-based ids", () => {
+      const output = makeModelOutput();
+      output.questions = output.questions.map((q) => ({ ...q, id: q.id - 1 }));
+      expect(codes(output)).toContain("reject:question_ids_invalid");
     });
 
-    it("keeps verified quotes and removes unverifiable ones with a warning", () => {
-      const { result, report } = gate(withIssue({ evidence_quotes: ["I have went to Samarkand", "I goed there"] }));
+    it("rejects a missing or duplicated question", () => {
+      const missing = makeModelOutput();
+      missing.questions = missing.questions.slice(0, 2);
+      expect(codes(missing)).toContain("reject:question_ids_invalid");
+      const duplicated = makeModelOutput();
+      duplicated.questions[2] = { ...duplicated.questions[2], id: 2 };
+      expect(codes(duplicated)).toContain("reject:question_ids_invalid");
+    });
+
+    it("sorts questions by id", () => {
+      const output = makeModelOutput();
+      output.questions.reverse();
+      expect(gate(output).result.questions.map((q) => q.id)).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe("evidence must be the student's exact words", () => {
+    it("rejects a feature whose every quote is not in the transcript (including a 'corrected' quote)", () => {
+      const output = makeModelOutput();
+      output.features.grammar.evidence = ["Last year I have gone to Samarkand"];
+      expect(codes(output)).toContain("reject:feature_evidence_fabricated");
+    });
+
+    it("keeps verified quotes and drops the rest with a warning", () => {
+      const output = makeModelOutput();
+      output.features.grammar.evidence = ["I have went to Samarkand", "I have visited Bukhara"];
+      const { result, report } = gate(output);
       expect(report.passed).toBe(true);
-      expect(result.issues[0].evidence_quotes).toEqual(["I have went to Samarkand"]);
-      expect(report.violations).toEqual([expect.objectContaining({ severity: "warn", code: "quote_not_found" })]);
+      expect(result.features.grammar.evidence).toEqual(["I have went to Samarkand"]);
+      expect(report.violations.map((v) => v.code)).toContain("quote_not_found");
     });
 
-    it("accepts quotes that differ only in case, punctuation or dropped fillers", () => {
-      expect(gate(withIssue({ evidence_quotes: ["i HAVE went, to samarkand"] })).report.passed).toBe(true);
+    it("is strict: no ellipsis gaps and no tolerated differing word in long quotes", () => {
+      const output = makeModelOutput();
+      output.features.vocabulary.evidence = ["I think … talk with friends"];
+      expect(codes(output)).toContain("reject:feature_evidence_fabricated");
+      const long = makeModelOutput();
+      long.features.vocabulary.evidence = ["Last year I have go to Samarkand with my friend and we used maps"];
+      expect(codes(long)).toContain("reject:feature_evidence_fabricated");
     });
 
-    it("allows issues based on metrics or task requirements without quotes", () => {
-      const result = withIssue({ evidence_basis: "task_requirement", evidence_quotes: [], improved_example: { original: "", improved: "Schools should limit phones during lessons." } });
-      expect(gate(result).report.passed).toBe(true);
+    it("ignores case, punctuation and fillers", () => {
+      const output = makeModelOutput();
+      output.features.grammar.evidence = ["i HAVE went, to samarkand"];
+      expect(gate(output).report.passed).toBe(true);
     });
 
-    it("blanks an improved-example 'original' and strength quotes that are not in the transcript", () => {
-      const evaluation = withIssue({ improved_example: { original: "I have went to Bukhara with my brother", improved: "I went to Bukhara with my brother" } });
-      evaluation.strengths[0].evidence_quote = "a fantastic and invented sentence";
-      const { result, report } = gate(evaluation);
+    it("clears unverifiable question evidence, errors and strengths", () => {
+      const output = makeModelOutput();
+      output.questions[0].evidence = "we always chat on Telegram";
+      output.errors.push({ quote: "nobody helps", correction: "nobody will help", type: "grammar" });
+      output.strengths.push({ feature: "fluency", quote: "made-up words", note: "x" });
+      const { result, report } = gate(output);
       expect(report.passed).toBe(true);
-      expect(result.issues[0].improved_example.original).toBe("");
-      expect(result.strengths[0].evidence_quote).toBe("");
+      expect(result.questions[0].evidence).toBe("");
+      expect(result.errors).toHaveLength(1);
+      expect(result.strengths).toHaveLength(1);
     });
   });
 
-  describe("Test B — improved version must preserve meaning", () => {
-    it("accepts a correction that keeps the student's idea", () => {
-      const check = compareImprovedExample(
-        "I visited Samarkand with my friend.",
-        "I visited Samarkand with my friend, and we spent the whole day exploring the city.",
-      );
-      expect(check).toMatchObject({ meaningChanged: false, tooElaborate: false });
-    });
-
-    it("rejects a rewrite that replaces the idea with showy prose", () => {
-      const check = compareImprovedExample(
-        "I visited Samarkand with my friend.",
-        "During my unforgettable journey across the breathtaking ancient city of Samarkand, I had the privilege of exploring its majestic monuments.",
-      );
-      expect(check.meaningChanged || check.tooElaborate).toBe(true);
-
-      const { report } = gate(
-        withIssue({
-          improved_example: {
-            original: "Last year I have went to Samarkand with my friend",
-            improved: "During an unforgettable journey across the breathtaking ancient city of Samarkand, I had the privilege of exploring magnificent architecture alongside a companion.",
-          },
-        }),
-      );
-      expect(report.passed).toBe(false);
-    });
-
-    it("rejects an improved version about something else entirely", () => {
-      const { report } = gate(
-        withIssue({ improved_example: { original: "Last year I have went to Samarkand with my friend", improved: "Social media can be a distraction for teenagers." } }),
-      );
-      expect(report.violations.map((v) => v.code)).toContain("improved_example_changes_meaning");
-    });
+  it("drops a strength for a feature judged below B2", () => {
+    const output = makeModelOutput();
+    output.strengths = [{ feature: "grammar", quote: "I think phones are good", note: "Correct sentence." }];
+    const { result, report } = gate(output);
+    expect(result.strengths).toEqual([]);
+    expect(report.violations.map((v) => v.code)).toContain("strength_below_b2");
   });
 
-  describe("Test C — no pronunciation claims from a transcript", () => {
-    it("rejects an issue filed under pronunciation", () => {
-      expect(codes(withIssue({ criterion: "pronunciation" }))).toContain("reject:pronunciation_claim");
-    });
-
-    it("rejects pronunciation claims hidden in other feedback text", () => {
-      const evaluation = withIssue({ why_it_matters: "You mispronounce 'th' as 's', which confuses listeners." });
-      expect(codes(evaluation)).toContain("reject:pronunciation_claim");
-      expect(makesPronunciationClaim("Your accent is very clear.")).toBe(true);
-      expect(makesPronunciationClaim("Your intonation is flat when you list ideas.")).toBe(true);
-    });
-
-    it("recognises the NOUN too: 'pronunciation' and 'mispronunciation' (the pattern once matched only 'pronounce…')", () => {
-      for (const text of [
-        "Your pronunciation of 'went' is unclear.",
-        "Your pronunciation is good.",
-        "Work on your pronunciation of long vowels.",
-        "Mispronunciation of 'th' sounds makes you hard to follow.",
-        "You mispronounced the word.",
-      ]) {
-        expect(makesPronunciationClaim(text), text).toBe(true);
-      }
-      expect(codes(withIssue({ why_it_matters: "Your pronunciation is very clear." }))).toContain("reject:pronunciation_claim");
-      // Still allowed: saying it was not assessed.
-      expect(makesPronunciationClaim("Pronunciation cannot be judged from a transcript.")).toBe(false);
-      expect(makesPronunciationClaim("We did not assess pronunciation.")).toBe(false);
-    });
-
-    it("allows saying that pronunciation was not assessed", () => {
-      expect(makesPronunciationClaim("Pronunciation was not assessed because we only have a transcript.")).toBe(false);
-      const evaluation = makeEvaluation({ overall_summary: "Clear answer. Pronunciation cannot be judged from text." });
-      expect(gate(evaluation).report.passed).toBe(true);
-    });
+  it("requires a concrete fix for every assessed feature", () => {
+    const empty = makeModelOutput();
+    empty.features.cohesion.how_to_improve = " ";
+    expect(codes(empty)).toContain("reject:missing_fix");
+    const generic = makeModelOutput();
+    generic.features.vocabulary.how_to_improve = "Use more advanced vocabulary.";
+    expect(codes(generic)).toContain("reject:generic_feedback");
   });
 
-  describe("Test D — generic feedback is rejected unless it is specific", () => {
-    it("rejects generic problem statements without evidence in the text", () => {
-      expect(codes(withIssue({ problem: "You need to improve your grammar." }))).toContain("reject:generic_feedback");
-      expect(codes(withIssue({ how_to_fix: "Use more advanced vocabulary." }))).toContain("reject:generic_feedback");
-    });
+  it("resets a pronunciation level from the transcript evaluator and rejects pronunciation talk elsewhere", () => {
+    const assessed = makeModelOutput();
+    assessed.features.pronunciation = { level: "B1", evidence: [], note: "x", how_to_improve: "y", how_to_check: "z" };
+    const { result, report } = gate(assessed);
+    expect(result.features.pronunciation.level).toBe("not_assessed");
+    expect(report.violations.map((v) => `${v.severity}:${v.code}`)).toContain("warn:pronunciation_from_transcript");
 
-    it("accepts the same words when they name the specific problem", () => {
-      expect(gate(withIssue({ how_to_fix: "Practise more with 'have gone' and 'have seen' before your next answer." })).report.passed).toBe(true);
-      expect(isGeneric("Speak more fluently.")).toBe(true);
-      expect(isGeneric("Link your ideas with 'however' and 'as a result'.")).toBe(false);
-    });
-
-    it("rejects a generic retry focus", () => {
-      const evaluation = makeEvaluation();
-      evaluation.retry_focus[0].objective = "Give more details";
-      expect(codes(evaluation)).toContain("reject:generic_feedback");
-    });
+    const claim = makeModelOutput();
+    claim.features.fluency.note = "Your pronunciation of 'Samarkand' was unclear.";
+    expect(codes(claim)).toContain("reject:pronunciation_claim");
   });
 
-  describe("Test E — retry focus must come from an identified weakness", () => {
-    it("rejects a focus pointing at an issue that does not exist", () => {
-      const evaluation = makeEvaluation();
-      evaluation.retry_focus[0].addresses_issue = 7;
-      expect(codes(evaluation)).toContain("reject:retry_focus_unlinked");
-    });
-
-    it("aligns the focus criterion with its linked issue", () => {
-      const evaluation = makeEvaluation();
-      evaluation.retry_focus[0].criterion = "fluency_coherence";
-      const { result, report } = gate(evaluation);
-      expect(report.passed).toBe(true);
-      expect(result.retry_focus[0].criterion).toBe("grammar");
-    });
-
-    it("keeps focus links correct when issues are reordered by severity", () => {
-      const evaluation = makeEvaluation();
-      evaluation.issues.reverse(); // medium first, high second
-      evaluation.retry_focus[0].addresses_issue = 1; // the high-severity grammar issue
-      const { result } = gate(evaluation);
-      expect(result.issues[0].severity).toBe("high");
-      expect(result.issues[result.retry_focus[0].addresses_issue].criterion).toBe("grammar");
-    });
+  it("rejects internal field names in student-facing text", () => {
+    const output = makeModelOutput();
+    output.features.fluency.note = "You spoke slowly (wordsPerMinute: 70).";
+    expect(codes(output)).toContain("reject:internal_field_leak");
   });
 
-  it("rejects duplicated issues", () => {
-    const evaluation = makeEvaluation();
-    evaluation.issues[1] = { ...evaluation.issues[0], severity: "medium" };
-    expect(codes(evaluation)).toContain("reject:duplicate_issue");
+  it("warns when an answer is marked memorised despite two answered questions", () => {
+    const output = makeModelOutput({ memorized_or_irrelevant: true });
+    output.questions[1].status = "on_topic";
+    expect(codes(output)).toContain("warn:memorized_conflict");
   });
 
-  it("drops invalid task-coverage entries and an unexpected retry review", () => {
-    const evaluation = makeEvaluation({
-      task_coverage: [
-        { prompt_index: 1, status: "covered", note: "ok" },
-        { prompt_index: 1, status: "covered", note: "duplicate" },
-        { prompt_index: 9, status: "covered", note: "out of range" },
-      ],
-      retry_review: { objectives: [], summary: "Invented review." },
+  it("removes a retry review on a first attempt and warns when a retry has none", () => {
+    const review = { objectives: [], summary: "Same." };
+    const first = gate(makeModelOutput({ retry_review: review }));
+    expect(first.result.retry_review).toBeNull();
+    expect(codes(makeModelOutput(), { hasPreviousAttempt: true })).toContain("warn:missing_retry_review");
+  });
+
+  it("downgrades 'achieved' when the measured value misses an explicit target", () => {
+    const output = makeModelOutput({
+      retry_review: { objectives: [{ objective: "Speak for at least 90 seconds", outcome: "achieved", evidence: "You spoke longer." }], summary: "Better." },
     });
-    const { result, report } = gate(evaluation);
+    const { result, report } = gate(output, { hasPreviousAttempt: true, metrics: { speakingSeconds: 88, wordCount: 150 } });
+    expect(result.retry_review?.objectives[0].outcome).toBe("partly_achieved");
     expect(report.passed).toBe(true);
-    expect(result.task_coverage).toHaveLength(1);
-    expect(result.retry_review).toBeNull();
+  });
+});
+
+describe("helpers", () => {
+  it("findUnmetTarget understands 'at least' and 'over', and ignores rates", () => {
+    const measured = { speakingSeconds: 88, wordCount: 152 };
+    expect(findUnmetTarget("Speak for at least 90 seconds.", measured)).not.toBeNull();
+    expect(findUnmetTarget("Use over 151 words.", measured)).toBeNull();
+    expect(findUnmetTarget("Reach at least 130 words per minute.", measured)).toBeNull();
   });
 
-  it("warns (but does not reject) when a retry has no retry review", () => {
-    expect(codes(makeEvaluation(), { hasPreviousAttempt: true })).toEqual(["warn:missing_retry_review"]);
+  it("findPronunciationClaim names the sentence and ignores 'cannot be assessed'", () => {
+    expect(findPronunciationClaim("Good. Pronounce the final -s clearly.")).toBe("Pronounce the final -s clearly.");
+    expect(findPronunciationClaim("Pronunciation cannot be assessed from a transcript.")).toBeNull();
+  });
+
+  it("isGeneric flags advice with no specifics", () => {
+    expect(isGeneric("Improve your grammar")).toBe(true);
+    expect(isGeneric("Use 'however' to contrast two ideas")).toBe(false);
   });
 });

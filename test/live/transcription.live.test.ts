@@ -78,7 +78,7 @@ describe.skipIf(!configured)("LIVE: real transcription of local recordings", () 
         },
         getEvaluationModel(),
       );
-      row.level = evaluation.result.overall_level;
+      row.level = `${evaluation.result.scoring.band}/${evaluation.result.scoring.band_max}`;
     }
   });
 
@@ -86,7 +86,7 @@ describe.skipIf(!configured)("LIVE: real transcription of local recordings", () 
     const md = [
       "# Live transcription report",
       "",
-      "| File | Latency | WER vs ref | Learner errors kept | Level | Error |",
+      "| File | Latency | WER vs ref | Learner errors kept | Band | Error |",
       "|---|---|---|---|---|---|",
       ...rows.map(
         (r) =>

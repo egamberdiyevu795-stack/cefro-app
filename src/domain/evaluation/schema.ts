@@ -9,6 +9,9 @@ import { SPEAKING_CRITERIA } from "./criteria";
  * AI output is validated against the current schema before it is stored,
  * and the UI renders only what it defines.
  *
+ * Version 3 (current) is the Multilevel band evaluation: ./multilevel/result.ts. Versions 1 and 2 (below) are
+ * the old analytic /10-per-criterion results; they are kept only so stored attempts can still be read.
+ *
  * Evolving the schema: add a new version next to the existing ones, bump
  * `EVALUATION_SCHEMA_VERSION`, and teach `parseStoredEvaluation`
  * (./stored.ts) to upgrade older rows for display. Stored evaluations keep
@@ -18,7 +21,7 @@ import { SPEAKING_CRITERIA } from "./criteria";
  * hints when it builds the JSON Schema for structured outputs, so they are
  * NOT enforced by the API. Zod validation here is the real guard.
  */
-export const EVALUATION_SCHEMA_VERSION = 2;
+export const EVALUATION_SCHEMA_VERSION = 3;
 
 const cefrLevel = z.enum(CEFR_LEVELS);
 const criterion = z.enum(SPEAKING_CRITERIA);
@@ -176,11 +179,8 @@ export const evaluationResultV2Schema = z.object({
   reliability_note: z.string().nullable(),
 });
 
-/** The current evaluation result shape. */
-export type EvaluationResult = z.infer<typeof evaluationResultV2Schema>;
-export const evaluationResultSchema = evaluationResultV2Schema;
-export type EvaluationIssue = EvaluationResult["issues"][number];
-export type EvaluationStrength = EvaluationResult["strengths"][number];
-export type RetryFocusItem = EvaluationResult["retry_focus"][number];
-export type CriterionAssessment = EvaluationResult["criteria"]["grammar"];
-export type TaskCoverageItem = EvaluationResult["task_coverage"][number];
+/** Legacy (schema 1–2) analytic result, read-only. */
+export type LegacyEvaluationResult = z.infer<typeof evaluationResultV2Schema>;
+export type LegacyRetryFocusItem = LegacyEvaluationResult["retry_focus"][number];
+
+export { multilevelResultSchema, type MultilevelResult } from "./multilevel/result";

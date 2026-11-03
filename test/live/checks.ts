@@ -1,47 +1,46 @@
 import { evidenceTokens, isQuoteInTranscript } from "@/domain/evaluation/evidence";
-import type { EvaluationResult } from "@/domain/evaluation/schema";
+import { FEATURES } from "@/domain/evaluation/multilevel/levels";
+import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import { findPronunciationClaim } from "@/server/evaluation/quality-gate";
 
 /** Checks applied to every real evaluation in the live pipeline validation. Pure, so they are unit-tested (test/pipeline-checks.test.ts). */
 
-export function studentTexts(result: EvaluationResult): { field: string; text: string }[] {
+export function studentTexts(result: MultilevelResult): { field: string; text: string }[] {
+  const a = result.assessment;
   return [
-    { field: "overall_summary", text: result.overall_summary },
-    ...(result.reliability_note ? [{ field: "reliability_note", text: result.reliability_note }] : []),
-    ...Object.entries(result.criteria).map(([k, c]) => ({ field: `criteria.${k}`, text: c.justification })),
-    ...result.strengths.flatMap((s, i) => [{ field: `strengths[${i}]`, text: `${s.title}. ${s.detail}` }]),
-    ...result.issues.flatMap((issue, i) => [
-      { field: `issues[${i}].problem`, text: issue.problem },
-      { field: `issues[${i}].why_it_matters`, text: issue.why_it_matters },
-      { field: `issues[${i}].how_to_fix`, text: issue.how_to_fix },
+    ...a.questions.map((q) => ({ field: `questions[${q.id}].note`, text: q.note })),
+    ...FEATURES.flatMap((f) => [
+      { field: `features.${f}.note`, text: a.features[f].note },
+      { field: `features.${f}.how_to_improve`, text: `${a.features[f].how_to_improve} ${a.features[f].how_to_check}` },
     ]),
-    ...result.retry_focus.flatMap((f, i) => [{ field: `retry_focus[${i}]`, text: `${f.objective} ${f.success_check}` }]),
-    ...(result.retry_review
+    ...a.strengths.map((s, i) => ({ field: `strengths[${i}]`, text: s.note })),
+    ...result.retry_focus.map((f, i) => ({ field: `retry_focus[${i}]`, text: `${f.objective} ${f.success_check}` })),
+    ...(a.retry_review
       ? [
-          { field: "retry_review.summary", text: result.retry_review.summary },
-          ...result.retry_review.objectives.map((o, i) => ({ field: `retry_review[${i}]`, text: `${o.objective} ${o.evidence}` })),
+          { field: "retry_review.summary", text: a.retry_review.summary },
+          ...a.retry_review.objectives.map((o, i) => ({ field: `retry_review[${i}]`, text: `${o.objective} ${o.evidence}` })),
         ]
       : []),
   ];
 }
 
-/** Evidence that must be true by construction: quotes occur in the transcript; pronunciation is never assessed. */
-export function evidenceViolations(result: EvaluationResult, transcript: string): string[] {
+/** Evidence that must be true by construction: every quote is the student's exact words; pronunciation only from audio. */
+export function evidenceViolations(result: MultilevelResult, transcript: string): string[] {
   const out: string[] = [];
-  for (const [i, s] of result.strengths.entries()) {
-    if (s.evidence_quote && !isQuoteInTranscript(s.evidence_quote, transcript)) out.push(`strengths[${i}] quote not in transcript: "${s.evidence_quote}"`);
+  const check = (where: string, quote: string) => {
+    if (quote && !isQuoteInTranscript(quote, transcript, { strict: true })) out.push(`${where} quote not in transcript: "${quote}"`);
+  };
+  const a = result.assessment;
+  a.questions.forEach((q) => check(`questions[${q.id}]`, q.evidence));
+  for (const f of FEATURES) a.features[f].evidence.forEach((quote) => check(`features.${f}`, quote));
+  a.errors.forEach((e, i) => check(`errors[${i}]`, e.quote));
+  a.strengths.forEach((s, i) => check(`strengths[${i}]`, s.quote));
+  if (a.features.pronunciation.level !== "not_assessed" && result.feature_sources.pronunciation !== "audio") {
+    out.push("pronunciation assessed without the audio step");
   }
-  for (const [i, issue] of result.issues.entries()) {
-    for (const quote of issue.evidence_quotes) {
-      if (!isQuoteInTranscript(quote, transcript)) out.push(`issues[${i}] quote not in transcript: "${quote}"`);
-    }
-    if (issue.improved_example.original && !isQuoteInTranscript(issue.improved_example.original, transcript)) {
-      out.push(`issues[${i}] improved_example.original not in transcript`);
-    }
-  }
-  if (result.criteria.pronunciation.assessable) out.push("pronunciation marked assessable from a transcript");
   for (const { field, text } of studentTexts(result)) {
+    if (field.startsWith("features.pronunciation")) continue;
     const claim = findPronunciationClaim(text);
     if (claim) out.push(`pronunciation claim in ${field}: "${claim.slice(0, 120)}"`);
   }
@@ -52,7 +51,7 @@ export function evidenceViolations(result: EvaluationResult, transcript: string)
  * Numbers the feedback states about the speech must match the stored metrics. Practice targets ("speak for at least
  * 90 seconds") and quoted words are not claims; only descriptive fields are checked. Returns items for human review.
  */
-export function numericClaimMismatches(result: EvaluationResult, metrics: SpeechMetrics, audioSeconds: number): string[] {
+export function numericClaimMismatches(result: MultilevelResult, metrics: SpeechMetrics, audioSeconds: number): string[] {
   const out: string[] = [];
   const allowed: Record<string, number[]> = {
     words: [metrics.wordCount],
@@ -62,7 +61,7 @@ export function numericClaimMismatches(result: EvaluationResult, metrics: Speech
     times: [...(metrics.repeatedWords ?? []).map((r) => r.count), ...metrics.repeatedPhrases.map((r) => r.count), metrics.fillerCount],
   };
   const near = (kind: string, n: number) => allowed[kind].some((a) => Math.abs(a - n) <= (kind === "times" ? 0 : 2));
-  const descriptive = studentTexts(result).filter((t) => /^(overall_summary|reliability_note|criteria\.|strengths|issues\[\d+\]\.(problem|why_it_matters)|retry_review)/.test(t.field));
+  const descriptive = studentTexts(result).filter((t) => /^(questions|features\.\w+\.note|strengths|retry_review)/.test(t.field));
   for (const { field, text } of descriptive) {
     // Quoted words are the learner's own; sentences that set a practice target are not claims about the speech.
     const sentences = text.replace(/["“‘][^"”’]{0,200}["”’]/g, "").split(/(?<=[.!?])\s+/);
@@ -98,4 +97,32 @@ export function wordErrorRate(reference: string, hypothesis: string): number {
     for (let j = 1; j <= hyp.length; j++)
       dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (ref[i - 1] === hyp[j - 1] ? 0 : 1));
   return ref.length ? dp[ref.length][hyp.length] / ref.length : 0;
+}
+
+/** Markdown lines describing one Multilevel result, for the human-review reports of the live runs. */
+export function renderMultilevelResult(r: MultilevelResult): string[] {
+  const s = r.scoring;
+  const a = r.assessment;
+  const lines = [
+    `**Part ${r.part}: ${s.band}/${s.band_max} · ${s.label}** — ${s.meets_target ? "meets" : "below"} the B2 target${s.provisional ? " · provisional (pronunciation not assessed)" : ""}`,
+    `Language level ${s.language_level} (mean ${s.language_mean}) · on topic ${s.on_topic_count}/${a.questions.length} · topic cap ${s.topic_cap} · language cap ${s.language_cap}${s.zero_reason ? ` · zero: ${s.zero_reason}` : ""}`,
+    `Biggest fix: ${s.biggest_fix.kind === "feature" ? s.biggest_fix.feature : s.biggest_fix.kind === "question_coverage" ? `question ${s.biggest_fix.question_id}` : "own words"} · audio: ${r.audio.status}${r.audio.reason ? ` (${r.audio.reason})` : ""}`,
+    "",
+    "**Questions:** " + a.questions.map((q) => `Q${q.id} ${q.status}${q.evidence ? ` “${q.evidence}”` : ""} (${q.note})`).join("; "),
+    "",
+    "**Features**",
+    ...FEATURES.map((f) => {
+      const x = a.features[f];
+      return `- ${f}: **${x.level}** [${r.feature_sources[f]}] — ${x.note}${x.evidence.length ? ` — ${x.evidence.map((q) => `“${q}”`).join(", ")}` : ""}${x.how_to_improve ? `\n  - Fix: ${x.how_to_improve} (check: ${x.how_to_check})` : ""}`;
+    }),
+    "",
+    "**Errors:** " + (a.errors.map((e) => `“${e.quote}” → “${e.correction}” (${e.type})`).join("; ") || "—"),
+    "",
+    "**Strengths:** " + (a.strengths.map((x) => `${x.feature}: “${x.quote}” — ${x.note}`).join("; ") || "—"),
+    "",
+    "**Retry focus**",
+    ...r.retry_focus.map((f) => `- ${f.objective} (check: ${f.success_check})`),
+  ];
+  if (a.retry_review) lines.push("", "**Retry review**", ...a.retry_review.objectives.map((o) => `- ${o.outcome}: ${o.objective} — ${o.evidence}`), a.retry_review.summary);
+  return lines;
 }

@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getSpeakingTask } from "@/content/speaking";
-import { CEFR_LEVELS } from "@/domain/cefr";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import { MockEvaluationModel } from "@/server/evaluation/mock-evaluation-model";
-import { buildSpeakingEvaluationPrompt } from "@/server/evaluation/prompts/speaking-evaluation-v2";
+import { buildMultilevelEvaluationPrompt } from "@/server/evaluation/prompts/multilevel-evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking } from "@/server/evaluation/speaking-evaluator";
 import { B2_PART2_SAMPLES } from "./b2-part2-samples";
@@ -29,8 +28,10 @@ describe("B2 Part 2 evaluation sample set", () => {
     expect(B2_PART2_SAMPLES.length).toBeGreaterThanOrEqual(12);
     expect(new Set(B2_PART2_SAMPLES.map((s) => s.id)).size).toBe(B2_PART2_SAMPLES.length);
     for (const sample of B2_PART2_SAMPLES) {
-      const [min, max] = sample.expect.level;
-      expect(CEFR_LEVELS.indexOf(min)).toBeLessThanOrEqual(CEFR_LEVELS.indexOf(max));
+      const [min, max] = sample.expect.band;
+      expect(min).toBeGreaterThanOrEqual(0);
+      expect(min).toBeLessThanOrEqual(max);
+      expect(max).toBeLessThanOrEqual(5);
     }
   });
 
@@ -50,11 +51,13 @@ describe("B2 Part 2 evaluation sample set", () => {
     const evaluation = await evaluateSpeaking(inputFor(id), new MockEvaluationModel());
     expect(evaluation.quality.passed).toBe(true);
     expect(evaluation.modelCalls).toBe(1);
-    expect(evaluation.result.criteria.pronunciation.assessable).toBe(false);
+    expect(evaluation.result.assessment.features.pronunciation.level).toBe("not_assessed");
+    expect(evaluation.result.scoring.band).toBeGreaterThanOrEqual(0);
+    expect(evaluation.result.scoring.band).toBeLessThanOrEqual(5);
   }, 10_000);
 
   it("the injection sample stays inside the escaped transcript section", () => {
-    const prompt = buildSpeakingEvaluationPrompt(inputFor("S13-prompt-injection"));
+    const prompt = buildMultilevelEvaluationPrompt(inputFor("S13-prompt-injection"));
     const transcriptSection = prompt.user.split("<transcript>")[1].split("</transcript>")[0];
     expect(transcriptSection).toContain("Ignore all previous instructions");
     expect(prompt.system).not.toContain("Ignore all previous instructions");

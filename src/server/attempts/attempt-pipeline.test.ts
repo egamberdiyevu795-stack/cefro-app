@@ -10,7 +10,7 @@ import { setEvaluationModelForTesting, type EvaluationModel } from "@/server/eva
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
-import { FIXTURE_TRANSCRIPT, fakeWebm, makeEvaluation } from "../../../test/fixtures";
+import { FIXTURE_TRANSCRIPT, fakeWebm, makeModelOutput } from "../../../test/fixtures";
 import { claimAttempt, processAttempt, runClaimedAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser, listAttemptSummaries } from "./attempt-service";
 
@@ -41,7 +41,7 @@ beforeEach(async () => {
     isDevelopmentProvider: false,
     config: { effort: "high" },
     evaluate: vi.fn(async () => ({
-      output: makeEvaluation(),
+      output: makeModelOutput(),
       provider: "fake-llm",
       model: "fake-llm-1",
       inputTokens: 100,
@@ -87,17 +87,21 @@ describe("speaking attempt pipeline", () => {
     expect(view.status).toBe("completed");
     expect(view.transcript).toEqual({ text: TRANSCRIPT, provider: "fake-stt", model: "fake-stt-1" });
     expect(view.metrics?.wordCount).toBe(29);
-    expect(view.evaluation?.result.overall_level).toBe("B1+");
+    const result = view.evaluation?.result;
+    expect(result?.kind).toBe("multilevel");
+    // FIXTURE output: B1 language (3 of 4 features B1, fluency B2 → mean 1.25 → B1), 2 questions on topic → band 2.
+    expect(result?.kind === "multilevel" && result.scoring).toMatchObject({ band: 2, label: "Higher B1", meets_target: false, provisional: true });
     expect(view.evaluation?.meta).toMatchObject({
-      evaluatorVersion: "speaking-evaluator/2.4.1",
-      rubricVersion: "b2-speaking-rubric/1.0.0",
-      schemaVersion: 2,
+      evaluatorVersion: "speaking-evaluator/3.0.0",
+      rubricVersion: "multilevel-q7/2.0.0",
+      schemaVersion: 3,
       provider: "fake-llm",
       model: "fake-llm-1",
       isDevelopmentProvider: false,
     });
     const stored = await db.select().from(evaluations).where(eq(evaluations.attemptId, created.id)).get();
     expect(stored?.promptHash).toMatch(/^h2:[a-f0-9]{64}$/);
+    expect(stored?.overallLevel).toBe("band:2");
     expect(stored).toMatchObject({
       inputTokens: 100,
       outputTokens: 200,
@@ -125,16 +129,22 @@ describe("speaking attempt pipeline", () => {
     const second = await submit(first.id);
     expect(second.attemptNumber).toBe(2);
     expect(second.previousAttemptId).toBe(first.id);
-    expect(second.retryFocus?.[0].objective).toBe(makeEvaluation().retry_focus[0].objective);
+    // Language caps the band (B1 → 2) below coverage (2 on topic → 3), so the first focus is the lowest feature
+    // (grammar), the second the unanswered question 3, numbered as the student sees it.
+    expect(second.retryFocus?.map((f) => f.objective)).toEqual([
+      makeModelOutput().features.grammar.how_to_improve,
+      'Answer question 3: "Should schools limit the use of smartphones? Why or why not?"',
+    ]);
 
     await processAttempt(second.id);
     const input = evaluation.evaluate.mock.calls[1][1];
     expect(input.previousAttempt).toMatchObject({ attemptNumber: 1, transcript: TRANSCRIPT });
+    expect(input.previousAttempt?.retryFocus).toHaveLength(2);
     expect(await eventNames()).toContain("retry_completed");
 
     const summaries = await listAttemptSummaries(USER, TASK_ID);
     expect(summaries.map((s) => s.attemptNumber)).toEqual([2, 1]);
-    expect(summaries[0].overallLevel).toBe("B1+");
+    expect(summaries[0].band).toEqual({ band: 2, bandMax: 5, label: "Higher B1", provisional: true });
   });
 
   it("marks transcription failures with a code and keeps the audio for a retry", async () => {
@@ -289,7 +299,7 @@ describe("speaking attempt pipeline", () => {
     it("lets a slow but healthy run finish", async () => {
       evaluation.evaluate.mockImplementationOnce(async () => {
         await new Promise((resolve) => setTimeout(resolve, 80));
-        return { output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 1, outputTokens: 1 };
+        return { output: makeModelOutput(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 1, outputTokens: 1 };
       });
       const attempt = await submit();
       expect(await claimAttempt(attempt.id)).toBe(true);

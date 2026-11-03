@@ -30,8 +30,8 @@ function quoteSegments(quote: string): string[][] {
     .filter((segment) => segment.length > 0);
 }
 
-function findSegment(haystack: string[], segment: string[], from: number): number {
-  const allowedMismatches = segment.length >= LONG_SEGMENT_WORDS ? 1 : 0;
+function findSegment(haystack: string[], segment: string[], from: number, strict = false): number {
+  const allowedMismatches = !strict && segment.length >= LONG_SEGMENT_WORDS ? 1 : 0;
   for (let start = from; start + segment.length <= haystack.length; start++) {
     let mismatches = 0;
     for (let i = 0; i < segment.length && mismatches <= allowedMismatches; i++) {
@@ -42,8 +42,18 @@ function findSegment(haystack: string[], segment: string[], from: number): numbe
   return -1;
 }
 
-/** True when the quote can be found in the transcript (see module doc for tolerance rules). */
-export function isQuoteInTranscript(quote: string, transcript: string): boolean {
+/**
+ * True when the quote can be found in the transcript (see module doc for tolerance rules).
+ *
+ * `strict`: the quote must be one contiguous run of the transcript's words, word for word: no ellipsis gaps and no
+ * tolerated differing word. Only case, punctuation and hesitation fillers are ignored. Used where a quote is evidence
+ * of the student's language (a "corrected" quote such as "nobody helps" for "nobody will helps" must not pass).
+ */
+export function isQuoteInTranscript(quote: string, transcript: string, options: { strict?: boolean } = {}): boolean {
+  if (options.strict) {
+    const words = evidenceTokens(quote);
+    return words.length > 0 && findSegment(evidenceTokens(transcript), words, 0, true) !== -1;
+  }
   const segments = quoteSegments(quote);
   if (segments.length === 0) return false;
   const haystack = evidenceTokens(transcript);

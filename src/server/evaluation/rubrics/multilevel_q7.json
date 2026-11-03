@@ -1,0 +1,56 @@
+{
+  "id": "multilevel-q7",
+  "version": "multilevel-q7/2.0.0",
+  "exam": "uzbmb-multilevel-speaking",
+  "part": 2,
+  "official_question": 7,
+  "target_level": "B2",
+  "question_count": 3,
+  "band_max": 5,
+  "meets_target_band": 3,
+  "bands": [
+    { "band": 5, "label": "Above B2", "descriptor": "Performance is likely to be above the B2 level." },
+    { "band": 4, "label": "Higher B2", "descriptor": "B2 descriptors; all three questions on topic." },
+    { "band": 3, "label": "Lower B2", "descriptor": "B2 descriptors; two questions on topic." },
+    { "band": 2, "label": "Higher B1", "descriptor": "B1 descriptors; at least two questions on topic." },
+    { "band": 1, "label": "Lower B1", "descriptor": "B1 descriptors; one question on topic." },
+    {
+      "band": 0,
+      "label": "Below B1",
+      "descriptor": "Performance is below B1, or there is no meaningful language, or all responses are completely off-topic (e.g. memorized answers, guessing)."
+    }
+  ],
+  "descriptors": {
+    "B2": {
+      "grammar": "Some complex grammar constructions are used accurately. Errors do not impede understanding.",
+      "vocabulary": "The range of vocabulary is sufficient to discuss the topics required by the task. Inappropriate lexical choices do not impede understanding.",
+      "pronunciation": "Pronunciation is intelligible. Mispronunciations do not put a strain on the listener or lead to misunderstanding.",
+      "fluency": "Some pausing while searching for vocabulary but this does not put a strain on the listener.",
+      "cohesion": "A limited number of cohesive devices are used to indicate the links between ideas."
+    },
+    "B1": {
+      "grammar": "Simple grammatical structures are used correctly. Errors occur when attempting complex structures.",
+      "vocabulary": "Limitations in vocabulary make it difficult to deal fully with the task.",
+      "pronunciation": "Pronunciation is generally intelligible but mispronunciations put an occasional strain on the listener.",
+      "fluency": "There is some pausing, false starts, and reformulations.",
+      "cohesion": "Uses only simple cohesive devices. Links between ideas are not always clearly indicated."
+    },
+    "below_B1": {
+      "grammar": "Some simple grammatical structures are used correctly but basic mistakes systematically occur.",
+      "vocabulary": "Vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable.",
+      "pronunciation": "Mispronunciations are noticeable and frequently place a strain on the listener.",
+      "fluency": "There is frequent pausing, false starts, and reformulations.",
+      "cohesion": "Cohesion between ideas is limited. Responses tend to be a list of points."
+    }
+  },
+  "descriptor_sources": {
+    "B2": "Official UZBMB Multilevel speaking rating scale, Question 7, B2 (bands 4 and 3).",
+    "B1": "Official UZBMB Multilevel speaking rating scale, Question 7, B1 (bands 2 and 1).",
+    "below_B1": "Reference only: the official Q7 scale has no below-B1 text. This is the official 'Higher A2' text from Questions 4-6, used only to recognise below-B1 language."
+  },
+  "scoring": {
+    "topic_cap": { "0": 0, "1": 1, "2": 3, "3": 4 },
+    "above_target_full_coverage_cap": 5,
+    "language_cap": { "below_B1": 0, "B1": 2, "B2": 4, "above_B2": 5 }
+  }
+}

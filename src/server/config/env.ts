@@ -34,6 +34,12 @@ const envSchema = z.object({
   AUDIO_STORAGE_DIR: z.string().default("./data/audio"),
 
   TRANSCRIPTION_PROVIDER: z.enum(["openai", "gemini", "mock"]).default("openai"),
+  /**
+   * Second speech-to-text provider, tried when the primary one fails with a provider error (timeout, rate limit,
+   * outage). Never used for "no speech" results. "none" = no fallback. Set e.g. TRANSCRIPTION_PROVIDER=gemini with
+   * TRANSCRIPTION_FALLBACK_PROVIDER=openai to switch to Gemini and keep OpenAI as the fallback.
+   */
+  TRANSCRIPTION_FALLBACK_PROVIDER: z.enum(["none", "openai", "gemini"]).default("none"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-transcribe"),
   OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
@@ -71,6 +77,14 @@ const envSchema = z.object({
    * what the learner actually said was validated only on synthetic speech: docs/AI_EVALUATION_QUALITY.md.
    */
   GEMINI_TRANSCRIPTION_MODEL: z.string().min(1).default("gemini-3.8-flash"),
+  /**
+   * Audio step of the Multilevel evaluation: a model listens to the recording and judges pronunciation (intelligibility
+   * and listener strain only) and pausing. "auto" = Gemini when GEMINI_API_KEY is set and the evaluator is not the
+   * development mock; "gemini" forces it (GEMINI_API_KEY required); "off" disables it. Without it, pronunciation is
+   * "not assessed" and every band is marked provisional.
+   */
+  AUDIO_ASSESSMENT: z.enum(["auto", "gemini", "off"]).default("auto"),
+  GEMINI_AUDIO_ASSESSMENT_MODEL: z.string().min(1).default("gemini-3.8-flash"),
   /** Thinking models spend output tokens on reasoning, so keep this generous. */
   GEMINI_EVALUATION_MAX_TOKENS: z.coerce.number().int().min(4000).max(65_000).default(24_000),
   /**

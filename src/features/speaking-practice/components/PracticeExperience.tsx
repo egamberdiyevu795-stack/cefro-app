@@ -250,7 +250,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
         attemptId: resultAttempt.id,
         properties: {
           attemptNumber: resultAttempt.attemptNumber,
-          overallLevel: resultAttempt.evaluation.result.overall_level,
+          band: resultAttempt.evaluation.result.kind === "multilevel" ? resultAttempt.evaluation.result.scoring.band : null,
         },
       });
     }

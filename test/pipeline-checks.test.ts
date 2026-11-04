@@ -1,37 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
-import { makeEvaluation, FIXTURE_TRANSCRIPT } from "./fixtures";
+import { makeModelOutput, makeMultilevelResult, FIXTURE_TRANSCRIPT } from "./fixtures";
 import { endpointOverrides, evidenceViolations, numericClaimMismatches, wordErrorRate } from "./live/checks";
 
 describe("live pipeline checks (pure helpers)", () => {
   it("accepts a clean evaluation", () => {
-    expect(evidenceViolations(makeEvaluation(), FIXTURE_TRANSCRIPT)).toEqual([]);
+    expect(evidenceViolations(makeMultilevelResult(), FIXTURE_TRANSCRIPT)).toEqual([]);
   });
 
   it("flags quotes that are not in the transcript, and a pronunciation claim", () => {
-    const base = makeEvaluation();
-    const bad = makeEvaluation({
-      strengths: [{ ...base.strengths[0], evidence_quote: "words that were never said" }],
-      issues: [{ ...base.issues[0], evidence_quotes: ["I have went to Samarkand", "invented quote here"], problem: "Your pronunciation of 'went' is unclear." }, base.issues[1]],
-    });
-    const found = evidenceViolations(bad, FIXTURE_TRANSCRIPT);
+    const output = makeModelOutput();
+    output.strengths[0].quote = "words that were never said";
+    output.features.grammar.evidence = ["I have went to Samarkand", "invented quote here"];
+    output.features.grammar.note = "Your pronunciation of 'went' is unclear.";
+    const found = evidenceViolations(makeMultilevelResult(output), FIXTURE_TRANSCRIPT);
     expect(found.some((f) => f.startsWith("strengths[0] quote not in transcript"))).toBe(true);
-    expect(found.some((f) => f.includes('issues[0] quote not in transcript: "invented quote here"'))).toBe(true);
-    expect(found.some((f) => f.startsWith("pronunciation claim in issues[0].problem"))).toBe(true);
+    expect(found.some((f) => f.includes('features.grammar quote not in transcript: "invented quote here"'))).toBe(true);
+    expect(found.some((f) => f.startsWith("pronunciation claim in features.grammar.note"))).toBe(true);
   });
 
-  const metrics = computeSpeechMetrics(FIXTURE_TRANSCRIPT, 60_000, 120); // 28 words in 60 s
+  const metrics = computeSpeechMetrics(FIXTURE_TRANSCRIPT, 60_000, 120);
 
   it("accepts numbers that match the stored metrics and ignores practice targets and quoted text", () => {
-    const evaluation = makeEvaluation({
-      overall_summary: `You spoke ${metrics.wordCount} words in 60 seconds. Try to speak for at least 90 seconds next time.`,
-    });
-    expect(numericClaimMismatches(evaluation, metrics, 60)).toEqual([]);
+    const output = makeModelOutput();
+    output.features.fluency.note = `You spoke ${metrics.wordCount} words in 60 seconds. Try to speak for at least 90 seconds next time.`;
+    expect(numericClaimMismatches(makeMultilevelResult(output), metrics, 60)).toEqual([]);
   });
 
   it("reports numeric claims that contradict the metrics", () => {
-    const evaluation = makeEvaluation({ overall_summary: "You spoke 250 words in 30 seconds, about 500 words per minute." });
-    const found = numericClaimMismatches(evaluation, metrics, 60);
+    const output = makeModelOutput();
+    output.features.fluency.note = "You spoke 250 words in 30 seconds, about 500 words per minute.";
+    const found = numericClaimMismatches(makeMultilevelResult(output), metrics, 60);
     expect(found.length).toBeGreaterThanOrEqual(2);
     expect(found.join("\n")).toMatch(/250 words/);
   });

@@ -5,17 +5,22 @@ import type { TranscriptionInput, TranscriptionOutput, TranscriptionProvider } f
 
 /**
  * Learners' mistakes and hesitations are the evidence we assess, so we ask
- * for a verbatim transcript instead of a cleaned-up one.
+ * for a verbatim transcript instead of a cleaned-up one. The wording names the
+ * error types models tend to "fix" (a live run turned a learner's "nobody will
+ * helps" into "nobody helps"); test/live has a regression sample for exactly that
+ * (T12-verbatim-regression, npm run eval:transcription:controlled).
  *
  * The prompt deliberately contains NO sample utterance: speech-to-text
  * models can echo prompt text when the audio is silent, and an echoed
  * sample sentence would look like a real (short) answer.
  */
 export const VERBATIM_TRANSCRIPTION_PROMPT =
-  "Verbatim transcript of an English learner answering a speaking exam question. " +
-  "Write exactly what the speaker says. Keep grammar mistakes, wrong verb forms, missing words, " +
-  "repetitions, false starts, self-corrections and hesitation sounds such as um, uh and er. " +
-  "Never correct grammar or vocabulary, and do not add words that were not spoken.";
+  "Verbatim, disfluent transcript of an English learner answering a speaking exam question. " +
+  "Write exactly what the speaker says, word for word, even when it is ungrammatical. " +
+  "Keep every grammar mistake as spoken: wrong verb forms, wrong agreement, an extra or missing -s, -ing or -ed ending, " +
+  "a wrong or extra auxiliary verb, missing words and wrong word choices. " +
+  "Keep repetitions, false starts, self-corrections and hesitation sounds such as um, uh and er. " +
+  "Never correct, normalise, tidy or complete the speech, and do not add words that were not spoken.";
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "audio/webm": "webm",

@@ -1,6 +1,7 @@
 import "server-only";
-import { getEnv } from "@/server/config/env";
+import { getEnv, type ServerEnv } from "@/server/config/env";
 import { ProviderError } from "@/server/errors";
+import { FallbackTranscriptionProvider } from "./fallback-transcription";
 import { GeminiTranscriptionProvider } from "./gemini-transcription";
 import { MockTranscriptionProvider } from "./mock-transcription";
 import { OpenAITranscriptionProvider } from "./openai-transcription";
@@ -8,11 +9,17 @@ import type { TranscriptionProvider } from "./types";
 
 let override: TranscriptionProvider | undefined;
 
-/** Resolve the configured provider. Throws ProviderError if it is misconfigured. */
+/** Resolve the configured provider (with its fallback, if one is set). Throws ProviderError if it is misconfigured. */
 export function getTranscriptionProvider(): TranscriptionProvider {
   if (override) return override;
   const env = getEnv();
-  switch (env.TRANSCRIPTION_PROVIDER) {
+  const primary = buildProvider(env.TRANSCRIPTION_PROVIDER, env);
+  if (env.TRANSCRIPTION_FALLBACK_PROVIDER === "none" || env.TRANSCRIPTION_FALLBACK_PROVIDER === env.TRANSCRIPTION_PROVIDER) return primary;
+  return new FallbackTranscriptionProvider(primary, buildProvider(env.TRANSCRIPTION_FALLBACK_PROVIDER, env));
+}
+
+function buildProvider(kind: ServerEnv["TRANSCRIPTION_PROVIDER"], env: ServerEnv): TranscriptionProvider {
+  switch (kind) {
     case "mock":
       if (env.NODE_ENV === "production") {
         throw new ProviderError("provider_not_configured", "Mock transcription is disabled in production", {

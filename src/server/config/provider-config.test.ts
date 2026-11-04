@@ -32,6 +32,13 @@ describe("validateProviderConfig", () => {
     expect(validateProviderConfig(env({ OPENAI_API_KEY: "k", EVALUATION_PROVIDER: "anthropic" })).map((p) => p.variable)).toEqual(["ANTHROPIC_API_KEY"]);
   });
 
+  it("checks the transcription fallback and the audio step", () => {
+    const keys = { OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" };
+    expect(validateProviderConfig(env({ ...keys, TRANSCRIPTION_PROVIDER: "gemini", TRANSCRIPTION_FALLBACK_PROVIDER: "openai", AUDIO_ASSESSMENT: "gemini" }))).toEqual([]);
+    expect(validateProviderConfig(env({ ...keys, TRANSCRIPTION_FALLBACK_PROVIDER: "openai" })).map((p) => p.variable)).toEqual(["TRANSCRIPTION_FALLBACK_PROVIDER"]);
+    expect(validateProviderConfig(env({ OPENAI_API_KEY: "k", EVALUATION_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "k", TRANSCRIPTION_FALLBACK_PROVIDER: "gemini", AUDIO_ASSESSMENT: "gemini" })).map((p) => p.variable)).toEqual(["GEMINI_API_KEY", "GEMINI_API_KEY"]);
+  });
+
   it("accepts Gemini for both roles with a single key, and names it when missing", () => {
     const both = env({ TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "gemini", GEMINI_API_KEY: "k" });
     expect(validateProviderConfig(both)).toEqual([]);

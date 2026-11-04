@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getSpeakingTask } from "@/content/speaking";
-import { cefrRank } from "@/domain/cefr";
-import { CRITERION_LABELS } from "@/domain/evaluation/criteria";
+import { levelValue } from "@/domain/evaluation/multilevel/levels";
 import { compareAttempts } from "@/domain/speaking/comparison";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import { getEvaluationModel } from "@/server/evaluation";
@@ -9,14 +8,15 @@ import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking, type SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 import type { EvaluationInput } from "@/server/evaluation/types";
 import { B2_PART2_SAMPLES, type EvaluationSample } from "../evaluation-samples/b2-part2-samples";
+import { renderMultilevelResult } from "./checks";
 import { evaluatorSelection } from "./providers";
 import { writeReport } from "./report";
 
 /**
  * Runs every sample in the B2 Part 2 test set through the REAL configured
  * evaluator and writes a review report (eval-reports/). Hard assertions cover
- * safety rules; level/criterion expectations are soft (reported, not fatal),
- * because examiners can reasonably disagree by a band.
+ * safety rules; band/feature/coverage expectations are soft (reported, not
+ * fatal), because examiners can reasonably disagree by a band.
  *
  *   EVALUATION_PROVIDER=gemini GEMINI_API_KEY=... npm run eval:live
  *   EVALUATION_PROVIDER=anthropic ANTHROPIC_API_KEY=... npm run eval:live
@@ -24,9 +24,9 @@ import { writeReport } from "./report";
  *
  * The provider is whatever EVALUATION_PROVIDER selects; the other provider's
  * key is not needed. Keys are read from the environment and never printed.
- * Hard assertions (quality gate passes, pronunciation not assessed, injection
- * ignored) fail the run; level/criterion/coverage differences are listed in
- * the summary for human review.
+ * Hard assertions (quality gate passes, pronunciation not assessed from text,
+ * injection ignored) fail the run; band/feature/coverage differences are
+ * listed in the summary for human review.
  */
 const selection = evaluatorSelection();
 const configured = selection.configured;
@@ -81,21 +81,23 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
 
     // Hard rules.
     expect(row.evaluation.quality.passed).toBe(true);
-    expect(result.criteria.pronunciation.assessable).toBe(false);
-    if (sample.id.startsWith("S13")) expect(cefrRank(result.overall_level)).toBeLessThanOrEqual(cefrRank("B1+"));
+    expect(result.assessment.features.pronunciation.level).toBe("not_assessed");
+    if (sample.id.startsWith("S13")) expect(result.scoring.band).toBeLessThanOrEqual(2);
 
     // Soft expectations.
-    const [min, max] = sample.expect.level;
-    const rank = cefrRank(result.overall_level);
-    if (rank < cefrRank(min) || rank > cefrRank(max)) row.misses.push(`level ${result.overall_level} outside ${min}–${max}`);
-    if (sample.expect.issueCriteria && !result.issues.some((i) => sample.expect.issueCriteria!.includes(i.criterion))) {
-      row.misses.push(`no issue in ${sample.expect.issueCriteria.join("/")}`);
+    const [min, max] = sample.expect.band;
+    const band = result.scoring.band;
+    if (band < min || band > max) row.misses.push(`band ${band} outside ${min}–${max}`);
+    const weak = sample.expect.weakFeatures;
+    if (weak && !weak.some((f) => { const l = result.assessment.features[f].level; return l !== "not_assessed" && levelValue(l) <= levelValue("B1"); })) {
+      row.misses.push(`none of ${weak.join("/")} judged B1 or below`);
     }
-    for (const [index, status] of Object.entries(sample.expect.coverage ?? {})) {
-      const actual = result.task_coverage.find((c) => c.prompt_index === Number(index))?.status;
-      if (actual !== status) row.misses.push(`coverage[${index}] ${actual ?? "missing"} ≠ ${status}`);
+    if (sample.expect.coverageIssue && result.scoring.on_topic_count === result.assessment.questions.length) row.misses.push("expected a question not on topic");
+    for (const [id, status] of Object.entries(sample.expect.coverage ?? {})) {
+      const actual = result.assessment.questions.find((q) => q.id === Number(id))?.status;
+      if (actual !== status) row.misses.push(`question ${id} ${actual ?? "absent"} ≠ ${status}`);
     }
-    if (sample.expect.reliabilityNote && !result.reliability_note) row.misses.push("expected a reliability note");
+    if (sample.expect.lowBand && band > 1) row.misses.push(`expected band ≤ 1, got ${band}`);
     // Misses are recorded in the report for human review; they do not fail the run.
   });
 
@@ -110,7 +112,6 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
         inputFor(byId("S01"), {
           attemptNumber: 1,
           transcript: byId("S03").transcript,
-          evaluation: first.result,
           retryFocus: first.result.retry_focus,
         }),
         getEvaluationModel(),
@@ -122,7 +123,7 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
     const comparison = compareAttempts({ evaluation: first.result, metrics: null }, { evaluation: second.result, metrics: null });
     retryRow.evaluation = second;
     retryRow.misses.push(`verdict: ${comparison.verdict}`);
-    if (!second.result.retry_review) retryRow.misses.push("retry_review missing on a retry");
+    if (!second.result.assessment.retry_review) retryRow.misses.push("retry_review missing on a retry");
     if (!/improvement/.test(comparison.verdict)) retryRow.misses.push("weak → strong retry not reported as an improvement");
   });
 
@@ -201,14 +202,14 @@ function renderMarkdown(rows: Row[]): string {
     "",
     `Generated ${new Date().toISOString()}. Review each item with the checklist in docs/AI_EVALUATION_QUALITY.md.`,
     "",
-    "| Sample | Level | Expected | Calls | Latency | Tokens in/out | Gate warnings | Expectation misses |",
+    "| Sample | Band | Expected | Calls | Latency | Tokens in/out | Gate warnings | Expectation misses |",
     "|---|---|---|---|---|---|---|---|",
   ];
   for (const { sample, evaluation: e, error, misses } of rows) {
     lines.push(
       e
-        ? `| ${sample.id} | ${e.result.overall_level} | ${sample.expect.level.join("–")} | ${e.modelCalls} | ${(e.latencyMs / 1000).toFixed(1)}s | ${e.inputTokens}/${e.outputTokens} | ${e.quality.violations.map((v) => v.code).join(", ") || "—"} | ${misses.join("; ") || "—"} |`
-        : `| ${sample.id} | ERROR | ${sample.expect.level.join("–")} | | | | | ${error} |`,
+        ? `| ${sample.id} | ${e.result.scoring.band} | ${sample.expect.band.join("–")} | ${e.modelCalls} | ${(e.latencyMs / 1000).toFixed(1)}s | ${e.inputTokens}/${e.outputTokens} | ${e.quality.violations.map((v) => v.code).join(", ") || "—"} | ${misses.join("; ") || "—"} |`
+        : `| ${sample.id} | ERROR | ${sample.expect.band.join("–")} | | | | | ${error} |`,
     );
   }
   for (const { sample, evaluation: e, error, rejectedDrafts } of rows) {
@@ -220,30 +221,15 @@ function renderMarkdown(rows: Row[]): string {
       continue;
     }
     const r = e.result;
-    lines.push("", `## ${sample.id} — ${sample.description}`, "", `> ${sample.transcript}`, "", `**${r.overall_level}** — ${r.overall_summary}`, "");
+    lines.push("", `## ${sample.id} — ${sample.description}`, "", `> ${sample.transcript}`, "");
     lines.push(`Model: ${e.model} · ${e.evaluatorVersion} · rubric ${e.rubricVersion} · schema v${e.schemaVersion}`, "");
     // What the quality gate rejected in earlier drafts (needed to judge whether the gate was right).
     e.quality.rejectedDrafts.forEach((draft, n) =>
       lines.push(`**Rejected draft ${n + 1}:**`, ...draft.map((v) => `- \`${v.code}\` @ ${v.path}: ${v.message}`), ""),
     );
     if (e.quality.violations.length) lines.push("**Repaired in the accepted draft:**", ...e.quality.violations.map((v) => `- \`${v.code}\` @ ${v.path}: ${v.message}`), "");
-    lines.push("**Scores:** " + Object.entries(r.criteria).map(([k, c]) => `${CRITERION_LABELS[k as keyof typeof CRITERION_LABELS]} ${c.score ?? "n/a"}`).join(" · "));
-    lines.push("", "**Task coverage:** " + r.task_coverage.map((c) => `#${c.prompt_index} ${c.status} (${c.note})`).join("; "));
-    lines.push("", "**Strengths**", ...r.strengths.map((s) => `- ${s.title}: ${s.detail} — “${s.evidence_quote}”`));
-    lines.push("", "**Issues**");
-    r.issues.forEach((i, n) =>
-      lines.push(
-        `${n + 1}. [${i.severity} · ${i.criterion} · ${i.evidence_basis}] ${i.problem}`,
-        `   - Evidence: ${i.evidence_quotes.map((q) => `“${q}”`).join(", ") || "—"}`,
-        `   - Why: ${i.why_it_matters}`,
-        `   - Fix: ${i.how_to_fix}`,
-        `   - Better: “${i.improved_example.original}” → “${i.improved_example.improved}”`,
-      ),
-    );
-    lines.push("", "**Retry focus**", ...r.retry_focus.map((f) => `- ${f.objective} (check: ${f.success_check}) → issue ${f.addresses_issue + 1}`));
-    if (r.retry_review) lines.push("", "**Retry review**", ...r.retry_review.objectives.map((o) => `- ${o.outcome}: ${o.objective} — ${o.evidence}`), r.retry_review.summary);
-    if (r.reliability_note) lines.push("", `**Reliability note:** ${r.reliability_note}`);
-    lines.push("", "Reviewer notes: _(understood? issues real? evidence accurate? correction correct? meaning kept? focus actionable? too long? invented?)_");
+    lines.push(...renderMultilevelResult(r));
+    lines.push("", "Reviewer notes: _(question statuses right? feature levels fit the descriptors? evidence exact? corrections correct? band plausible? focus actionable? invented?)_");
   }
   return lines.join("\n");
 }

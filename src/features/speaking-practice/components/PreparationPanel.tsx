@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import type { RetryFocusItem } from "@/domain/evaluation/schema";
+import type { RetryFocusItem } from "@/domain/evaluation/stored";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import { CountdownRing } from "./CountdownRing";
 import { TaskQuestion } from "./TaskQuestion";
@@ -35,7 +35,7 @@ export function PreparationPanel({
         <p className="text-sm font-semibold uppercase tracking-wide text-brand">Preparation</p>
         <CountdownRing remainingMs={remainingMs} totalMs={task.preparationSeconds * 1000} label="to prepare" />
         <p className="text-sm text-muted">
-          Plan your opinion, two reasons and one example. Recording starts automatically when the time is up.
+          Plan a short answer, with a reason, for each of the {task.prompts.length} questions. Recording starts automatically when the time is up.
         </p>
         <Button variant="secondary" className="w-full" onClick={onSkip}>
           I&apos;m ready — start speaking

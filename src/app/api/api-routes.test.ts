@@ -39,6 +39,7 @@ import { POST as postAnalytics } from "./analytics/events/route";
 import { POST as postSession } from "./sessions/route";
 import { POST as postAttempt } from "./speaking/attempts/route";
 import { POST as postProcess } from "./speaking/attempts/[attemptId]/process/route";
+import { GET as getAudio } from "./speaking/attempts/[attemptId]/audio/route";
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER = "22222222-2222-4222-8222-222222222222";
@@ -277,6 +278,38 @@ describe("POST /api/speaking/attempts/:id/process: restart limit", () => {
     await seedUsers(db, USER, OTHER);
     await seedAttempt(db, { id: ID, userId: OTHER, attemptNumber: 1, status: "failed", processingRuns: 1 });
     const response = await postProcess(post(`/api/speaking/attempts/${ID}/process`, {}), ctx(ID));
+    expect(response.status).toBe(404);
+  });
+});
+
+describe("GET /api/speaking/attempts/:id/audio: the saved recording plays back", () => {
+  const ctx = (id: string) => ({ params: Promise.resolve({ attemptId: id }) }) as never;
+  const get = (path: string, headers: Record<string, string> = {}) => new Request(`${URL_BASE}${path}`, { headers });
+
+  it("returns exactly the uploaded bytes, and serves byte ranges the way media players request them", async () => {
+    const audio = fakeWebm(4096);
+    audio.write("tail-marker", 4096 - 11);
+    const { attempt } = await json(await postAttempt(post("/api/speaking/attempts", { body: uploadForm({}, audio) })));
+
+    const full = await getAudio(get(`/api/speaking/attempts/${attempt.id}/audio`), ctx(attempt.id));
+    expect(full.status).toBe(200);
+    expect(full.headers.get("content-type")).toBe("audio/webm");
+    expect(full.headers.get("accept-ranges")).toBe("bytes");
+    expect(Buffer.from(await full.arrayBuffer()).equals(audio)).toBe(true);
+
+    // What Chrome/Safari send first, and when scanning a WebM for its duration.
+    const head = await getAudio(get(`/api/speaking/attempts/${attempt.id}/audio`, { range: "bytes=0-" }), ctx(attempt.id));
+    expect(head.status).toBe(206);
+    expect(head.headers.get("content-range")).toBe("bytes 0-4095/4096");
+    const tail = await getAudio(get(`/api/speaking/attempts/${attempt.id}/audio`, { range: "bytes=-11" }), ctx(attempt.id));
+    expect(tail.status).toBe(206);
+    expect(Buffer.from(await tail.arrayBuffer()).toString()).toBe("tail-marker");
+  });
+
+  it("does not serve another user's recording", async () => {
+    const { attempt } = await json(await postAttempt(post("/api/speaking/attempts", { body: uploadForm() })));
+    jar.set("cefro_uid", OTHER);
+    const response = await getAudio(get(`/api/speaking/attempts/${attempt.id}/audio`), ctx(attempt.id));
     expect(response.status).toBe(404);
   });
 });

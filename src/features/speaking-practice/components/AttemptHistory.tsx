@@ -48,8 +48,11 @@ export function AttemptHistory({
                   </span>
                   <span className="block text-xs text-subtle">{formatDateTime(attempt.createdAt)}</span>
                 </span>
-                {attempt.overallLevel ? (
-                  <Badge tone="brand">{attempt.overallLevel}</Badge>
+                {attempt.band ? (
+                  <Badge tone="brand">
+                    {attempt.band.band}/{attempt.band.bandMax} · {attempt.band.label}
+                    {attempt.band.provisional && <span className="sr-only"> (provisional)</span>}
+                  </Badge>
                 ) : (
                   <Badge tone={attempt.status === "failed" ? "danger" : "neutral"}>{STATUS_LABEL[attempt.status]}</Badge>
                 )}

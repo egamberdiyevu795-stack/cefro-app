@@ -2,13 +2,13 @@ import type { TargetLevel } from "@/domain/cefr";
 
 /**
  * What kind of response a task asks for. It selects the evaluation approach together with `rubricId`.
- * Only "long_turn" (one question, several task points, one extended answer: B2 Part 2) exists; new
- * kinds are added here when their content, rubric and evaluator contract are designed, not before.
+ * Only "long_turn" (one topic, several questions, one extended answer: Multilevel Part 2 / official Question 7)
+ * exists; new kinds are added here when their content, rubric and evaluator contract are designed, not before.
  */
 export type SpeakingTaskType = "long_turn";
 
 /** Identifies a rubric in the server's rubric registry (`server/evaluation/rubrics`). */
-export type RubricId = "b2-long-turn";
+export type RubricId = "multilevel-q7";
 
 /**
  * A speaking task as authored in the content layer (`src/content`).
@@ -32,9 +32,12 @@ export interface SpeakingTask {
   rubricId: RubricId;
   title: string;
   topic: string;
-  /** The main question the student must answer. */
+  /** The topic introduction shown above the questions. */
   question: string;
-  /** Points the student is expected to cover. */
+  /**
+   * The questions the student must answer, in order. Shown and referred to as "Question 1", "Question 2", … (1-based)
+   * everywhere: in the UI, in the evaluator prompt and in stored results.
+   */
   prompts: string[];
   /** Student-facing instructions, shown before preparation. */
   instructions: string[];

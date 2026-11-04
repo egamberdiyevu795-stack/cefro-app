@@ -41,6 +41,17 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
       break;
   }
 
+  if (env.TRANSCRIPTION_FALLBACK_PROVIDER && env.TRANSCRIPTION_FALLBACK_PROVIDER !== "none") {
+    if (env.TRANSCRIPTION_FALLBACK_PROVIDER === env.TRANSCRIPTION_PROVIDER) {
+      problems.push({ variable: "TRANSCRIPTION_FALLBACK_PROVIDER", message: "must differ from TRANSCRIPTION_PROVIDER" });
+    }
+    const key = env.TRANSCRIPTION_FALLBACK_PROVIDER === "openai" ? "OPENAI_API_KEY" : "GEMINI_API_KEY";
+    if (!env[key]) problems.push({ variable: key, message: `required when TRANSCRIPTION_FALLBACK_PROVIDER=${env.TRANSCRIPTION_FALLBACK_PROVIDER}` });
+  }
+  if (env.AUDIO_ASSESSMENT === "gemini" && !env.GEMINI_API_KEY) {
+    problems.push({ variable: "GEMINI_API_KEY", message: "required when AUDIO_ASSESSMENT=gemini" });
+  }
+
   switch (env.EVALUATION_PROVIDER) {
     case "gemini":
       if (!env.GEMINI_API_KEY) problems.push({ variable: "GEMINI_API_KEY", message: "required when EVALUATION_PROVIDER=gemini" });

@@ -17,7 +17,7 @@ import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { setTranscriptionProviderForTesting } from "@/server/transcription";
 import { PASSWORD, signIn, signOut, signUp } from "../../../test/auth-helpers";
 import { applySetCookies, jar } from "../../../test/next-headers-mock";
-import { FIXTURE_TRANSCRIPT, fakeWebm, makeEvaluation } from "../../../test/fixtures";
+import { FIXTURE_TRANSCRIPT, fakeWebm, makeModelOutput } from "../../../test/fixtures";
 import { getCurrentUser } from "./current-user";
 import { mergeUsers } from "./merge-users";
 import { USER_COOKIE_NAME } from "./user-cookie";
@@ -42,7 +42,7 @@ beforeEach(async () => {
   setTranscriptionProviderForTesting({ name: "fake-stt", model: "m", transcribe: async () => ({ text: FIXTURE_TRANSCRIPT, language: "en" }) });
   const llm: EvaluationModel = {
     provider: "fake-llm", model: "fake-llm-1", isDevelopmentProvider: false, config: {},
-    evaluate: async () => ({ output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 10, outputTokens: 20 }),
+    evaluate: async () => ({ output: makeModelOutput(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 10, outputTokens: 20 }),
   };
   setEvaluationModelForTesting(llm);
 });

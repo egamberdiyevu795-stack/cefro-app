@@ -1,13 +1,12 @@
 import "server-only";
-import type { RetryFocusItem } from "@/domain/evaluation/schema";
-import { parseStoredEvaluation } from "@/domain/evaluation/stored";
+import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
 import { computeSpeechMetrics, type SpeechMetrics } from "@/domain/speaking/metrics";
 import { getSpeakingTask } from "@/content/speaking";
 import { getEnv } from "@/server/config/env";
 import { trackServerEvent } from "@/server/analytics/track";
 import { ProviderError } from "@/server/errors";
-import { evaluateSpeaking, getEvaluationModel } from "@/server/evaluation";
+import { evaluateSpeaking, getAudioAssessor, getEvaluationModel } from "@/server/evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { logger } from "@/server/logging/logger";
 import { AudioNotFoundError, getAudioStorage } from "@/server/storage";
@@ -116,8 +115,8 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       }
       transcript = await repo.saveTranscript({
         attemptId,
-        provider: provider.name,
-        model: provider.model,
+        provider: output.provider ?? provider.name,
+        model: output.model ?? provider.model,
         text: output.text,
         language: output.language,
         latencyMs,
@@ -126,7 +125,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       await trackServerEvent({
         name: "transcription_completed",
         ...context,
-        properties: { provider: provider.name, model: provider.model, latencyMs, wordCount: metrics.wordCount },
+        properties: { provider: output.provider ?? provider.name, model: output.model ?? provider.model, latencyMs, wordCount: metrics.wordCount },
       });
     }
 
@@ -135,6 +134,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
     stageStartedAt = Date.now();
     await repo.setAttemptStatus(attemptId, "evaluating");
     const model = getEvaluationModel();
+    const audioAssessor = getAudioAssessor();
     await trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
 
     const evaluationInput = {
@@ -150,8 +150,10 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       },
       previousAttempt: await loadPreviousAttemptContext(attempt),
     };
+    // The audio step needs the recording; when it cannot be read, pronunciation is simply not assessed.
+    const recordingAudio = audioAssessor ? await readAudio(recording.storageKey).catch(() => null) : null;
     const evaluation = await withDeadline(
-      evaluateSpeaking(evaluationInput, model, { deadlineAt }),
+      evaluateSpeaking(evaluationInput, model, { deadlineAt, audioAssessor, audio: recordingAudio }),
       deadlineAt,
       "evaluation",
     );
@@ -173,7 +175,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
         warnings: evaluation.quality.violations,
         rejectedDrafts: evaluation.quality.rejectedDrafts,
       },
-      overallLevel: evaluation.result.overall_level,
+      overallLevel: bandHeadline(evaluation.result.scoring.band),
       result: evaluation.result,
       latencyMs: evaluation.latencyMs,
       inputTokens: evaluation.inputTokens,
@@ -201,7 +203,8 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
         model: evaluation.model,
         evaluatorVersion: evaluation.evaluatorVersion,
         rubricVersion: evaluation.rubricVersion,
-        overallLevel: evaluation.result.overall_level,
+        band: evaluation.result.scoring.band,
+        provisional: evaluation.result.scoring.provisional,
         latencyMs: evaluation.latencyMs,
         processingDurationMs,
         modelCalls: evaluation.modelCalls,
@@ -217,7 +220,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
         properties: {
           attemptNumber: attempt.attemptNumber,
           previousAttemptId: attempt.previousAttemptId,
-          overallLevel: evaluation.result.overall_level,
+          band: evaluation.result.scoring.band,
         },
       });
     }
@@ -251,6 +254,14 @@ async function readAudio(storageKey: string): Promise<Buffer> {
   }
 }
 
+/**
+ * The evaluations table's overall_level column holds the headline result: a CEFR level for schema 1–2 rows, and
+ * "band:N" for Multilevel (schema 3) rows. No overall exam level is ever derived from one part.
+ */
+export function bandHeadline(band: number): string {
+  return `band:${band}`;
+}
+
 async function loadPreviousAttemptContext(attempt: repo.AttemptRow) {
   if (!attempt.previousAttemptId) return null;
   const previous = await repo.findAttempt(attempt.previousAttemptId);
@@ -259,11 +270,11 @@ async function loadPreviousAttemptContext(attempt: repo.AttemptRow) {
   if (!previous || !previousTranscript || !previousEvaluation) return null;
   const evaluation = parseStoredEvaluation(previousEvaluation.schemaVersion, previousEvaluation.result);
   if (!evaluation) return null;
+  const retryFocus = (attempt.retryFocus as RetryFocusItem[] | null) ?? evaluation.retry_focus;
   return {
     attemptNumber: previous.attemptNumber,
     transcript: previousTranscript.text,
-    evaluation,
-    retryFocus: (attempt.retryFocus as RetryFocusItem[] | null) ?? evaluation.retry_focus,
+    retryFocus: retryFocus.map(({ objective, success_check }) => ({ objective, success_check })),
   };
 }
 

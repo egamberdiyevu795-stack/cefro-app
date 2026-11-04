@@ -1,5 +1,4 @@
-import type { CefrLevel } from "@/domain/cefr";
-import type { EvaluationResult, RetryFocusItem } from "@/domain/evaluation/schema";
+import type { RetryFocusItem, StoredEvaluation } from "@/domain/evaluation/stored";
 import type { SpeechMetrics } from "./metrics";
 
 /**
@@ -85,7 +84,7 @@ export interface AttemptView {
   retryFocus: RetryFocusItem[] | null;
   transcript: { text: string; provider: string; model: string } | null;
   metrics: SpeechMetrics | null;
-  evaluation: { result: EvaluationResult; meta: EvaluationMeta } | null;
+  evaluation: { result: StoredEvaluation; meta: EvaluationMeta } | null;
   createdAt: string;
   completedAt: string | null;
 }
@@ -95,7 +94,8 @@ export interface AttemptSummary {
   id: string;
   attemptNumber: number;
   status: AttemptStatus;
-  overallLevel: CefrLevel | null;
+  /** Part band, for Multilevel results only (never an overall exam level). */
+  band: { band: number; bandMax: number; label: string; provisional: boolean } | null;
   createdAt: string;
   previousAttemptId: string | null;
 }

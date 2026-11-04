@@ -1,15 +1,19 @@
 import "server-only";
-import { evaluationResultSchema, type EvaluationResult } from "@/domain/evaluation/schema";
+import { scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
+import { FEATURES, type Feature } from "@/domain/evaluation/multilevel/levels";
+import { multilevelModelOutputSchema, type MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { deriveRetryFocus, type FeatureSource, type MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { ProviderError } from "@/server/errors";
 import { logger } from "@/server/logging/logger";
-import { buildRevisionRequest, buildSpeakingEvaluationPrompt } from "./prompts/speaking-evaluation-v2";
+import { runAudioAssessment, type AudioOutcome } from "./audio-assessment";
+import { buildMultilevelEvaluationPrompt, buildRevisionRequest } from "./prompts/multilevel-evaluation";
 import { computePromptHash } from "./prompt-fingerprint";
 import { applyQualityGate, type QualityReport, type QualityViolation } from "./quality-gate";
-import type { EvaluationInput, EvaluationModel } from "./types";
+import type { AudioAssessor, EvaluationInput, EvaluationModel } from "./types";
 import { EVALUATION_SCHEMA_VERSION, EVALUATOR_VERSION } from "./versions";
 
 export interface SpeakingEvaluation {
-  result: EvaluationResult;
+  result: MultilevelResult;
   evaluatorVersion: string;
   rubricVersion: string;
   schemaVersion: number;
@@ -19,8 +23,9 @@ export interface SpeakingEvaluation {
   modelConfig: Record<string, string | number | boolean>;
   isDevelopmentProvider: boolean;
   latencyMs: number;
-  /** 1 normally; 2 when the first draft was invalid or rejected by the quality gate. */
+  /** Calls to the transcript evaluator: 1 normally; 2 when the first draft was invalid or rejected by the quality gate. */
   modelCalls: number;
+  /** Transcript evaluator plus audio step. */
   inputTokens: number | null;
   outputTokens: number | null;
   /** Quality gate outcome for the accepted draft, plus why earlier drafts were rejected. */
@@ -33,19 +38,83 @@ const MAX_MODEL_CALLS = 2;
 /** A regeneration is not started with less than this left of the processing budget (live calls took 8-32 s). */
 const MIN_TIME_FOR_REGENERATION_MS = 40_000;
 
+export interface EvaluateOptions {
+  deadlineAt?: number;
+  /** The audio step; null/undefined = switched off (pronunciation not assessed, result provisional). */
+  audioAssessor?: AudioAssessor | null;
+  /** The recording, for the audio step. */
+  audio?: Buffer | null;
+}
+
 /**
- * Runs the speaking evaluation methodology:
- * build prompt → call model → validate schema → quality gate → (regenerate once) → attach versions.
- * Throws ProviderError when no acceptable evaluation could be produced.
+ * Runs the Multilevel evaluation:
+ *   transcript evaluator (judgements + evidence) → schema → quality gate → (regenerate once)
+ *   ∥ audio step (pronunciation, pausing)
+ *   → merge → deterministic band → retry focus → attach versions.
+ * Throws ProviderError when the transcript evaluator produced no acceptable output. The audio step never fails the run.
  */
-export async function evaluateSpeaking(
-  input: EvaluationInput,
-  model: EvaluationModel,
-  options: { deadlineAt?: number } = {},
-): Promise<SpeakingEvaluation> {
-  const prompt = buildSpeakingEvaluationPrompt(input);
-  const promptHash = computePromptHash(input, prompt);
+export async function evaluateSpeaking(input: EvaluationInput, model: EvaluationModel, options: EvaluateOptions = {}): Promise<SpeakingEvaluation> {
   const startedAt = Date.now();
+  const audioPromise = runAudioAssessment({
+    assessor: options.audioAssessor ?? null,
+    audio: options.audio ?? null,
+    mimeType: input.audio.mimeType,
+    transcript: input.transcript,
+    config: input.rubric.config,
+  });
+  const text = await evaluateTranscript(input, model, options.deadlineAt);
+  const audio = await audioPromise;
+
+  const assessment = mergeAudio(text.output, audio);
+  const sources = featureSources(audio);
+  const scoring = scoreBand(
+    {
+      questions: assessment.questions,
+      features: Object.fromEntries(FEATURES.map((f) => [f, assessment.features[f].level])) as Parameters<typeof scoreBand>[0]["features"],
+      memorizedOrIrrelevant: assessment.memorized_or_irrelevant,
+    },
+    input.rubric.config,
+  );
+  const result: MultilevelResult = {
+    kind: "multilevel",
+    rubric_id: input.rubric.id,
+    part: input.rubric.config.part,
+    official_question: input.rubric.config.official_question,
+    assessment,
+    feature_sources: sources,
+    audio:
+      audio.status === "assessed"
+        ? { status: "assessed", reason: null, provider: audio.provider, model: audio.model }
+        : { status: "not_assessed", reason: audio.reason, provider: audio.provider, model: audio.model },
+    scoring,
+    retry_focus: deriveRetryFocus(assessment, scoring, input.task.prompts),
+  };
+
+  const audioTokens = audio.status === "assessed" ? { input: audio.inputTokens, output: audio.outputTokens } : { input: null, output: null };
+  return {
+    result,
+    evaluatorVersion: EVALUATOR_VERSION,
+    rubricVersion: input.rubric.version,
+    schemaVersion: EVALUATION_SCHEMA_VERSION,
+    promptHash: text.promptHash,
+    provider: text.provider,
+    model: text.model,
+    modelConfig: {
+      ...model.config,
+      audioAssessment: audio.status === "assessed" ? `${audio.provider}:${audio.model}` : `off:${audio.reason}`,
+    },
+    isDevelopmentProvider: model.isDevelopmentProvider,
+    latencyMs: Date.now() - startedAt,
+    modelCalls: text.modelCalls,
+    inputTokens: sumNullable(text.inputTokens, audioTokens.input),
+    outputTokens: sumNullable(text.outputTokens, audioTokens.output),
+    quality: text.quality,
+  };
+}
+
+async function evaluateTranscript(input: EvaluationInput, model: EvaluationModel, deadlineAt: number | undefined) {
+  const prompt = buildMultilevelEvaluationPrompt(input);
+  const promptHash = computePromptHash(input, prompt);
   const rejectedDrafts: QualityViolation[][] = [];
   let inputTokens: number | null = null;
   let outputTokens: number | null = null;
@@ -53,7 +122,7 @@ export async function evaluateSpeaking(
 
   for (let call = 1; call <= MAX_MODEL_CALLS; call++) {
     // Never start a regeneration that cannot finish inside the caller's processing budget.
-    if (call > 1 && options.deadlineAt !== undefined && options.deadlineAt - Date.now() < MIN_TIME_FOR_REGENERATION_MS) {
+    if (call > 1 && deadlineAt !== undefined && deadlineAt - Date.now() < MIN_TIME_FOR_REGENERATION_MS) {
       logger.warn("Skipping regeneration: processing budget nearly used up", { call });
       break;
     }
@@ -62,15 +131,12 @@ export async function evaluateSpeaking(
       ? { system: prompt.system, user: `${prompt.user}\n\n${buildRevisionRequest(previousRejection)}` }
       : prompt;
 
-    // Provider failures (timeouts, rate limits, refusals…) are not retried here;
-    // the SDK already retries transient HTTP errors.
     let raw;
     try {
       raw = await model.evaluate(request, input);
     } catch (error) {
-      // A provider that reports unusable output (empty, truncated) gets the same one
-      // regeneration as invalid JSON. Every other failure (timeout, auth, rate limit,
-      // refusal) is not retried here.
+      // A provider that reports unusable output (empty, truncated) gets the same one regeneration as invalid JSON.
+      // Every other failure (timeout, auth, rate limit, refusal) is not retried here.
       if (error instanceof ProviderError && error.failureCode === "evaluation_invalid_output") {
         lastError = error;
         rejectedDrafts.push([{ code: "schema_invalid", severity: "reject", path: "(response)", message: error.message }]);
@@ -82,7 +148,7 @@ export async function evaluateSpeaking(
     inputTokens = sumNullable(inputTokens, raw.inputTokens);
     outputTokens = sumNullable(outputTokens, raw.outputTokens);
 
-    let validated: EvaluationResult;
+    let validated: MultilevelModelOutput;
     try {
       validated = validateEvaluationOutput(raw.output);
     } catch (error) {
@@ -94,7 +160,7 @@ export async function evaluateSpeaking(
 
     const { result, report } = applyQualityGate(validated, {
       transcript: input.transcript,
-      taskPromptCount: input.task.prompts.length,
+      questionCount: input.rubric.config.question_count,
       hasPreviousAttempt: input.previousAttempt !== null,
       metrics: { speakingSeconds: input.metrics.speakingSeconds, wordCount: input.metrics.wordCount },
     });
@@ -102,16 +168,10 @@ export async function evaluateSpeaking(
 
     if (report.passed) {
       return {
-        result: normalise(result),
-        evaluatorVersion: EVALUATOR_VERSION,
-        rubricVersion: input.rubric.version,
-        schemaVersion: EVALUATION_SCHEMA_VERSION,
+        output: result,
         promptHash,
         provider: raw.provider,
         model: raw.model,
-        modelConfig: model.config,
-        isDevelopmentProvider: model.isDevelopmentProvider,
-        latencyMs: Date.now() - startedAt,
         modelCalls: call,
         inputTokens,
         outputTokens,
@@ -135,8 +195,37 @@ export async function evaluateSpeaking(
   });
 }
 
-/** Parse and validate unknown model output (object or JSON string) against the current schema. */
-export function validateEvaluationOutput(output: unknown): EvaluationResult {
+/**
+ * Pronunciation comes only from the audio step. Fluency: the transcript shows false starts and fillers, the audio
+ * shows the pauses themselves, so when the audio step ran its level is used, with its note; the transcript quotes stay
+ * as evidence.
+ */
+export function mergeAudio(output: MultilevelModelOutput, audio: AudioOutcome): MultilevelModelOutput {
+  if (audio.status !== "assessed") return output;
+  const { pronunciation, fluency } = audio.assessment;
+  return {
+    ...output,
+    features: {
+      ...output.features,
+      pronunciation: { ...pronunciation },
+      fluency: { ...output.features.fluency, level: fluency.level, note: fluency.note || output.features.fluency.note },
+    },
+  };
+}
+
+function featureSources(audio: AudioOutcome): Record<Feature, FeatureSource> {
+  const assessed = audio.status === "assessed";
+  return {
+    grammar: "transcript",
+    vocabulary: "transcript",
+    cohesion: "transcript",
+    fluency: assessed ? "transcript+audio" : "transcript",
+    pronunciation: assessed ? "audio" : "none",
+  };
+}
+
+/** Parse and validate unknown model output (object or JSON string) against the model-output schema. */
+export function validateEvaluationOutput(output: unknown): MultilevelModelOutput {
   let value = output;
   if (typeof value === "string") {
     try {
@@ -145,7 +234,7 @@ export function validateEvaluationOutput(output: unknown): EvaluationResult {
       throw new ProviderError("evaluation_invalid_output", "Evaluation output is not valid JSON", { cause: error });
     }
   }
-  const parsed = evaluationResultSchema.safeParse(value);
+  const parsed = multilevelModelOutputSchema.safeParse(value);
   if (!parsed.success) {
     throw new ProviderError(
       "evaluation_invalid_output",
@@ -162,18 +251,6 @@ export function validateEvaluationOutput(output: unknown): EvaluationResult {
 function stripCodeFence(text: string): string {
   const match = /^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$/i.exec(text);
   return match ? match[1] : text;
-}
-
-/** Transcript-only evaluation: non-assessable criteria (always pronunciation) carry no score. */
-function normalise(result: EvaluationResult): EvaluationResult {
-  const criteria = { ...result.criteria };
-  for (const key of Object.keys(criteria) as (keyof typeof criteria)[]) {
-    const c = criteria[key];
-    if (key === "pronunciation" || !c.assessable || c.score === null) {
-      criteria[key] = { ...c, assessable: false, score: null, level: null };
-    }
-  }
-  return { ...result, criteria };
 }
 
 function logQualityReport(report: QualityReport, call: number) {

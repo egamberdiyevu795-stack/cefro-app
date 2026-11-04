@@ -1,6 +1,6 @@
 import "server-only";
 import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel } from "@google/genai";
-import { evaluationResultSchema } from "@/domain/evaluation/schema";
+import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
 import { ProviderError } from "@/server/errors";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
@@ -53,7 +53,7 @@ export class GeminiEvaluationModel implements EvaluationModel {
   readonly isDevelopmentProvider = false;
   readonly config: Record<string, string | number | boolean>;
   private readonly client: GoogleGenAI;
-  private readonly responseSchema = toGeminiJsonSchema(evaluationResultSchema);
+  private readonly responseSchema = toGeminiJsonSchema(multilevelModelOutputSchema);
 
   constructor(private readonly options: GeminiEvaluationOptions) {
     this.client = new GoogleGenAI({

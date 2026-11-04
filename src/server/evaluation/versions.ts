@@ -44,7 +44,13 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  * change): `prompt_hash` now also covers the user-message template, the revision template and the
  * result schema, and is stored with an "h2:" prefix (prompt-fingerprint.ts). Hashes written before
  * this are bare hex and identify only version + system prompt; they are not comparable with h2 hashes.
+ *
+ * - speaking-evaluator/3.0.0 — Multilevel (UZBMB) band evaluation, schema v3. The model no longer scores: it judges
+ *   each question (on_topic / partial / missing / off_topic) and each feature against the official Question 7
+ *   descriptors (rubric multilevel-q7/2.0.0), with strictly verified quotes. The 0–5 band is computed in code
+ *   (domain/evaluation/multilevel/band-scoring.ts). Pronunciation and pausing come from an optional audio step
+ *   (AUDIO_ASSESSMENT); without it the result is provisional. 1-based question numbering throughout. New quality gate.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/2.4.1";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.0.0";
 
 export { EVALUATION_SCHEMA_VERSION };

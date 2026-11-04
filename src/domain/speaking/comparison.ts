@@ -1,23 +1,19 @@
-import { cefrRank, type CefrLevel } from "@/domain/cefr";
-import { SPEAKING_CRITERIA, type SpeakingCriterion } from "@/domain/evaluation/criteria";
-import type { EvaluationIssue, EvaluationResult, RetryFocusItem } from "@/domain/evaluation/schema";
+import { FEATURES, levelValue, NOT_ASSESSED, type Feature, type PronunciationLevel } from "@/domain/evaluation/multilevel/levels";
+import type { MultilevelResult, MultilevelRetryFocus } from "@/domain/evaluation/multilevel/result";
 import type { SpeechMetrics } from "./metrics";
 
 export type ChangeDirection = "improved" | "same" | "declined" | "not_comparable";
 /**
- * How much a change means. AI scores vary a little between evaluations of
- * similar answers, so a 1-point (or one sub-band) change is "slight" and is
- * never presented as real progress on its own.
+ * How much a change means. Judgements vary a little between evaluations of similar answers, so a one-band (or
+ * one-level) change is "slight" and is never presented as real progress on its own.
  */
 export type ChangeMagnitude = "none" | "slight" | "clear";
 
-export interface CriterionComparison {
-  criterion: SpeakingCriterion;
-  before: number | null;
-  after: number | null;
-  delta: number | null;
+export interface FeatureComparison {
+  feature: Feature;
+  before: PronunciationLevel;
+  after: PronunciationLevel;
   direction: ChangeDirection;
-  magnitude: ChangeMagnitude;
 }
 
 export type ComparisonVerdict =
@@ -30,8 +26,9 @@ export type ComparisonVerdict =
 
 export interface AttemptComparison {
   verdict: ComparisonVerdict;
-  overall: { before: CefrLevel; after: CefrLevel; direction: ChangeDirection; magnitude: ChangeMagnitude };
-  criteria: CriterionComparison[];
+  band: { before: number; after: number; bandMax: number; beforeLabel: string; afterLabel: string; direction: ChangeDirection; magnitude: ChangeMagnitude };
+  questions: { before: number; after: number; total: number };
+  features: FeatureComparison[];
   metrics: {
     wordCount: { before: number; after: number };
     speakingSeconds: { before: number; after: number };
@@ -39,72 +36,49 @@ export interface AttemptComparison {
   } | null;
   /** Outcome of the focus the student was given, as judged by the retry evaluation. */
   focus: { achieved: number; partlyAchieved: number; notAchieved: number; total: number } | null;
-  /** Criteria that clearly improved. */
-  clearlyImproved: SpeakingCriterion[];
-  /** Weakness areas (by criterion) flagged before but not after. */
-  resolvedCriteria: SpeakingCriterion[];
-  /** Weaknesses still flagged in the newer attempt, most important first. */
-  remainingIssues: EvaluationIssue[];
   /** What to practise next: the newer attempt's retry focus. */
-  practiceNext: RetryFocusItem[];
+  practiceNext: MultilevelRetryFocus[];
   /** True when the two attempts were scored with different methodology versions. */
   methodologyChanged: boolean;
-  tally: { improved: number; declined: number; same: number };
 }
 
 export interface ComparableAttempt {
-  evaluation: EvaluationResult;
+  evaluation: MultilevelResult;
   metrics: SpeechMetrics | null;
   /** Evaluator + rubric version that produced the evaluation. */
   methodology?: string;
 }
 
 /**
- * Compare two evaluated attempts. Purely derived from stored results — it
- * never invents improvement: equal scores are "same", lower scores are
- * "declined", and small differences are labelled as slight.
+ * Compare two evaluated attempts. Purely derived from stored results — it never invents improvement: an equal band is
+ * "same", a lower band is "declined", and a one-band difference is labelled as slight.
  */
 export function compareAttempts(before: ComparableAttempt, after: ComparableAttempt): AttemptComparison {
-  const criteria = SPEAKING_CRITERIA.map((criterion): CriterionComparison => {
-    const a = before.evaluation.criteria[criterion];
-    const b = after.evaluation.criteria[criterion];
-    const beforeScore = a.assessable ? a.score : null;
-    const afterScore = b.assessable ? b.score : null;
-    if (beforeScore === null || afterScore === null) {
-      return { criterion, before: beforeScore, after: afterScore, delta: null, direction: "not_comparable", magnitude: "none" };
-    }
-    const delta = afterScore - beforeScore;
-    return { criterion, before: beforeScore, after: afterScore, delta, direction: directionOf(delta), magnitude: magnitudeOf(delta) };
+  const a = before.evaluation;
+  const b = after.evaluation;
+  const features = FEATURES.map((feature): FeatureComparison => {
+    const from = a.assessment.features[feature].level;
+    const to = b.assessment.features[feature].level;
+    if (from === NOT_ASSESSED || to === NOT_ASSESSED) return { feature, before: from, after: to, direction: "not_comparable" };
+    return { feature, before: from, after: to, direction: directionOf(levelValue(to) - levelValue(from)) };
   });
-
-  const levelDelta = cefrRank(after.evaluation.overall_level) - cefrRank(before.evaluation.overall_level);
-  const overall = {
-    before: before.evaluation.overall_level,
-    after: after.evaluation.overall_level,
-    direction: directionOf(levelDelta),
-    magnitude: magnitudeOf(levelDelta),
+  const delta = b.scoring.band - a.scoring.band;
+  const band = {
+    before: a.scoring.band,
+    after: b.scoring.band,
+    bandMax: b.scoring.band_max,
+    beforeLabel: a.scoring.label,
+    afterLabel: b.scoring.label,
+    direction: directionOf(delta),
+    magnitude: magnitudeOf(delta),
   };
 
-  const clearlyImproved = criteria.filter((c) => c.direction === "improved" && c.magnitude === "clear").map((c) => c.criterion);
-  const clearlyDeclined = criteria.filter((c) => c.direction === "declined" && c.magnitude === "clear").map((c) => c.criterion);
-
-  const beforeIssueCriteria = new Set(before.evaluation.issues.map((issue) => issue.criterion));
-  const afterIssueCriteria = new Set(after.evaluation.issues.map((issue) => issue.criterion));
-
-  const review = after.evaluation.retry_review;
-  const focus = review
-    ? {
-        achieved: review.objectives.filter((o) => o.outcome === "achieved").length,
-        partlyAchieved: review.objectives.filter((o) => o.outcome === "partly_achieved").length,
-        notAchieved: review.objectives.filter((o) => o.outcome === "not_achieved").length,
-        total: review.objectives.length,
-      }
-    : null;
-
+  const review = b.assessment.retry_review;
   return {
-    verdict: verdictOf(overall, clearlyImproved.length, clearlyDeclined.length),
-    overall,
-    criteria,
+    verdict: verdictOf(delta, features),
+    band,
+    questions: { before: a.scoring.on_topic_count, after: b.scoring.on_topic_count, total: b.assessment.questions.length },
+    features,
     metrics:
       before.metrics && after.metrics
         ? {
@@ -113,39 +87,28 @@ export function compareAttempts(before: ComparableAttempt, after: ComparableAtte
             fillerCount: { before: before.metrics.fillerCount, after: after.metrics.fillerCount },
           }
         : null,
-    focus,
-    clearlyImproved,
-    resolvedCriteria: [...beforeIssueCriteria].filter((c) => !afterIssueCriteria.has(c)),
-    remainingIssues: after.evaluation.issues,
-    practiceNext: after.evaluation.retry_focus,
-    methodologyChanged:
-      before.methodology !== undefined && after.methodology !== undefined && before.methodology !== after.methodology,
-    tally: {
-      improved: criteria.filter((c) => c.direction === "improved").length,
-      declined: criteria.filter((c) => c.direction === "declined").length,
-      same: criteria.filter((c) => c.direction === "same").length,
-    },
+    focus: review
+      ? {
+          achieved: review.objectives.filter((o) => o.outcome === "achieved").length,
+          partlyAchieved: review.objectives.filter((o) => o.outcome === "partly_achieved").length,
+          notAchieved: review.objectives.filter((o) => o.outcome === "not_achieved").length,
+          total: review.objectives.length,
+        }
+      : null,
+    practiceNext: b.retry_focus,
+    methodologyChanged: before.methodology !== undefined && after.methodology !== undefined && before.methodology !== after.methodology,
   };
 }
 
-/**
- * A "clear" verdict needs a criterion that moved by 2+ points. The overall level alone is not
- * enough: the same transcript scored B2+ in one live run and C1 (two sub-bands higher) in
- * another while every criterion differed by exactly 1 point, because at the top of the scale
- * one point is worth about two sub-bands. Without a criterion-level change, a shift in the
- * overall level is treated as ordinary variation.
- */
-function verdictOf(
-  overall: { direction: ChangeDirection },
-  clearImprovements: number,
-  clearDeclines: number,
-): ComparisonVerdict {
-  if (clearImprovements > 0 && clearDeclines > 0) return "mixed";
-  if (clearImprovements > 0) return overall.direction === "declined" ? "mixed" : "clear_improvement";
-  if (clearDeclines > 0) return overall.direction === "improved" ? "mixed" : "clear_decline";
-  if (overall.direction === "improved") return "slight_improvement";
-  if (overall.direction === "declined") return "slight_decline";
-  return "about_the_same";
+/** Two or more bands is clear; one band is slight; features moving both ways with an equal band is mixed. */
+function verdictOf(bandDelta: number, features: FeatureComparison[]): ComparisonVerdict {
+  const up = features.some((f) => f.direction === "improved");
+  const down = features.some((f) => f.direction === "declined");
+  if (bandDelta >= 2) return "clear_improvement";
+  if (bandDelta <= -2) return "clear_decline";
+  if (bandDelta === 1) return down ? "mixed" : "slight_improvement";
+  if (bandDelta === -1) return up ? "mixed" : "slight_decline";
+  return up && down ? "mixed" : "about_the_same";
 }
 
 function directionOf(delta: number): ChangeDirection {

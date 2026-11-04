@@ -10,7 +10,20 @@ async function recordAndSubmit(page: Page, speakMs = 2500) {
   await page.waitForTimeout(speakMs);
   await page.getByRole("button", { name: "Finish answer" }).click();
   await expect(page.locator("audio")).toBeVisible();
+  await expectPlayableAudio(page, speakMs);
   await page.getByRole("button", { name: "Submit for feedback" }).click();
+}
+
+/**
+ * The player must know the recording's real length (Chrome's MediaRecorder WebM has no duration in its header, which
+ * showed as "0:00 / 0:00"), and the recording must be playable.
+ */
+async function expectPlayableAudio(page: Page, minMs: number) {
+  const audio = page.locator("audio").first();
+  await expect
+    .poll(() => audio.evaluate((el: HTMLAudioElement) => (Number.isFinite(el.duration) ? el.duration : -1)), { timeout: 15_000 })
+    .toBeGreaterThan(minMs / 1000 - 1);
+  expect(await audio.evaluate((el: HTMLAudioElement) => el.error)).toBeNull();
 }
 
 test("full loop: prepare, record, feedback, retry with focus, honest comparison, history", async ({ page }) => {
@@ -28,12 +41,23 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
   await expect(page.getByText("Development evaluator").first()).toBeVisible();
   await expect(page.getByText("Your focus for the next attempt")).toBeVisible();
   await expect(page.getByText("Did you answer every point?")).toBeVisible();
-  await expect(page.getByText("Pronunciation").locator("..").getByText("Not assessed")).toBeVisible();
+  // Part band only: "Part 2: N/5 · label", the B2 target, and never an overall exam level or a /10 score.
+  await expect(page.getByTestId("band-headline")).toHaveText(/^Part 2: [0-5]\/5 · (Above B2|Higher B2|Lower B2|Higher B1|Lower B1|Below B1)$/);
+  await expect(page.getByText(/^(Meets B2 target|Below B2 target \(need 3\+\))$/)).toBeVisible();
+  await expect(page.getByText(/estimated level|\/10\b|Scores by criterion/)).toHaveCount(0);
+  await expect(page.getByTestId("provisional-note")).toHaveText(/Provisional: pronunciation not assessed/);
+  await expect(page.getByTestId("feature-pronunciation").getByText("Not assessed", { exact: true })).toBeVisible();
+  for (const feature of ["grammar", "vocabulary", "fluency", "cohesion"]) {
+    await expect(page.getByTestId(`feature-${feature}`).getByText(/^(Above B2|B2|B1|Below B1)$/)).toBeVisible();
+  }
+  // One 1-based numbering: the checklist names the questions as the task does.
+  await expect(page.getByTestId("question-3")).toContainText("Question 3: Should schools limit the use of smartphones?");
+  await expectPlayableAudio(page, 2500);
 
-  // The retry CTA comes before the secondary detail (other issues, scores, transcript).
+  // The retry CTA comes before the secondary detail (questions, features, transcript).
   const ctaBox = await page.getByRole("button", { name: "Retry this task" }).boundingBox();
-  const scoresBox = await page.getByText("Scores by criterion").boundingBox();
-  expect(ctaBox!.y).toBeLessThan(scoresBox!.y);
+  const featuresBox = await page.getByText("Your language, feature by feature").boundingBox();
+  expect(ctaBox!.y).toBeLessThan(featuresBox!.y);
 
   // Attempt 2 (retry)
   await page.getByRole("button", { name: "Retry this task" }).click();
@@ -187,4 +211,47 @@ test("the browser sends its session id with the recording and its analytics even
   expect(uploadSessionId).toMatch(/^[0-9a-f-]{36}$/);
   const sessionIds = new Set(eventBodies.flatMap((body) => body.events.map((event) => event.sessionId)));
   expect(sessionIds).toEqual(new Set([uploadSessionId])); // every client event carries the same server-issued session
+});
+
+test("a missed question gets a model answer, and mistakes are grouped by pattern", async ({ page }) => {
+  // Rewrite the (mock) result the way a real evaluation of an answer that skips question 3 would look.
+  await page.route(/\/api\/speaking\/attempts\/[0-9a-f-]+$/, async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    const response = await route.fetch();
+    const body = await response.json();
+    const result = body.attempt?.evaluation?.result;
+    if (result?.kind === "multilevel") {
+      const quote = body.attempt.transcript.text.split(/(?<=[.!?])\s+/)[0];
+      result.assessment.questions[2] = {
+        id: 3,
+        status: "missing",
+        evidence: "",
+        note: "You did not talk about schools.",
+        model_answer: "As for schools, I think they should limit phones in lessons, because students concentrate better.",
+      };
+      result.assessment.errors = [
+        { quote, correction: "Corrected one", type: "grammar", pattern: "Missing -s after he/she/it" },
+        { quote: "second slip", correction: "Corrected two", type: "grammar", pattern: "Missing -s after he/she/it" },
+        { quote: "one-off slip", correction: "Corrected three", type: "grammar", pattern: "" },
+      ];
+      result.assessment.error_patterns = [
+        { name: "Missing -s after he/she/it", type: "grammar", rule: "Add -s to the verb after he, she or it: 'it helps'.", how_to_fix: "Check every verb after 'it'." },
+      ];
+      result.scoring.biggest_fix = { kind: "question_coverage", question_id: 3 };
+    }
+    return route.fulfill({ response, json: body });
+  });
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page, 1500);
+  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+
+  await expect(page.getByRole("heading", { name: /^Answer question 3: / })).toBeVisible();
+  await expect(page.getByTestId("model-answer")).toContainText("As for schools, I think they should limit phones in lessons");
+  await expect(page.getByTestId("question-3")).toContainText("Example: “As for schools");
+  const pattern = page.getByTestId("feature-grammar").getByTestId("error-pattern");
+  await expect(pattern).toContainText("Missing -s after he/she/it");
+  await expect(pattern).toContainText("· 2 times");
+  await expect(pattern).toContainText("Fix: Check every verb after 'it'.");
+  await expect(page.getByTestId("feature-grammar")).toContainText("Other corrections");
+  await page.screenshot({ path: "test-results/model-answer-and-patterns.png", fullPage: true });
 });

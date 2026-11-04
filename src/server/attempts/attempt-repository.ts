@@ -1,6 +1,6 @@
 import "server-only";
 import { and, count, desc, eq, gte, inArray, lt, max, or, sql } from "drizzle-orm";
-import type { RetryFocusItem } from "@/domain/evaluation/schema";
+import type { RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptStatus, FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";

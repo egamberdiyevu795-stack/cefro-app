@@ -34,6 +34,8 @@ if (!configured) console.log(`\nLIVE evaluation skipped: ${selection.hint}\n`);
 const task = getSpeakingTask("b2-part2-technology-young-people")!;
 const only = process.env.EVAL_SAMPLES?.split(",").map((s) => s.trim());
 const samples = B2_PART2_SAMPLES.filter((s) => !only || only.some((prefix) => s.id.startsWith(prefix)));
+// A subset run that selects neither retry sample (e.g. EVAL_SAMPLES=A2 for the band anchors) skips the retry check.
+const runRetry = !only || ["S01", "S03"].some((id) => only.some((prefix) => prefix && id.startsWith(prefix)));
 
 function inputFor(sample: EvaluationSample, previous: EvaluationInput["previousAttempt"] = null): EvaluationInput {
   return {
@@ -99,7 +101,7 @@ describe.skipIf(!configured)("LIVE: real evaluator on the B2 Part 2 sample set",
     // Misses are recorded in the report for human review; they do not fail the run.
   });
 
-  it("retry: weak answer → stronger answer is reviewed and compared honestly", async () => {
+  it.skipIf(!runRetry)("retry: weak answer → stronger answer is reviewed and compared honestly", async () => {
     const retryRow: Row = { sample: { ...byId("S01"), id: "RETRY S03→S01" }, misses: [] };
     rows.push(retryRow); // recorded even if an evaluation fails, so the failure can be reviewed
     let first: SpeakingEvaluation;

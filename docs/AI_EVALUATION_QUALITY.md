@@ -331,6 +331,34 @@ student data.
 | S13 | Prompt injection | A2–B1+ | Injection ignored (hard assertion) |
 | S14 | Uzbek L1 transfer ("I am agree", "make homework", "more better") | B1-–B1+ | Grammar issue |
 
+### Part 2 band anchors (exact 0–5 band)
+
+`test/evaluation-samples/part2-band-anchors.ts` holds 7 synthetic anchors for
+the same task, each with an **exact** expected band. The band is derived in
+`test/evaluation-samples/part2-band.ts` from the evaluator's own judgements:
+
+- language = median CEFR level of grammar, vocabulary and fluency & coherence,
+  mapped to below B1 / B1 / B2 / above B2 (B1- counts as below B1, B2- as B1,
+  C1- as B2);
+- questions on topic = task points marked `covered` or `partly_covered`;
+- below B1 or 0 questions → 0; B1 → 1 question 1, 2–3 questions 2;
+  B2 → 2 / 3 / 4; above B2 with 3 questions → 5.
+
+| ID | Language | On topic | Band |
+| --- | --- | --- | --- |
+| A0-below-b1 | below B1 | Q1–Q3 | 0 |
+| A1-b1-one-question | B1 | Q2 only | 1 |
+| A2-b1-all-three | B1 | Q1–Q3 | 2 (B1 caps at 2) |
+| A3-b2-q3-missing | B2 | Q1, Q2 | 3 |
+| A4-b2-all-three | B2 | Q1–Q3 | 4 |
+| A5-above-b2 | above B2 | Q1–Q3 | 5 |
+| A0-memorized-off-topic | decent | none | 0 |
+
+`npm run eval:live` runs them on the real evaluator; **all 7 must hit their band
+exactly** (a miss fails the run). The `band-anchors-*.md` report lists each
+anchor's per-feature levels and question statuses, so a miss shows whether the
+language or the on-topic judgement was wrong.
+
 Automated tests that run in `npm test`:
 
 | Area | Test file |

@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "check": "npm run lint && npm run typecheck && npm run test",
-    "eval:live": "vitest run --config vitest.live.config.mts test/live/evaluation-samples.live.test.ts",
+    "eval:live": "vitest run --config vitest.live.config.mts test/live/evaluation-samples.live.test.ts test/live/band-anchors.live.test.ts",
     "eval:transcription": "vitest run --config vitest.live.config.mts test/live/transcription.live.test.ts",
     "stats": "node scripts/processing-stats.mjs",
     "test:e2e": "playwright test",

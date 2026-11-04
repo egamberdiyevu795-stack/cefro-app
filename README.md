@@ -85,7 +85,7 @@ real feedback, run the validation steps in `docs/AI_EVALUATION_QUALITY.md` §6.
 | `npm run check`       | Lint + typecheck + tests (run before pushing)        |
 | `npm test`            | Unit and integration tests (Vitest)                  |
 | `npm run test:e2e`    | Browser tests (Playwright, mock providers, fake mic) |
-| `npm run eval:live`   | Run the evaluation sample set on the REAL evaluator chosen by `EVALUATION_PROVIDER` (costs money) |
+| `npm run eval:live`   | Run the evaluation sample set and the Part 2 band anchors (exact 0–5 band) on the REAL evaluator chosen by `EVALUATION_PROVIDER` (costs money) |
 | `npm run eval:transcription` | Transcribe real recordings in `local-samples/` |
 | `npm run eval:transcription:controlled` | Real OpenAI transcription of generated test audio (needs `OPENAI_API_KEY`, ffmpeg) |
 | `npm run eval:pipeline` | Real audio → OpenAI → Gemini → gate → database, with persistence and evidence checks |

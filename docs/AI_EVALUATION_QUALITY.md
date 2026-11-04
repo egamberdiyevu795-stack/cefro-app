@@ -16,7 +16,10 @@
 > by one level (A2 B1 → B2 = band 4; A4 B2 → above_B2 = band 5; A3 over-rated too but capped by coverage). 3.1.0
 > adds a strict calibration section to the prompt (simple vs complex structures, everyday vs topic vocabulary,
 > simple vs B2 linkers, "accuracy is not range", lower level when in doubt, transcript-only fluency capped near
-> the language level). Re-run `npm run eval:live` to validate.
+> the language level). Second run (3.1.0): 6/7, with A2 and A4 fixed, but A0 rose to band 2: the rules were read as
+> floors (vocabulary, fluency and cohesion B1 despite "very simple" notes). **3.2.0** says the rules only cap a
+> level, gives concrete below_B1 signals per feature and caps transcript-only fluency at the higher of grammar and
+> vocabulary.
 >
 > **Verbatim transcription regression.** A live run turned a learner's "nobody will helps" into "nobody helps".
 > Both transcription prompts now ask for a verbatim, disfluent transcript and name the error types models "fix".

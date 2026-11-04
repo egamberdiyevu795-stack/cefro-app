@@ -55,7 +55,11 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   calibration section: what counts as simple vs complex grammar, everyday vs topic vocabulary, simple vs B2 linkers,
  *   "accuracy is not range", choose the lower level when in doubt, and fluency from a transcript capped near the
  *   language level. New prompt hash; scoring, schema and gate unchanged.
+ * - speaking-evaluator/3.2.0 — Second anchor run (3.1.0): 6/7, A2 and A4 fixed, but the below-B1 anchor rose to band 2
+ *   (vocabulary, fluency and cohesion rated B1 although the notes said "very simple" and "only simple linkers"): the
+ *   3.1.0 rules were read as floors. Prompt now says they only cap a level, gives concrete below_B1 signals per
+ *   feature, says what B1 needs, and caps transcript-only fluency at the higher of grammar and vocabulary.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.1.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.2.0";
 
 export { EVALUATION_SCHEMA_VERSION };

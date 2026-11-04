@@ -1,7 +1,7 @@
 # Part 3 plan: official Question 8 (balanced argument, target C1, band 0–6)
 
-Status: **plan only, decisions recorded.** No code has been changed. The decisions taken on the first draft are in
-[section 5](#5-decisions); the items marked **check** there are the reviewer's to confirm.
+Status: **plan complete.** No code has been changed. All decisions are recorded in [section 5](#5-decisions).
+Implementation waits until Part 2 is merged and live-tested, the same as Part 1.
 
 Part 3 reuses the Part 2 design ([`ARCHITECTURE.md` › AI evaluation](ARCHITECTURE.md#ai-evaluation)): **the model
 judges, with exact quotes; code computes the band.** What changes is *what* is judged. Part 2 counts answered
@@ -151,13 +151,15 @@ Notes:
 - **Naming a point is not reading it.** "Safer streets for pedestrians and cyclists. My brother cycles to school and
   was nearly hit twice…" is `developed`. The point text is only "reading" when nothing of the student's own follows it
   (decision 5, measured in section 6).
-- **Rebuttals** (decision 8): "some people say the metro isn't good enough, but…" presents A3 and counts as
-  `restated` (`developed` only if the student gives a reason *for* A3 before answering it). A counter-argument that
-  never states the opposing point ("the metro is cheap, so people would adapt") argues FOR and does not cover A3
-  (see anchor 3).
+- **Rebuttals** (decision 8): "some people say the metro isn't good enough, but…" **addresses** A3 (`restated`), so
+  the AGAINST side counts as covered. It is `developed` only if the student first gives at least one real reason or
+  example *supporting* A3. The rebuttal itself develops the student's own side, not A3's, and is never A3's
+  `development_evidence`. A counter-argument that never states the opposing point ("the metro is cheap, so people
+  would adapt") argues FOR and does not cover A3 at all (see anchor 3 and fixture R1).
 - `own_points` **never count towards coverage** and never raise the band (decision 2). They are recorded so the
   feedback can say "good extra argument" with the quote.
-- Pronunciation is judged on the ladder up to **C1 only**, never `above_C1` (decision 7).
+- Pronunciation is judged on the ladder up to **C1 only**, never `above_C1`, and is not part of the band-6 gate
+  (decision 7).
 - Strengths: allowed only for features judged **C1 or above** (Part 2 uses B2+; the threshold moves to the target).
 
 ### Code-side derived values
@@ -200,10 +202,15 @@ All numbers live in the rubric JSON (`multilevel_q8.json`), not in code.
 | one_side | 3 | | heavily_dependent | 2 | | B1 | 2 |
 | both_sides | 4 | | own_development | 6 | | B2 | 4 |
 | both_sides_full | 6 | | | | | C1 | 5 |
-| | | | | | | above_C1 | 6 |
+| | | | | | | above_C1 | 6 * |
 
 Language level = mean of assessed features on the 5-step ladder (below_B1 = 0 … above_C1 = 4), nearest step,
 exact .5 rounds **down** (Part 2's `bestFitLevel`, generalised to a ladder from config).
+
+\* **Band-6 gate** (decision 7): the `above_C1` cap of 6 applies only when the language level is `above_C1` **and**
+grammar and vocabulary are each judged `above_C1`. Otherwise an `above_C1` language level is capped at 5.
+Pronunciation (judged up to C1 only) and fluency/cohesion are not part of the gate. Config:
+`scoring.top_band_requires: ["grammar", "vocabulary"]`.
 
 ### Resulting band table
 
@@ -218,11 +225,14 @@ exact .5 rounds **down** (Part 2's `bestFitLevel`, generalised to a ladder from 
 | both_sides | own_development | ≥ B2 | **4** | points from each section, B2 cap |
 | both_sides_full | own_development | B2 | **4** | language caps at B2 |
 | both_sides_full | own_development | C1 | **5** | C1: each section, reasons for and against |
-| both_sides_full | own_development | above C1 | **6** | likely above C1 |
+| both_sides_full | own_development | above C1, grammar **and** vocabulary above C1 | **6** | likely above C1 |
+| both_sides_full | own_development | above C1, grammar or vocabulary at C1 or below | **5** | band-6 gate not met |
 
 Coverage counts **listed points only** (decision 2, decision 3): `one_side` = at least one listed point addressed on
 only one side; `both_sides` = at least one on each side; `both_sides_full` = two listed points per side with at least
-one developed per side. Once coverage is full, band 4 vs 5 vs 6 is decided by language alone (B2 / C1 / above C1).
+one developed per side, where "developed" means a real reason or example *supporting* that point (a rebuttal does
+not develop the point it rebuts, decision 8). Once coverage is full, band 4 vs 5 vs 6 is decided by language alone
+(B2 / C1 / above C1 with the band-6 gate).
 
 Two consequences worth stating to students: one-sided answers stop at 3 whatever the language; reading the list
 stops at 1 whatever the language (decision 5, the official text). A C1 speaker who uses only one point per side
@@ -249,15 +259,16 @@ Pick the cap that binds lowest; ties go in this order:
 3. `section_coverage` — coverage cap binds at `one_side`: name the missing side, say **"Choose two points from each
    list."**, and suggest one point from the missing side with its `model_answer`.
 4. `point_development` — coverage is `both_sides` but not full: if fewer than two listed points on a side, **"Choose
-   two points from each list."**; otherwise name the restated point to develop with a reason.
+   two points from each list."**; otherwise name the restated point to develop with a reason. When that side's points
+   were only rebutted (decision 8): "Before you argue against a point, give one real reason that supports it."
 5. `feature` — lowest language feature (same `FIX_PRIORITY` as Part 2).
 
 ---
 
 ## 5. Decisions
 
-Decisions 1–5 were taken by the reviewer on the first draft. Decisions 6–10 are the author's recommended defaults;
-the ones marked **check** should still be confirmed.
+All ten decisions are approved by the reviewer (1–5 on the first draft, 6–10 on the second, with the
+clarifications to 7, 8 and 9 below).
 
 | # | Topic | Decision | Reason |
 | --- | --- | --- | --- |
@@ -267,9 +278,9 @@ the ones marked **check** should still be confirmed.
 | 4 | Model vs code (dependence) | **The model decides in v1.** Code overrides only in the clear case: `copied_ratio ≥ 0.50` **and** `points_read ≥ 4` → `reads_prompts`. Every other disagreement is logged and flagged, not applied. Thresholds are reviewed on real recordings before code gets more power. | The overlap measure is only calibrated on synthetic anchors. |
 | 5 | Reading out | **Reading the list = band 1 whatever the language** (official text). Briefly naming a point and then explaining it in your own words is **not** reading: the overlap measure must not count a short point name followed by the student's own content (section 6, "named" runs). Band-1 feedback headline: **"Say the ideas in your own words."** | Official band 1; naming a point is normal exam technique. |
 | 6 | Overlap thresholds | Ship with the thresholds in section 6 as **flag-only** (except the clear-case override in decision 4). Collect ~20 real recordings across bands and review false flags before any further change. | Follows from decision 4: with the model deciding, wrong thresholds only produce log entries. |
-| 7 | Pronunciation at C1 | The audio step may judge pronunciation **up to C1, never `above_C1`**. **Check.** | The C1 text is only "Pronunciation is intelligible", which cannot separate C1 from above C1. With five features, one at C1 and four above C1 still averages to above C1, so this never blocks band 6 by itself. |
-| 8 | Rebuttals | "Some people say X, but…" with X a listed point counts as **`restated`** (side covered); **`developed`** only if the student gives a reason *for* X. A counter-argument that never states X does not cover X's side (anchor 3). **Check.** | Presenting the opposing view is what makes the argument balanced; arguing against it without stating it is one-sided. |
-| 9 | Topics | Our own topics come from everyday society: cities and transport, education, work, technology, environment, health, family. **Avoid** politics, religion, weapons, crime and violence, and personal tragedy. Ship **3 topics** first, each with its own anchor set. **Check.** | The official sample is a sensitive topic; for practice content we keep topics neutral. Content policy is the owner's call. |
+| 7 | Pronunciation and band 6 | The audio step judges pronunciation **up to C1 only, never `above_C1`**, and pronunciation **never blocks band 6**. Band 6 requires the language level `above_C1` **and** grammar and vocabulary each `above_C1` (band-6 gate, section 4); otherwise the cap is 5. | The C1 pronunciation text ("Pronunciation is intelligible") cannot separate C1 from above C1; grammar and vocabulary are where "above C1" is visible in a transcript. Intended to mirror Part 2's band-5 rule. Note: Part 2's current code (`band-scoring.ts`) gates band 5 on the *mean* level only, with no grammar/vocabulary condition, so Part 3 is stricter than Part 2 as built today. |
+| 8 | Rebuttals | "Some people say X, but…" = point X is **addressed** (`restated`), so X's side counts as covered (cap 4). X is **developed** only if the student gives at least one real reason or example *supporting* X before rebutting it; the rebuttal develops the student's own side, not X's. So `both_sides_full` (cap 6) needs a genuine supporting reason on each side. A counter-argument that never states X does not cover X's side (anchor 3). Test: fixture R1 (section 8). | Presenting the opposing view covers the section; a balanced argument also gives that view's reasons. |
+| 9 | Topics | **Allowed:** education, technology, environment, health, work, cities, transport, media, sport, including policy-style statements ("X should be banned / required / taxed"), because the real exam uses public-debate topics. **Avoid:** weapons, religion, party politics, crime, personal tragedy. Ship **3 topics** first, each with its own anchor set; the reviewer picks 3 from the 5 candidates in section 9. | Students need practice with policy statements like the official sample, without its sensitive subject. |
 | 10 | Session flow | Part 3 runs **alone**, like Part 2: the UI shows the Part band (`Part 3: 4/6 · Higher B2`) and the C1 target, never an overall exam level. A full mock test with an overall level is a separate later plan. | Same contract as Part 2; an overall level needs all parts. |
 
 ---
@@ -326,6 +337,7 @@ Stored with each result: the model's level, the code level, the metrics, whether
 | Anchor 4 | 171 | 0.00 | 0 | 60 | 0 | own_development | own_development | agrees |
 | Anchor 5 | 223 | 0.00 | 0 | 91 | 1 | own_development | own_development | agrees (statement echo is named) |
 | Fixture N1 | 72 | 0.00 | 0 | 33 | 2 | own_development | own_development | agrees |
+| Fixture R1 | 158 | 0.00 | 0 | 59 | 2 | own_development | own_development | agrees |
 
 **Fixture N1** (overlap unit test, not a band anchor): names two points verbatim, then develops each.
 
@@ -377,7 +389,7 @@ refactor.
 
 Transcripts are written as an ASR would return them (no corrections). Each lists the expected judgements and how
 code reaches the band. These become unit-test fixtures for the scorer and the overlap metric, and calibration items
-for the live evaluation run.
+for the live evaluation run. The full list of planned test cases is at the end of this section.
 
 ### Anchor 0 — Band 0 (below B1)
 
@@ -483,5 +495,97 @@ for the live evaluation run.
 - Code: coverage `both_sides_full` (cap 6), language cap 5 → **band 5**. Biggest fix: feature (grammar, "which are
   located").
 
-No band-6 anchor was requested. Band 6 needs the same structure as anchor 5 with every feature clearly beyond the
-C1 descriptors.
+No band-6 anchor was requested. Band 6 needs the same structure as anchor 5 with grammar and vocabulary clearly
+beyond the C1 descriptors and the mean level above C1 (band-6 gate, decision 7).
+
+### Fixture R1 — mentioned then rebutted (decision 8), expected cap 4
+
+Two listed points per side, but both FOR points are only stated and then argued against. Language is C1, so the
+coverage cap is what limits the band.
+
+> Personally, I'm against banning cars from the centre, although I can see why the idea is popular. Some people say
+> the air would be cleaner and there would be less noise, but in my view the real problem is old buses and
+> factories, not private cars. Others claim the streets would be safer for pedestrians and cyclists, yet most serious
+> accidents in our city happen on the ring road rather than in the centre. On the other side, a ban would be very
+> hard on elderly and disabled people. My grandfather, for instance, uses a walking stick and simply couldn't manage
+> the distance from the nearest metro station to his clinic. What's more, shops in the centre would probably lose
+> customers, since people who drive would rather go to a shopping mall with free parking than carry heavy bags to a
+> bus stop. So, all things considered, I think a ban would cause more problems than it solves.
+
+- Points: F1 `restated` and F2 `restated` (each stated, then rebutted; no reason given *for* it). A1 `developed`
+  (grandfather, walking stick), A2 `developed` (free parking, heavy bags). F3, A3 `not_addressed`.
+- The rebuttals ("the real problem is old buses and factories", "accidents happen on the ring road") are **not**
+  `development_evidence` for F1/F2. They argue the AGAINST position but are not listed AGAINST points, so they add
+  nothing to coverage either (decision 2).
+- Derived: `covered(for) = 2`, `developed(for) = 0`, `covered(against) = 2`, `developed(against) = 2` →
+  coverage **`both_sides`** (not full, because the FOR side has no supporting reason).
+- Dependence: `own_development` (copied 0.00; the two point names are named runs).
+- Language: C1 (concessive "although", "yet", "rather than", "would rather … than", "all things considered").
+- Code: coverage cap **4**, dependence cap 6, language cap 5 → **band 4**. Biggest fix: point_development, "Before
+  you argue against a point, give one real reason that supports it."
+- What would make it band 5: one genuine supporting reason for F1 or F2 before the "but".
+
+### Planned test cases
+
+Pure unit tests, no model call. Each case fixes the model judgements as input and asserts the computed values.
+
+| Case | Under test | Input (judgements / transcript) | Expected |
+| --- | --- | --- | --- |
+| Anchor 0 | scorer | no point addressed, language below B1 | band 0, `no_point_addressed` |
+| Anchor 1 | scorer + overlap | all six restated; transcript anchor 1 | override fires (0.81, 6) → `reads_prompts`; band 1 |
+| Anchor 2 | scorer + overlap | `heavily_dependent`, B1 | no override, no flag; band 2 |
+| Anchor 3 | scorer | FOR only, B2 | `one_side`; band 3; "Choose two points from each list." |
+| Anchor 4 | scorer | full coverage, B2 | band 4 (language cap) |
+| Anchor 5 | scorer + overlap | full coverage, C1; transcript anchor 5 | statement echo is a named run; band 5 |
+| Band-6 gate | scorer | full coverage, mean above C1, vocabulary at C1 | band 5 (gate not met) |
+| Band-6 gate, pronunciation | scorer | full coverage, grammar/vocabulary/fluency/cohesion above C1, pronunciation C1 | band 6 |
+| Fixture N1 | overlap | transcript N1 | 2 named runs; `copied_ratio` 0.00, `points_read` 0 |
+| **Fixture R1** | scorer + overlap | F1, F2 restated (rebutted); A1, A2 developed; C1 | `both_sides`; **band 4**; point_development fix |
+
+---
+
+## 9. Candidate topics (reviewer picks 3)
+
+Policy-style statements in the allowed areas (decision 9). Each needs its own six anchors once chosen. The anchor
+topic above (cars in city centres) can also be one of the three.
+
+**T1. Education — "Homework should be banned in primary schools."**
+
+| FOR | AGAINST |
+| --- | --- |
+| More time for play, sport and family | Practises what was learned in class |
+| Less stress for young children | Builds good study habits early |
+| The school day is already long enough | Parents can see what their child is learning |
+
+**T2. Technology — "Children under 14 should not be allowed to own a smartphone."**
+
+| FOR | AGAINST |
+| --- | --- |
+| Less screen time and better sleep | Parents can reach them in an emergency |
+| Protection from harmful content online | Useful for learning and homework |
+| More face-to-face time with friends | Children without one may feel left out |
+
+**T3. Health — "Governments should put a special tax on sugary drinks and fast food."**
+
+| FOR | AGAINST |
+| --- | --- |
+| Fewer people would become overweight or ill | Unfair to families on low incomes |
+| The money could pay for health services | Adults should decide what they eat |
+| Companies would make healthier products | Lack of exercise is a bigger problem than food |
+
+**T4. Work — "Companies should be required to offer a four-day working week."**
+
+| FOR | AGAINST |
+| --- | --- |
+| Better balance between work and family life | Impossible in hospitals, shops and transport |
+| Rested staff work more productively | Higher costs for small businesses |
+| Less commuting means less traffic and pollution | Customers may get slower service |
+
+**T5. Sport — "Governments should spend money on local sports facilities rather than on hosting international sports events."**
+
+| FOR | AGAINST |
+| --- | --- |
+| Everyone can use local facilities every day | Big events bring tourists and investment |
+| International events are expensive and last only weeks | Success at home inspires young people to take up sport |
+| Local clubs are where new talent is found | New stadiums, roads and hotels remain after the event |
+

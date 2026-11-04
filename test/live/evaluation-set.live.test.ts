@@ -6,6 +6,7 @@ import { compareAttempts } from "@/domain/speaking/comparison";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";
 import { getEvaluationModel } from "@/server/evaluation";
+import { costUsd, formatUsd, priceFor } from "@/server/evaluation/pricing";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking, type SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 import type { EvaluationInput } from "@/server/evaluation/types";
@@ -27,7 +28,11 @@ import { writeReport } from "./report";
  *
  *   EVALUATION_PROVIDER=gemini GEMINI_API_KEY=... npm run eval:live
  *   EVAL_SAMPLES=A2,S15 EVAL_REPEAT=1 npm run eval:live     # subset (id prefixes; P1 = injection, RETRY = retry pair)
+ *   npm run eval:live:part2                                 # the 8 Part 2 anchors + S15, ×3 (EVAL_SAMPLES=A,S15)
  *   GEMINI_THINKING_LEVEL=medium GEMINI_EVALUATION_MAX_TOKENS=12000 npm run eval:live
+ *
+ * The report gives every run's band, feature levels, question statuses, time and estimated cost, plus the total
+ * (src/server/evaluation/pricing.ts; override prices with EVAL_PRICE_INPUT_PER_M / EVAL_PRICE_OUTPUT_PER_M).
  *
  * Keys are read from the environment and never printed.
  */
@@ -183,6 +188,25 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
     const anchorPass = anchorRows.filter((r) => r.misses.length === 0 && r.errors.length === 0 && r.runs.length === REPEAT);
     const unstableRows = rows.filter(unstable);
     const sec = (ms: number | null) => (ms === null ? "n/a" : `${(ms / 1000).toFixed(1)}s`);
+    const price = priceFor(model.model);
+    const costOf = (e: SpeakingEvaluation) => costUsd(e, price);
+    const knownCosts = all.map(costOf).filter((c): c is number => c !== null);
+    const totalCost = knownCosts.reduce((a, c) => a + c, 0);
+    const levelsOf = (e: SpeakingEvaluation) =>
+      FEATURES.filter((f) => f !== "pronunciation").map((f) => e.result.assessment.features[f].level).join(" / ");
+    const questionsOf = (e: SpeakingEvaluation) => e.result.assessment.questions.map((q) => `Q${q.id} ${q.status}`).join(", ");
+    const runRows = rows.flatMap((r) =>
+      r.runs.map((e, i) => {
+        const s = e.result.scoring;
+        const tokens = `${e.inputTokens ?? "?"}/${e.outputTokens ?? "?"}${e.modelCalls > 1 ? " (2 calls)" : ""}`;
+        return `| ${r.id} | ${i + 1} | ${s.band}${s.zero_reason ? ` (${s.zero_reason})` : ""} | ${levelsOf(e)} | ${questionsOf(e)} | ${sec(e.latencyMs)} | ${tokens} | ${formatUsd(costOf(e))} |`;
+      }),
+    );
+    const costLine = price
+      ? `Estimated cost: ${formatUsd(totalCost)} in total, ${formatUsd(knownCosts.length ? totalCost / knownCosts.length : null)} per evaluation on average` +
+        `${knownCosts.length < all.length ? ` (${all.length - knownCosts.length} evaluation(s) without token counts not included)` : ""}` +
+        ` · prices $${price.inputPerMillion}/M input, $${price.outputPerMillion}/M output (thinking billed as output) · ${price.source}`
+      : `Estimated cost: n/a (no price known for ${model.model}; set EVAL_PRICE_INPUT_PER_M and EVAL_PRICE_OUTPUT_PER_M)`;
     const fmt = (r: Row) => {
       const bands = bandsOf(r);
       const e = r.runs[0]?.result;
@@ -199,10 +223,17 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
       `S01–S15 with expectation misses (soft): ${sampleRows.filter((r) => r.misses.length).length}/${sampleRows.length}${sampleRows.some((r) => r.misses.length) ? ` (${sampleRows.filter((r) => r.misses.length).map((r) => r.id).join(", ")})` : ""}`,
       `Latency per evaluation: average ${sec(avg)}, p90 ${sec(p90)} over ${latencies.length} evaluations (target: average under 60s)`,
       `Regenerated drafts: ${all.filter((e) => e.modelCalls > 1).length} · tokens in/out: ${all.reduce((a, e) => a + (e.inputTokens ?? 0), 0)}/${all.reduce((a, e) => a + (e.outputTokens ?? 0), 0)}`,
+      costLine,
       "",
       "| Sample | Expected | Bands per run | Stability | Language run 1 (grammar / vocabulary / fluency / cohesion) | Questions run 1 | Expectations |",
       "|---|---|---|---|---|---|---|",
       ...rows.map(fmt),
+      "",
+      "## Every run",
+      "",
+      "| Sample | Run | Band | Grammar / vocabulary / fluency / cohesion | Questions | Time | Tokens in/out | Cost |",
+      "|---|---|---|---|---|---|---|---|",
+      ...runRows,
       "",
       ...rows
         .filter((r) => r.misses.length || r.errors.length || unstable(r))
@@ -223,7 +254,10 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
     const file = writeReport(
       "evaluation-set",
       markdown,
-      rows.map((r) => ({ id: r.id, kind: r.kind, expected: r.expected, bands: bandsOf(r), misses: r.misses, errors: r.errors, results: r.runs.map((e) => e.result), latencyMs: r.runs.map((e) => e.latencyMs) })),
+      rows.map((r) => ({ id: r.id, kind: r.kind, expected: r.expected, bands: bandsOf(r), misses: r.misses, errors: r.errors, results: r.runs.map((e) => e.result), latencyMs: r.runs.map((e) => e.latencyMs),
+        tokens: r.runs.map((e) => ({ input: e.inputTokens, output: e.outputTokens, calls: e.modelCalls })),
+        costUsd: r.runs.map(costOf),
+      })),
     );
     console.log(`\n${markdown}\n\nReport: ${file}\n`);
   });

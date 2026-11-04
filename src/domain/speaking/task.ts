@@ -7,6 +7,28 @@ import type { TargetLevel } from "@/domain/cefr";
  */
 export type SpeakingTaskType = "long_turn";
 
+/**
+ * A picture shown with the questions (official Part 2 shows one). It only sets the scene: the student answers the
+ * questions, not the picture. Every picture must be original or freely licensed; its source and licence are stored
+ * here (and so in every task snapshot) and listed in public/tasks/README.md.
+ */
+export interface TaskPicture {
+  /** Path under /public, e.g. "/tasks/advice-from-someone.svg". */
+  src: string;
+  /**
+   * What the picture shows, in plain words. Used as the image's alt text AND given to the evaluator, so it can tell
+   * a description of the picture from an answer to the questions. Changing it changes the evaluator input.
+   */
+  alt: string;
+  width: number;
+  height: number;
+  /** Who made it / where it comes from. */
+  source: string;
+  /** Licence name, e.g. "CC0 1.0". */
+  licence: string;
+  licenceUrl: string;
+}
+
 /** Identifies a rubric in the server's rubric registry (`server/evaluation/rubrics`). */
 export type RubricId = "multilevel-q7";
 
@@ -39,6 +61,8 @@ export interface SpeakingTask {
    * everywhere: in the UI, in the evaluator prompt and in stored results.
    */
   prompts: string[];
+  /** Optional picture shown beside the questions on every screen (brief, preparation, recording, retry). */
+  picture?: TaskPicture;
   /** Student-facing instructions, shown before preparation. */
   instructions: string[];
   preparationSeconds: number;

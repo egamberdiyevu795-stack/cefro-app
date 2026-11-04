@@ -27,8 +27,8 @@ function inputFor(sample: { transcript: string; durationMs: number }): Evaluatio
 }
 
 describe("Part 2 band anchor set (advice from someone)", () => {
-  it("has the seven anchors with unique ids", () => {
-    expect(PART2_BAND_ANCHORS.map((a) => a.expect.band).sort()).toEqual([0, 0, 1, 2, 3, 4, 5]);
+  it("has the eight anchors with unique ids", () => {
+    expect(PART2_BAND_ANCHORS.map((a) => a.expect.band).sort()).toEqual([0, 0, 0, 1, 2, 3, 4, 5]);
     expect(new Set(PART2_BAND_ANCHORS.map((a) => a.id)).size).toBe(PART2_BAND_ANCHORS.length);
   });
 

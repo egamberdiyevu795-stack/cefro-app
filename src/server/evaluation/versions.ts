@@ -71,7 +71,11 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   the official descriptors: simple linkers ARE the B1 cohesion descriptor, and short sentences are not a fluency
  *   problem (pausing / false starts / reformulations are). Cues realigned. Also: no level codes in student text,
  *   concrete fluency techniques (5 of 7 regenerations were generic fluency advice), no intonation talk.
+ * - speaking-evaluator/3.5.0 — Part 2 picture. The task can show a picture (task v2 of the advice task); the user
+ *   message gives the model what it shows (from its alt text), and the system prompt gains the picture rule: describing
+ *   the picture does NOT answer any question, even when it uses the topic's words ("the man is giving advice to the
+ *   girl"). New anchor A0-picture-only (band 0). Scoring, schema and gate unchanged; new prompt hash.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.4.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.5.0";
 
 export { EVALUATION_SCHEMA_VERSION };

@@ -21,6 +21,12 @@
 > level, gives concrete below_B1 signals per feature and caps transcript-only fluency at the higher of grammar and
 > vocabulary.
 >
+> **Evaluator 3.5.0 (Part 2 picture).** The advice task (v2) shows an original CC0 illustration beside the three
+> questions (`public/tasks/`). The evaluator is told what it shows (its alt text) and that describing the picture
+> answers no question, even with the topic's words. New anchor `A0-picture-only` (describes only the picture,
+> including "the man is giving advice to the girl") must get band 0 with all three questions off topic.
+> **Not yet run live.**
+>
 > **Verbatim transcription regression.** A live run turned a learner's "nobody will helps" into "nobody helps".
 > Both transcription prompts now ask for a verbatim, disfluent transcript and name the error types models "fix".
 > `T12-verbatim-regression` (`TRANSCRIPTION_SAMPLES=T12 npm run eval:transcription:controlled`) FAILS if "nobody
@@ -287,10 +293,13 @@ the local database.
 
 ## 6. Validating with real providers
 
-**Evaluator on the band anchors** (7 anchors, an injection probe and a retry pair; needs only the selected provider's key):
+**Evaluator on the band anchors** (8 anchors, an injection probe and a retry pair; needs only the selected provider's key):
 
 - **Local:** put `EVALUATION_PROVIDER=gemini` and `GEMINI_API_KEY` in `.env.local` (never commit it), then
-  `npm run eval:live`. Subset: `EVAL_SAMPLES=A2,A3 npm run eval:live`.
+  `npm run eval:live`. Subset: `EVAL_SAMPLES=A2,A3 npm run eval:live`. The 8 anchors + S15 only (×3, 27 calls):
+  `npm run eval:live:part2` (on GitHub Actions: samples `A,S15`). The report gives every run's band, feature
+  levels, question statuses, time and estimated cost (`src/server/evaluation/pricing.ts`; the default
+  gemini-3.8-flash prices are unverified, override with `EVAL_PRICE_INPUT_PER_M` / `EVAL_PRICE_OUTPUT_PER_M`).
 - **GitHub Actions** (works from the cloud sandbox, which cannot reach the Gemini API): add the repository
   secret `GEMINI_API_KEY`, then run **Actions → "Live evaluation (Gemini)" → Run workflow**.
   The workflow is manual-only. It uploads the review report as an artifact **and prints it in the job

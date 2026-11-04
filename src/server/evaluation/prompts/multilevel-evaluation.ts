@@ -65,6 +65,7 @@ For each of the ${n} questions in <task>, give one entry in "questions" with the
 - "missing": the student does not address it.
 - "off_topic": the student talks about something unrelated instead.
 "evidence" is the exact part of the transcript where the student answers it ("" for missing). Use <task_guidance_for_examiner> to decide what counts as answering each question. Always refer to a question by its number in <task>.
+Picture rule: if <task> has a "Picture shown to the student" line, that picture only sets the scene. Describing the picture (who is in it, what they are doing or wearing, where they are) does NOT answer any question, even when the description uses the topic's words (e.g. "the man is giving advice to the girl"). Judge each question only on what the student says about their own experience or their own opinion, as the question asks. An answer that only describes the picture leaves every question off_topic.
 For every question that is partial, minimal, missing or off_topic, "model_answer" is one or two short sentences (at most 30 words) the student could have said to answer it, written ONE level above the student's language (see "Feedback level" below). Never invent an opinion the student did not give:
 - If the student gave a view on this question (partial or minimal), build on it: keep their view and add a reason or an example.
 - If they gave no view on it (missing or off_topic), give a frame with both options for them to complete, e.g. "As for older people's advice, I think young people should / shouldn't always follow it, because …". Do not choose a side for them.
@@ -132,7 +133,7 @@ function buildUser(input: EvaluationInput): string {
 Part: ${task.part} (official Question ${input.rubric.config.official_question})
 Topic: ${task.question}
 ${task.prompts.map((p, i) => `Question ${i + 1}: ${p}`).join("\n")}
-Preparation time: ${task.preparationSeconds}s
+${task.picture ? `Picture shown to the student (it only sets the scene; describing it answers no question): ${task.picture.alt}\n` : ""}Preparation time: ${task.preparationSeconds}s
 Speaking time available: ${task.speakingSeconds}s
 </task>`,
     `<task_guidance_for_examiner>

@@ -135,6 +135,18 @@ export const PART2_BAND_ANCHORS: BandAnchor[] = [
       "I think every young person should have a hobby because it helps them relax after studying.",
     expect: { band: 0, language: "B1", questions: ["off_topic", "off_topic", "off_topic"], memorized: true },
   },
+  {
+    id: "A0-picture-only",
+    description: "Describes only the picture (uses the word \"advice\").",
+    why: "The picture only sets the scene. Describing it answers none of the questions, even with 'the man is giving advice to the girl': no own story (Q1, Q2) and no general view about young people (Q3) → all three off topic → 0.",
+    durationMs: 70_000,
+    transcript:
+      "In this picture I can see an old man and a young girl. They are sitting on a wooden bench in a park. " +
+      "The man has grey hair and glasses, and he is wearing a blue jumper. He is raising his hand, so I think the man is giving advice to the girl. " +
+      "The girl has long dark hair and an orange top. She is holding a notebook and she is listening to him carefully. " +
+      "Behind them there is a big green tree, and the sun is shining. It looks like a nice, calm day.",
+    expect: { band: 0, language: "B1", questions: ["off_topic", "off_topic", "off_topic"] },
+  },
 ];
 
 /**

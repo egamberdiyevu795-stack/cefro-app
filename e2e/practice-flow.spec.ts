@@ -82,6 +82,64 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
   expect(errors).toEqual([]);
 });
 
+/**
+ * The task picture has loaded (a real image, not a broken one), carries the caption, and sits beside the questions
+ * ("beside") or above them ("above").
+ */
+async function expectPicture(page: Page, layout: "beside" | "above") {
+  const figure = page.getByTestId("task-picture");
+  await expect(figure).toBeVisible();
+  await expect(figure.getByText("You don't need to describe the picture")).toBeVisible();
+  const img = figure.getByRole("img", { name: /older man .* teenage girl/ });
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  const pictureBox = (await img.boundingBox())!;
+  const questionsBox = (await page.getByTestId("task-picture-layout").getByRole("list").boundingBox())!;
+  expect(pictureBox.width).toBeGreaterThan(150);
+  if (layout === "beside") {
+    expect(pictureBox.x + pictureBox.width).toBeLessThanOrEqual(questionsBox.x); // picture on the left
+    expect(Math.abs(pictureBox.y - questionsBox.y)).toBeLessThan(pictureBox.height); // same row
+  } else {
+    expect(pictureBox.y + pictureBox.height).toBeLessThanOrEqual(questionsBox.y); // picture above
+  }
+}
+
+test("the task picture loads beside the questions on every screen (desktop): brief, preparation, recording, retry", async ({ page }) => {
+  const imageResponses: number[] = [];
+  page.on("response", (r) => {
+    if (r.url().includes("/tasks/advice-from-someone.svg")) imageResponses.push(r.status());
+  });
+  await page.goto(TASK_URL);
+  await expectPicture(page, "beside");
+  expect(imageResponses).toContain(200);
+
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await expectPicture(page, "beside");
+
+  await page.getByRole("button", { name: /start speaking/ }).click();
+  await expect(page.getByRole("button", { name: "Finish answer" })).toBeVisible();
+  await expectPicture(page, "beside");
+  await page.waitForTimeout(1500);
+  await page.getByRole("button", { name: "Finish answer" }).click();
+  await page.getByRole("button", { name: "Submit for feedback" }).click();
+  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+
+  await page.getByRole("button", { name: "Retry this task" }).click();
+  await expect(page.getByRole("heading", { name: "Your focus" })).toBeVisible();
+  await expectPicture(page, "beside");
+});
+
+test("on a phone the task picture is above the questions", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
+  const page = await context.newPage();
+  await page.goto(TASK_URL);
+  await expectPicture(page, "above");
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await expectPicture(page, "above");
+  await context.close();
+});
+
 test("microphone permission denied shows guidance", async ({ browser }) => {
   const context = await browser.newContext();
   await context.addInitScript(() => {

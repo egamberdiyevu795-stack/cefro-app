@@ -19,11 +19,11 @@ export function BiggestFixCard({ result, task }: { result: MultilevelResult; tas
 
 function QuestionFix({ result, task, questionId }: { result: MultilevelResult; task: PublicSpeakingTask; questionId: number }) {
   const question = result.assessment.questions.find((q) => q.id === questionId);
-  const missed = result.assessment.questions.filter((q) => q.status === "missing" || q.status === "off_topic").map((q) => q.id);
+  const missed = result.assessment.questions.filter((q) => q.status === "missing" || q.status === "off_topic" || q.status === "minimal").map((q) => q.id);
   return (
     <Card className="space-y-4 border-warning/50">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="danger">{question?.status === "off_topic" ? "Off topic" : "Not answered"}</Badge>
+        <Badge tone="danger">{STATUS_BADGE[question?.status ?? "missing"] ?? "Not answered"}</Badge>
         <Badge>Question coverage</Badge>
       </div>
       <h3 className="text-xl font-semibold leading-snug">
@@ -31,13 +31,21 @@ function QuestionFix({ result, task, questionId }: { result: MultilevelResult; t
       </h3>
       {question?.note && <p className="text-sm text-muted">{question.note}</p>}
       {question?.model_answer && <ModelAnswer text={question.model_answer} />}
-      <p className="text-sm leading-relaxed">
-        Your language is good enough for a higher band, but {missed.length > 1 ? `questions ${missed.join(" and ")} were` : `question ${questionId} was`} not
-        answered. Each question you leave out lowers the highest band you can get, so answering it is the quickest way to raise your band.
-      </p>
+      {result.scoring.zero_reason === "too_short" ? (
+        <p className="text-sm leading-relaxed">
+          Your answer was too short to rate. Answer each question with at least two sentences: a direct answer, then a reason or an example.
+        </p>
+      ) : (
+        <p className="text-sm leading-relaxed">
+          Your language is good enough for a higher band, but {missed.length > 1 ? `questions ${missed.join(" and ")} were` : `question ${questionId} was`} not
+          answered. Each question you leave out lowers the highest band you can get, so answering it is the quickest way to raise your band.
+        </p>
+      )}
     </Card>
   );
 }
+
+const STATUS_BADGE: Record<string, string> = { off_topic: "Off topic", minimal: "Too short", partial: "Partly answered", missing: "Not answered" };
 
 function OwnWordsFix() {
   return (

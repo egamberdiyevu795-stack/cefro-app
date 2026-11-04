@@ -8,7 +8,7 @@ import type { LegacyEvaluationResult } from "@/domain/evaluation/schema";
 
 /** Transcript that matches the quotes used by makeEvaluation(). */
 export const FIXTURE_TRANSCRIPT =
-  "I think phones are good. I think they help us talk with friends every day. Last year I have went to Samarkand with my friend and we used maps.";
+  "I think phones are good. I think they help us talk with friends every day. Last year I have went to Samarkand with my friend and we used maps. My friend said the maps were very useful for us.";
 
 export const Q7_CONFIG = multilevelRubricConfigSchema.parse(rawQ7);
 export const FIXTURE_QUESTIONS = [

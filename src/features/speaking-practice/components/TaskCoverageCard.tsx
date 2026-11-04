@@ -6,6 +6,7 @@ import type { PublicSpeakingTask } from "@/domain/speaking/task";
 const STATUS = {
   on_topic: { icon: "✓", label: "Answered", className: "bg-success-soft text-success" },
   partial: { icon: "!", label: "On topic, but only partly answered", className: "bg-warning-soft text-warning" },
+  minimal: { icon: "✗", label: "Too short to count: no reason, detail or example", className: "bg-danger-soft text-danger" },
   missing: { icon: "✗", label: "Not answered", className: "bg-danger-soft text-danger" },
   off_topic: { icon: "✗", label: "Off topic", className: "bg-danger-soft text-danger" },
 } as const;
@@ -35,6 +36,11 @@ export function TaskCoverageCard({ task, questions }: { task: PublicSpeakingTask
                 {item.model_answer && item.status !== "on_topic" && (
                   <p className="mt-1 text-sm">
                     <span className="text-subtle">Example: </span>&ldquo;{item.model_answer}&rdquo;
+                  </p>
+                )}
+                {item.status === "minimal" && (
+                  <p className="mt-1 text-xs font-medium text-danger">
+                    One bare sentence does not count as answering. Add a reason, a detail or an example.
                   </p>
                 )}
                 {item.status === "partial" && (

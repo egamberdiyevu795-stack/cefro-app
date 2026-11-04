@@ -36,13 +36,15 @@ export const questionAssessmentSchema = z.object({
   id: z.number().int().min(1).describe("Question number, 1-based, exactly as numbered in <task>."),
   status: z
     .enum(QUESTION_STATUSES)
-    .describe("on_topic: answered. partial: touched on but not really answered. missing: not addressed. off_topic: talks about something else."),
+    .describe(
+      "on_topic: answered, with a reason, detail or example. partial: touched on but not really answered. minimal: answered in one bare sentence with no reason, detail or example. missing: not addressed. off_topic: talks about something else.",
+    ),
   evidence: z.string().describe("Exact substring of the transcript where the student answers this question, or an empty string."),
   note: z.string().describe("One short sentence about what the student said for this question."),
   model_answer: z
     .string()
     .describe(
-      "For partial, missing or off_topic: one or two short sentences (at most 30 words) the student could say to answer this question, at a realistic B2 level, consistent with opinions they expressed elsewhere. Empty string for on_topic.",
+      "For partial, minimal, missing or off_topic: one or two short sentences (at most 30 words) the student could say, one level above their language level. Keep any view they gave; if they gave none, a frame with both options (should / shouldn't … because …). Empty string for on_topic.",
     ),
 });
 

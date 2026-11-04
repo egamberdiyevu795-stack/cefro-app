@@ -93,6 +93,12 @@ const envSchema = z.object({
    */
   GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).default("high"),
   /**
+   * Sampling temperature for the Gemini evaluator. 0 (the lowest the API accepts) by default, so the same transcript
+   * gives the same judgements as often as possible. Google suggests 1.0 for Gemini 3 thinking models (lower values can
+   * cause repetition); raise it if live runs show looping or truncated output.
+   */
+  GEMINI_TEMPERATURE: z.coerce.number().min(0).max(2).default(0),
+  /**
    * "schema": send the JSON schema to the API (constrained decoding) and in the prompt.
    * "json": only request JSON and describe the shape in the prompt. Escape hatch if the API
    * rejects the schema. Our own validation applies in both modes.

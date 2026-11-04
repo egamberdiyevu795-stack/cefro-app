@@ -1,5 +1,6 @@
 import "server-only";
 import { scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
+import { tokenizeWords } from "@/domain/speaking/metrics";
 import { FEATURES, type Feature } from "@/domain/evaluation/multilevel/levels";
 import { multilevelModelOutputSchema, type MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
 import { deriveRetryFocus, type FeatureSource, type MultilevelResult } from "@/domain/evaluation/multilevel/result";
@@ -72,6 +73,9 @@ export async function evaluateSpeaking(input: EvaluationInput, model: Evaluation
       questions: assessment.questions,
       features: Object.fromEntries(FEATURES.map((f) => [f, assessment.features[f].level])) as Parameters<typeof scoreBand>[0]["features"],
       memorizedOrIrrelevant: assessment.memorized_or_irrelevant,
+      // Everything spoken counts towards the minimum, hesitation sounds included (owner decision: a hesitant but
+      // real attempt is still a ratable sample; its fluency is judged separately).
+      wordCount: tokenizeWords(input.transcript).length,
     },
     input.rubric.config,
   );

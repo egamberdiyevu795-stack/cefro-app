@@ -86,14 +86,14 @@ describe("speaking attempt pipeline", () => {
 
     expect(view.status).toBe("completed");
     expect(view.transcript).toEqual({ text: TRANSCRIPT, provider: "fake-stt", model: "fake-stt-1" });
-    expect(view.metrics?.wordCount).toBe(29);
+    expect(view.metrics?.wordCount).toBe(39);
     const result = view.evaluation?.result;
     expect(result?.kind).toBe("multilevel");
     // FIXTURE output: B1 language (3 of 4 features B1, fluency B2 → mean 1.25 → B1), 2 questions on topic → band 2.
     expect(result?.kind === "multilevel" && result.scoring).toMatchObject({ band: 2, label: "Higher B1", meets_target: false, provisional: true });
     expect(view.evaluation?.meta).toMatchObject({
-      evaluatorVersion: "speaking-evaluator/3.2.0",
-      rubricVersion: "multilevel-q7/2.0.0",
+      evaluatorVersion: "speaking-evaluator/3.3.0",
+      rubricVersion: "multilevel-q7/2.1.0",
       schemaVersion: 3,
       provider: "fake-llm",
       model: "fake-llm-1",

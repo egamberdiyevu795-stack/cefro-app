@@ -14,7 +14,7 @@ describe("task type and rubric boundary", () => {
   });
 
   it("selects the rubric by the task's rubricId and checks it fits the task", () => {
-    expect(getSpeakingRubric(task)).toMatchObject({ id: "multilevel-q7", version: "multilevel-q7/2.0.0", targetLevel: "B2" });
+    expect(getSpeakingRubric(task)).toMatchObject({ id: "multilevel-q7", version: "multilevel-q7/2.1.0", targetLevel: "B2" });
     const unknown = { ...task, rubricId: "does-not-exist" } as unknown as SpeakingTask;
     expect(() => getSpeakingRubric(unknown)).toThrow(/unknown rubric/);
     expect(() => getSpeakingRubric({ ...task, level: "B1" } as SpeakingTask)).toThrow(/targets B2 but task .* is B1/);

@@ -59,7 +59,14 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   (vocabulary, fluency and cohesion rated B1 although the notes said "very simple" and "only simple linkers"): the
  *   3.1.0 rules were read as floors. Prompt now says they only cap a level, gives concrete below_B1 signals per
  *   feature, says what B1 needs, and caps transcript-only fluency at the higher of grammar and vocabulary.
+ * - speaking-evaluator/3.3.0 — Owner decisions after the 3.2.0 runs (rubric multilevel-q7/2.1.0):
+ *   grammar is below_B1 when basic errors in simple structures recur systematically (3+ instances across 2+ kinds);
+ *   new question status "minimal" (bare one-sentence answer, not on topic); band 5 only with grammar AND vocabulary
+ *   above_B2; under 30 words = band 0 (too_short); fluency strictly lowest = biggest fix and first retry focus;
+ *   feedback written one level above the student (no C1 for B1 students), missing-question model answers give a
+ *   should / shouldn't frame instead of an invented opinion; the gate allows pronunciation practice tips in
+ *   instruction fields but still blocks judgements of the student's pronunciation.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.2.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.3.0";
 
 export { EVALUATION_SCHEMA_VERSION };

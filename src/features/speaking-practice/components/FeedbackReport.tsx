@@ -142,6 +142,7 @@ function MultilevelReport({ attempt, task, onRetry, onCompare, onBack, result }:
 }
 
 const ZERO_REASON = {
+  too_short: "Band 0: the answer is too short to rate (under 30 words). Answer every question with a reason or an example.",
   memorized_or_irrelevant: "Band 0: the answer looks memorised or does not answer these questions.",
   no_question_on_topic: "Band 0: none of the questions was answered on topic.",
   below_B1: "Band 0: the language is below B1 level for this part.",

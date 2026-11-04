@@ -46,8 +46,11 @@ export const FEATURE_LABELS: Record<Feature, string> = {
  */
 export const FIX_PRIORITY: readonly Feature[] = ["grammar", "vocabulary", "cohesion", "fluency", "pronunciation"];
 
-/** How a question of the task was answered. "partial" counts as on topic (with a warning in the UI). */
-export const QUESTION_STATUSES = ["on_topic", "partial", "missing", "off_topic"] as const;
+/**
+ * How a question of the task was answered. "partial" counts as on topic (with a warning in the UI); "minimal" (a bare
+ * one-sentence answer with no reason, detail or example) does NOT count as on topic.
+ */
+export const QUESTION_STATUSES = ["on_topic", "partial", "minimal", "missing", "off_topic"] as const;
 export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
 
 export function isOnTopic(status: QuestionStatus): boolean {

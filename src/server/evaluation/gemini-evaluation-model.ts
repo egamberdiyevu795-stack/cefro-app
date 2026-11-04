@@ -14,6 +14,8 @@ export interface GeminiEvaluationOptions {
   maxTokens: number;
   /** Unset = the model's default. Only valid for models that support thinking levels. */
   thinkingLevel?: GeminiThinkingLevel;
+  /** Unset = the model's default. */
+  temperature?: number;
   structuredOutput: GeminiStructuredOutputMode;
   timeoutMs: number;
   /** Retries for 408/429/5xx (the SDK handles them). */
@@ -68,6 +70,7 @@ export class GeminiEvaluationModel implements EvaluationModel {
       maxTokens: options.maxTokens,
       structuredOutput: options.structuredOutput,
       ...(options.thinkingLevel ? { thinkingLevel: options.thinkingLevel } : {}),
+      ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
     };
   }
 
@@ -86,6 +89,7 @@ export class GeminiEvaluationModel implements EvaluationModel {
         config: {
           systemInstruction: `${prompt.system}\n\n${this.outputFormatInstruction()}`,
           maxOutputTokens: this.options.maxTokens,
+          ...(this.options.temperature !== undefined ? { temperature: this.options.temperature } : {}),
           responseMimeType: "application/json",
           ...(this.options.structuredOutput === "schema" ? { responseJsonSchema: this.responseSchema } : {}),
           ...(this.options.thinkingLevel

@@ -104,6 +104,15 @@ describe("quality gate (Multilevel)", () => {
       expect(codes(long)).toContain("reject:model_answer_too_long");
     });
 
+    it("allows a pronunciation practice tip in how_to_improve, but not a judgement", () => {
+      const tip = makeModelOutput();
+      tip.features.grammar.how_to_improve = "Add -s after he/she/it, and pronounce the -s in 'she likes' clearly.";
+      expect(codes(tip)).not.toContain("reject:pronunciation_claim");
+      const judged = makeModelOutput();
+      judged.features.grammar.note = "Your pronunciation of the -s ending was unclear.";
+      expect(codes(judged)).toContain("reject:pronunciation_claim");
+    });
+
     it("rejects pronunciation talk in a model answer like any student-facing text", () => {
       const output = makeModelOutput();
       output.questions[2].model_answer = "Pronounce 'schools' clearly and say they should limit phones.";
@@ -214,9 +223,26 @@ describe("helpers", () => {
     expect(findUnmetTarget("Reach at least 130 words per minute.", measured)).toBeNull();
   });
 
-  it("findPronunciationClaim names the sentence and ignores 'cannot be assessed'", () => {
-    expect(findPronunciationClaim("Good. Pronounce the final -s clearly.")).toBe("Pronounce the final -s clearly.");
+  it("findPronunciationClaim names a judgement sentence and ignores 'cannot be assessed'", () => {
+    expect(findPronunciationClaim("Good. Your pronunciation of 'th' is unclear.")).toBe("Your pronunciation of 'th' is unclear.");
+    expect(findPronunciationClaim("You mispronounced 'thirty'.")).toBe("You mispronounced 'thirty'.");
+    expect(findPronunciationClaim("Your accent is very clear.")).toBe("Your accent is very clear.");
+    expect(findPronunciationClaim("The intonation was flat.")).toBe("The intonation was flat.");
     expect(findPronunciationClaim("Pronunciation cannot be assessed from a transcript.")).toBeNull();
+  });
+
+  it("findPronunciationClaim allows practice tips phrased as instructions", () => {
+    for (const tip of [
+      "Pronounce the final -s clearly.",
+      "Pronounce the -s in 'she likes' clearly, so the listener hears it.",
+      "Make sure you pronounce the -ed in 'worked'.",
+      "Practise saying 'third' slowly before the exam.",
+      "Good point. Stress the second word in 'make sure'.",
+    ]) {
+      expect(findPronunciationClaim(tip), tip).toBeNull();
+    }
+    // An instruction that still judges the student is blocked.
+    expect(findPronunciationClaim("Pronounce words more carefully because your pronunciation is unclear.")).not.toBeNull();
   });
 
   it("isGeneric flags advice with no specifics", () => {

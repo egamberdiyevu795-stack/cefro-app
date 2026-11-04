@@ -238,6 +238,7 @@ evaluations:
 | Gemini model | `GEMINI_EVALUATION_MODEL` | `gemini-3.8-flash` (pinned; the ID the API reported, confirmed by live runs) |
 | Gemini max output tokens | `GEMINI_EVALUATION_MAX_TOKENS` | `24000` |
 | Gemini thinking level | `GEMINI_THINKING_LEVEL` | `high` |
+| Gemini temperature | `GEMINI_TEMPERATURE` | `0` (lowest the API accepts) |
 | Gemini structured-output mode | `GEMINI_STRUCTURED_OUTPUT` (`schema`, `json`) | `schema` |
 | Timeout (both) | `EVALUATION_TIMEOUT_MS` | `180000` |
 | Transcription provider / model | `TRANSCRIPTION_PROVIDER` / `OPENAI_TRANSCRIPTION_MODEL` | `openai` / `gpt-4o-transcribe` |
@@ -336,26 +337,30 @@ For each sample response:
 
 ## 8. Test set
 
-The B2 Part 2 task is **"Describe a time when you received advice from someone"**
-(`b2-part2-advice-from-someone`). It replaced "Technology and young people"
-(`b2-part2-technology-young-people`), which was removed together with its 14
-range-based samples (S01–S15) and its anchors. Run results further down that
-mention the 14 samples refer to that old task and are kept as history. The
-project owner's real answer (formerly S15) is kept only as the verbatim
-transcription regression (`test/evaluation-samples/owner-sample.ts`, T12).
+The B2 Part 2 task students see is **"Describe a time when you received advice from someone"**
+(`b2-part2-advice-from-someone`). It replaced "Technology and young people", which is no longer offered to students
+but is kept as a test fixture (`test/evaluation-samples/technology-task.ts`) so the S01–S15 samples written for it can
+still be evaluated.
 
-Q1–Q2 are a personal story; Q3 is a general opinion question. Q3 is the common
-trap: retelling the student's own story does not answer it (the task's
-`evaluatorGuidance` says so explicitly).
+Q1–Q2 are a personal story; Q3 is a general opinion question. Q3 is the common trap: retelling the student's own
+story does not answer it (the task's `evaluatorGuidance` says so explicitly).
 
-### Part 2 band anchors (exact 0–5 band)
+### Decision rules (evaluator 3.3.0, rubric multilevel-q7/2.1.0)
 
-`test/evaluation-samples/part2-band-anchors.ts` holds 7 synthetic anchors, each
-with an **exact** expected band. The band checked is the evaluator's own
-`result.scoring.band`, computed deterministically from its per-feature levels and
-question statuses (`src/domain/evaluation/multilevel/band-scoring.ts`, rubric
-`multilevel_q7.json`). Each anchor also records the judgements expected to lead to
-its band; a unit test checks that those judgements give that band under the
+| Rule | Where |
+| --- | --- |
+| Grammar is below_B1 when basic errors in simple structures (agreement, verb form after do/will/should…, missing "be" in continuous forms) recur: 3+ instances across 2+ kinds | prompt |
+| "minimal" question status (a bare one-sentence answer, no reason/detail/example) does NOT count as on topic; "partial" still does | prompt + `levels.ts` |
+| Band 5 needs all 3 questions on topic AND grammar AND vocabulary above_B2; otherwise at most 4 | `band-scoring.ts` (`above_target_requires`) |
+| Under 30 spoken words (hesitation sounds included) = band 0, "too short to rate" | `band-scoring.ts` (`min_words`) |
+| Fluency strictly the lowest feature = the biggest fix and the first retry focus | `band-scoring.ts` |
+| Model answers and corrections one level above the student (B1 → plain B2, never C1); missing questions get a should / shouldn't frame, never an invented opinion | prompt |
+| Pronunciation judgements from text are blocked; practice tips ("pronounce the -s clearly") are allowed in instruction fields | quality gate |
+
+### Part 2 band anchors (exact 0–5 band, hard)
+
+`test/evaluation-samples/part2-band-anchors.ts`: 7 synthetic anchors, each with an **exact** expected band (the
+evaluator's own `result.scoring.band`). A unit test checks each anchor's expected judgements give its band under the
 official scoring.
 
 | ID | Language | On topic | Band |
@@ -368,13 +373,21 @@ official scoring.
 | A5-above-b2 | above B2 | Q1–Q3 | 5 |
 | A0-memorized-off-topic | decent | none | 0 |
 
-`npm run eval:live` runs them on the real evaluator; **all 7 must hit their band
-exactly** (a miss fails the run). The `band-anchors-*.md` report lists each
-anchor's per-feature levels and question statuses, so a miss shows whether the
-language or the on-topic judgement was wrong. The same run has a hard
-prompt-injection check (`P1-prompt-injection`: an instruction in the transcript
-must not lift the band above 2) and a soft weak → strong retry check
-(A2 → A4). Subset: `EVAL_SAMPLES=A2,A3` (id prefixes; `P1`, `RETRY`).
+### S01–S15 (former technology task, soft)
+
+`test/evaluation-samples/b2-part2-samples.ts`: loose band ranges re-annotated for 3.3.0, each with a `note`. Notable:
+S01 3–4 (band 5 gate), S06 0–1 (26 words: too short), S08 1–3 (bare statements are minimal), S10 0, S12 exactly 2
+with fluency as the biggest fix (24 words + 11 fillers = 35 spoken), S15 exactly 2 (grammar below B1, mean 1.5).
+Misses are reported, not fatal; S13's injection limit (band ≤ 2) is hard.
+
+### Live run
+
+`npm run eval:live` (workflow "Live evaluation (Gemini)") runs anchors, S01–S15, the injection probe P1 and the
+A2 → A4 retry, **each sample `EVAL_REPEAT` times (default 3)**. Every anchor run must hit its band. The
+`evaluation-set-*.md` report lists bands per run, flags samples whose band changes between runs, gives per-feature
+levels and question statuses for every miss, the model config and the average latency per evaluation (target under
+60 s). Workflow inputs `thinking_level`, `max_tokens` and `repeat` compare settings (e.g. medium thinking) without a
+code change. Subset: `EVAL_SAMPLES=A2,S15` (id prefixes; `P1`, `RETRY`).
 
 Automated tests that run in `npm test`:
 
@@ -389,6 +402,7 @@ Automated tests that run in `npm test`:
 | Stored v1 → v2 upgrade | `src/domain/evaluation/stored.test.ts` |
 | Pipeline (failures, timings, ownership, upload validation) | `src/server/attempts/attempt-pipeline.test.ts` |
 | Anchor set, injection isolation, verbatim regression sample | `test/evaluation-samples/part2-band-anchors.test.ts` |
+| S01–S15 metrics, 30-word rule, gate robustness | `test/evaluation-samples/samples.test.ts` |
 | Browser | `e2e/practice-flow.spec.ts` (`npm run test:e2e`) |
 
 ## Gemini evaluation provider

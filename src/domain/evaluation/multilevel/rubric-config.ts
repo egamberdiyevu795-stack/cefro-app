@@ -37,6 +37,10 @@ export const multilevelRubricConfigSchema = z
       topic_cap: capTable,
       /** Topic cap when the language level is above_B2 and every question is on topic. */
       above_target_full_coverage_cap: z.number().int().min(0),
+      /** Features that must themselves be above_B2 for that lifted cap to apply (otherwise the full-coverage cap stays). */
+      above_target_requires: z.array(z.enum(FEATURES)).default([]),
+      /** Answers with fewer words than this are not a ratable sample: band 0. 0 switches the check off. */
+      min_words: z.number().int().min(0).default(0),
       /** Band cap by overall language level. */
       language_cap: z.object(Object.fromEntries(FEATURE_LEVELS.map((l) => [l, z.number().int().min(0)])) as Record<
         (typeof FEATURE_LEVELS)[number],

@@ -18,12 +18,14 @@ import type { BandScoringConfig } from "./rubric-config";
  * The model judges each question and each feature against the official descriptors; this module turns those
  * judgements into the band, following the official scale's logic:
  *
- *  1. on_topic_count = questions answered on topic or partially.
+ *  1. on_topic_count = questions answered on topic or partially ("minimal", a bare one-sentence answer, does not count).
  *  2. language_level = mean of the assessed feature levels (below_B1 = 0 … above_B2 = 3), rounded to the nearest
  *     level with an exact .5 rounding DOWN.
- *  3. Band 0 when the answer is memorised/irrelevant, no question is on topic, or the language is below B1.
- *  4. topic_cap from the on-topic count (above-target language with full coverage lifts the cap), language_cap from
- *     the language level; band = min(topic_cap, language_cap).
+ *  3. Band 0 when the answer is too short to rate (under min_words), memorised/irrelevant, no question is on topic,
+ *     or the language is below B1.
+ *  4. topic_cap from the on-topic count (above-target language with full coverage lifts the cap, but only when the
+ *     features in above_target_requires are themselves above_B2), language_cap from the language level;
+ *     band = min(topic_cap, language_cap).
  *  5. Provisional when pronunciation could not be assessed.
  *
  * All numbers come from the rubric config, so another part only needs another config.
@@ -33,9 +35,11 @@ export interface BandScoringInput {
   questions: readonly { id: number; status: QuestionStatus }[];
   features: Record<Exclude<Feature, "pronunciation">, FeatureLevel> & { pronunciation: PronunciationLevel };
   memorizedOrIrrelevant: boolean;
+  /** Words in the transcript; when given, answers under the config's min_words get band 0. */
+  wordCount?: number;
 }
 
-export type ZeroReason = "memorized_or_irrelevant" | "no_question_on_topic" | "below_B1";
+export type ZeroReason = "too_short" | "memorized_or_irrelevant" | "no_question_on_topic" | "below_B1";
 
 export type BiggestFix =
   | { kind: "question_coverage"; question_id: number }
@@ -71,8 +75,17 @@ export function bestFitLevel(levels: readonly FeatureLevel[]): { level: FeatureL
   return { level: levelFromValue(rounded), mean: sum / n };
 }
 
-export function topicCap(onTopicCount: number, languageLevel: FeatureLevel, config: BandScoringConfig): number {
-  if (languageLevel === "above_B2" && onTopicCount === config.question_count) return config.scoring.above_target_full_coverage_cap;
+export function topicCap(
+  onTopicCount: number,
+  languageLevel: FeatureLevel,
+  config: BandScoringConfig,
+  features?: BandScoringInput["features"],
+): number {
+  const required = config.scoring.above_target_requires ?? [];
+  const requirementsMet = required.every((f) => features?.[f] === "above_B2");
+  if (languageLevel === "above_B2" && onTopicCount === config.question_count && requirementsMet) {
+    return config.scoring.above_target_full_coverage_cap;
+  }
   const cap = config.scoring.topic_cap[String(onTopicCount)];
   if (cap === undefined) throw new Error(`No topic cap for ${onTopicCount} on-topic questions`);
   return cap;
@@ -106,21 +119,32 @@ export function scoreBand(input: BandScoringInput, config: BandScoringConfig): B
   const assessedFeatures = FEATURES.filter((f) => input.features[f] !== NOT_ASSESSED);
   const { level: languageLevel, mean } = bestFitLevel(assessedFeatures.map((f) => input.features[f] as FeatureLevel));
 
-  const zeroReason: ZeroReason | null = input.memorizedOrIrrelevant
-    ? "memorized_or_irrelevant"
-    : onTopicCount === 0
-      ? "no_question_on_topic"
-      : languageLevel === "below_B1"
-        ? "below_B1"
-        : null;
+  const minWords = config.scoring.min_words ?? 0;
+  const tooShort = input.wordCount !== undefined && minWords > 0 && input.wordCount < minWords;
+  const zeroReason: ZeroReason | null = tooShort
+    ? "too_short"
+    : input.memorizedOrIrrelevant
+      ? "memorized_or_irrelevant"
+      : onTopicCount === 0
+        ? "no_question_on_topic"
+        : languageLevel === "below_B1"
+          ? "below_B1"
+          : null;
 
-  const tCap = topicCap(onTopicCount, languageLevel, config);
+  const tCap = topicCap(onTopicCount, languageLevel, config, input.features);
   const lCap = languageCap(languageLevel, config);
   const band = zeroReason ? 0 : Math.min(tCap, lCap);
 
   let biggestFix: BiggestFix;
+  const uncovered = firstUncoveredQuestion(input.questions, true);
   if (zeroReason === "memorized_or_irrelevant") {
     biggestFix = { kind: "own_words" };
+  } else if (isLowestAlone(input.features, "fluency")) {
+    // Fluency clearly below every other feature: it is what holds the answer back, whatever the coverage.
+    biggestFix = { kind: "feature", feature: "fluency" };
+  } else if (zeroReason === "too_short") {
+    // Too short to rate: say more, starting with the first question not (fully) answered.
+    biggestFix = uncovered !== null ? { kind: "question_coverage", question_id: uncovered } : { kind: "feature", feature: "fluency" };
   } else if (tCap < lCap) {
     // Coverage limits the band more than language does: answering the missing question is the biggest gain.
     biggestFix = { kind: "question_coverage", question_id: firstUncoveredQuestion(input.questions) ?? 1 };
@@ -145,6 +169,14 @@ export function scoreBand(input: BandScoringInput, config: BandScoringConfig): B
     zero_reason: zeroReason,
     biggest_fix: biggestFix,
   };
+}
+
+/** True when `feature` is assessed and strictly lower than every other assessed feature. */
+export function isLowestAlone(features: BandScoringInput["features"], feature: Feature): boolean {
+  const level = features[feature];
+  if (level === NOT_ASSESSED) return false;
+  const others = FEATURES.filter((f) => f !== feature && features[f] !== NOT_ASSESSED);
+  return others.length > 0 && others.every((f) => levelValue(features[f] as FeatureLevel) > levelValue(level as FeatureLevel));
 }
 
 export function bandLabel(band: number, config: Pick<BandScoringConfig, "bands">): string {

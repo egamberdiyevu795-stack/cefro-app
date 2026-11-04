@@ -23,7 +23,7 @@ export const bandScoreSchema = z.object({
   target_band: z.number().int().min(0),
   meets_target: z.boolean(),
   provisional: z.boolean(),
-  zero_reason: z.enum(["memorized_or_irrelevant", "no_question_on_topic", "below_B1"]).nullable(),
+  zero_reason: z.enum(["too_short", "memorized_or_irrelevant", "no_question_on_topic", "below_B1"]).nullable(),
   biggest_fix: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("question_coverage"), question_id: z.number().int().min(1) }),
     z.object({ kind: z.literal("feature"), feature: featureEnum }),
@@ -110,7 +110,7 @@ export function deriveRetryFocus(
 ): MultilevelRetryFocus[] {
   const levels = Object.fromEntries(FEATURES.map((f) => [f, assessment.features[f].level])) as Parameters<typeof lowestFeature>[0];
   const statusOf = (id: number) => assessment.questions.find((q) => q.id === id)?.status;
-  const forQuestion = (id: number) => questionFocus(id, questionTexts[id - 1] ?? `question ${id}`, statusOf(id) === "partial");
+  const forQuestion = (id: number) => questionFocus(id, questionTexts[id - 1] ?? `question ${id}`, statusOf(id) === "partial" || statusOf(id) === "minimal");
 
   const focus: MultilevelRetryFocus[] = [];
   const fix: BiggestFix = score.biggest_fix;

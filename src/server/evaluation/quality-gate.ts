@@ -128,7 +128,8 @@ export function applyQualityGate(
   }
   result.features.pronunciation = { level: NOT_ASSESSED, evidence: [], note: "", how_to_improve: "", how_to_check: "" };
   for (const [path, text] of studentTexts(result)) {
-    const claim = findPronunciationClaim(text);
+    // Practice tips are instructions, so they are allowed only where the student is told what to do next.
+    const claim = findPronunciationClaim(text, { allowPracticeTips: INSTRUCTION_PATH.test(path) });
     if (claim) add("reject", "pronunciation_claim", path, `Pronunciation claim: "${truncate(claim, 200)}"`);
     const leak = INTERNAL_FIELD_NAMES.exec(text);
     if (leak) add("reject", "internal_field_leak", path, `Internal field name "${leak[0]}" in student-facing text: "${truncate(text, 160)}"`);
@@ -211,10 +212,12 @@ function studentTexts(result: MultilevelModelOutput): [string, string][] {
   result.questions.forEach((q, i) => out.push([`questions[${i}].note`, `${q.note} ${q.model_answer}`]));
   for (const feature of TEXT_FEATURES) {
     const f = result.features[feature];
-    out.push([`features.${feature}`, [f.note, f.how_to_improve, f.how_to_check].join(" ")]);
+    out.push([`features.${feature}.note`, f.note], [`features.${feature}.how_to_improve`, f.how_to_improve], [`features.${feature}.how_to_check`, f.how_to_check]);
   }
   result.strengths.forEach((s, i) => out.push([`strengths[${i}].note`, s.note]));
-  result.error_patterns.forEach((p, i) => out.push([`error_patterns[${i}]`, `${p.name}. ${p.rule} ${p.how_to_fix}`]));
+  result.error_patterns.forEach((p, i) =>
+    out.push([`error_patterns[${i}].name`, p.name], [`error_patterns[${i}].rule`, p.rule], [`error_patterns[${i}].how_to_fix`, p.how_to_fix]),
+  );
   result.retry_review?.objectives.forEach((o, i) => out.push([`retry_review.objectives[${i}]`, `${o.objective}. ${o.evidence}`]));
   if (result.retry_review) out.push(["retry_review.summary", result.retry_review.summary]);
   return out;
@@ -244,11 +247,26 @@ export function findUnmetTarget(text: string, metrics: { speakingSeconds: number
 const PRONUNCIATION_PATTERN = /\b((?:mis)?pron(?:ou|u)nc\w*|accent\w*|intonation|vowels?|consonants?|phonem\w*|word stress)\b/i;
 const NEGATED_ASSESSMENT = /\b(not|cannot|can't|couldn't|unable to)\b[^.]*\b(assess\w*|judg\w*|evaluat\w*|hear\w*)\b/i;
 
-export function findPronunciationClaim(text: string): string | null {
+/**
+ * A practice instruction about sounds ("Pronounce the -s in 'helps' clearly", "Practise saying 'thirty' slowly") is
+ * allowed; a judgement of how the student sounded ("your pronunciation is clear", "you mispronounced 'th'") is not.
+ */
+const PRACTICE_TIP = /\b(?:pronounce|stress|practi[cs]e (?:saying|pronouncing)|say\b[^.]*\b(?:clearly|slowly|carefully|aloud|out loud))\b/i;
+const PRONUNCIATION_JUDGEMENT =
+  /\b(?:you|your)\b[^.]*\b(?:mispronounc\w*|accent\w*|pronunciation|intonation)\b|\b(?:mispronounc\w*|accent\w*|pronunciation|intonation)\b[^.]*\b(?:is|was|were|sounds?|sounded)\b/i;
+
+const INSTRUCTION_PATH = /\.(how_to_improve|how_to_check|how_to_fix|rule)$/;
+
+export function findPronunciationClaim(text: string, options: { allowPracticeTips?: boolean } = { allowPracticeTips: true }): string | null {
   return (
     text
       .split(/(?<=[.!?])\s+/)
-      .find((sentence) => PRONUNCIATION_PATTERN.test(sentence) && !NEGATED_ASSESSMENT.test(sentence)) ?? null
+      .find(
+        (sentence) =>
+          PRONUNCIATION_PATTERN.test(sentence) &&
+          !NEGATED_ASSESSMENT.test(sentence) &&
+          !(options.allowPracticeTips && PRACTICE_TIP.test(sentence) && !PRONUNCIATION_JUDGEMENT.test(sentence)),
+      ) ?? null
   );
 }
 

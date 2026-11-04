@@ -11,7 +11,9 @@ import { processAttempt } from "@/server/attempts/attempt-processing";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import { analyticsEvents, evaluations, practiceSessions, recordings, speakingAttempts, transcripts, users } from "@/server/db/schema";
 import { getEvaluationModel, setEvaluationModelForTesting, type EvaluationModel } from "@/server/evaluation";
-import { EVALUATOR_VERSION } from "@/server/evaluation/versions";
+import { getSpeakingTask } from "@/content/speaking";
+import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { EVALUATION_SCHEMA_VERSION, EVALUATOR_VERSION } from "@/server/evaluation/versions";
 import { createPracticeSession } from "@/server/sessions/session-service";
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
@@ -274,8 +276,9 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     if (transcript.model.length === 0 || !transcript.latencyMs) bad("transcript model/latency not recorded");
     if (evaluation.transcriptId !== transcript.id) bad("evaluation does not point at the transcript");
     if (evaluation.evaluatorVersion !== EVALUATOR_VERSION) bad(`evaluator version ${evaluation.evaluatorVersion}`);
-    if (evaluation.rubricVersion !== "b2-speaking-rubric/1.0.0") bad(`rubric version ${evaluation.rubricVersion}`);
-    if (evaluation.schemaVersion !== 2) bad(`schema version ${evaluation.schemaVersion}`);
+    // The versions this code writes: any other value means the row was not produced by the current methodology.
+    if (evaluation.rubricVersion !== getSpeakingRubric(getSpeakingTask(TASK_ID)!).version) bad(`rubric version ${evaluation.rubricVersion}`);
+    if (evaluation.schemaVersion !== EVALUATION_SCHEMA_VERSION) bad(`schema version ${evaluation.schemaVersion}`);
     if (!/^h2:[a-f0-9]{64}$/.test(evaluation.promptHash)) bad("prompt hash not in h2 format");
     if (evaluation.provider !== selection.provider || !evaluation.model) bad("evaluation provider/model not recorded");
     if (!evaluation.modelConfig || !evaluation.qualityReport) bad("model config or quality report not stored");

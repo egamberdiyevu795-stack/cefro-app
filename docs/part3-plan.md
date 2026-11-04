@@ -327,18 +327,24 @@ flag (logged only):  code_dependence ≠ model dependence, where
 Stored with each result: the model's level, the code level, the metrics, whether the override fired, and a
 `dependence_disagreement` flag. Flags go into the evaluation quality report for the threshold review (decision 6).
 
-### Measured on the anchors (script in scratch, not committed)
+### Measured on the anchors
+
+Values from `src/domain/evaluation/multilevel/prompt-overlap.ts` (branch `claude/sleepy-hypatia-rp7db1`), which is
+the reference for these numbers. The module defines the stopwords behind `novel_content_words`: the NLTK English
+list plus function-word contractions ("that's", "can't", "I'd" …). The first draft of this table came from an
+uncommitted scratch script with a different stopword list; its novel-word counts differed by a few words but were on
+the same side of the threshold (25) everywhere, so no code level changed.
 
 | Text | tokens | copied_ratio | points_read | novel words | named runs | code level | Model level | Applied |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Anchor 0 | 49 | 0.00 | 0 | 15 | 0 | heavily_dependent | (band 0 by language) | flag only |
 | Anchor 1 | 81 | **0.81** | **6** | 2 | 0 | reads_prompts | reads_prompts | override condition met; agrees |
-| Anchor 2 | 100 | **0.29** | **3** | 14 | 0 | heavily_dependent | heavily_dependent | agrees |
-| Anchor 3 | 156 | 0.00 | 0 | 60 | 0 | own_development | own_development | agrees |
-| Anchor 4 | 171 | 0.00 | 0 | 60 | 0 | own_development | own_development | agrees |
-| Anchor 5 | 223 | 0.00 | 0 | 91 | 1 | own_development | own_development | agrees (statement echo is named) |
-| Fixture N1 | 72 | 0.00 | 0 | 33 | 2 | own_development | own_development | agrees |
-| Fixture R1 | 158 | 0.00 | 0 | 59 | 2 | own_development | own_development | agrees |
+| Anchor 2 | 100 | **0.29** | **3** | 15 | 0 | heavily_dependent | heavily_dependent | agrees |
+| Anchor 3 | 156 | 0.00 | 0 | 62 | 0 | own_development | own_development | agrees |
+| Anchor 4 | 171 | 0.00 | 0 | 63 | 0 | own_development | own_development | agrees |
+| Anchor 5 | 223 | 0.00 | 0 | 85 | 1 | own_development | own_development | agrees (statement echo is named) |
+| Fixture N1 | 72 | 0.00 | 0 | 31 | 2 | own_development | own_development | agrees |
+| Fixture R1 | 158 | 0.00 | 0 | 56 | 2 | own_development | own_development | agrees |
 
 **Fixture N1** (overlap unit test, not a band anchor): names two points verbatim, then develops each.
 
@@ -449,7 +455,7 @@ for the live evaluation run. The full list of planned test cases is at the end o
 
 - Points: F1, F2 `developed`, F3 `developed` (metro); A1–A3 `not_addressed`. The metro sentence argues **against
   A3** without ever stating it, so it does not cover the AGAINST side (decision 8).
-- Dependence: `own_development` (copied 0.00, 60 novel words).
+- Dependence: `own_development` (copied 0.00, 62 novel words).
 - Language: B2 across features (second conditional, relative clause, "first of all / to sum up"; few errors).
 - Code: coverage `one_side` (cap 3), language cap 4 → **band 3**. Biggest fix: section_coverage: "Choose two points
   from each list.", naming the AGAINST side and suggesting A1 with its model answer.

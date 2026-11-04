@@ -214,6 +214,6 @@ export const B2_PART2_SAMPLES: EvaluationSample[] = [
       "Real answer from the project owner: clear opinion and examples, frequent agreement/verb-form errors, question 3 (schools) never answered.",
     durationMs: 120_000,
     transcript: OWNER_SAMPLE_ANSWER,
-    expect: { band: [2, 2], weakFeatures: ["grammar"], levels: { grammar: "below_B1" }, coverageIssue: true, coverage: { 3: "missing" }, note: "Systematic basic errors ('will helps', 'don't talking', 'is making'/'just watching'): grammar below B1 → mean 1.5 → B1 → band 2." },
+    expect: { band: [2, 2], weakFeatures: ["grammar"], levels: { grammar: "below_B1" }, coverageIssue: true, coverage: { 3: "missing" }, note: "Systematic basic errors ('will helps', 'don't talking', 'just watching', 'both things is'): grammar below B1 → mean 1.5 → B1 → band 2." },
   },
 ];

@@ -22,7 +22,7 @@ import { getCurrentUser } from "./current-user";
 import { mergeUsers } from "./merge-users";
 import { USER_COOKIE_NAME } from "./user-cookie";
 
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 const ANON_1 = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
 const ANON_2 = "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2";
 const ANON_3 = "a3a3a3a3-a3a3-4a3a-8a3a-a3a3a3a3a3a3";

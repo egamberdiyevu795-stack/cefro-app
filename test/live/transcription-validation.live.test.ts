@@ -39,7 +39,7 @@ import { ffmpegSpeechGuard } from "@/server/audio/speech-guard";
  * prompt-derived transcript; the provider must not fail on supported formats). Everything about fidelity (errors
  * corrected, words dropped, fillers lost) is MEASURED AND REPORTED, never normalised away or failed silently.
  */
-const task = getSpeakingTask("b2-part2-technology-young-people")!;
+const task = getSpeakingTask("b2-part2-advice-from-someone")!;
 const selection = transcriptionSelection();
 const configured = selection.configured && ffmpegAvailable();
 if (!configured) console.log("\nLIVE controlled transcription skipped: needs TRANSCRIPTION_PROVIDER=openai|gemini with its API key, and ffmpeg/ffprobe.\n");

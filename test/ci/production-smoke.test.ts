@@ -114,7 +114,7 @@ describe("smoke (the visitor flow)", () => {
   });
 
   it("tests the real task", () => {
-    expect(TASK_ID).toBe("b2-part2-technology-young-people");
+    expect(TASK_ID).toBe("b2-part2-advice-from-someone");
   });
 });
 

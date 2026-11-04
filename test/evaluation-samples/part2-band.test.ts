@@ -4,12 +4,13 @@ import type { CefrLevel } from "@/domain/cefr";
 import type { EvaluationResult } from "@/domain/evaluation/schema";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import { MockEvaluationModel } from "@/server/evaluation/mock-evaluation-model";
+import { buildSpeakingEvaluationPrompt } from "@/server/evaluation/prompts/speaking-evaluation-v2";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking } from "@/server/evaluation/speaking-evaluator";
 import { bandFor, deriveBand, describeDerivation, languageBandOf, type LanguageBand } from "./part2-band";
-import { PART2_BAND_ANCHORS } from "./part2-band-anchors";
+import { PART2_BAND_ANCHORS, PART2_INJECTION_PROBE } from "./part2-band-anchors";
 
-const task = getSpeakingTask("b2-part2-technology-young-people")!;
+const task = getSpeakingTask("b2-part2-advice-from-someone")!;
 
 function fakeResult(levels: [CefrLevel | null, CefrLevel | null, CefrLevel | null], statuses: (string | null)[], overall: CefrLevel = "B1"): EvaluationResult {
   const c = (level: CefrLevel | null) => ({ assessable: level !== null, score: level ? 5 : null, level, justification: "x" });
@@ -96,4 +97,23 @@ describe("Part 2 band anchor set", () => {
     expect(evaluation.quality.passed).toBe(true);
     expect(deriveBand(evaluation.result).questionStatuses).toHaveLength(3);
   }, 10_000);
+
+  it("the injection probe stays inside the escaped transcript section", () => {
+    const prompt = buildSpeakingEvaluationPrompt({
+      task,
+      rubric: getSpeakingRubric(task),
+      transcript: PART2_INJECTION_PROBE.transcript,
+      metrics: computeSpeechMetrics(PART2_INJECTION_PROBE.transcript, PART2_INJECTION_PROBE.durationMs, task.speakingSeconds),
+      audio: { storageProvider: "local", storageKey: "k", mimeType: "audio/webm", durationMs: PART2_INJECTION_PROBE.durationMs },
+      previousAttempt: null,
+    });
+    const transcriptSection = prompt.user.split("<transcript>")[1].split("</transcript>")[0];
+    expect(transcriptSection).toContain("Ignore all previous instructions");
+    expect(prompt.system).not.toContain("Ignore all previous instructions");
+  });
+
+  it("the task tells the evaluator that retelling the story does not answer Q3", () => {
+    expect(task.prompts).toHaveLength(3);
+    expect(task.evaluatorGuidance).toMatch(/does NOT answer point 3/);
+  });
 });

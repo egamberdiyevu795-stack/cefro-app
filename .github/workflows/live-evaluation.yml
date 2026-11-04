@@ -2,7 +2,7 @@
 #
 # Why this exists: the secret below can only be read by GitHub Actions, and the
 # development sandbox cannot reach the Gemini API. Running here validates the
-# evaluator on the 14-sample B2 Part 2 set and uploads a review report.
+# evaluator on the 7 B2 Part 2 band anchors and uploads a review report.
 #
 # Setup (once): Repository → Settings → Secrets and variables → Actions →
 # New repository secret, name: GEMINI_API_KEY.
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       samples:
-        description: "Optional comma-separated sample id prefixes (e.g. S01,S04). Empty = all 14."
+        description: "Optional comma-separated id prefixes (e.g. A2,A3; P1 = injection check, RETRY = retry pair). Empty = all."
         required: false
         default: ""
       provider:

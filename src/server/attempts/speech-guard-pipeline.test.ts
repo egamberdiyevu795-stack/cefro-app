@@ -23,7 +23,7 @@ import { createAttempt, getAttemptViewForUser } from "./attempt-service";
 const ffmpeg = isFfmpegAvailable();
 if (!ffmpeg && process.env.REQUIRE_FFMPEG === "1") throw new Error("ffmpeg is required for the speech guard tests (REQUIRE_FFMPEG=1)");
 
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 const USER = "11111111-1111-4111-8111-111111111111";
 const DIR = path.join(process.cwd(), "test", "audio-fixtures", "speech-guard");
 

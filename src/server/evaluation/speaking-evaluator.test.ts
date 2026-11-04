@@ -8,7 +8,7 @@ import { evaluateSpeaking, validateEvaluationOutput } from "./speaking-evaluator
 import type { EvaluationInput, EvaluationModel } from "./types";
 import { EVALUATOR_VERSION } from "./versions";
 
-const task = getSpeakingTask("b2-part2-technology-young-people")!;
+const task = getSpeakingTask("b2-part2-advice-from-someone")!;
 const input: EvaluationInput = {
   task,
   rubric: getSpeakingRubric(task),
@@ -155,7 +155,7 @@ describe("evaluateSpeaking", () => {
       model,
     );
     const prompt = model.evaluate.mock.calls[0][0];
-    expect(prompt.user).toContain("2: Should schools limit");
+    expect(prompt.user).toContain("2: Do you think young people should always follow advice");
     expect(prompt.user).toContain("speech_metrics");
     expect(prompt.user).toContain("old answer");
     expect(prompt.user).toContain("Use 'have' + third form");

@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-const TASK = "b2-part2-technology-young-people";
+const TASK = "b2-part2-advice-from-someone";
 const TASK_URL = `/practice/speaking/${TASK}`;
 const PASSWORD = "correct horse battery staple";
 const run = Date.now();

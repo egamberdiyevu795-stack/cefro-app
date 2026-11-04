@@ -176,7 +176,7 @@ describe("GeminiEvaluationModel — failures map to controlled errors", () => {
 });
 
 describe("Gemini through the shared evaluation pipeline", () => {
-  const task = getSpeakingTask("b2-part2-technology-young-people")!;
+  const task = getSpeakingTask("b2-part2-advice-from-someone")!;
   const input: EvaluationInput = {
     task,
     rubric: getSpeakingRubric(task),

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const TASK_URL = "/practice/speaking/b2-part2-technology-young-people";
+const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
 
 async function recordAndSubmit(page: Page, speakMs = 2500) {
   await page.getByRole("button", { name: "Start preparation" }).click();
@@ -19,7 +19,7 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
 
   await page.goto("/");
   await page.getByText("Start practice").click();
-  await expect(page.getByRole("heading", { name: "Technology and young people" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
 
   // Attempt 1
   await recordAndSubmit(page);

@@ -18,7 +18,7 @@ import { createAttempt, getAttemptViewForUser, getRecordingAudio } from "./attem
  * instance writes, another sees on the next request. Each helper switches the process-wide connection to the instance
  * that is "serving" the request.
  */
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER = "22222222-2222-4222-8222-222222222222";
 

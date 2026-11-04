@@ -1,5 +1,5 @@
 import type { SpeakingTask } from "@/domain/speaking/task";
-import { b2Part2TechnologyYoungPeople } from "./b2/part-2-technology-young-people";
+import { b2Part2AdviceFromSomeone } from "./b2/part-2-advice-from-someone";
 
 /**
  * Registry of available speaking tasks.
@@ -8,7 +8,7 @@ import { b2Part2TechnologyYoungPeople } from "./b2/part-2-technology-young-peopl
  * content library grows, this module is the single seam to replace with a
  * CMS or database-backed source — callers only use the functions below.
  */
-const TASKS: readonly SpeakingTask[] = [b2Part2TechnologyYoungPeople];
+const TASKS: readonly SpeakingTask[] = [b2Part2AdviceFromSomeone];
 
 export function listSpeakingTasks(): readonly SpeakingTask[] {
   return TASKS;

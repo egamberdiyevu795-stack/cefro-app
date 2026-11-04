@@ -29,7 +29,7 @@ const MIME: Record<string, string> = { ".webm": "audio/webm", ".m4a": "audio/mp4
 const files = fs.existsSync(DIR) ? fs.readdirSync(DIR).filter((f) => MIME[path.extname(f)]) : [];
 const configured = process.env.TRANSCRIPTION_PROVIDER !== "mock" && Boolean(process.env.OPENAI_API_KEY) && files.length > 0;
 const evaluate = evaluatorSelection().configured;
-const task = getSpeakingTask("b2-part2-technology-young-people")!;
+const task = getSpeakingTask("b2-part2-advice-from-someone")!;
 
 interface Row {
   file: string;

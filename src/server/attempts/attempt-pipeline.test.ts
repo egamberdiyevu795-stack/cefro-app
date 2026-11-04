@@ -14,7 +14,7 @@ import { FIXTURE_TRANSCRIPT, fakeWebm, makeEvaluation } from "../../../test/fixt
 import { claimAttempt, processAttempt, runClaimedAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser, listAttemptSummaries } from "./attempt-service";
 
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER = "22222222-2222-4222-8222-222222222222";
 const TRANSCRIPT = FIXTURE_TRANSCRIPT;

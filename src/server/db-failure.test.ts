@@ -13,7 +13,7 @@ import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { fakeWebm } from "../../test/fixtures";
 
 const USER = "11111111-1111-4111-8111-111111111111";
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 
 describe("infrastructure failures are not 'not found'", () => {
   it("maps a database outage to 503 database_unavailable (retryable) and keeps a real 404 a 404", async () => {

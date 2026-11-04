@@ -21,7 +21,7 @@ import { buildSpeakingEvaluationPrompt } from "./prompts/speaking-evaluation-v2"
 import { getSpeakingRubric } from "./rubrics";
 import type { EvaluationInput } from "./types";
 
-const task = getSpeakingTask("b2-part2-technology-young-people")!;
+const task = getSpeakingTask("b2-part2-advice-from-someone")!;
 const input = (transcript = FIXTURE_TRANSCRIPT): EvaluationInput => ({
   task,
   rubric: getSpeakingRubric(task),

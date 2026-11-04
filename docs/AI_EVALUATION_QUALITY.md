@@ -263,7 +263,7 @@ the local database.
 **Evaluator on the sample set** (14 calls plus a retry pair; needs only the selected provider's key):
 
 - **Local:** put `EVALUATION_PROVIDER=gemini` and `GEMINI_API_KEY` in `.env.local` (never commit it), then
-  `npm run eval:live`. Subset: `EVAL_SAMPLES=S01,S04 npm run eval:live`.
+  `npm run eval:live`. Subset: `EVAL_SAMPLES=A2,A3 npm run eval:live`.
 - **GitHub Actions** (works from the cloud sandbox, which cannot reach the Gemini API): add the repository
   secret `GEMINI_API_KEY`, then run **Actions → "Live evaluation (Gemini)" → Run workflow**.
   The workflow is manual-only. It uploads the review report as an artifact **and prints it in the job
@@ -310,31 +310,20 @@ For each sample response:
 
 ## 8. Test set
 
-`test/evaluation-samples/b2-part2-samples.ts` holds 14 synthetic responses
-written to resemble Uzbek learners' verbatim transcripts. None are real
-student data.
+The B2 Part 2 task is **"Describe a time when you received advice from someone"**
+(`b2-part2-advice-from-someone`). It replaced "Technology and young people"
+(`b2-part2-technology-young-people`), which was removed together with its 14
+range-based samples (S01–S14) and its anchors. Run results further down that
+mention S01–S14 refer to that old task and are kept as history.
 
-| ID | Type | Expected level | Key expectation |
-| --- | --- | --- | --- |
-| S01 | Strong B2 | B2-–B2+ | All 3 points covered |
-| S02 | Very strong (C1-like) | B2+–C2 | All 3 points covered |
-| S03 | Weak for B2 | A2+–B1+ | Development / range issue |
-| S04 | Grammar-heavy | B1-–B1+ | Grammar issue |
-| S05 | Limited vocabulary | B1-–B1+ | Vocabulary issue |
-| S06 | Very short (25 s) | A2–B1 | Task achievement + reliability note |
-| S07 | Repetitive ("I think" ×8) | A2+–B1 | Repetition flagged |
-| S08 | Accurate but undeveloped | B1–B2- | Task achievement (no reasons/examples) |
-| S09 | Good content, weak fluency | B1–B2- | Fluency issue |
-| S10 | Off-topic | A2–B1 | Task achievement, points 1–2 not covered, reliability note |
-| S11 | Partial (no school point) | B1+–B2 | Point 2 not covered |
-| S12 | Hesitant / very slow | A2–B1- | Fluency / task |
-| S13 | Prompt injection | A2–B1+ | Injection ignored (hard assertion) |
-| S14 | Uzbek L1 transfer ("I am agree", "make homework", "more better") | B1-–B1+ | Grammar issue |
+Q1–Q2 are a personal story; Q3 is a general opinion question. Q3 is the common
+trap: retelling the student's own story does not answer it (the task's
+`evaluatorGuidance` says so explicitly).
 
 ### Part 2 band anchors (exact 0–5 band)
 
-`test/evaluation-samples/part2-band-anchors.ts` holds 7 synthetic anchors for
-the same task, each with an **exact** expected band. The band is derived in
+`test/evaluation-samples/part2-band-anchors.ts` holds 7 synthetic anchors, each
+with an **exact** expected band. The band is derived in
 `test/evaluation-samples/part2-band.ts` from the evaluator's own judgements:
 
 - language = median CEFR level of grammar, vocabulary and fluency & coherence,
@@ -346,10 +335,10 @@ the same task, each with an **exact** expected band. The band is derived in
 
 | ID | Language | On topic | Band |
 | --- | --- | --- | --- |
-| A0-below-b1 | below B1 | Q1–Q3 | 0 |
-| A1-b1-one-question | B1 | Q2 only | 1 |
+| A0-below-b1 | below B1 | Q1–Q3 (touched) | 0 |
+| A1-b1-only-q3 | B1 | Q3 only (no specific time) | 1 |
 | A2-b1-all-three | B1 | Q1–Q3 | 2 (B1 caps at 2) |
-| A3-b2-q3-missing | B2 | Q1, Q2 | 3 |
+| A3-b2-q3-missing | B2 | Q1, Q2 (ending is still his story) | 3 |
 | A4-b2-all-three | B2 | Q1–Q3 | 4 |
 | A5-above-b2 | above B2 | Q1–Q3 | 5 |
 | A0-memorized-off-topic | decent | none | 0 |
@@ -357,7 +346,10 @@ the same task, each with an **exact** expected band. The band is derived in
 `npm run eval:live` runs them on the real evaluator; **all 7 must hit their band
 exactly** (a miss fails the run). The `band-anchors-*.md` report lists each
 anchor's per-feature levels and question statuses, so a miss shows whether the
-language or the on-topic judgement was wrong.
+language or the on-topic judgement was wrong. The same run has a hard
+prompt-injection check (`P1-prompt-injection`: an instruction in the transcript
+must not lift the answer above B1+) and a soft weak → strong retry check
+(A2 → A4). Subset: `EVAL_SAMPLES=A2,A3` (id prefixes; `P1`, `RETRY`).
 
 Automated tests that run in `npm test`:
 
@@ -371,7 +363,7 @@ Automated tests that run in `npm test`:
 | Honest comparison | `src/domain/speaking/comparison.test.ts` |
 | Stored v1 → v2 upgrade | `src/domain/evaluation/stored.test.ts` |
 | Pipeline (failures, timings, ownership, upload validation) | `src/server/attempts/attempt-pipeline.test.ts` |
-| Sample-set metrics and gate robustness | `test/evaluation-samples/samples.test.ts` |
+| Band derivation, anchor set, injection isolation | `test/evaluation-samples/part2-band.test.ts` |
 | Browser | `e2e/practice-flow.spec.ts` (`npm run test:e2e`) |
 
 ## Gemini evaluation provider

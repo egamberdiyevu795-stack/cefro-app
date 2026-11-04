@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import type { EvaluationResult } from "@/domain/evaluation/schema";
+import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { compareAttempts } from "@/domain/speaking/comparison";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import { MAX_AUDIO_BYTES, createAttempt, getAttemptViewForUser } from "@/server/attempts/attempt-service";
@@ -16,7 +16,7 @@ import { createPracticeSession } from "@/server/sessions/session-service";
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { getTranscriptionProvider, setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
-import { endpointOverrides, evidenceViolations, numericClaimMismatches, wordErrorRate } from "./checks";
+import { endpointOverrides, evidenceViolations, numericClaimMismatches, renderMultilevelResult, wordErrorRate } from "./checks";
 import { MIME_BY_FORMAT, ffmpegAvailable, makeNearSilence, makeSilence, pausedSpeechFile, probeDurationSeconds, speechFile, ttsLog, ttsProvider } from "./audio";
 import { PIPELINE_SAMPLES, pipelineText, threeParts, type PipelineSample } from "./audio-samples";
 import { evaluatorSelection, transcriptionSelection } from "./providers";
@@ -72,7 +72,7 @@ interface Row {
   totalMs?: number;
   integrity: string[];
   review: string[];
-  result?: EvaluationResult;
+  result?: MultilevelResult;
   metrics?: SpeechMetrics | null;
   retryVerdict?: string;
 }
@@ -169,7 +169,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
         rows.push({ sample, format: MIME_BY_FORMAT.webm, audioSeconds: 0, gateWarnings: [], rejectedDrafts: [], integrity: [], review: [], status: "not_run", failure: `its first attempt ${sample.retryOf} did not complete` });
         return;
       }
-      text = await guidedRewrite(first.view.transcript!.text, first.view.evaluation!.result.retry_focus.map((f) => f.objective));
+      text = await guidedRewrite(first.view.transcript!.text, first.view.evaluation!.result.retry_focus.map((f: { objective: string }) => f.objective));
       guidedTexts.set(sample.id, text);
     }
     const file = sample.pauses ? await pausedSpeechFile(threeParts(text), { lead: 4, gap: 3, trail: 4 }, "webm") : await speechFile(text, "webm");
@@ -216,11 +216,12 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     }
     attemptBySample.set(sample.id, { id: created.id, sessionId, view });
 
+    if (view.evaluation.result.kind !== "multilevel") throw new Error("expected a Multilevel (schema 3) result");
     const result = view.evaluation.result;
     row.result = result;
-    row.level = result.overall_level;
-    row.scores = Object.entries(result.criteria)
-      .map(([k, c]) => `${k.split("_")[0].slice(0, 4)} ${c.assessable ? c.score : "n/a"}`)
+    row.level = `${result.scoring.band}/${result.scoring.band_max}${result.scoring.provisional ? " (prov.)" : ""}`;
+    row.scores = Object.entries(result.assessment.features)
+      .map(([k, f]) => `${k.slice(0, 4)} ${f.level}`)
       .join(", ");
 
     await checkPersistence(row, created.id, sessionId, audio, previous?.id ?? null);
@@ -228,17 +229,17 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     checkNumericClaims(row, result, view.metrics!, audioSeconds);
 
     if (previous) {
-      const comparison = compareAttempts(
-        { evaluation: previous.view.evaluation!.result, metrics: previous.view.metrics },
-        { evaluation: result, metrics: view.metrics },
-      );
-      row.retryVerdict = `${comparison.verdict} (${comparison.overall.before} → ${comparison.overall.after}); focus ${JSON.stringify(comparison.focus)}`;
-      if (!result.retry_review) row.integrity.push("retry attempt has no retry_review");
-      const given = previous.view.evaluation!.result.retry_focus.length;
-      if (result.retry_review && result.retry_review.objectives.length !== given) {
-        row.review.push(`retry_review lists ${result.retry_review.objectives.length} objective(s) for ${given} focus item(s) given`);
+      const before = previous.view.evaluation!.result;
+      if (before.kind !== "multilevel") throw new Error("expected a Multilevel (schema 3) result");
+      const comparison = compareAttempts({ evaluation: before, metrics: previous.view.metrics }, { evaluation: result, metrics: view.metrics });
+      row.retryVerdict = `${comparison.verdict} (band ${comparison.band.before} → ${comparison.band.after}); focus ${JSON.stringify(comparison.focus)}`;
+      const review = result.assessment.retry_review;
+      if (!review) row.integrity.push("retry attempt has no retry_review");
+      const given = before.retry_focus.length;
+      if (review && review.objectives.length !== given) {
+        row.review.push(`retry_review lists ${review.objectives.length} objective(s) for ${given} focus item(s) given`);
       }
-    } else if (result.retry_review) {
+    } else if (result.assessment.retry_review) {
       row.integrity.push("first attempt has a retry_review");
     }
 
@@ -312,11 +313,11 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
     row.review.push(`Failed: ${row.failure}. State: status=${attempt?.status}, runs=${attempt?.processingRuns}, audio kept=${Boolean(recording)}, evaluation row=${Boolean(evaluation)}.`);
   }
 
-  function checkEvidence(row: Row, result: EvaluationResult, transcript: string) {
+  function checkEvidence(row: Row, result: MultilevelResult, transcript: string) {
     row.integrity.push(...evidenceViolations(result, transcript));
   }
 
-  function checkNumericClaims(row: Row, result: EvaluationResult, metrics: SpeechMetrics, audioSeconds: number) {
+  function checkNumericClaims(row: Row, result: MultilevelResult, metrics: SpeechMetrics, audioSeconds: number) {
     row.review.push(...numericClaimMismatches(result, metrics, audioSeconds));
   }
 
@@ -390,7 +391,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
       `# Full pipeline validation (real ${provider.name} transcription + real ${model.provider} evaluation)`,
       "",
       summary,
-      "| Sample | Format | Audio | STT | WER | Words | Eval | Model | Level | Calls | Gate | Total | Status |",
+      "| Sample | Format | Audio | STT | WER | Words | Eval | Model | Band | Calls | Gate | Total | Status |",
       "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
       ...rows.map(
         (r) =>
@@ -402,7 +403,7 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
         return [
           `## ${r.sample.id}: ${r.sample.description}`,
           "",
-          `Attempt ${r.attemptId ?? "—"}; scores: ${r.scores ?? "—"}; tokens in/out ${r.inputTokens ?? "—"}/${r.outputTokens ?? "—"}; STT usage ${JSON.stringify(r.sttUsage ?? {})}`,
+          `Attempt ${r.attemptId ?? "—"}; features: ${r.scores ?? "—"}; tokens in/out ${r.inputTokens ?? "—"}/${r.outputTokens ?? "—"}; STT usage ${JSON.stringify(r.sttUsage ?? {})}`,
           "",
           "**Transcript:**",
           "",
@@ -411,15 +412,8 @@ describe.skipIf(!configured)(`LIVE: full pipeline (audio → ${sttSelection.prov
           ...(r.metrics ? [`Metrics: ${JSON.stringify({ words: r.metrics.wordCount, seconds: r.metrics.speakingSeconds, wpm: r.metrics.wordsPerMinute, fillers: r.metrics.fillerCount, repeatedWords: r.metrics.repeatedWords, timeUsed: r.metrics.timeUsedRatio })}`, ""] : []),
           ...(result
             ? [
-                `**${result.overall_level}**: ${result.overall_summary}`,
+                ...renderMultilevelResult(result),
                 "",
-                "Issues:",
-                ...result.issues.map((i, n) => `${n + 1}. [${i.severity} · ${i.criterion} · ${i.evidence_basis}] ${i.problem}\n   - Evidence: ${i.evidence_quotes.map((q) => `“${q}”`).join(", ") || "—"}\n   - Fix: ${i.how_to_fix}\n   - Better: “${i.improved_example.original}” → “${i.improved_example.improved}”`),
-                "",
-                "Retry focus: " + result.retry_focus.map((f) => `${f.objective} (issue ${f.addresses_issue})`).join(" | "),
-                "",
-                ...(result.retry_review ? ["Retry review:", ...result.retry_review.objectives.map((o) => `- ${o.outcome}: ${o.objective} — ${o.evidence}`), `Summary: ${result.retry_review.summary}`, ""] : []),
-                ...(result.reliability_note ? [`Reliability note: ${result.reliability_note}`, ""] : []),
               ]
             : []),
           ...(r.retryVerdict ? [`Comparison with the first attempt: ${r.retryVerdict}`, ""] : []),

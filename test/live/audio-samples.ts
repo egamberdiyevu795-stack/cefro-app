@@ -1,3 +1,4 @@
+import { OWNER_SAMPLE_ANSWER } from "../evaluation-samples/owner-sample";
 import { PART2_BAND_ANCHORS } from "../evaluation-samples/part2-band-anchors";
 
 /**
@@ -11,6 +12,10 @@ export interface AudioSample {
   ref?: string;
   /** Learner mistakes that must survive transcription (checked with the same normalisation as evidence quotes). */
   keep?: string[];
+  /** Regression sample: losing any `keep` phrase FAILS the run (otherwise losses are only reported). */
+  mustKeep?: boolean;
+  /** Further learner errors that should survive; losses are reported for review, never fatal. */
+  watch?: string[];
   kind: "speech" | "silence" | "near_silence" | "noise";
   seconds?: number;
   /** Speech split into parts with silence before, between and after (pauses must not stop transcription). */
@@ -85,6 +90,30 @@ export const TRANSCRIPTION_SAMPLES: AudioSample[] = [
       "Me and my friend is discussing about this problem many times. In my opinion the phones is very usefull for study, " +
       "but too much of them are dangerous for the eyes.",
     keep: ["I have went", "I buy two bread", "he don't like", "it make people lazy", "Me and my friend is", "discussing about", "the phones is"],
+  },
+  {
+    id: "T12-verbatim-regression",
+    description:
+      "Regression on the project owner's real answer: speech-to-text once 'corrected' 'nobody will helps' to 'nobody helps'. The three keep phrases must come back word for word, or the run fails; the other errors are reported.",
+    kind: "speech",
+    ref: OWNER_SAMPLE_ANSWER,
+    keep: ["nobody will helps", "they don't talking", "less sociable"],
+    watch: [
+      "social media is making",
+      "it help people",
+      "both things is true",
+      "spend many times",
+      "everyone looking at their phone",
+      "nobody talk with each other",
+      "They just watching videos",
+      "social media make people think",
+      "these people very good",
+      "is not same like real friendship",
+      "technology have some advantages",
+      "if your friend live in another country",
+      "Young people should using it less",
+    ],
+    mustKeep: true,
   },
   { id: "T06-silence", description: "Eight seconds of digital silence.", kind: "silence", seconds: 8 },
   { id: "T07-near-silence", description: "Eight seconds of very quiet noise (open microphone, no speech).", kind: "near_silence", seconds: 8 },

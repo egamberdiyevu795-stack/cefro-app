@@ -2,7 +2,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/components/ui/cn";
 import { CRITERION_LABELS } from "@/domain/evaluation/criteria";
-import type { EvaluationIssue } from "@/domain/evaluation/schema";
+import type { LegacyEvaluationResult } from "@/domain/evaluation/schema";
+
+type EvaluationIssue = LegacyEvaluationResult["issues"][number];
 
 const SEVERITY = {
   high: { label: "High impact", tone: "danger" },

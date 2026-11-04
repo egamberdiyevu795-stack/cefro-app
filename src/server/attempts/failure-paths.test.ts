@@ -11,7 +11,7 @@ import { setEvaluationModelForTesting, type EvaluationModel } from "@/server/eva
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
-import { FIXTURE_TRANSCRIPT, fakeWebm, makeEvaluation } from "../../../test/fixtures";
+import { FIXTURE_TRANSCRIPT, fakeWebm, makeModelOutput } from "../../../test/fixtures";
 import { claimAttempt, processAttempt, runClaimedAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser } from "./attempt-service";
 
@@ -29,7 +29,7 @@ let dir: string;
 let stt: TranscriptionProvider & { transcribe: ReturnType<typeof vi.fn> };
 let llm: EvaluationModel & { evaluate: ReturnType<typeof vi.fn> };
 
-const goodOutput = () => ({ output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 10, outputTokens: 20 });
+const goodOutput = () => ({ output: makeModelOutput(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 10, outputTokens: 20 });
 
 beforeEach(async () => {
   db = await openDatabase(":memory:");
@@ -177,8 +177,8 @@ describe("evaluation failures", () => {
   });
 
   it("quality-gate rejection on both drafts (regeneration exhausted): evaluation_quality_rejected, nothing stored", async () => {
-    const hallucinated = makeEvaluation();
-    hallucinated.issues[0].evidence_quotes = ["words the student never said"];
+    const hallucinated = makeModelOutput();
+    hallucinated.features.grammar.evidence = ["words the student never said"];
     llm.evaluate.mockResolvedValue({ output: hallucinated, provider: "fake-llm", model: "fake-llm-1", inputTokens: 5, outputTokens: 5 });
     const attempt = await newAttempt();
     await processAttempt(attempt.id);
@@ -189,8 +189,8 @@ describe("evaluation failures", () => {
   });
 
   it("quality-gate rejection that the regeneration fixes: completes, and records both calls and why the first was rejected", async () => {
-    const hallucinated = makeEvaluation();
-    hallucinated.issues[0].evidence_quotes = ["words the student never said"];
+    const hallucinated = makeModelOutput();
+    hallucinated.features.grammar.evidence = ["words the student never said"];
     llm.evaluate
       .mockResolvedValueOnce({ output: hallucinated, provider: "fake-llm", model: "fake-llm-1", inputTokens: 5, outputTokens: 5 })
       .mockResolvedValueOnce(goodOutput());
@@ -200,6 +200,6 @@ describe("evaluation failures", () => {
     expect((await getAttemptViewForUser(USER, attempt.id)).status).toBe("completed");
     expect(row.modelCalls).toBe(2);
     expect(row.inputTokens).toBe(15); // both calls are counted
-    expect(JSON.stringify(row.qualityReport)).toContain("issue_without_evidence");
+    expect(JSON.stringify(row.qualityReport)).toContain("feature_evidence_fabricated");
   });
 });

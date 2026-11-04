@@ -2,11 +2,13 @@ import "server-only";
 import { getEnv } from "@/server/config/env";
 import { ProviderError } from "@/server/errors";
 import { AnthropicEvaluationModel } from "./anthropic-evaluation-model";
+import { GeminiAudioAssessor } from "./gemini-audio-assessor";
 import { GeminiEvaluationModel } from "./gemini-evaluation-model";
 import { MockEvaluationModel } from "./mock-evaluation-model";
-import type { EvaluationModel } from "./types";
+import type { AudioAssessor, EvaluationModel } from "./types";
 
 let override: EvaluationModel | undefined;
+let audioOverride: AudioAssessor | null | undefined;
 
 /** Resolve the configured evaluation model. Throws ProviderError if misconfigured. */
 export function getEvaluationModel(): EvaluationModel {
@@ -51,5 +53,26 @@ export function setEvaluationModelForTesting(model: EvaluationModel | undefined)
   override = model;
 }
 
+/**
+ * The audio step (pronunciation and pausing from the recording), or null when it is off (AUDIO_ASSESSMENT).
+ * "auto" turns it on only for a real evaluator with a Gemini key, so development with mocks never calls Gemini.
+ */
+export function getAudioAssessor(): AudioAssessor | null {
+  if (audioOverride !== undefined) return audioOverride;
+  const env = getEnv();
+  const wanted =
+    env.AUDIO_ASSESSMENT === "gemini" || (env.AUDIO_ASSESSMENT === "auto" && Boolean(env.GEMINI_API_KEY) && env.EVALUATION_PROVIDER !== "mock");
+  if (!wanted) return null;
+  if (!env.GEMINI_API_KEY) {
+    throw new ProviderError("provider_not_configured", "GEMINI_API_KEY is not set (AUDIO_ASSESSMENT=gemini)", { retryable: false });
+  }
+  return new GeminiAudioAssessor({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_AUDIO_ASSESSMENT_MODEL, timeoutMs: env.EVALUATION_TIMEOUT_MS });
+}
+
+/** undefined = use the configured assessor again. */
+export function setAudioAssessorForTesting(assessor: AudioAssessor | null | undefined) {
+  audioOverride = assessor;
+}
+
 export { evaluateSpeaking } from "./speaking-evaluator";
-export type { EvaluationModel } from "./types";
+export type { AudioAssessor, EvaluationModel } from "./types";

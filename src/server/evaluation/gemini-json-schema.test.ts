@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { evaluationResultSchema } from "@/domain/evaluation/schema";
+import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
 
 function collectKeys(node: unknown, found = new Set<string>()): Set<string> {
@@ -16,7 +16,7 @@ function collectKeys(node: unknown, found = new Set<string>()): Set<string> {
 }
 
 describe("toGeminiJsonSchema", () => {
-  const schema = toGeminiJsonSchema(evaluationResultSchema) as {
+  const schema = toGeminiJsonSchema(multilevelModelOutputSchema) as {
     type: string;
     required: string[];
     properties: Record<string, { type?: string; description?: string; anyOf?: unknown[] }>;
@@ -25,9 +25,11 @@ describe("toGeminiJsonSchema", () => {
   it("describes the evaluation contract with every top-level field required", () => {
     expect(schema.type).toBe("object");
     expect(schema.required).toEqual(
-      expect.arrayContaining(["overall_level", "criteria", "task_coverage", "strengths", "issues", "retry_focus", "retry_review", "reliability_note"]),
+      expect.arrayContaining(["questions", "features", "memorized_or_irrelevant", "errors", "strengths", "retry_review"]),
     );
-    expect(Object.keys(schema.properties)).toEqual(Object.keys(evaluationResultSchema.shape));
+    expect(Object.keys(schema.properties)).toEqual(Object.keys(multilevelModelOutputSchema.shape));
+    // The model is never asked for a band or a score.
+    expect(JSON.stringify(schema)).not.toMatch(/"(band|score|overall_level)"/);
   });
 
   it("is fully inlined and uses only the keywords we send", () => {
@@ -41,9 +43,10 @@ describe("toGeminiJsonSchema", () => {
   it("keeps nullability, enums, bounds and field guidance", () => {
     expect(schema.properties.retry_review.anyOf).toEqual(expect.arrayContaining([{ type: "null" }]));
     const json = JSON.stringify(schema);
-    expect(json).toContain('"enum":["A1","A2"');
-    expect(json).toContain('"maximum":10');
-    expect(json).toContain("Never generic");
+    expect(json).toContain('"enum":["below_B1","B1","B2","above_B2"]');
+    expect(json).toContain('"enum":["on_topic","partial","missing","off_topic"]');
+    expect(json).toContain('"minimum":1');
+    expect(json).toContain("Never paraphrase");
     expect(json).toContain('"maxItems":4');
   });
 

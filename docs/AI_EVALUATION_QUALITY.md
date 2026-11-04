@@ -1,5 +1,21 @@
 # AI evaluation quality (B2 Part 2)
 
+> **Evaluator 3.0.0 (Multilevel band scale).** CEFRO now scores Part 2 as the official UZBMB Multilevel
+> **Question 7**: three questions on one topic, target B2, holistic band 0–5 (5 Above B2, 4 Higher B2, 3 Lower B2,
+> 2 Higher B1, 1 Lower B1, 0 Below B1; "meets B2" = band 3+). The model no longer gives scores: it judges each
+> question and each feature (grammar, vocabulary, fluency, cohesion; pronunciation and pausing from the audio step)
+> against the official descriptors, with strictly verified quotes, and the band is computed in code. Current design:
+> [`ARCHITECTURE.md` → AI evaluation](ARCHITECTURE.md#ai-evaluation). **Not yet validated against real providers:**
+> the 3.0.0 prompt, the audio step and the band distribution on the sample set (`npm run eval:live`, now with band
+> ranges per sample). Sections below about the 0–10 analytic evaluator (issues, improved examples, `overall_level`)
+> describe versions ≤ 2.4.1 and are kept as history; their real-run findings informed the 3.0.0 rules (evidence,
+> plain-language numbers, honest retry review).
+>
+> **Verbatim transcription regression.** A live run turned a learner's "nobody will helps" into "nobody helps".
+> Both transcription prompts now ask for a verbatim, disfluent transcript and name the error types models "fix".
+> `T12-verbatim-regression` (`TRANSCRIPTION_SAMPLES=T12 npm run eval:transcription:controlled`) FAILS if "nobody
+> will helps", "they don't talking" or "less sociable" do not come back word for word.
+
 This document describes how CEFRO evaluates spoken answers, how evaluation
 quality is checked, and what we know about its weaknesses. It is a working
 document: add a row to the [findings log](#findings-log) whenever a review
@@ -260,7 +276,7 @@ the local database.
 
 ## 6. Validating with real providers
 
-**Evaluator on the sample set** (14 calls plus a retry pair; needs only the selected provider's key):
+**Evaluator on the band anchors** (7 anchors, an injection probe and a retry pair; needs only the selected provider's key):
 
 - **Local:** put `EVALUATION_PROVIDER=gemini` and `GEMINI_API_KEY` in `.env.local` (never commit it), then
   `npm run eval:live`. Subset: `EVAL_SAMPLES=A2,A3 npm run eval:live`.
@@ -313,8 +329,10 @@ For each sample response:
 The B2 Part 2 task is **"Describe a time when you received advice from someone"**
 (`b2-part2-advice-from-someone`). It replaced "Technology and young people"
 (`b2-part2-technology-young-people`), which was removed together with its 14
-range-based samples (S01–S14) and its anchors. Run results further down that
-mention S01–S14 refer to that old task and are kept as history.
+range-based samples (S01–S15) and its anchors. Run results further down that
+mention the 14 samples refer to that old task and are kept as history. The
+project owner's real answer (formerly S15) is kept only as the verbatim
+transcription regression (`test/evaluation-samples/owner-sample.ts`, T12).
 
 Q1–Q2 are a personal story; Q3 is a general opinion question. Q3 is the common
 trap: retelling the student's own story does not answer it (the task's
@@ -323,15 +341,12 @@ trap: retelling the student's own story does not answer it (the task's
 ### Part 2 band anchors (exact 0–5 band)
 
 `test/evaluation-samples/part2-band-anchors.ts` holds 7 synthetic anchors, each
-with an **exact** expected band. The band is derived in
-`test/evaluation-samples/part2-band.ts` from the evaluator's own judgements:
-
-- language = median CEFR level of grammar, vocabulary and fluency & coherence,
-  mapped to below B1 / B1 / B2 / above B2 (B1- counts as below B1, B2- as B1,
-  C1- as B2);
-- questions on topic = task points marked `covered` or `partly_covered`;
-- below B1 or 0 questions → 0; B1 → 1 question 1, 2–3 questions 2;
-  B2 → 2 / 3 / 4; above B2 with 3 questions → 5.
+with an **exact** expected band. The band checked is the evaluator's own
+`result.scoring.band`, computed deterministically from its per-feature levels and
+question statuses (`src/domain/evaluation/multilevel/band-scoring.ts`, rubric
+`multilevel_q7.json`). Each anchor also records the judgements expected to lead to
+its band; a unit test checks that those judgements give that band under the
+official scoring.
 
 | ID | Language | On topic | Band |
 | --- | --- | --- | --- |
@@ -348,7 +363,7 @@ exactly** (a miss fails the run). The `band-anchors-*.md` report lists each
 anchor's per-feature levels and question statuses, so a miss shows whether the
 language or the on-topic judgement was wrong. The same run has a hard
 prompt-injection check (`P1-prompt-injection`: an instruction in the transcript
-must not lift the answer above B1+) and a soft weak → strong retry check
+must not lift the band above 2) and a soft weak → strong retry check
 (A2 → A4). Subset: `EVAL_SAMPLES=A2,A3` (id prefixes; `P1`, `RETRY`).
 
 Automated tests that run in `npm test`:
@@ -363,7 +378,7 @@ Automated tests that run in `npm test`:
 | Honest comparison | `src/domain/speaking/comparison.test.ts` |
 | Stored v1 → v2 upgrade | `src/domain/evaluation/stored.test.ts` |
 | Pipeline (failures, timings, ownership, upload validation) | `src/server/attempts/attempt-pipeline.test.ts` |
-| Band derivation, anchor set, injection isolation | `test/evaluation-samples/part2-band.test.ts` |
+| Anchor set, injection isolation, verbatim regression sample | `test/evaluation-samples/part2-band-anchors.test.ts` |
 | Browser | `e2e/practice-flow.spec.ts` (`npm run test:e2e`) |
 
 ## Gemini evaluation provider

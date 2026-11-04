@@ -11,7 +11,8 @@ export default defineConfig({
   test: {
     environment: "node",
     // Most tests feed fake audio bytes to fake providers; the Speech Activity Guard has its own tests, which switch it on.
-    env: { SPEECH_GUARD: "off" },
+    // The audio step (pronunciation from the recording) is off unless a test turns it on with a fake assessor.
+    env: { SPEECH_GUARD: "off", AUDIO_ASSESSMENT: "off" },
     include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     exclude: ["test/live/**", "e2e/**", "node_modules/**"],
   },

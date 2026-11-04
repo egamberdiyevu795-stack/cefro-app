@@ -2,11 +2,14 @@ import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, SectionTitle } from "@/components/ui/Card";
-import { meetsTargetLevel } from "@/domain/cefr";
+import { FEATURE_LABELS } from "@/domain/evaluation/multilevel/levels";
+import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
+import type { LegacyEvaluation } from "@/domain/evaluation/stored";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import { formatDateTime } from "../lib/format";
-import { CriteriaScores } from "./CriteriaScores";
+import { BiggestFixCard } from "./BiggestFixCard";
+import { FeatureLevels } from "./FeatureLevels";
 import { IssueCard } from "./IssueCard";
 import { RetryReviewCard } from "./RetryReviewCard";
 import { TaskCoverageCard } from "./TaskCoverageCard";
@@ -21,28 +24,29 @@ export function isEvaluated(attempt: AttemptView): attempt is EvaluatedAttempt {
   return attempt.status === "completed" && attempt.evaluation !== null && attempt.transcript !== null;
 }
 
-/**
- * Feedback for one attempt, ordered to answer the student's questions in turn:
- * How did I do? → What went well? → What is the biggest thing to fix (with
- * evidence, fix and better version)? → What do I focus on? → Retry.
- * Everything else (other issues, scores, transcript) comes after the CTA.
- */
-export function FeedbackReport({
-  attempt,
-  task,
-  onRetry,
-  onCompare,
-  onBack,
-}: {
+interface ReportProps {
   attempt: EvaluatedAttempt;
   task: PublicSpeakingTask;
   onRetry: () => void;
   onCompare: (() => void) | null;
   onBack: () => void;
-}) {
-  const { result, meta } = attempt.evaluation;
-  const meetsTarget = meetsTargetLevel(result.overall_level, task.level);
-  const [topIssue, ...otherIssues] = result.issues;
+}
+
+/**
+ * Feedback for one attempt, ordered to answer the student's questions in turn:
+ * What band did I get for this part? → What went well? → What is the biggest thing to fix? → What do I focus on? → Retry.
+ * Everything else (questions, features, transcript) comes after the CTA.
+ *
+ * Only the PART band is shown. An overall exam level, or a 0–75 exam score, is never derived from one part.
+ */
+export function FeedbackReport(props: ReportProps) {
+  const { result } = props.attempt.evaluation;
+  return result.kind === "multilevel" ? <MultilevelReport {...props} result={result} /> : <LegacyReport {...props} result={result} />;
+}
+
+function MultilevelReport({ attempt, task, onRetry, onCompare, onBack, result }: ReportProps & { result: MultilevelResult }) {
+  const { meta } = attempt.evaluation;
+  const { scoring, assessment } = result;
 
   return (
     <div className="space-y-6">
@@ -52,22 +56,27 @@ export function FeedbackReport({
         </Alert>
       )}
 
-      {/* 1. How did I do? */}
+      {/* 1. How did I do on this part? */}
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-subtle">Attempt {attempt.attemptNumber} · estimated level</p>
-            <p className="mt-1 text-5xl font-semibold tracking-tight">{result.overall_level}</p>
+            <p className="text-sm font-medium text-subtle">Attempt {attempt.attemptNumber}</p>
+            <h2 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl" data-testid="band-headline">
+              Part {result.part}: {scoring.band}/{scoring.band_max} · {scoring.label}
+            </h2>
           </div>
-          <Badge tone={meetsTarget ? "success" : "warning"} className="text-sm">
-            {meetsTarget ? `Meets the ${task.level} target` : `Below the ${task.level} target`}
+          <Badge tone={scoring.meets_target ? "success" : "warning"} className="text-sm">
+            {scoring.meets_target ? `Meets ${task.level} target` : `Below ${task.level} target (need ${scoring.target_band}+)`}
           </Badge>
         </div>
-        <p className="leading-relaxed">{result.overall_summary}</p>
-        {result.reliability_note && (
-          <p className="rounded-xl bg-warning-soft p-3 text-sm">
-            <span className="font-semibold">Note: </span>
-            {result.reliability_note}
+        <p className="text-sm text-muted">
+          You answered {scoring.on_topic_count} of {assessment.questions.length} questions on topic. This is the band for Part {result.part} only, not
+          an overall exam result.
+        </p>
+        {scoring.zero_reason && <p className="rounded-xl bg-warning-soft p-3 text-sm">{ZERO_REASON[scoring.zero_reason]}</p>}
+        {scoring.provisional && (
+          <p className="rounded-xl bg-surface-muted p-3 text-sm" data-testid="provisional-note">
+            <span className="font-semibold">Provisional: pronunciation not assessed.</span> Your band could change once pronunciation is included.
           </p>
         )}
         {onCompare && (
@@ -77,33 +86,31 @@ export function FeedbackReport({
         )}
       </Card>
 
-      {result.retry_review && <RetryReviewCard review={result.retry_review} />}
+      {assessment.retry_review && <RetryReviewCard review={assessment.retry_review} />}
 
-      {/* 2. What went well */}
-      <Card>
-        <SectionTitle>What you did well</SectionTitle>
-        <ul className="mt-3 grid gap-4 sm:grid-cols-2">
-          {result.strengths.map((strength) => (
-            <li key={strength.title}>
-              <p className="font-medium">✓ {strength.title}</p>
-              <p className="mt-1 text-sm text-muted">{strength.detail}</p>
-              {strength.evidence_quote && (
-                <blockquote className="mt-2 border-l-2 border-success/60 pl-3 text-sm italic text-muted">
-                  &ldquo;{strength.evidence_quote}&rdquo;
-                </blockquote>
-              )}
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {/* 2. What went well (only real evidence at B2 or above; none is invented) */}
+      {assessment.strengths.length > 0 && (
+        <Card>
+          <SectionTitle>What you did well</SectionTitle>
+          <ul className="mt-3 grid gap-4 sm:grid-cols-2">
+            {assessment.strengths.map((strength) => (
+              <li key={strength.quote}>
+                <p className="font-medium">✓ {FEATURE_LABELS[strength.feature]}</p>
+                <p className="mt-1 text-sm text-muted">{strength.note}</p>
+                <blockquote className="mt-2 border-l-2 border-success/60 pl-3 text-sm italic text-muted">&ldquo;{strength.quote}&rdquo;</blockquote>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
-      {/* 3–5. The biggest thing to fix, with evidence, fix and a better version */}
+      {/* 3. The biggest thing to fix */}
       <section className="space-y-3" aria-labelledby="top-fix-heading">
         <h2 id="top-fix-heading" className="text-xl font-semibold">The biggest thing to fix</h2>
-        <IssueCard issue={topIssue} highlight />
+        <BiggestFixCard result={result} task={task} />
       </section>
 
-      {/* 6–7. Focus and retry */}
+      {/* 4. Focus and retry */}
       <Card className="space-y-4 border-brand/40 bg-brand-soft/50">
         <div>
           <SectionTitle>Your focus for the next attempt</SectionTitle>
@@ -121,32 +128,65 @@ export function FeedbackReport({
         </div>
       </Card>
 
-      {otherIssues.length > 0 && (
-        <section className="space-y-3" aria-labelledby="other-issues-heading">
-          <div>
-            <h2 id="other-issues-heading" className="text-lg font-semibold">Also worth working on</h2>
-            <p className="text-sm text-muted">Fix the point above first. Open these when you are ready.</p>
-          </div>
-          {otherIssues.map((issue, i) => (
-            <IssueCard key={`${issue.criterion}-${i}`} issue={issue} collapsible />
-          ))}
-        </section>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
-          {result.task_coverage.length > 0 && <TaskCoverageCard task={task} coverage={result.task_coverage} />}
-          <CriteriaScores criteria={result.criteria} />
+          <TaskCoverageCard task={task} questions={assessment.questions} />
+          <FeatureLevels result={result} metrics={attempt.metrics} />
         </div>
-        <TranscriptCard attemptId={attempt.id} text={attempt.transcript.text} metrics={attempt.metrics} />
+        <TranscriptCard attemptId={attempt.id} text={attempt.transcript.text} metrics={attempt.metrics} durationMs={attempt.recordingDurationMs} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-subtle">
-        <Button variant="ghost" onClick={onBack}>← Back to task</Button>
-        <p>
-          Evaluated {formatDateTime(meta.createdAt)} · {meta.evaluatorVersion} · {meta.rubricVersion} · {meta.model}
-        </p>
-      </div>
+      <Footer attempt={attempt} onBack={onBack} />
+    </div>
+  );
+}
+
+const ZERO_REASON = {
+  memorized_or_irrelevant: "Band 0: the answer looks memorised or does not answer these questions.",
+  no_question_on_topic: "Band 0: none of the questions was answered on topic.",
+  below_B1: "Band 0: the language is below B1 level for this part.",
+} as const;
+
+/** Attempts scored before the band scale (schema 1–2): shown as they were, without any level or band. */
+function LegacyReport({ attempt, onRetry, onBack, result }: ReportProps & { result: LegacyEvaluation }) {
+  const [topIssue] = result.issues;
+  return (
+    <div className="space-y-6">
+      <Alert tone="warning" title="Scored with an older method">
+        This attempt was assessed before CEFRO switched to the official Multilevel band scale, so it has no Part 2 band. Retry the task to get one.
+      </Alert>
+      {topIssue && (
+        <section className="space-y-3" aria-labelledby="top-fix-heading">
+          <h2 id="top-fix-heading" className="text-xl font-semibold">The biggest thing to fix</h2>
+          <IssueCard issue={topIssue} highlight />
+        </section>
+      )}
+      <Card className="space-y-4 border-brand/40 bg-brand-soft/50">
+        <SectionTitle>Your focus for the next attempt</SectionTitle>
+        <ul className="space-y-3">
+          {result.retry_focus.map((focus) => (
+            <li key={focus.objective}>
+              <p className="font-medium">→ {focus.objective}</p>
+              <p className="text-sm text-muted">How to check: {focus.success_check}</p>
+            </li>
+          ))}
+        </ul>
+        <Button size="lg" onClick={onRetry}>Retry this task</Button>
+      </Card>
+      <TranscriptCard attemptId={attempt.id} text={attempt.transcript.text} metrics={attempt.metrics} durationMs={attempt.recordingDurationMs} />
+      <Footer attempt={attempt} onBack={onBack} />
+    </div>
+  );
+}
+
+function Footer({ attempt, onBack }: { attempt: EvaluatedAttempt; onBack: () => void }) {
+  const { meta } = attempt.evaluation;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-subtle">
+      <Button variant="ghost" onClick={onBack}>← Back to task</Button>
+      <p>
+        Evaluated {formatDateTime(meta.createdAt)} · {meta.evaluatorVersion} · {meta.rubricVersion} · {meta.model}
+      </p>
     </div>
   );
 }

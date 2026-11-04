@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card, SectionTitle } from "@/components/ui/Card";
-import type { EvaluationResult } from "@/domain/evaluation/schema";
+import type { RetryReview } from "@/domain/evaluation/multilevel/model-output";
 
 const OUTCOME = {
   achieved: { label: "Achieved", tone: "success" },
@@ -9,7 +9,7 @@ const OUTCOME = {
 } as const;
 
 /** How the student did on the focus they were given before this retry. */
-export function RetryReviewCard({ review }: { review: NonNullable<EvaluationResult["retry_review"]> }) {
+export function RetryReviewCard({ review }: { review: RetryReview }) {
   return (
     <Card className="space-y-4 border-brand/30">
       <SectionTitle>Your focus this time</SectionTitle>

@@ -8,7 +8,7 @@ import { setEvaluationModelForTesting, type EvaluationModel } from "@/server/eva
 import { setAudioStorageForTesting } from "@/server/storage";
 import { DatabaseAudioStorage } from "@/server/storage/database-audio-storage";
 import { setTranscriptionProviderForTesting } from "@/server/transcription";
-import { FIXTURE_TRANSCRIPT, fakeWebm, makeEvaluation } from "../../../test/fixtures";
+import { FIXTURE_TRANSCRIPT, fakeWebm, makeModelOutput } from "../../../test/fixtures";
 import { claimAttempt, processAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser, getRecordingAudio } from "./attempt-service";
 
@@ -41,7 +41,7 @@ beforeEach(async () => {
     model: "fake-llm-1",
     isDevelopmentProvider: false,
     config: {},
-    evaluate: vi.fn(async () => ({ output: makeEvaluation(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 1, outputTokens: 1 })),
+    evaluate: vi.fn(async () => ({ output: makeModelOutput(), provider: "fake-llm", model: "fake-llm-1", inputTokens: 1, outputTokens: 1 })),
   };
   setEvaluationModelForTesting(model);
 });

@@ -4,12 +4,12 @@ import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import { FIXTURE_TRANSCRIPT } from "../../../test/fixtures";
 
 const tweak = vi.hoisted(() => ({ user: "", system: "", revision: "" }));
-vi.mock("./prompts/speaking-evaluation-v2", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./prompts/speaking-evaluation-v2")>();
+vi.mock("./prompts/multilevel-evaluation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./prompts/multilevel-evaluation")>();
   return {
     ...actual,
-    buildSpeakingEvaluationPrompt: (input: Parameters<typeof actual.buildSpeakingEvaluationPrompt>[0]) => {
-      const prompt = actual.buildSpeakingEvaluationPrompt(input);
+    buildMultilevelEvaluationPrompt: (input: Parameters<typeof actual.buildMultilevelEvaluationPrompt>[0]) => {
+      const prompt = actual.buildMultilevelEvaluationPrompt(input);
       return { system: prompt.system + tweak.system, user: prompt.user + tweak.user };
     },
     buildRevisionRequest: (violations: Parameters<typeof actual.buildRevisionRequest>[0]) => actual.buildRevisionRequest(violations) + tweak.revision,
@@ -17,7 +17,7 @@ vi.mock("./prompts/speaking-evaluation-v2", async (importOriginal) => {
 });
 
 import { computePromptHash, currentPromptParts, hashPromptParts, PROMPT_HASH_SCHEME } from "./prompt-fingerprint";
-import { buildSpeakingEvaluationPrompt } from "./prompts/speaking-evaluation-v2";
+import { buildMultilevelEvaluationPrompt } from "./prompts/multilevel-evaluation";
 import { getSpeakingRubric } from "./rubrics";
 import type { EvaluationInput } from "./types";
 
@@ -31,7 +31,7 @@ const input = (transcript = FIXTURE_TRANSCRIPT): EvaluationInput => ({
   previousAttempt: null,
 });
 
-const hash = (i = input()) => computePromptHash(i, buildSpeakingEvaluationPrompt(i));
+const hash = (i = input()) => computePromptHash(i, buildMultilevelEvaluationPrompt(i));
 const reset = () => Object.assign(tweak, { user: "", system: "", revision: "" });
 
 describe("prompt hash", () => {
@@ -61,16 +61,17 @@ describe("prompt hash", () => {
     expect(hash()).not.toBe(before);
     reset();
 
-    const parts = currentPromptParts(input(), buildSpeakingEvaluationPrompt(input()));
-    expect(hashPromptParts({ ...parts, resultSchema: parts.resultSchema.replace("Most important first", "Least important first") })).not.toBe(hashPromptParts(parts));
+    const parts = currentPromptParts(input(), buildMultilevelEvaluationPrompt(input()));
+    expect(hashPromptParts({ ...parts, resultSchema: parts.resultSchema.replace("most serious first", "least serious first") })).not.toBe(hashPromptParts(parts));
     expect(hashPromptParts({ ...parts, evaluatorVersion: "speaking-evaluator/9.9.9" })).not.toBe(hashPromptParts(parts));
   });
 
-  it("covers the rubric text (it is part of the system prompt) and the schema's field guidance", () => {
+  it("covers the official descriptors (system prompt), the audio-step prompt and the schema's field guidance", () => {
     reset();
-    const parts = currentPromptParts(input(), buildSpeakingEvaluationPrompt(input()));
-    expect(parts.system).toContain("SCORE BANDS");
-    expect(parts.resultSchema).toContain("Most important first");
+    const parts = currentPromptParts(input(), buildMultilevelEvaluationPrompt(input()));
+    expect(parts.system).toContain("A limited number of cohesive devices are used to indicate the links between ideas.");
+    expect(parts.userTemplate).toContain("Mispronunciations do not put a strain on the listener");
+    expect(parts.resultSchema).toContain("most serious first");
     expect(parts.userTemplate).toContain("<speech_metrics>");
     expect(parts.userTemplate).toContain("<previous_attempt number=");
   });
@@ -82,7 +83,7 @@ describe("prompt hash", () => {
 
   it("does not read any secret", () => {
     reset();
-    const parts = currentPromptParts(input(), buildSpeakingEvaluationPrompt(input()));
+    const parts = currentPromptParts(input(), buildMultilevelEvaluationPrompt(input()));
     expect(JSON.stringify(parts)).not.toMatch(/api[_-]?key|sk-[a-z0-9]/i);
   });
 });

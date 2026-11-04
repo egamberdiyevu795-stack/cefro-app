@@ -62,7 +62,9 @@ EVALUATION_PROVIDER=gemini        # or: anthropic
 GEMINI_API_KEY=...                # or: ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Only the selected provider's key is needed. Transcription supports OpenAI and Gemini
+Only the selected provider's key is needed. With `GEMINI_API_KEY` set, the audio step (pronunciation and pausing
+from the recording, `AUDIO_ASSESSMENT=auto`) is on; without it every Part band is marked provisional.
+`TRANSCRIPTION_FALLBACK_PROVIDER` adds a second speech-to-text provider for outages. Transcription supports OpenAI and Gemini
 (`TRANSCRIPTION_PROVIDER=gemini`, temporary, validated on synthetic speech only;
 see `docs/AI_EVALUATION_QUALITY.md`). Real providers run the Speech Activity Guard, which needs ffmpeg
 (on `PATH`, `FFMPEG_PATH`, or the bundled `ffmpeg-static`).

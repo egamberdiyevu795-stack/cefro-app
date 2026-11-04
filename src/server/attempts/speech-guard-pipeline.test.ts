@@ -11,7 +11,7 @@ import { setEvaluationModelForTesting, type EvaluationModel } from "@/server/eva
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
-import { FIXTURE_TRANSCRIPT, makeEvaluation } from "../../../test/fixtures";
+import { FIXTURE_TRANSCRIPT, makeModelOutput } from "../../../test/fixtures";
 import { processAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser } from "./attempt-service";
 
@@ -44,7 +44,7 @@ beforeEach(async () => {
     model: "spy-llm-1",
     isDevelopmentProvider: false,
     config: {},
-    evaluate: vi.fn(async () => ({ output: makeEvaluation(), provider: "spy-llm", model: "spy-llm-1", inputTokens: 1, outputTokens: 1 })),
+    evaluate: vi.fn(async () => ({ output: makeModelOutput(), provider: "spy-llm", model: "spy-llm-1", inputTokens: 1, outputTokens: 1 })),
   };
   setTranscriptionProviderForTesting(transcription);
   setEvaluationModelForTesting(evaluation);

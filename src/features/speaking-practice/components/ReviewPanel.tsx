@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import type { Recording } from "../hooks/useAudioRecorder";
 import { formatDuration } from "../lib/format";
+import { RecordingPlayer } from "./RecordingPlayer";
 
 /** Listen back before submitting; submit or record again. */
 export function ReviewPanel({
@@ -24,7 +25,7 @@ export function ReviewPanel({
         <h2 className="text-xl font-semibold">Listen to your answer</h2>
         <p className="mt-1 text-sm text-muted">You spoke for {formatDuration(seconds)}. Submit it for feedback, or record again.</p>
       </div>
-      <audio controls src={recording.url} className="w-full" />
+      <RecordingPlayer src={recording.url} durationMs={recording.durationMs} label="Your recorded answer" />
       {isShort && (
         <Alert tone="warning" title="Your answer is quite short">
           At B2, examiners expect you to use most of the {formatDuration(speakingSeconds)}. You can still submit it.

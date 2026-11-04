@@ -194,3 +194,46 @@ test("the browser sends its session id with the recording and its analytics even
   const sessionIds = new Set(eventBodies.flatMap((body) => body.events.map((event) => event.sessionId)));
   expect(sessionIds).toEqual(new Set([uploadSessionId])); // every client event carries the same server-issued session
 });
+
+test("a missed question gets a model answer, and mistakes are grouped by pattern", async ({ page }) => {
+  // Rewrite the (mock) result the way a real evaluation of an answer that skips question 3 would look.
+  await page.route(/\/api\/speaking\/attempts\/[0-9a-f-]+$/, async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    const response = await route.fetch();
+    const body = await response.json();
+    const result = body.attempt?.evaluation?.result;
+    if (result?.kind === "multilevel") {
+      const quote = body.attempt.transcript.text.split(/(?<=[.!?])\s+/)[0];
+      result.assessment.questions[2] = {
+        id: 3,
+        status: "missing",
+        evidence: "",
+        note: "You did not talk about schools.",
+        model_answer: "As for schools, I think they should limit phones in lessons, because students concentrate better.",
+      };
+      result.assessment.errors = [
+        { quote, correction: "Corrected one", type: "grammar", pattern: "Missing -s after he/she/it" },
+        { quote: "second slip", correction: "Corrected two", type: "grammar", pattern: "Missing -s after he/she/it" },
+        { quote: "one-off slip", correction: "Corrected three", type: "grammar", pattern: "" },
+      ];
+      result.assessment.error_patterns = [
+        { name: "Missing -s after he/she/it", type: "grammar", rule: "Add -s to the verb after he, she or it: 'it helps'.", how_to_fix: "Check every verb after 'it'." },
+      ];
+      result.scoring.biggest_fix = { kind: "question_coverage", question_id: 3 };
+    }
+    return route.fulfill({ response, json: body });
+  });
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page, 1500);
+  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+
+  await expect(page.getByRole("heading", { name: /^Answer question 3: / })).toBeVisible();
+  await expect(page.getByTestId("model-answer")).toContainText("As for schools, I think they should limit phones in lessons");
+  await expect(page.getByTestId("question-3")).toContainText("Example: “As for schools");
+  const pattern = page.getByTestId("feature-grammar").getByTestId("error-pattern");
+  await expect(pattern).toContainText("Missing -s after he/she/it");
+  await expect(pattern).toContainText("· 2 times");
+  await expect(pattern).toContainText("Fix: Check every verb after 'it'.");
+  await expect(page.getByTestId("feature-grammar")).toContainText("Other corrections");
+  await page.screenshot({ path: "test-results/model-answer-and-patterns.png", fullPage: true });
+});

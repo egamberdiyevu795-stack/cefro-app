@@ -29,6 +29,10 @@ export type QualityCode =
   | "pronunciation_claim"
   | "internal_field_leak"
   | "strength_below_b2"
+  | "model_answer_missing"
+  | "model_answer_too_long"
+  | "unknown_error_pattern"
+  | "pattern_without_errors"
   | "memorized_conflict"
   | "missing_retry_review"
   | "retry_review_contradicts_metrics"
@@ -58,6 +62,8 @@ export interface QualityContext {
 }
 
 const TEXT_FEATURES = ["grammar", "vocabulary", "fluency", "cohesion"] as const;
+/** A model answer is a short example, not a showcase (the v2 runs showed long "better versions" turning showy). */
+const MAX_MODEL_ANSWER_WORDS = 40;
 /** Features whose level must be backed by quotes (fluency may rest on the speech metrics alone). */
 const QUOTE_BACKED = new Set<string>(["grammar", "vocabulary", "cohesion"]);
 
@@ -84,6 +90,14 @@ export function applyQualityGate(
     if (q.evidence.trim() && !found(q.evidence)) {
       add("warn", "quote_not_found", `questions[${i}].evidence`, `Removed unverifiable quote: "${truncate(q.evidence)}"`);
       q.evidence = "";
+    }
+    // A model answer shows how to answer a question the student did not (fully) answer; it must stay short and plain.
+    if (q.status === "on_topic") {
+      q.model_answer = "";
+    } else if (!q.model_answer.trim()) {
+      add("warn", "model_answer_missing", `questions[${i}].model_answer`, `No model answer for question ${q.id} (${q.status}).`);
+    } else if (wordCount(q.model_answer) > MAX_MODEL_ANSWER_WORDS) {
+      add("reject", "model_answer_too_long", `questions[${i}].model_answer`, `Model answer has ${wordCount(q.model_answer)} words (max ${MAX_MODEL_ANSWER_WORDS}): "${truncate(q.model_answer, 120)}"`);
     }
   });
 
@@ -126,6 +140,31 @@ export function applyQualityGate(
     if (!ok) add("warn", "quote_not_found", `errors[${i}].quote`, `Removed error with unverifiable quote: "${truncate(error.quote)}"`);
     return ok;
   });
+  // Error patterns: every error names a listed pattern (or none); every listed pattern groups at least one verified error.
+  const seenPatterns = new Set<string>();
+  result.error_patterns = result.error_patterns.filter((p) => {
+    const key = p.name.trim().toLowerCase();
+    if (seenPatterns.has(key)) return false;
+    seenPatterns.add(key);
+    return true;
+  });
+  const patternNames = new Map(result.error_patterns.map((p) => [p.name.trim().toLowerCase(), p.name]));
+  result.errors.forEach((error, i) => {
+    if (!error.pattern.trim()) return;
+    const name = patternNames.get(error.pattern.trim().toLowerCase());
+    if (!name) {
+      add("warn", "unknown_error_pattern", `errors[${i}].pattern`, `Pattern "${truncate(error.pattern)}" is not in error_patterns; error kept as a one-off.`);
+      error.pattern = "";
+    } else {
+      error.pattern = name;
+    }
+  });
+  result.error_patterns = result.error_patterns.filter((p, i) => {
+    const used = result.errors.some((e) => e.pattern === p.name);
+    if (!used) add("warn", "pattern_without_errors", `error_patterns[${i}]`, `Removed pattern "${truncate(p.name)}": no verified error belongs to it.`);
+    return used;
+  });
+
   result.strengths = result.strengths.filter((strength, i) => {
     if (!found(strength.quote)) {
       add("warn", "quote_not_found", `strengths[${i}].quote`, `Removed strength with unverifiable quote: "${truncate(strength.quote)}"`);
@@ -169,12 +208,13 @@ export function applyQualityGate(
 /** Every student-facing string outside the pronunciation feature, with where it came from. */
 function studentTexts(result: MultilevelModelOutput): [string, string][] {
   const out: [string, string][] = [];
-  result.questions.forEach((q, i) => out.push([`questions[${i}].note`, q.note]));
+  result.questions.forEach((q, i) => out.push([`questions[${i}].note`, `${q.note} ${q.model_answer}`]));
   for (const feature of TEXT_FEATURES) {
     const f = result.features[feature];
     out.push([`features.${feature}`, [f.note, f.how_to_improve, f.how_to_check].join(" ")]);
   }
   result.strengths.forEach((s, i) => out.push([`strengths[${i}].note`, s.note]));
+  result.error_patterns.forEach((p, i) => out.push([`error_patterns[${i}]`, `${p.name}. ${p.rule} ${p.how_to_fix}`]));
   result.retry_review?.objectives.forEach((o, i) => out.push([`retry_review.objectives[${i}]`, `${o.objective}. ${o.evidence}`]));
   if (result.retry_review) out.push(["retry_review.summary", result.retry_review.summary]);
   return out;
@@ -235,6 +275,10 @@ function hasSpecifics(text: string): boolean {
 /** Names of fields the evaluator is given as data (metrics, schema); they are not student vocabulary. */
 export const INTERNAL_FIELD_NAMES =
   /\b(timeUsedRatio|wordsPerMinute|lexicalVariety|fillerCount|wordCount|speakingSeconds|repeatedPhrases|repeatedWords|speech_metrics?|memorized_or_irrelevant|how_to_improve|how_to_check|on_topic|off_topic|not_assessed|above_B2|below_B1)\b/;
+
+function wordCount(text: string): number {
+  return text.split(/\s+/).filter(Boolean).length;
+}
 
 function truncate(text: string, max = 80): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;

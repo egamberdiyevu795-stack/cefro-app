@@ -39,12 +39,27 @@ export const questionAssessmentSchema = z.object({
     .describe("on_topic: answered. partial: touched on but not really answered. missing: not addressed. off_topic: talks about something else."),
   evidence: z.string().describe("Exact substring of the transcript where the student answers this question, or an empty string."),
   note: z.string().describe("One short sentence about what the student said for this question."),
+  model_answer: z
+    .string()
+    .describe(
+      "For partial, missing or off_topic: one or two short sentences (at most 30 words) the student could say to answer this question, at a realistic B2 level, consistent with opinions they expressed elsewhere. Empty string for on_topic.",
+    ),
 });
 
 export const languageErrorSchema = z.object({
   quote: z.string().min(1).describe("Exact substring of the transcript containing the error."),
   correction: z.string().min(1).describe("The same words, corrected. Keep the student's meaning."),
   type: z.enum(["grammar", "vocabulary"]),
+  pattern: z
+    .string()
+    .describe("The name of the error pattern in error_patterns this error belongs to (copied exactly), or an empty string for a one-off error."),
+});
+
+export const errorPatternSchema = z.object({
+  name: z.string().min(1).describe("Short name of a repeated error type, e.g. 'Missing -s after he/she/it'."),
+  type: z.enum(["grammar", "vocabulary"]),
+  rule: z.string().min(1).describe("One sentence explaining the rule, with a short correct example."),
+  how_to_fix: z.string().min(1).describe("One concrete habit for the next attempt that prevents this error."),
 });
 
 export const strengthSchema = z.object({
@@ -77,6 +92,10 @@ export const multilevelModelOutputSchema = z.object({
     .boolean()
     .describe("true only if the whole answer is clearly a memorised/prepared text that ignores the questions, or is irrelevant to the task."),
   errors: z.array(languageErrorSchema).max(8).describe("The most important grammar and vocabulary errors, most serious first."),
+  error_patterns: z
+    .array(errorPatternSchema)
+    .max(4)
+    .describe("0-4 error types that occur more than once (or one important type), most important first. Each must be used by at least one entry in errors."),
   strengths: z
     .array(strengthSchema)
     .max(2)
@@ -89,6 +108,7 @@ export type QuestionAssessment = z.infer<typeof questionAssessmentSchema>;
 export type FeatureAssessment = MultilevelModelOutput["features"]["grammar"];
 export type PronunciationAssessment = MultilevelModelOutput["features"]["pronunciation"];
 export type LanguageError = z.infer<typeof languageErrorSchema>;
+export type ErrorPattern = z.infer<typeof errorPatternSchema>;
 export type Strength = z.infer<typeof strengthSchema>;
 export type RetryReview = z.infer<typeof retryReviewSchema>;
 

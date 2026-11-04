@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/Card";
 import { FEATURE_LABELS, type Feature } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
-import { ErrorList, levelText, levelTone } from "./FeatureLevels";
+import { ErrorPatterns } from "./ErrorPatterns";
+import { levelText, levelTone } from "./FeatureLevels";
 
 /**
  * "The biggest thing to fix", chosen in code from the band logic: when the questions answered limit the band more
@@ -29,6 +30,7 @@ function QuestionFix({ result, task, questionId }: { result: MultilevelResult; t
         Answer question {questionId}: &ldquo;{task.prompts[questionId - 1]}&rdquo;
       </h3>
       {question?.note && <p className="text-sm text-muted">{question.note}</p>}
+      {question?.model_answer && <ModelAnswer text={question.model_answer} />}
       <p className="text-sm leading-relaxed">
         Your language is good enough for a higher band, but {missed.length > 1 ? `questions ${missed.join(" and ")} were` : `question ${questionId} was`} not
         answered. Each question you leave out lowers the highest band you can get, so answering it is the quickest way to raise your band.
@@ -74,9 +76,9 @@ function FeatureFix({ result, feature }: { result: MultilevelResult; feature: Fe
       )}
       {errors.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Corrections</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Your mistakes, by pattern</p>
           <div className="mt-1">
-            <ErrorList errors={errors} />
+            <ErrorPatterns errors={errors} patterns={result.assessment.error_patterns.filter((p) => p.type === feature)} />
           </div>
         </div>
       )}
@@ -87,5 +89,16 @@ function FeatureFix({ result, feature }: { result: MultilevelResult; feature: Fe
         </div>
       )}
     </Card>
+  );
+}
+
+/** A short example of how the missed question could be answered (not a script to memorise). */
+export function ModelAnswer({ text }: { text: string }) {
+  return (
+    <div data-testid="model-answer">
+      <p className="text-xs font-semibold uppercase tracking-wide text-subtle">For example, you could say</p>
+      <blockquote className="mt-1 border-l-2 border-success/60 pl-3 text-sm">&ldquo;{text}&rdquo;</blockquote>
+      <p className="mt-1 text-xs text-subtle">Use your own idea and words: a memorised answer gets band 0.</p>
+    </div>
   );
 }

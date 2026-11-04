@@ -24,6 +24,12 @@ export class MockEvaluationModel implements EvaluationModel {
   }
 }
 
+const MOCK_MODEL_ANSWERS = [
+  "My friends and I mostly use Telegram and video calls to stay in touch every day.",
+  "Social media helps us share ideas, but it can also waste a lot of our time.",
+  "I think schools should limit phones in lessons, because students concentrate better without them.",
+];
+
 const LINKERS_B2 = ["however", "although", "on the other hand", "as a result", "whereas", "overall", "since"];
 
 function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
@@ -59,6 +65,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
       status,
       evidence: status === "missing" ? "" : (hit ?? ""),
       note: `Development estimate: ${shared} key word(s) from question ${index + 1} appear in your answer.`,
+      model_answer: status === "on_topic" ? "" : MOCK_MODEL_ANSWERS[index] ?? "",
     };
   });
 
@@ -97,6 +104,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
     },
     memorized_or_irrelevant: false,
     errors: [],
+    error_patterns: [],
     strengths: cohesion === "B2" && linkerSentence ? [{ feature: "cohesion", quote: linkerSentence, note: "You contrast ideas with a linking word." }] : [],
     retry_review: previousAttempt
       ? {

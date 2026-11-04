@@ -64,6 +64,7 @@ For each of the ${n} questions in <task>, give one entry in "questions" with the
 - "missing": the student does not address it.
 - "off_topic": the student talks about something unrelated instead.
 "evidence" is the exact part of the transcript where the student answers it ("" for missing). Use <task_guidance_for_examiner> to decide what counts as answering each question. Always refer to a question by its number in <task>.
+For every question that is partial, missing or off_topic, "model_answer" is one or two short sentences (at most 30 words) the student could have said to answer it: realistic B2 language, simple and natural, no rare or showy words, and consistent with any opinion the student gave elsewhere (do not invent a different stance). For on_topic questions "model_answer" is "".
 
 # 2. Features
 For grammar, vocabulary, fluency and cohesion give "level" (above_B2 / B2 / B1 / below_B1), 1–4 exact quotes as "evidence" that justify that level, a one-sentence "note" for the student, "how_to_improve" (one concrete instruction that would move this feature towards the next level, naming the words or the structure) and "how_to_check" (how the student can tell they did it).
@@ -78,6 +79,7 @@ Set memorized_or_irrelevant to true ONLY when the whole answer is clearly a prep
 
 # 4. Errors and strengths
 - "errors": up to 8 of the most important grammar and vocabulary errors, most serious first. "quote" is copied exactly from the transcript; "correction" is the same words corrected, keeping the student's meaning. Skip one-off slips that don't matter.
+- "error_patterns": up to 4 error TYPES the student repeats (e.g. "Missing -s after he/she/it", "-ing after don't / should / will"), most important first. Give each a short "name", a one-sentence "rule" with a short correct example, and "how_to_fix" (one habit for the next attempt). Set each error's "pattern" to the exact name of its pattern, or "" for a one-off error. Every pattern must be used by at least one error. Grouping helps the student fix a habit instead of single sentences.
 - "strengths": 0–2, only for a feature you judged B2 or above_B2, each with an exact quote showing it. If no feature reaches B2, give an empty list. Do not invent strengths.
 
 # 5. Evidence rules

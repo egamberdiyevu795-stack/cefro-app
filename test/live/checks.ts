@@ -10,6 +10,8 @@ export function studentTexts(result: MultilevelResult): { field: string; text: s
   const a = result.assessment;
   return [
     ...a.questions.map((q) => ({ field: `questions[${q.id}].note`, text: q.note })),
+    ...a.questions.filter((q) => q.model_answer).map((q) => ({ field: `questions[${q.id}].model_answer`, text: q.model_answer })),
+    ...a.error_patterns.map((p, i) => ({ field: `error_patterns[${i}]`, text: `${p.name}. ${p.rule} ${p.how_to_fix}` })),
     ...FEATURES.flatMap((f) => [
       { field: `features.${f}.note`, text: a.features[f].note },
       { field: `features.${f}.how_to_improve`, text: `${a.features[f].how_to_improve} ${a.features[f].how_to_check}` },
@@ -108,7 +110,7 @@ export function renderMultilevelResult(r: MultilevelResult): string[] {
     `Language level ${s.language_level} (mean ${s.language_mean}) · on topic ${s.on_topic_count}/${a.questions.length} · topic cap ${s.topic_cap} · language cap ${s.language_cap}${s.zero_reason ? ` · zero: ${s.zero_reason}` : ""}`,
     `Biggest fix: ${s.biggest_fix.kind === "feature" ? s.biggest_fix.feature : s.biggest_fix.kind === "question_coverage" ? `question ${s.biggest_fix.question_id}` : "own words"} · audio: ${r.audio.status}${r.audio.reason ? ` (${r.audio.reason})` : ""}`,
     "",
-    "**Questions:** " + a.questions.map((q) => `Q${q.id} ${q.status}${q.evidence ? ` “${q.evidence}”` : ""} (${q.note})`).join("; "),
+    "**Questions:** " + a.questions.map((q) => `Q${q.id} ${q.status}${q.evidence ? ` “${q.evidence}”` : ""} (${q.note})${q.model_answer ? ` → model: “${q.model_answer}”` : ""}`).join("; "),
     "",
     "**Features**",
     ...FEATURES.map((f) => {
@@ -116,7 +118,9 @@ export function renderMultilevelResult(r: MultilevelResult): string[] {
       return `- ${f}: **${x.level}** [${r.feature_sources[f]}] — ${x.note}${x.evidence.length ? ` — ${x.evidence.map((q) => `“${q}”`).join(", ")}` : ""}${x.how_to_improve ? `\n  - Fix: ${x.how_to_improve} (check: ${x.how_to_check})` : ""}`;
     }),
     "",
-    "**Errors:** " + (a.errors.map((e) => `“${e.quote}” → “${e.correction}” (${e.type})`).join("; ") || "—"),
+    "**Errors:** " + (a.errors.map((e) => `“${e.quote}” → “${e.correction}” (${e.type}${e.pattern ? `, ${e.pattern}` : ""})`).join("; ") || "—"),
+    "",
+    "**Error patterns:** " + (a.error_patterns.map((p) => `${p.name}: ${p.rule} Fix: ${p.how_to_fix}`).join(" | ") || "—"),
     "",
     "**Strengths:** " + (a.strengths.map((x) => `${x.feature}: “${x.quote}” — ${x.note}`).join("; ") || "—"),
     "",

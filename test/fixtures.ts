@@ -28,9 +28,21 @@ export function makeModelOutput(overrides: Partial<MultilevelModelOutput> = {}):
   });
   return {
     questions: [
-      { id: 1, status: "on_topic", evidence: "they help us talk with friends every day", note: "You say how you use phones with friends." },
-      { id: 2, status: "partial", evidence: "I think phones are good", note: "You mention only that phones are good." },
-      { id: 3, status: "missing", evidence: "", note: "You did not talk about schools." },
+      { id: 1, status: "on_topic", evidence: "they help us talk with friends every day", note: "You say how you use phones with friends.", model_answer: "" },
+      {
+        id: 2,
+        status: "partial",
+        evidence: "I think phones are good",
+        note: "You mention only that phones are good.",
+        model_answer: "Social media helps us stay in touch, but it can also waste a lot of our time.",
+      },
+      {
+        id: 3,
+        status: "missing",
+        evidence: "",
+        note: "You did not talk about schools.",
+        model_answer: "As for schools, I think they should limit phones in lessons, because students can concentrate better.",
+      },
     ],
     features: {
       grammar: feature(
@@ -64,7 +76,15 @@ export function makeModelOutput(overrides: Partial<MultilevelModelOutput> = {}):
       pronunciation: { level: "not_assessed", evidence: [], note: "", how_to_improve: "", how_to_check: "" },
     },
     memorized_or_irrelevant: false,
-    errors: [{ quote: "I have went to Samarkand", correction: "I went to Samarkand", type: "grammar" }],
+    errors: [{ quote: "I have went to Samarkand", correction: "I went to Samarkand", type: "grammar", pattern: "Present perfect with a finished time" }],
+    error_patterns: [
+      {
+        name: "Present perfect with a finished time",
+        type: "grammar",
+        rule: "With 'last year' or 'yesterday' use the past simple: 'Last year I went'.",
+        how_to_fix: "When you say a past time, use one past verb without 'have'.",
+      },
+    ],
     strengths: [{ feature: "fluency", quote: "they help us talk with friends every day", note: "A complete idea said in one go." }],
     retry_review: null,
     ...overrides,

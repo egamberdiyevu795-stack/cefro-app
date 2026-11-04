@@ -76,13 +76,75 @@ describe("quality gate (Multilevel)", () => {
     it("clears unverifiable question evidence, errors and strengths", () => {
       const output = makeModelOutput();
       output.questions[0].evidence = "we always chat on Telegram";
-      output.errors.push({ quote: "nobody helps", correction: "nobody will help", type: "grammar" });
+      output.errors.push({ quote: "nobody helps", correction: "nobody will help", type: "grammar", pattern: "" });
       output.strengths.push({ feature: "fluency", quote: "made-up words", note: "x" });
       const { result, report } = gate(output);
       expect(report.passed).toBe(true);
       expect(result.questions[0].evidence).toBe("");
       expect(result.errors).toHaveLength(1);
       expect(result.strengths).toHaveLength(1);
+    });
+  });
+
+  describe("model answers for questions that were not (fully) answered", () => {
+    it("keeps a short model answer and clears one given for an answered question", () => {
+      const output = makeModelOutput();
+      output.questions[0].model_answer = "An unnecessary example.";
+      const { result, report } = gate(output);
+      expect(report.passed).toBe(true);
+      expect(result.questions.map((q) => q.model_answer)).toEqual(["", makeModelOutput().questions[1].model_answer, makeModelOutput().questions[2].model_answer]);
+    });
+
+    it("warns when a missing question has no model answer, and rejects a showy paragraph", () => {
+      const empty = makeModelOutput();
+      empty.questions[2].model_answer = "";
+      expect(codes(empty)).toEqual(["warn:model_answer_missing"]);
+      const long = makeModelOutput();
+      long.questions[2].model_answer = Array.from({ length: 45 }, () => "word").join(" ");
+      expect(codes(long)).toContain("reject:model_answer_too_long");
+    });
+
+    it("rejects pronunciation talk in a model answer like any student-facing text", () => {
+      const output = makeModelOutput();
+      output.questions[2].model_answer = "Pronounce 'schools' clearly and say they should limit phones.";
+      expect(codes(output)).toContain("reject:pronunciation_claim");
+    });
+  });
+
+  describe("error patterns", () => {
+    it("links errors to patterns case-insensitively and keeps one-offs", () => {
+      const output = makeModelOutput();
+      output.errors[0].pattern = "present PERFECT with a finished time";
+      output.errors.push({ quote: "we used maps", correction: "we used a map", type: "vocabulary", pattern: "" });
+      const { result, report } = gate(output);
+      expect(report.passed).toBe(true);
+      expect(result.errors.map((e) => e.pattern)).toEqual(["Present perfect with a finished time", ""]);
+    });
+
+    it("turns an unknown pattern name into a one-off and drops patterns with no verified error", () => {
+      const output = makeModelOutput();
+      output.errors[0].pattern = "Made-up pattern";
+      const { result, report } = gate(output);
+      expect(report.violations.map((v) => v.code)).toEqual(expect.arrayContaining(["unknown_error_pattern", "pattern_without_errors"]));
+      expect(result.errors[0].pattern).toBe("");
+      expect(result.error_patterns).toEqual([]);
+    });
+
+    it("drops a pattern whose only error had a fabricated quote", () => {
+      const output = makeModelOutput();
+      output.errors[0].quote = "I have gone to Bukhara";
+      const { result } = gate(output);
+      expect(result.errors).toEqual([]);
+      expect(result.error_patterns).toEqual([]);
+    });
+
+    it("removes duplicate pattern names and rejects internal field names in pattern text", () => {
+      const output = makeModelOutput();
+      output.error_patterns.push({ ...output.error_patterns[0] });
+      expect(gate(output).result.error_patterns).toHaveLength(1);
+      const leak = makeModelOutput();
+      leak.error_patterns[0].how_to_fix = "Check how_to_improve first.";
+      expect(codes(leak)).toContain("reject:internal_field_leak");
     });
   });
 

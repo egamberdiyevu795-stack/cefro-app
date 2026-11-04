@@ -4,6 +4,7 @@ import { FEATURES, FEATURE_LABELS, LEVEL_LABELS, levelValue, NOT_ASSESSED, type 
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import { formatDuration } from "../lib/format";
+import { ErrorPatterns } from "./ErrorPatterns";
 
 export function levelTone(level: PronunciationLevel): "success" | "warning" | "danger" | "neutral" {
   if (level === NOT_ASSESSED) return "neutral";
@@ -20,7 +21,7 @@ export function levelText(level: PronunciationLevel): string {
  * /10 criterion bars: the band is computed from these levels, so this is what the student can act on.
  */
 export function FeatureLevels({ result, metrics }: { result: MultilevelResult; metrics: SpeechMetrics | null }) {
-  const { features, errors } = result.assessment;
+  const { features, errors, error_patterns: patterns } = result.assessment;
   return (
     <Card>
       <SectionTitle>Your language, feature by feature</SectionTitle>
@@ -49,7 +50,9 @@ export function FeatureLevels({ result, metrics }: { result: MultilevelResult; m
                       ))}
                     </div>
                   )}
-                  {featureErrors.length > 0 && <ErrorList errors={featureErrors} />}
+                  {featureErrors.length > 0 && (
+                    <ErrorPatterns errors={featureErrors} patterns={patterns.filter((p) => p.type === feature)} />
+                  )}
                 </>
               )}
               {feature === "fluency" && metrics && (

@@ -32,6 +32,11 @@ export function TaskCoverageCard({ task, questions }: { task: PublicSpeakingTask
                   Question {item.id}: {task.prompts[item.id - 1]}
                 </p>
                 <p className="text-sm text-muted">{item.note}</p>
+                {item.model_answer && item.status !== "on_topic" && (
+                  <p className="mt-1 text-sm">
+                    <span className="text-subtle">Example: </span>&ldquo;{item.model_answer}&rdquo;
+                  </p>
+                )}
                 {item.status === "partial" && (
                   <p className="mt-1 text-xs font-medium text-warning">
                     Counts as on topic, but a fuller answer (a direct answer plus a reason or example) is safer.

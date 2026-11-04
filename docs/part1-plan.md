@@ -148,13 +148,14 @@ Each rubric JSON holds its own copy, and a unit test checks every file against t
 
 ### Reference text for the levels outside each scale
 
-The prompt has to tell the model what "below" and "above" look like. Following what `multilevel_q7.json` already
-does, each rubric marks this text as reference only (`descriptor_sources`):
+The prompt has to tell the model what "below" and "above" look like. **Approved (owner, 2026-11-04)** as
+background for the model only, never as band text: it is not shown to students, not used as a band label or band
+descriptor, and each rubric marks it as reference in `descriptor_sources`, as `multilevel_q7.json` already does:
 
 | Rubric | Level | Reference text |
 |---|---|---|
 | Q1–3 | above_A2 | Q4–6 B1 descriptors (same 4 features) |
-| Q1–3 | below_A1 | No text: "no meaningful language" (isolated words that answer nothing, silence, guessing) |
+| Q1–3 | below_A1 | **No text.** In Part 1.1 this level means only "no meaningful language"; band 0 there means no meaningful language or all responses off-topic, nothing else |
 | Q4–6 | above_B1 | Q7 B2 descriptors |
 | Q4–6 | below_A2 | Q1–3 A1 descriptors (grammar, vocabulary, pronunciation, fluency); for cohesion, the official Q4–6 A2 cohesion text is the lowest one, so it is "below A2" only when even that is not met |
 
@@ -167,14 +168,20 @@ does, each rubric marks this text as reference only (`descriptor_sources`):
 | `above_target_requires` | `["grammar", "vocabulary"]` | `["grammar", "vocabulary"]` |
 | `language_cap` | below_A1 0 · A1 2 · A2 4 · above_A2 5 | below_A2 0 · A2 2 · B1 4 · above_B1 5 |
 | `meets_target_band` | 3 | 3 |
-| `min_words` | from calibration (low: words and phrases are a valid A1 sample) | from calibration |
+| `min_relevant_words` (safety floor) | 5 | 5 |
 
 1. `on_topic_count` = questions with a status that counts: `on_topic` in Part 1.1; `on_topic` or `partial` in
    Part 1.2.
 2. `language_level` = mean of the assessed features' ladder indices, rounded to the nearest level, **exact .5 rounds
    down**. Part 1.1 averages 3–4 features (pronunciation only when the audio step assessed it); Part 1.2 averages 4–5.
-3. Band 0 if the answer is memorised/irrelevant, no question is on topic, the language is at index 0 (below A1 / below
-   A2), or fewer than `min_words`.
+3. Band 0 if:
+   - the answer is memorised/irrelevant, or no question is on topic;
+   - the language is at index 0: in Part 1.2 "below A2"; in Part 1.1 "below_A1", which means **only** no meaningful
+     language (there is no below-A1 descriptor, so weak but meaningful A1 language is never band 0);
+   - **fewer than `min_relevant_words` (5) relevant words in the whole part** (no ratable sample). Relevant words =
+     words inside the verified evidence quotes of questions that count as on topic, fillers (um, uh …) excluded, so
+     the count comes from code, not from the model. This is a safety floor only; the real per-part minimum is set
+     later from real answers. Part 2's own `min_words` is unchanged.
 4. Otherwise `band = min(topic_cap, language_cap)`. **Band 5** needs all three questions on topic, an overall
    language level above the target, **and** grammar and vocabulary each above the target. This is the same as the
    Part 2 rule in the other session's branch (`above_target_requires`). If any of these fails, the band stays at 4
@@ -238,7 +245,7 @@ does, each rubric marks this text as reference only (`descriptor_sources`):
 | Content: one A2 task (1.1) and one B1 task (1.2) | Pictures freely licensed, sources recorded |
 | Practice UI: question stepper inside one recording; picture panel | Extract the generic recording session from `PracticeExperience.tsx` first |
 | `question_offsets_ms` on upload → attempt → evaluator; per-question time used in metrics | |
-| Per-part speech-guard thresholds and `min_words` | Today tuned for one 2-minute answer |
+| Per-part speech-guard thresholds and `min_relevant_words` | Today tuned for one 2-minute answer |
 | Tests: descriptor text vs §2; image licence fields; anchor judgements → `scoreBand` (§4); status allow-lists | Unit tests; anchors also as live calibration cases |
 
 ---
@@ -378,7 +385,9 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 |---|---|
 | Silence / noise only | Speech guard rejects before evaluation (no band) |
 | One memorised "my hobby" paragraph for all of Part 1.1 | `memorized_or_irrelevant` → band 0 |
-| Part 1.1, single relevant words for all three ("Football." / "Plov." / "Mother.") | All on_topic; grammar/vocab A1 → language cap 2, topic cap 4 → band 2 |
+| Part 1.1, words and phrases for all three ("Football. TV." / "Plov. Very good." / "My mother.") | 7 relevant words ≥ 5; all on_topic; grammar/vocab A1 → language cap 2, topic cap 4 → band 2 |
+| Part 1.1, "Football." / "Plov." / "Mother." | 3 relevant words < 5 → band 0 (no ratable sample) |
+| Exactly 5 relevant words in the part | Not below the floor → scored normally |
 | Part 1.2, Q4 describes only picture A | Q4 `partial` (counts); feedback contains "compare the two pictures" |
 | Part 1.2, Q5 = "I prefer home." | Q5 `partial` (counts); feedback asks for a reason |
 | Part 1.1 output contains `partial` or `minimal` | Quality gate rejects (status not allowed in this rubric) |
@@ -401,6 +410,12 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 8. Full part only; single-question practice later.
 9. Original or freely licensed pictures only, never copies of exam pictures; licence/source stored per image.
 10. Level-name generalisation goes in the Part 2 files, after the other session merges, on a fresh branch from `main`.
+11. Borrowed descriptors approved, as background for the model only, never as band text: "above A2" = Questions 4–6
+    B1 text; "above B1" = Question 7 B2 text; "below A2" = Questions 1–3 A1 text. Part 1.1 has no "below A1" text:
+    band 0 there means no meaningful language or all responses off-topic, nothing else.
+12. Minimum word count: set from real answers later. For now only a safety floor, as a config value
+    (`min_relevant_words: 5`): fewer than 5 relevant words in the whole part = band 0 (no ratable sample).
+13. Timings: still waiting for `Speaking_format.pdf`; they stay config placeholders.
 
 ## 6. Order of work
 
@@ -414,6 +429,4 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 ## 7. Still to confirm (small)
 
 - The timings from `Speaking_format.pdf` (and whether the questions are also read aloud).
-- The reference texts in §2 (Q4–6 B1 as "above A2", Q7 B2 as "above B1", Q1–3 A1 as "below A2"): fine as
-  **reference only** for the model, like Q7's below-B1 reference?
-- `min_words` for each part, set from calibration (it must not reject a valid A1 answer made of words and phrases).
+- The real per-part minimum word count, from real answers (replaces or adds to the 5-word safety floor).

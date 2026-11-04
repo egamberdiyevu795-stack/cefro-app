@@ -1,7 +1,7 @@
 # Part 3 plan: official Question 8 (balanced argument, target C1, band 0–6)
 
-Status: **plan only.** No code has been changed. Everything here is a proposal to be confirmed (see
-[Open questions](#8-open-questions)).
+Status: **plan only, decisions recorded.** No code has been changed. The decisions taken on the first draft are in
+[section 5](#5-decisions); the items marked **check** there are the reviewer's to confirm.
 
 Part 3 reuses the Part 2 design ([`ARCHITECTURE.md` › AI evaluation](ARCHITECTURE.md#ai-evaluation)): **the model
 judges, with exact quotes; code computes the band.** What changes is *what* is judged. Part 2 counts answered
@@ -148,9 +148,16 @@ Notes:
 
 - `restated` vs `developed` is the core judgement. Reading "safer streets for pedestrians and cyclists" counts as
   **restated**; adding "because children walk to school across busy roads" makes it **developed**.
-- A **rebuttal is not coverage**: "the metro is cheap, so people would adapt" argues FOR. It does not present the
-  AGAINST point A3 (see anchor 3).
-- `own_points` are recorded and praised in feedback. Whether they count towards coverage is open question Q2.
+- **Naming a point is not reading it.** "Safer streets for pedestrians and cyclists. My brother cycles to school and
+  was nearly hit twice…" is `developed`. The point text is only "reading" when nothing of the student's own follows it
+  (decision 5, measured in section 6).
+- **Rebuttals** (decision 8): "some people say the metro isn't good enough, but…" presents A3 and counts as
+  `restated` (`developed` only if the student gives a reason *for* A3 before answering it). A counter-argument that
+  never states the opposing point ("the metro is cheap, so people would adapt") argues FOR and does not cover A3
+  (see anchor 3).
+- `own_points` **never count towards coverage** and never raise the band (decision 2). They are recorded so the
+  feedback can say "good extra argument" with the quote.
+- Pronunciation is judged on the ladder up to **C1 only**, never `above_C1` (decision 7).
 - Strengths: allowed only for features judged **C1 or above** (Part 2 uses B2+; the threshold moves to the target).
 
 ### Code-side derived values
@@ -166,7 +173,9 @@ coverage =
   "both_sides"       otherwise (both sides have covered ≥ 1)
 ```
 
-`misread` counts as not covered and is surfaced as feedback.
+Only the six listed points are counted; `own_points` are ignored here. `misread` counts as not covered and is
+surfaced as feedback. Whenever `covered(side) < 2` on either side, the feedback adds **"Choose two points from each
+list."**, whatever the band.
 
 ---
 
@@ -185,7 +194,7 @@ All numbers live in the rubric JSON (`multilevel_q8.json`), not in code.
 
 ### Caps
 
-| Coverage | cap | | Dependence (combined, §5) | cap | | Language level | cap |
+| Coverage | cap | | Dependence (final, §6) | cap | | Language level | cap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | none | 0 | | reads_prompts | 1 | | below_B1 | 0 |
 | one_side | 3 | | heavily_dependent | 2 | | B1 | 2 |
@@ -211,12 +220,17 @@ exact .5 rounds **down** (Part 2's `bestFitLevel`, generalised to a ladder from 
 | both_sides_full | own_development | C1 | **5** | C1: each section, reasons for and against |
 | both_sides_full | own_development | above C1 | **6** | likely above C1 |
 
+Coverage counts **listed points only** (decision 2, decision 3): `one_side` = at least one listed point addressed on
+only one side; `both_sides` = at least one on each side; `both_sides_full` = two listed points per side with at least
+one developed per side. Once coverage is full, band 4 vs 5 vs 6 is decided by language alone (B2 / C1 / above C1).
+
 Two consequences worth stating to students: one-sided answers stop at 3 whatever the language; reading the list
-stops at 1 whatever the language.
+stops at 1 whatever the language (decision 5, the official text). A C1 speaker who uses only one point per side
+stops at 4.
 
 `coherent_and_sustained = false` is **not** a separate cap: the official text pairs it with dependence ("unable to
 construct a coherent and sustained response **and** is heavily dependent / reads"). It is stored and used as a
-consistency check (see the quality gate, §6), and as a tiebreak in §5.
+consistency check (see the quality gate, §7).
 
 ### Target and labels
 
@@ -229,67 +243,107 @@ consistency check (see the quality gate, §6), and as a tiebreak in §5.
 Pick the cap that binds lowest; ties go in this order:
 
 1. `own_words` — zero for memorised answers.
-2. `prompt_dependence` — dependence cap is the binding one: "explain each point in your own words with a reason";
-   show the student which of their sentences matched the list (from §5's matched spans).
-3. `section_coverage` — coverage cap binds: name the missing side and suggest one point from it with its `model_answer`.
-4. `point_development` — coverage is `both_sides` but not full: name the restated point to develop.
+2. `prompt_dependence` — dependence cap is the binding one. Headline for band 1: **"Say the ideas in your own
+   words."** For band 2: "Explain each point in your own words with a reason or an example." Both show the student
+   which of their sentences matched the list (§6's `copied` spans).
+3. `section_coverage` — coverage cap binds at `one_side`: name the missing side, say **"Choose two points from each
+   list."**, and suggest one point from the missing side with its `model_answer`.
+4. `point_development` — coverage is `both_sides` but not full: if fewer than two listed points on a side, **"Choose
+   two points from each list."**; otherwise name the restated point to develop with a reason.
 5. `feature` — lowest language feature (same `FIX_PRIORITY` as Part 2).
 
 ---
 
-## 5. Measuring prompt dependence in code
+## 5. Decisions
 
-The model's dependence judgement is useful but is exactly the kind of call models drift on. Text overlap between
-the transcript and the task text is cheap, deterministic and testable, so code measures it too.
+Decisions 1–5 were taken by the reviewer on the first draft. Decisions 6–10 are the author's recommended defaults;
+the ones marked **check** should still be confirmed.
+
+| # | Topic | Decision | Reason |
+| --- | --- | --- | --- |
+| 1 | Level scale | **Each rubric declares its own ladder.** Q7 keeps `below_B1 … above_B2`; Q8 declares `below_B1, B1, B2, C1, above_C1`. Part 2 code and its stored v3 results stay unchanged. | No migration of stored results; the scorer reads the ladder from config. |
+| 2 | Own arguments | **Never count towards coverage and never raise the band.** Recorded in `own_points` and praised in feedback ("good extra argument", with the quote). | The official task says to choose points from the lists. |
+| 3 | Coverage | `one_side` = ≥ 1 listed point addressed on only one side → cap 3. `both_sides` = ≥ 1 listed point on each side → cap 4. `both_sides_full` = 2 listed points per side, ≥ 1 developed per side → cap 6. Band 4 vs 5 is then decided by language (B2 vs C1). Feedback says **"Choose two points from each list."** whenever fewer than two listed points are used on a side. | Follows the official 3/4/5 wording; band 5 asks for points from each section *with* reasons for and against. |
+| 4 | Model vs code (dependence) | **The model decides in v1.** Code overrides only in the clear case: `copied_ratio ≥ 0.50` **and** `points_read ≥ 4` → `reads_prompts`. Every other disagreement is logged and flagged, not applied. Thresholds are reviewed on real recordings before code gets more power. | The overlap measure is only calibrated on synthetic anchors. |
+| 5 | Reading out | **Reading the list = band 1 whatever the language** (official text). Briefly naming a point and then explaining it in your own words is **not** reading: the overlap measure must not count a short point name followed by the student's own content (section 6, "named" runs). Band-1 feedback headline: **"Say the ideas in your own words."** | Official band 1; naming a point is normal exam technique. |
+| 6 | Overlap thresholds | Ship with the thresholds in section 6 as **flag-only** (except the clear-case override in decision 4). Collect ~20 real recordings across bands and review false flags before any further change. | Follows from decision 4: with the model deciding, wrong thresholds only produce log entries. |
+| 7 | Pronunciation at C1 | The audio step may judge pronunciation **up to C1, never `above_C1`**. **Check.** | The C1 text is only "Pronunciation is intelligible", which cannot separate C1 from above C1. With five features, one at C1 and four above C1 still averages to above C1, so this never blocks band 6 by itself. |
+| 8 | Rebuttals | "Some people say X, but…" with X a listed point counts as **`restated`** (side covered); **`developed`** only if the student gives a reason *for* X. A counter-argument that never states X does not cover X's side (anchor 3). **Check.** | Presenting the opposing view is what makes the argument balanced; arguing against it without stating it is one-sided. |
+| 9 | Topics | Our own topics come from everyday society: cities and transport, education, work, technology, environment, health, family. **Avoid** politics, religion, weapons, crime and violence, and personal tragedy. Ship **3 topics** first, each with its own anchor set. **Check.** | The official sample is a sensitive topic; for practice content we keep topics neutral. Content policy is the owner's call. |
+| 10 | Session flow | Part 3 runs **alone**, like Part 2: the UI shows the Part band (`Part 3: 4/6 · Higher B2`) and the C1 target, never an overall exam level. A full mock test with an overall level is a separate later plan. | Same contract as Part 2; an overall level needs all parts. |
+
+---
+
+## 6. Measuring prompt dependence in code
+
+The model's dependence judgement is the one used for the band (decision 4). Text overlap between the transcript and
+the task text is cheap, deterministic and testable, so code measures it too: to override the one clear case, to flag
+disagreements, and to show the student which sentences came from the list.
 
 ### Metrics (pure function in `src/domain/evaluation/multilevel/prompt-overlap.ts`)
 
 Normalise both texts: lowercase, unify apostrophes, strip punctuation, split into word tokens. Prompt text =
 statement + the six points, each kept as a separate segment (n-grams never cross segments).
 
+1. **Matched runs.** Find every maximal run of transcript tokens made of 4-grams that also appear in a prompt
+   segment. Single shared words ("cars", "centre", "public transport") never match; that is why runs start at 4 tokens.
+2. **Named vs copied** (decision 5). Look at the 20 tokens after each run. If they contain **≥ 5 distinct novel
+   content words** (not stopwords, not in the prompt vocabulary), the run is **named**: the student used the point
+   as a heading and went on in their own words. Otherwise it is **copied**.
+3. Metrics, from **copied** runs only:
+
 | Metric | Definition | What it catches |
 | --- | --- | --- |
-| `copied_ratio` | share of transcript tokens inside any run of **≥ 4 consecutive tokens** that also appears in a prompt segment | reading the list aloud |
-| `points_read` | number of the six points whose own 4-grams appear in the transcript at ≥ 80 % | point-by-point reading |
+| `copied_ratio` | share of transcript tokens inside copied runs | reading the list aloud |
+| `points_read` | points whose own 4-grams are ≥ 80 % inside copied runs | point-by-point reading |
 | `novel_content_words` | distinct transcript words that are neither stopwords nor in the prompt vocabulary | how much the student added |
-| `matched_spans` | the transcript substrings that matched | shown to the student; used as evidence |
+| `named_runs` | count of runs classed as named | reported only, never penalised |
+| `copied_spans` | the transcript substrings of copied runs | shown to the student; used as evidence |
 
-Single shared words ("cars", "centre", "public transport") are expected and say nothing; that is why matches start
-at 4-grams.
-
-### Thresholds (initial, calibrated on the anchors below; to be tuned on real answers)
+### Rules
 
 ```
-code_dependence =
-  "reads_prompts"      if copied_ratio ≥ 0.50 or points_read ≥ 4
-  "heavily_dependent"  if copied_ratio ≥ 0.20 or points_read ≥ 2 or novel_content_words < 25
-  "own_development"    otherwise
+override (applied):  copied_ratio ≥ 0.50 AND points_read ≥ 4         → final dependence = reads_prompts
+
+flag (logged only):  code_dependence ≠ model dependence, where
+  code_dependence =
+    "reads_prompts"      if copied_ratio ≥ 0.50 or points_read ≥ 4
+    "heavily_dependent"  if copied_ratio ≥ 0.20 or points_read ≥ 2 or novel_content_words < 25
+    "own_development"    otherwise
 ```
 
-Measured on the six anchors in section 7 (script in scratch, not committed):
+Stored with each result: the model's level, the code level, the metrics, whether the override fired, and a
+`dependence_disagreement` flag. Flags go into the evaluation quality report for the threshold review (decision 6).
 
-| Anchor | tokens | copied_ratio | points_read | novel_content_words | code_dependence |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 49 | 0.00 | 0 | 15 | heavily_dependent (irrelevant: band 0 by language) |
-| 1 | 81 | **0.81** | **6** | 2 | reads_prompts |
-| 2 | 100 | **0.29** | **3** | 14 | heavily_dependent |
-| 3 | 156 | 0.00 | 0 | 60 | own_development |
-| 4 | 171 | 0.00 | 0 | 60 | own_development |
-| 5 | 223 | 0.04 | 0 | 91 | own_development |
+### Measured on the anchors (script in scratch, not committed)
 
-### Combining model and code
+| Text | tokens | copied_ratio | points_read | novel words | named runs | code level | Model level | Applied |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Anchor 0 | 49 | 0.00 | 0 | 15 | 0 | heavily_dependent | (band 0 by language) | flag only |
+| Anchor 1 | 81 | **0.81** | **6** | 2 | 0 | reads_prompts | reads_prompts | override condition met; agrees |
+| Anchor 2 | 100 | **0.29** | **3** | 14 | 0 | heavily_dependent | heavily_dependent | agrees |
+| Anchor 3 | 156 | 0.00 | 0 | 60 | 0 | own_development | own_development | agrees |
+| Anchor 4 | 171 | 0.00 | 0 | 60 | 0 | own_development | own_development | agrees |
+| Anchor 5 | 223 | 0.00 | 0 | 91 | 1 | own_development | own_development | agrees (statement echo is named) |
+| Fixture N1 | 72 | 0.00 | 0 | 33 | 2 | own_development | own_development | agrees |
 
-Proposal: **take the more dependent of the two**, with one guard. The code result can lower dependence only on
-strong evidence (`copied_ratio ≥ 0.20` or `points_read ≥ 2`); the `novel_content_words < 25` rule alone may only
-confirm a model judgement, never override it (short honest answers would otherwise be punished twice). Store both
-values plus the metrics, and log disagreements to the evaluation quality report. Alternatives in open question Q4.
+**Fixture N1** (overlap unit test, not a band anchor): names two points verbatim, then develops each.
+
+> I'd like to start with safer streets for pedestrians and cyclists. My younger brother cycles to school every
+> morning, and twice last year he was nearly hit by a taxi driver who was speeding. Then, against the idea, shops and
+> businesses in the centre may lose customers. My uncle runs a small bakery near Chorsu bazaar and most of his
+> regular buyers stop their cars right outside the door for a minute.
+
+Without the named/copied split this text scores `copied_ratio 0.21`, `points_read 2` (a false "heavily dependent"
+flag); with it, 0.00 and 0. Anchors 1 and 2 are unchanged by the split, because nothing of the student's own follows
+their copied runs.
 
 ASR caveat: transcription normalises speech towards standard written forms, which can *raise* overlap for a student
 who paraphrases closely. 4-gram matching keeps that small, but the thresholds must be checked on real recordings.
 
 ---
 
-## 6. What is reused from Part 2
+## 7. What is reused from Part 2
 
 | Area | Part 2 file | Part 3 |
 | --- | --- | --- |
@@ -305,12 +359,13 @@ who paraphrases closely. 4-gram matching keeps that small, but the thresholds mu
 | Result storage, retry focus, UI cards | `result.ts`, `BiggestFixCard`, `ErrorPatterns`, `FeatureLevels`, `LevelMeter` | **Reused**; `bandScore` becomes part-specific (Q8: `coverage`, `dependence`, overlap metrics instead of `on_topic_count`). |
 | New | — | Task type + content, `prompt-overlap.ts` (+ tests), `q8-band-scoring.ts` (+ tests), Q8 prompt, FOR/AGAINST coverage view with matched-span highlighting. |
 
-The current `FEATURE_LEVELS` (`below_B1 … above_B2`) is shared and typed. Generalising it is the main refactor; see
-open question Q1.
+The current `FEATURE_LEVELS` (`below_B1 … above_B2`) is shared and typed. Per decision 1 it becomes the Q7 rubric's
+declared ladder and the shared code takes the ladder from config; Part 2 stored results are untouched. This is the main
+refactor.
 
 ---
 
-## 7. Anchor answers (one original topic)
+## 8. Anchor answers (one original topic)
 
 **Statement:** Cities should ban private cars from their centres.
 
@@ -344,9 +399,11 @@ for the live evaluation run.
 > elderly and disabled people. It is my opinion.
 
 - Points: all six `restated`, none developed.
-- Dependence: model `reads_prompts`; code `copied_ratio 0.81`, `points_read 6` → `reads_prompts`.
+- Dependence: model `reads_prompts`; code `copied_ratio 0.81`, `points_read 6` meets the override condition (≥ 0.50
+  and ≥ 4), so the result is `reads_prompts` even if the model had said otherwise.
 - Coherent and sustained: false. Language: B1 (simple structures, "cleaner air … is good", "But difficult for…").
-- Code: coverage `both_sides` (cap 4), dependence cap 1, language cap 2 → **band 1**. Biggest fix: prompt_dependence.
+- Code: coverage `both_sides` (cap 4), dependence cap 1, language cap 2 → **band 1**. Biggest fix: prompt_dependence,
+  headline "Say the ideas in your own words.", with the copied sentences highlighted.
 
 ### Anchor 2 — Band 2 (heavily dependent)
 
@@ -358,10 +415,12 @@ for the live evaluation run.
 
 - Points: F1 `developed` (thin: "good for people health"), F2 `restated` (reason is a tautology), A1 `developed`
   ("they can't walk long"), A2 `restated`; F3, A3 `not_addressed`.
-- Dependence: model `heavily_dependent`; code `copied_ratio 0.29`, `points_read 3` → `heavily_dependent`.
+- Dependence: model `heavily_dependent` (decides). Code `copied_ratio 0.29`, `points_read 3` → `heavily_dependent`:
+  agrees, no flag. The override does not apply (below 0.50 and 4).
 - Language: B1 ("people health", "there is no many cars", simple linking: first / second / and / but).
 - Code: coverage `both_sides_full` (cap 6), dependence cap 2, language cap 2 → **band 2**. Biggest fix:
-  prompt_dependence (ties with language; dependence comes first in the order).
+  prompt_dependence (ties with language; dependence comes first in the order): "Explain each point in your own
+  words with a reason or an example."
 
 ### Anchor 3 — Band 3 (one section only)
 
@@ -375,11 +434,11 @@ for the live evaluation run.
 > benefits and I think every big city should do it.
 
 - Points: F1, F2 `developed`, F3 `developed` (metro); A1–A3 `not_addressed`. The metro sentence argues **against
-  A3**; it does not present it.
+  A3** without ever stating it, so it does not cover the AGAINST side (decision 8).
 - Dependence: `own_development` (copied 0.00, 60 novel words).
 - Language: B2 across features (second conditional, relative clause, "first of all / to sum up"; few errors).
-- Code: coverage `one_side` (cap 3), language cap 4 → **band 3**. Biggest fix: section_coverage, suggesting A1 with
-  its model answer.
+- Code: coverage `one_side` (cap 3), language cap 4 → **band 3**. Biggest fix: section_coverage: "Choose two points
+  from each list.", naming the AGAINST side and suggesting A1 with its model answer.
 
 ### Anchor 4 — Band 4 (both sections, B2 language)
 
@@ -417,7 +476,7 @@ for the live evaluation run.
 
 - Points: F1, F2, A1, A2 `developed`; A3 used in the conclusion (`restated` or `developed`, either is fine); F3
   `not_addressed`.
-- Dependence: `own_development` (copied 0.04: only the statement is echoed in the opening).
+- Dependence: `own_development` (copied 0.00: the statement echoed in the opening is a named run, decision 5).
 - Language: C1 (fronting "Closely linked to this is…", "not to mention", participle clause "Having weighed up";
   one minor error "which located"; wide range of cohesive devices). Not above C1 because of that slip and the
   fairly standard phrasing.
@@ -426,30 +485,3 @@ for the live evaluation run.
 
 No band-6 anchor was requested. Band 6 needs the same structure as anchor 5 with every feature clearly beyond the
 C1 descriptors.
-
----
-
-## 8. Open questions
-
-1. **Level ladder.** Q7 uses `below_B1 … above_B2`; Q8 needs `below_B1 … C1 … above_C1`. Should the ladder be
-   **per rubric** (config lists its steps; Q7 unchanged; my recommendation) or one global ladder
-   `below_B1, B1, B2, C1, above_C1` with Q7's `above_B2` renamed to `C1`, which changes stored v3 results?
-2. **Own points.** A student argues something not on the list. Should it count towards a section's coverage, or only
-   listed points? The official text says "choose two points from each list". I'd say listed points only, with own
-   points praised in feedback.
-3. **What "addresses the points from each section" needs.** My proposal: band 4 needs ≥ 1 point per side; band 5+
-   needs ≥ 2 per side with ≥ 1 developed per side (`both_sides_full`). Is ≥ 1 per side enough for 5?
-4. **Model vs code dependence.** Take the more dependent of the two (recommended), or code only as a check with
-   disagreements logged, or code only as the decider?
-5. **Dependence with B2+ language.** A fluent student who reads the list gets band 1, and a heavily dependent one
-   band 2, whatever their language. That is how I read the official text. Confirm?
-6. **Overlap thresholds.** 0.50 / 0.20 / 4 points / 25 novel words are set from the six anchors only. Should we
-   collect ~20 real recordings before shipping, or ship with these and tune from the logs?
-7. **Pronunciation at C1.** The C1 text is only "Pronunciation is intelligible", which the audio step can barely
-   tell apart from B2. Cap pronunciation's contribution at C1 (never above_C1), or let it judge freely?
-8. **Rebuttals.** Anchor 3 counters A3 without presenting it. I treated that as not covering the AGAINST side.
-   Should a clear "some people say X, but…" with X close to a listed point count as `restated`?
-9. **Topics.** The official sample is a sensitive social topic. Is there a list of topics to avoid (politics,
-   religion, weapons) for our own content, and how many Part 3 topics should ship first?
-10. **Session flow.** Does Part 3 run alone like Part 2 today, or only inside a full mock test with an overall
-    level? (Affects whether we ever show anything other than the Part band.)

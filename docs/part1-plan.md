@@ -1,174 +1,262 @@
 # Part 1 plan: Part 1.1 (Questions 1–3) and Part 1.2 (Questions 4–6)
 
-Status: **plan only, nothing built.** Nothing here changes code. The Part 2 evaluator, scoring and result files are
-being changed in another session, so every code change below waits until that work is merged (see §5).
+Status: **plan only, nothing built.** Revision 2 adds the owner's answers (2026-11-04): the official descriptors, the
+scoring rules and the content decisions. Every code change below starts **after** the other session's Part 2
+evaluator/scoring/results work is merged, on a fresh branch from `main` (§6).
 
 The approach is the same as Part 2 (official Question 7, `multilevel-q7`): **the model judges, code scores.** The
-model judges each question (on_topic / partial / missing / off_topic) and each feature (grammar, vocabulary, fluency,
-cohesion; pronunciation from the audio step) against the official descriptors, quoting the transcript exactly. The
-0–5 band is computed in `band-scoring.ts` from a per-part rubric JSON. No model ever outputs a band.
+model judges each question's status and each feature's level against the official descriptors, quoting the
+transcript exactly. `band-scoring.ts` computes the 0–5 band from a per-part rubric JSON. No model outputs a band.
 
 | | Part 1.1 | Part 1.2 |
 |---|---|---|
 | Official questions | 1–3 | 4–6 |
 | Target level | A2 | B1 |
-| Band | 0–5 | 0–5 |
-| Rubric id (proposed) | `multilevel-q1-3` | `multilevel-q4-6` |
-| Rubric file (proposed) | `server/evaluation/rubrics/multilevel_q1_3.json` | `server/evaluation/rubrics/multilevel_q4_6.json` |
+| Level ladder (index 0–3) | below_A1 · A1 · A2 · above_A2 | below_A2 · A2 · B1 · above_B1 |
+| Features | grammar, vocabulary, pronunciation, fluency (**no cohesion**) | grammar, vocabulary, pronunciation, fluency, cohesion |
+| Question statuses | on_topic · missing · off_topic | on_topic · partial · missing · off_topic |
+| Band | one 0–5 band for Questions 1–3 together | one 0–5 band for Questions 4–6 together |
+| Rubric id / file | `multilevel-q1-3` / `rubrics/multilevel_q1_3.json` | `multilevel-q4-6` / `rubrics/multilevel_q4_6.json` |
 
 ---
 
 ## 1. Task format
 
-> Timings are my understanding of the current UZBMB format. **Please confirm them** (open question Q1).
+### Timings are config, not code
+
+The official format document (UZBMB `Speaking_format.pdf`) has not arrived yet, so **no timing is fixed in this
+plan or in code**. Each task's content file carries per-question values that the UI and the metrics read:
+
+```ts
+questions: [{ text, prepSeconds, speakingSeconds, partialHint? }, …]
+```
+
+The values are filled in from the PDF when it arrives. Until then, tests use their own fixture values. No timing
+literal goes into components or the evaluator.
 
 ### Part 1.1 — Questions 1–3 (personal questions)
 
-- The student sees and hears three short questions about themselves (home, family, free time, study, food …),
-  **one at a time**. Example task: *"What do you usually do at the weekend?"*, *"What is your favourite food? Why?"*,
+- Three short questions about the student (home, family, free time, study, food …), shown **one at a time**.
+  Example task: *"What do you usually do at the weekend?"*, *"What is your favourite food? Why?"*,
   *"Who do you spend the most time with in your family?"*
-- No preparation time (a short "get ready" of ~5 s per question).
-- **30 s per question**, ~1 min 30 s of speech in total. The next question appears when the time is up (or when the
-  student taps "Next").
-- What the student sees: the question number and text, a countdown ring per question, a "1 of 3" progress row.
+- Per question: optional preparation, then a speaking countdown (both from config). Shows "Question 1 of 3", the
+  question text and a countdown ring. The next question appears when the time ends.
+- Only the full part can be practised (no single-question mode for now).
 
-### Part 1.2 — Questions 4–6 (two pictures + two questions)
+### Part 1.2 — Questions 4–6 (two pictures, then two questions)
 
-- The student sees **two pictures** on one theme (e.g. *A: a family cooking at home*, *B: friends eating at a
-  fast-food restaurant*).
-- **Question 4:** describe the two pictures and say how they are different / similar — **45 s**.
-- **Questions 5 and 6:** two questions on the same theme, answered from the student's own experience and opinion —
-  **30 s each** (e.g. *"Do you prefer eating at home or eating out? Why?"*, *"How have people's eating habits changed
-  in your country?"*).
-- ~10 s preparation looking at the pictures before Question 4; ~5 s before Questions 5 and 6.
-- The pictures stay on screen for all three questions.
+- Two pictures on one theme (e.g. *A: a family cooking at home*, *B: friends eating at a fast-food restaurant*).
+  They stay on screen for all three questions.
+- **Question 4:** describe the two pictures and compare them.
+- **Questions 5 and 6:** two questions on the same theme, from the student's own experience and opinion.
+- Preparation and speaking time per question come from config.
+- Only the full part can be practised.
 
-### Recording model (decision needed, Q2)
+### Recording (decided): one continuous recording per part
 
-Part 1 is three short answers, while today an attempt has exactly **one** recording (`recordings_attempt_uq`).
+- One recording runs for the whole part while the app advances the questions on screen.
+- The client records the start time of each question relative to the recording start,
+  `question_offsets_ms: [0, t2, t3]`, and sends it with the upload.
+- Stored on the attempt (a small JSON column or the existing attempt metadata, decided in the PR); no `responses`
+  table, no change to the one-recording-per-attempt rule.
+- The evaluator gets the whole transcript with the question order and the offsets as context, and quotes each
+  question's answer itself, as it already does for the three Q7 questions. Per-question time used (from the
+  offsets) goes into the metrics, so feedback such as "you used 12 seconds for Question 2" is measured, not guessed.
+- One recording per question stays a later option, only if v1 shows answers being given to the wrong question.
 
-- **Recommended for v1 — one continuous recording per part.** The app advances the questions on screen with timers
-  while one recording runs; the client sends the time at which each question started (`question_offsets_ms`). The
-  evaluator receives the whole transcript plus the question order, exactly like Part 2, and finds each question's
-  answer itself (it already does this for the three Q7 questions). No DB migration; the existing upload, speech
-  guard, transcription, audio step, retry and history flows are reused unchanged.
-- *Later, if needed — one recording per question.* Needs a `responses` table (attempt → question → recording →
-  transcript), i.e. a migration, and per-question transcription calls. Better question boundaries; more cost and
-  more failure modes. Only worth it if v1 shows the model misplaces answers.
+### Pictures (Part 1.2)
+
+- Only original or freely licensed images (Unsplash, Pexels or similar). Never copies or look-alikes of real exam
+  pictures.
+- Each image in the task content records: `src`, `alt`, `author`, `sourceUrl`, `licence`, `retrievedAt`.
+  A unit test fails if any image lacks these fields.
+- The evaluator reads text only, so each task's `evaluatorGuidance` describes what the pictures show and which
+  differences count as a comparison.
 
 ---
 
-## 2. Band tables
+## 2. Band tables (official UZBMB rating scale, verbatim)
 
-The Part 2 rubric shows the shape of the official scale (5 = above target, 4 = higher target, 3 = lower target,
-2 = higher level-below, 1 = lower level-below, 0 = below that / no meaningful language / all off-topic). I have
-assumed Parts 1.1 and 1.2 follow the same shape, one level lower and two levels lower. **The labels and the
-descriptor text below are placeholders until you paste the official text** (open question Q3); I have not written
-any official wording from memory. The only official text already in the repo is the Q4–6 "Higher A2" descriptor,
-which `multilevel_q7.json` uses as its below-B1 reference.
+### Part 1.1 — Questions 1–3, target A2
 
-### Part 1.1 (target A2) — proposed table
-
-| Band | Label (to confirm) | Rule (to confirm against official text) |
+| Band | Label | Official rule |
 |---|---|---|
-| 5 | Above A2 | Language above the A2 descriptors, all three questions answered |
-| 4 | Higher A2 | A2 descriptors; all three questions answered |
-| 3 | Lower A2 | A2 descriptors; two questions answered |
-| 2 | Higher A1 | A1 descriptors; at least two questions answered |
-| 1 | Lower A1 | A1 descriptors; one question answered |
-| 0 | Below A1 | Below A1, no meaningful language, or all answers off-topic / memorised |
+| 5 | Above A2 | Performance is above A2 |
+| 4 | Higher A2 | A2 descriptors; all three questions on topic |
+| 3 | Lower A2 | A2 descriptors; two questions on topic |
+| 2 | Higher A1 | A1 descriptors; at least two questions on topic |
+| 1 | Lower A1 | A1 descriptors; one question on topic |
+| 0 | — | No meaningful language, or all responses completely off-topic (e.g. memorized answers, guessing) |
 
-Descriptors needed verbatim, per feature (grammar, vocabulary, pronunciation, fluency, cohesion):
-**A2** (bands 4/3), **A1** (bands 2/1), and whatever the scale says for band 0. `[PASTE]`
+**A2 descriptors**
 
-### Part 1.2 (target B1) — proposed table
+| Feature | Official text |
+|---|---|
+| Grammar | Some simple grammatical structures are used correctly but basic mistakes systematically occur. |
+| Vocabulary | Vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable. |
+| Pronunciation | Mispronunciations are noticeable and frequently place a strain on the listener. |
+| Fluency | There is frequent pausing, false starts, and reformulations, but the meaning is still clear. |
 
-| Band | Label (to confirm) | Rule (to confirm against official text) |
+**A1 descriptors**
+
+| Feature | Official text |
+|---|---|
+| Grammar | Grammatical structure is limited to words and phrases. Errors in basic patterns and simple grammar structures impede understanding. |
+| Vocabulary | Vocabulary is limited to very basic words related to personal information. |
+| Pronunciation | Pronunciation is mostly unintelligible except for isolated words. |
+| Fluency | Frequent pausing, false starts, and reformulations impede understanding. |
+
+There is **no cohesion feature** in Part 1.1.
+
+### Part 1.2 — Questions 4–6, target B1
+
+| Band | Label | Official rule |
 |---|---|---|
-| 5 | Above B1 | Language above the B1 descriptors, all three questions answered |
-| 4 | Higher B1 | B1 descriptors; all three questions answered |
-| 3 | Lower B1 | B1 descriptors; two questions answered |
-| 2 | Higher A2 | A2 descriptors; at least two questions answered |
-| 1 | Lower A2 | A2 descriptors; one question answered |
-| 0 | Below A2 | Below A2, no meaningful language, or all answers off-topic / memorised |
+| 5 | Above B1 | Performance is above B1 |
+| 4 | Higher B1 | B1 descriptors; all three questions on topic |
+| 3 | Lower B1 | B1 descriptors; two questions on topic |
+| 2 | Higher A2 | A2 descriptors; at least two questions on topic |
+| 1 | Lower A2 | A2 descriptors; one question on topic |
+| 0 | — | Below A2, or no meaningful language, or all responses completely off-topic |
 
-Descriptors needed verbatim: **B1** (bands 4/3), **A2** (bands 2/1; the Higher A2 text is already in
-`multilevel_q7.json` → `descriptors.below_B1`), and band 0. `[PASTE]`
+**B1 descriptors**
 
-### Proposed scoring caps (same numbers as Q7, to confirm)
+| Feature | Official text |
+|---|---|
+| Grammar | Simple grammatical structures are used correctly. Errors occur when attempting complex structures. |
+| Vocabulary | There is sufficient range and control of vocabulary for the task. Errors occur when expressing complex thoughts. |
+| Pronunciation | Pronunciation is generally intelligible but mispronunciations put an occasional strain on the listener. |
+| Fluency | There is some pausing, false starts, and reformulations. |
+| Cohesion | Uses only simple cohesive devices. Links between ideas are not always clearly indicated. |
 
-Both parts, with the four-step language ladder `below_lower < lower < target < above_target`:
+**A2 descriptors**
 
-```json
-"topic_cap":      { "0": 0, "1": 1, "2": 3, "3": 4 },
-"above_target_full_coverage_cap": 5,
-"language_cap":   { "below_lower": 0, "lower": 2, "target": 4, "above_target": 5 }
-```
+| Feature | Official text |
+|---|---|
+| Grammar | Some simple grammatical structures are used correctly but basic mistakes systematically occur. |
+| Vocabulary | Vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable. |
+| Pronunciation | Mispronunciations are noticeable and frequently place a strain on the listener. |
+| Fluency | There is frequent pausing, false starts, and reformulations. |
+| Cohesion | Cohesion between ideas is limited. Responses tend to be a list of points. |
 
-`band = 0` if memorised/irrelevant, nothing on topic, or language at `below_lower`; else
-`min(topic_cap, language_cap)`. Language level = mean of assessed features, nearest level, exact .5 rounds down.
-`meets_target_band = 3`.
+**Each rubric keeps its own text.** The same level name does not mean the same text:
+
+- B1 vocabulary in Questions 4–6 is different from B1 vocabulary in Question 7.
+- A2 fluency in Questions 1–3 adds ", but the meaning is still clear"; A2 fluency in Questions 4–6 does not.
+
+Each rubric JSON holds its own copy, and a unit test checks every file against this section.
+
+### Reference text for the levels outside each scale
+
+The prompt has to tell the model what "below" and "above" look like. Following what `multilevel_q7.json` already
+does, each rubric marks this text as reference only (`descriptor_sources`):
+
+| Rubric | Level | Reference text |
+|---|---|---|
+| Q1–3 | above_A2 | Q4–6 B1 descriptors (same 4 features) |
+| Q1–3 | below_A1 | No text: "no meaningful language" (isolated words that answer nothing, silence, guessing) |
+| Q4–6 | above_B1 | Q7 B2 descriptors |
+| Q4–6 | below_A2 | Q1–3 A1 descriptors (grammar, vocabulary, pronunciation, fluency); for cohesion, the official Q4–6 A2 cohesion text is the lowest one, so it is "below A2" only when even that is not met |
+
+### Scoring (same algorithm as Part 2, shifted down)
+
+| | Part 1.1 | Part 1.2 |
+|---|---|---|
+| `topic_cap` | `{0:0, 1:1, 2:3, 3:4}` | `{0:0, 1:1, 2:3, 3:4}` |
+| `above_target_full_coverage_cap` | 5 | 5 |
+| `above_target_requires` | `["grammar", "vocabulary"]` | `["grammar", "vocabulary"]` |
+| `language_cap` | below_A1 0 · A1 2 · A2 4 · above_A2 5 | below_A2 0 · A2 2 · B1 4 · above_B1 5 |
+| `meets_target_band` | 3 | 3 |
+| `min_words` | from calibration (low: words and phrases are a valid A1 sample) | from calibration |
+
+1. `on_topic_count` = questions with a status that counts: `on_topic` in Part 1.1; `on_topic` or `partial` in
+   Part 1.2.
+2. `language_level` = mean of the assessed features' ladder indices, rounded to the nearest level, **exact .5 rounds
+   down**. Part 1.1 averages 3–4 features (pronunciation only when the audio step assessed it); Part 1.2 averages 4–5.
+3. Band 0 if the answer is memorised/irrelevant, no question is on topic, the language is at index 0 (below A1 / below
+   A2), or fewer than `min_words`.
+4. Otherwise `band = min(topic_cap, language_cap)`. **Band 5** needs all three questions on topic, an overall
+   language level above the target, **and** grammar and vocabulary each above the target. This is the same as the
+   Part 2 rule in the other session's branch (`above_target_requires`). If any of these fails, the band stays at 4
+   or lower.
+5. Pronunciation not assessed → result is `provisional`.
+
+### Question status rules
+
+- **Part 1.1:** any **relevant** answer is `on_topic`, even single words or phrases (that is what the A1 bands
+  describe); the language level handles quality. Part 1.1 does not use `partial` or `minimal`. `missing` = nothing
+  relevant said; `off_topic` = talks about something else.
+- **Part 1.2:** a bare one-sentence answer is `partial`: it **counts** as on topic, and the feedback says to add a
+  reason or detail. In Question 4, describing only one picture, or both without comparing, is `partial`, and the
+  feedback must say **"compare the two pictures"** (stored as Question 4's `partialHint` in the task content, shown
+  word for word).
+- **`minimal`** (a bare one-sentence answer that does *not* count) is a **Part 2 rule only**.
+- The model-output schema allows only the rubric's own statuses (built from `question_statuses` in the JSON), and
+  the quality gate rejects any other status.
 
 ---
 
 ## 3. Reuse vs new
 
-### Reused as is (no change)
+### Reused as is
 
 | Piece | File |
 |---|---|
-| Band algorithm: on-topic count, best-fit mean with .5 down, zero rules, `min(topic cap, language cap)`, biggest fix | `domain/evaluation/multilevel/band-scoring.ts` (logic) |
-| Question statuses, `partial` counts as on topic | `levels.ts` (`QUESTION_STATUSES`, `isOnTopic`) |
-| Retry focus derivation | `result.ts` (`deriveRetryFocus`, `questionFocus`) |
-| Rubric loading/validation pattern, task ↔ rubric checks | `rubrics/index.ts`, `rubric-config.ts` (pattern) |
-| Strict exact-quote evidence checks, regeneration-once, internal-name filter | `quality-gate.ts` |
-| Audio step for pronunciation + pausing, `provisional` when not assessed | `audio-assessment.ts`, `gemini-audio-assessor.ts` |
-| Upload, speech guard, transcription with fallback, attempt pipeline, polling, history, retries | `server/attempts/*`, `server/transcription/*`, `server/audio/*` |
-| Error patterns, model answers for missed questions, strengths | `model-output.ts` (shape) |
+| Band algorithm (counting, .5-down mean, zero rules, `min` of caps, `above_target_requires`, biggest fix) | `domain/evaluation/multilevel/band-scoring.ts` |
+| Retry focus derivation, question focus text (`partial` → "answer fully") | `result.ts` |
+| Rubric load + validation pattern, task ↔ rubric checks | `rubrics/index.ts`, `rubric-config.ts` |
+| Exact-quote evidence checks, one regeneration, internal-name filter | `quality-gate.ts` |
+| Audio step for pronunciation and pausing; `provisional` without it | `audio-assessment.ts`, `gemini-audio-assessor.ts` |
+| Upload, speech guard, transcription + fallback, pipeline, polling, history, retries | `server/attempts/*`, `server/transcription/*`, `server/audio/*` |
+| Errors, error patterns, model answers for missed questions, strengths | `model-output.ts` (shape) |
 | Speech metrics | `domain/speaking/metrics.ts` |
 
-### Needs generalising (touches Part 2 files → only after the other session merges)
+### Generalise (Part 2 files → fresh branch from `main` after the other session merges)
 
-1. **Level ladder per rubric.** `FEATURE_LEVELS` is hard-wired to `below_B1 / B1 / B2 / above_B2`. Proposal: the
-   rubric JSON declares its own four level names (`"levels": ["below_A1","A1","A2","above_A2"]`); the scorer only
-   uses the index 0–3, and the model-output Zod schema is built from the rubric's names. Part 2 keeps its exact
-   strings, so **stored Part 2 results need no migration**.
-2. **`rubric-config.ts`:** `target_level` enum gains `A2`; `descriptors` keyed by the rubric's levels instead of
-   fixed `B2/B1/below_B1`; optional per-question speaking seconds.
-3. **Prompt (`prompts/multilevel-evaluation.ts`):** remove literal "B2" wording (level list, "realistic B2 level" in
-   model answers, "strengths only for B2 or above", the B1–B2 style line); take everything from the rubric. Add a
-   Part 1 paragraph: short answers, judge each question's answer separately, do not punish shortness that the 30 s
-   limit causes.
-4. **Quality gate:** `strength_below_b2` → "strength below the rubric's target level".
-5. **Mock model** (`mock-evaluation-model.ts`): level names from the rubric.
-6. **UI labels** currently say "B2 target": read the target and labels from the result's rubric.
+1. **Level names per rubric.** The rubric declares `"levels": [4 names]`; the scorer works on the index 0–3 only,
+   and the model-output Zod schema is built from the rubric's names. Part 2 keeps
+   `below_B1/B1/B2/above_B2`, so **stored Part 2 results need no migration**.
+2. **Features per rubric.** The rubric declares `"features"` (Q1–3 has no cohesion). Averaging, `lowestFeature`
+   (filtered `FIX_PRIORITY`), strengths, the prompt's descriptor block and the UI feature list read from it.
+3. **Question statuses per rubric** (`"question_statuses"`), as in §2.
+4. **`rubric-config.ts`:** `target_level` accepts `A2`; descriptors keyed by the rubric's levels and features;
+   `above_target_requires` checks "above target" by index, not the literal `above_B2`.
+5. **Prompt:** remove literal B2 wording (level list, "realistic B2 level" model answers, "strengths only at B2+",
+   the B1–B2 style line); everything comes from the rubric. A short Part 1 section: short timed answers; judge each
+   question's answer at its offset; Part 1.1 relevance rule; Part 1.2 partial rules.
+6. **Quality gate:** `strength_below_b2` → "strength below the rubric's target"; status allow-list per rubric.
+7. **Mock model** and **UI labels** ("B2 target", feature list) read from the rubric.
+8. `EVALUATOR_VERSION` bump (prompt changes); Part 2 rubric version unchanged unless its file changes.
 
 ### New
 
-| New piece | Notes |
+| Piece | Notes |
 |---|---|
-| Two rubric JSON files + `RubricId` entries | Official text verbatim, own `version` (`multilevel-q1-3/1.0.0`, `multilevel-q4-6/1.0.0`) |
-| `SpeakingTaskType`: `"short_answers"` (1.1) and `"picture_questions"` (1.2) | Closed union, as today |
-| `SpeakingTask` fields: per-question `speakingSeconds[]` / `prepSeconds[]`; `images` (1.2) with alt text | Picture *content* described in `evaluatorGuidance`, because the evaluator reads text only |
-| Content: at least one task per part (`content/speaking/a2/…`, `content/speaking/b1/…`) | Pictures we have rights to, stored in `public/` |
-| Practice UI: question stepper (one question at a time, per-question timer, auto-advance) inside one recording; picture panel for 1.2 | Extract the generic recording session from `PracticeExperience.tsx` first |
-| `question_offsets_ms` sent with the upload and passed to the evaluator as context | Small: stored on the attempt; no new table in v1 |
-| Per-question time used in metrics (from offsets) | So "you used 12 of 30 s for Question 2" is real |
-| Speech guard thresholds per part | Today tuned for one 2-min answer; 30 s answers are shorter |
-| Anchor/fixture tests (§4) as unit tests on the scorer + live calibration cases | `band-scoring.test.ts` style, one config per part |
-| `EVALUATOR_VERSION` bump (prompt change) | Required by `versions.ts` rules |
+| `multilevel_q1_3.json`, `multilevel_q4_6.json` + `RubricId` entries | §2 text verbatim; versions `…/1.0.0` |
+| `SpeakingTaskType`: `"short_answers"` (1.1), `"picture_questions"` (1.2) | Closed union, as today |
+| Task content: per-question `{text, prepSeconds, speakingSeconds, partialHint?}`; `images[]` with licence fields | Timings filled from `Speaking_format.pdf` |
+| Content: one A2 task (1.1) and one B1 task (1.2) | Pictures freely licensed, sources recorded |
+| Practice UI: question stepper inside one recording; picture panel | Extract the generic recording session from `PracticeExperience.tsx` first |
+| `question_offsets_ms` on upload → attempt → evaluator; per-question time used in metrics | |
+| Per-part speech-guard thresholds and `min_words` | Today tuned for one 2-minute answer |
+| Tests: descriptor text vs §2; image licence fields; anchor judgements → `scoreBand` (§4); status allow-lists | Unit tests; anchors also as live calibration cases |
 
 ---
 
-## 4. Anchor answers
+## 4. Anchor answers (re-checked against the official text)
 
-Synthetic answers written for this plan (no real student data). Each lists the judgements we expect from the model
-and the band the code must compute from them under §2's proposed caps. Pronunciation is assumed `not_assessed`
-(transcript only), so every result is also **provisional**. These become: (a) unit tests feeding the judgements to
-`scoreBand`, (b) live calibration cases checking the model produces those judgements (±1 level per feature allowed,
-question statuses must match).
+Synthetic answers (no real student data). Each gives the judgements we expect from the model and the band the code
+must compute from them with §2's config. Pronunciation is `not_assessed` (transcript only), so each result is also
+**provisional** and the mean uses grammar, vocabulary, fluency (+ cohesion in 1.2).
 
-### Part 1.1 (target A2)
+**What changed in the re-check.** The real A2 descriptor says *"basic mistakes **systematically** occur"*. The first
+Part 1.1 middle anchor was mostly accurate simple English, which fits B1 better ("simple structures are used
+correctly"). Under this scale that would be **above_A2** and could reach band 5 instead of 3. The middle anchor has
+been rewritten with systematic basic mistakes. The Part 1.2 middle anchor's grammar is now **A2** (errors in simple
+past and third person are basic mistakes, not "errors when attempting complex structures"). Its band is still 2,
+but the rounding case now comes from a different mix of features.
+
+### Part 1.1 (target A2, ladder below_A1 0 · A1 1 · A2 2 · above_A2 3)
 
 Questions: **Q1** *What do you usually do at the weekend?* · **Q2** *What is your favourite food? Why?* ·
 **Q3** *Who do you spend the most time with in your family?*
@@ -176,27 +264,38 @@ Questions: **Q1** *What do you usually do at the weekend?* · **Q2** *What is yo
 **Low — expected band 1 (Lower A1)**
 
 > Q1: "Weekend… um… I sleep. I sleep and… television. Yes."
-> Q2: "Um… food… I don't… um… sorry."
+> Q2: "Um… sorry. Um… next, please."
 > Q3: "Family is… um… my city is Samarkand. Is big city."
 
-- Questions: Q1 on_topic (it answers, minimally); Q2 missing; Q3 off_topic (talks about the city).
-- Features: grammar A1 ("Is big city", no verbs in most phrases), vocabulary A1, fluency A1 (constant pausing),
-  cohesion A1 (only "and") → mean 1.0 → **A1**.
-- Caps: topic 1 (one on topic), language 2 → **band 1**. Biggest fix: answer Question 2 (coverage limits the band).
-- Why: real but very basic language on one question only. Not band 0: there is meaningful language and one
-  question is answered.
+| Judgement | Expected | Why (official text) |
+|---|---|---|
+| Q1 | on_topic | Relevant words and phrases count in Part 1.1 |
+| Q2 | missing | Nothing about food |
+| Q3 | off_topic | Talks about the city, not family |
+| Grammar | A1 (1) | "limited to words and phrases" ("Is big city", "television. Yes") |
+| Vocabulary | A1 (1) | "limited to very basic words related to personal information" |
+| Fluency | A2 (2) | Frequent pausing, but "the meaning is still clear" for what is said |
+
+Mean (1+1+2)/3 = 1.33 → **A1** → language cap 2; one on topic → topic cap 1 → **band 1**.
+Biggest fix: answer Question 2 (coverage caps the band). Not band 0: there is meaningful language on one question.
 
 **Middle — expected band 3 (Lower A2)**
 
-> Q1: "At the weekend I usually go to the bazaar with my mother. Then we cook plov. In the evening I watch films."
-> Q2: "My favourite food is manti. I like it because it is very tasty and my grandmother make it every Sunday."
-> Q3: "Um… I like football. I play football with my friends in the school. It is very interesting."
+> Q1: "At weekend I usually go bazaar with my mother. Then we cooking plov. In evening I watching film."
+> Q2: "My favourite food is manti. I like because is very tasty and my grandmother make every Sunday."
+> Q3: "Um… I like football. I play football with my friends in the school. Is very interesting."
 
-- Questions: Q1 on_topic, Q2 on_topic, Q3 off_topic (talks about football, never names a family member).
-- Features: grammar A2 (present simple mostly right, "my grandmother make"), vocabulary A2, fluency A2,
-  cohesion A2 ("then", "because", "and") → **A2**.
-- Caps: topic 3 (two on topic), language 4 → **band 3**. Biggest fix: answer Question 3. Meets target (3).
-- Why: A2 language, but one of three questions not answered, so it cannot reach Higher A2.
+| Judgement | Expected | Why (official text) |
+|---|---|---|
+| Q1 | on_topic | |
+| Q2 | on_topic | Food and a reason |
+| Q3 | off_topic | Football with friends, no family member |
+| Grammar | A2 (2) | Simple structures partly right, "basic mistakes systematically occur" (missing articles/prepositions, "we cooking", "I watching", "grandmother make", missing "it") |
+| Vocabulary | A2 (2) | Enough to respond; noticeable choices ("go bazaar", "watching film") |
+| Fluency | A2 (2) | Some hesitation, meaning clear |
+
+Mean 2 → **A2** → language cap 4; two on topic → topic cap 3 → **band 3**. Meets target (3).
+Biggest fix: answer Question 3.
 
 **High — expected band 5 (Above A2)**
 
@@ -204,30 +303,38 @@ Questions: **Q1** *What do you usually do at the weekend?* · **Q2** *What is yo
 > Q2: "I really love lagman, especially the one my father makes. It's spicy and filling, and I've eaten it since I was a child, so it reminds me of home."
 > Q3: "Probably my younger sister. We share a room, so we talk a lot, and I help her with her English homework, although sometimes she's lazy."
 
-- Questions: all on_topic.
-- Features: grammar above_A2 (conditional "if the weather is bad", present perfect "I've eaten it since…",
-  "although"), vocabulary above_A2 ("filling", "reminds me of home"), fluency above_A2, cohesion above_A2
-  ("so", "although", "especially") → **above_A2**.
-- Caps: topic 5 (above target + full coverage), language 5 → **band 5**.
-- Why: B1-like language throughout and every question answered.
+| Judgement | Expected | Why |
+|---|---|---|
+| Q1–Q3 | on_topic | All answered with detail |
+| Grammar | above_A2 (3) | No systematic basic mistakes; conditional, present perfect, "although" → fits the B1 reference |
+| Vocabulary | above_A2 (3) | "filling", "reminds me of home": beyond basic personal words |
+| Fluency | above_A2 (3) | No pausing visible in the transcript |
 
-### Part 1.2 (target B1)
+Mean 3 → **above_A2** → language cap 5; full coverage + grammar and vocabulary above A2 → topic cap 5 → **band 5**.
+
+### Part 1.2 (target B1, ladder below_A2 0 · A2 1 · B1 2 · above_B1 3)
 
 Pictures: **A** a family cooking dinner together at home · **B** teenagers eating burgers in a fast-food restaurant.
-**Q4** *Describe the two pictures and say how they are different.* · **Q5** *Do you prefer eating at home or eating
-out? Why?* · **Q6** *How have people's eating habits changed in your country?*
+**Q4** *Describe the two pictures and compare them.* · **Q5** *Do you prefer eating at home or eating out? Why?* ·
+**Q6** *How have people's eating habits changed in your country?*
 
 **Low — expected band 1 (Lower A2)**
 
 > Q4: "In first picture is a family. They cooking in kitchen. Second picture, young people, they eat burger. First is home, second is café."
 > Q5: "Um… sorry, I don't understand. Um…"
-> Q6: "Um… I don't know… food is… um… good."
+> Q6: "Um… I don't know. Sorry."
 
-- Questions: Q4 on_topic (describes both pictures and states a difference); Q5 missing; Q6 missing ("food is good"
-  says nothing about change).
-- Features: grammar A2 ("They cooking", "In first picture is a family"), vocabulary A2, fluency A2, cohesion A2
-  ("second", no linkers) → **A2**.
-- Caps: topic 1, language 2 → **band 1**. Biggest fix: answer Question 5.
+| Judgement | Expected | Why (official text) |
+|---|---|---|
+| Q4 | on_topic | Both pictures described and contrasted ("First is home, second is café") |
+| Q5 | missing | |
+| Q6 | missing | |
+| Grammar | A2 (1) | "basic mistakes systematically occur" ("They cooking", "In first picture is") but sentences, not only words → not the A1 reference |
+| Vocabulary | A2 (1) | Enough to respond; noticeable choices |
+| Fluency | A2 (1) | "frequent pausing, false starts" |
+| Cohesion | A2 (1) | "Responses tend to be a list of points" |
+
+Mean 1 → **A2** → language cap 2; one on topic → topic cap 1 → **band 1**. Biggest fix: answer Question 5.
 
 **Middle — expected band 2 (Higher A2) — tests the .5 rounding rule**
 
@@ -235,13 +342,19 @@ out? Why?* · **Q6** *How have people's eating habits changed in your country?*
 > Q5: "I prefer eat at home because my mother cook very good and is cheaper. But sometimes I go to café with friends."
 > Q6: "Now people eat more fast food. Before, people eat at home every day. Now many fast food is in Tashkent."
 
-- Questions: all on_topic.
-- Features: grammar B1 (relative clause "who are cooking", comparatives; errors in "prefer eat", "people eat" for
-  past), vocabulary A2 ("many fast food", "cook very good"), fluency A2, cohesion B1 ("because", "but", "before",
-  "now") → values 2, 1, 1, 2 → mean 1.5 → **rounds down to A2**.
-- Caps: topic 4, language 2 → **band 2**. Biggest fix: vocabulary (lowest feature, first in fix priority after
-  grammar). Does not meet target.
-- Why: full coverage but language sits on the A2/B1 border; the rule is that an exact tie rounds down.
+| Judgement | Expected | Why (official text) |
+|---|---|---|
+| Q4 | on_topic | Both described and compared |
+| Q5 | on_topic | Preference + reason (two sentences, not a bare one) |
+| Q6 | on_topic | Before/now change |
+| Grammar | A2 (1) | Basic mistakes recur in simple forms ("prefer eat", "my mother cook", "people eat" for the past, "many fast food is"); the B1 text needs simple structures used correctly |
+| Vocabulary | A2 (1) | "inappropriate word choices are noticeable" ("cook very good", "many fast food") |
+| Fluency | B1 (2) | No more than "some pausing" visible |
+| Cohesion | B1 (2) | "only simple cohesive devices" (because, but, before, now) |
+
+Mean (1+1+2+2)/4 = 1.5 → **exact .5 rounds down → A2** → language cap 2; three on topic → topic cap 4 →
+**band 2**. Does not meet target. Biggest fix: grammar (tied lowest with vocabulary; grammar comes first in
+`FIX_PRIORITY`).
 
 **High — expected band 5 (Above B1)**
 
@@ -249,50 +362,58 @@ out? Why?* · **Q6** *How have people's eating habits changed in your country?*
 > Q5: "Honestly, I'd rather eat at home. Home-cooked food is fresher, and it's a chance to talk to my family, although I don't mind eating out on special occasions."
 > Q6: "I think they've changed a lot. Ten years ago fast food was rare, whereas now there are chains everywhere, so young people eat out much more and families cook together less."
 
-- Questions: all on_topic.
-- Features: grammar above_B1 ("I'd rather", "which looks…", present perfect, "whereas"), vocabulary above_B1
-  ("home-cooked", "on special occasions", "chains"), fluency above_B1, cohesion above_B1 ("whereas", "although",
-  "so", "both … but") → **above_B1**.
-- Caps: topic 5, language 5 → **band 5**.
+| Judgement | Expected | Why |
+|---|---|---|
+| Q4–Q6 | on_topic | Q4 compares explicitly ("Both … but", "quicker but less healthy") |
+| Grammar | above_B1 (3) | Complex structures used accurately ("I'd rather", "which looks…", present perfect, "whereas") → fits the B2 reference |
+| Vocabulary | above_B1 (3) | "home-cooked", "on special occasions", "chains" |
+| Fluency | above_B1 (3) | No pausing visible |
+| Cohesion | above_B1 (3) | Beyond simple devices: "whereas", "although", "both … but" |
 
-### Extra edge cases for the tests (not anchors)
+Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabulary above B1 → topic cap 5 → **band 5**.
 
-- Silence / noise only → speech guard rejects before evaluation (no band).
-- A memorised paragraph about "my hobby" given for all three Part 1.1 questions → `memorized_or_irrelevant` → band 0.
-- Above-target language but one question missing → topic cap 3 → band 3 (shows coverage beats language).
+### Edge cases for the unit tests (not anchors)
+
+| Case | Expected |
+|---|---|
+| Silence / noise only | Speech guard rejects before evaluation (no band) |
+| One memorised "my hobby" paragraph for all of Part 1.1 | `memorized_or_irrelevant` → band 0 |
+| Part 1.1, single relevant words for all three ("Football." / "Plov." / "Mother.") | All on_topic; grammar/vocab A1 → language cap 2, topic cap 4 → band 2 |
+| Part 1.2, Q4 describes only picture A | Q4 `partial` (counts); feedback contains "compare the two pictures" |
+| Part 1.2, Q5 = "I prefer home." | Q5 `partial` (counts); feedback asks for a reason |
+| Part 1.1 output contains `partial` or `minimal` | Quality gate rejects (status not allowed in this rubric) |
+| Above-target grammar + vocabulary, one question missing | Topic cap 3 → band 3 |
+| All features above target except vocabulary at target, full coverage | Mean rounds to above target, but `above_target_requires` fails → band 4 |
 
 ---
 
-## 5. Order of work (after this plan is approved)
+## 5. Decisions recorded (owner, 2026-11-04)
 
-1. Wait for the Part 2 evaluator/scoring/results session to merge; branch from the new `main`.
-2. PR A — generalise (no behaviour change for Part 2): level ladder per rubric, rubric-config, prompt/gate wording
-   from the rubric. Part 2 tests must pass unchanged; prompt hash changes → evaluator version bump.
-3. PR B — Part 1.1: rubric file (official text), task type + content, question stepper UI, offsets, anchor unit tests.
-4. PR C — Part 1.2: rubric file, picture content + panel, anchor tests.
-5. Live calibration run on the anchors (both providers), recorded in `AI_EVALUATION_QUALITY.md`.
+1. Timings come from the official `Speaking_format.pdf` (to be sent). Until then they are config values only.
+2. One continuous recording per part with a timestamp per question, for v1.
+3. Official descriptors as in §2, verbatim; the lower level for Questions 1–3 is A1; Part 1.1 has no cohesion.
+4. Caps work exactly like Part 2, shifted down; band 5 needs all three on topic and grammar and vocabulary above
+   target.
+5. One band per part.
+6. `minimal` is a Part 2 rule only. Part 1.1: any relevant answer is on topic. Part 1.2: a bare one-sentence
+   answer is `partial` (counts) and the feedback flags it.
+7. Question 4: one picture only, or no comparison → `partial`, feedback "compare the two pictures".
+8. Full part only; single-question practice later.
+9. Original or freely licensed pictures only, never copies of exam pictures; licence/source stored per image.
+10. Level-name generalisation goes in the Part 2 files, after the other session merges, on a fresh branch from `main`.
 
----
+## 6. Order of work
 
-## 6. Open questions for you
+1. Wait for the other session's Part 2 work to merge; branch from the new `main`.
+2. **PR A — generalise** (no Part 2 behaviour change): levels, features and statuses per rubric; prompt and gate
+   wording from the rubric. Part 2 tests pass unchanged; evaluator version bump.
+3. **PR B — Part 1.1:** rubric file, task type + content (timings from the PDF), stepper UI, offsets, anchor tests.
+4. **PR C — Part 1.2:** rubric file, licensed pictures + panel, Q4 partial hint, anchor tests.
+5. Live calibration on the six anchors (both providers), results in `AI_EVALUATION_QUALITY.md`.
 
-1. **Timings.** Confirm: 1.1 = 3 × 30 s, no prep; 1.2 = Q4 45 s, Q5/Q6 30 s each, ~10 s to look at the pictures.
-   Are questions read aloud as well as shown (do we need TTS / audio prompts)?
-2. **Recording.** OK to start with one continuous recording per part (no DB migration), and move to one recording
-   per question only if needed?
-3. **Official text.** Please paste the official rating scale for Questions 1–3 and 4–6: band labels, the per-band
-   coverage rule, and the per-feature descriptors (grammar, vocabulary, pronunciation, fluency, cohesion) for every
-   level. Is the Q1–3 lower level really **A1**?
-4. **Caps.** Do Parts 1.1/1.2 use the same coverage logic as Q7 (4 = all answered, 3 = two answered, 2 = at least
-   two, 1 = one)? Or does the official scale score coverage differently for short answers?
-5. **One band per part, or per question?** I assumed one 0–5 band for each of Part 1.1 and Part 1.2. If the exam
-   rates each question separately, the scorer still works but the caps and UI change.
-6. **Very short answers.** Is a two-word answer ("Home. Yes, home.") `partial` (counts as answered) or `missing`?
-   This decides several low-band results; I'd like a written rule for the guidance.
-7. **Q4 "describe and compare".** If the student describes only one picture, or both without comparing, is that
-   `partial`?
-8. **Practice mode.** Should students be able to practise a single question (e.g. only Q4) or always the full part?
-9. **Pictures.** Do you have pictures we may use, or should we source licensed/stock ones?
-10. **Ladder generalisation.** OK to change `levels.ts` / `model-output.ts` / the prompt so each rubric declares its own
-    four level names (Part 2 strings unchanged, no stored-data migration)? These are Part 2 files, so this happens
-    only after the other session merges.
+## 7. Still to confirm (small)
+
+- The timings from `Speaking_format.pdf` (and whether the questions are also read aloud).
+- The reference texts in §2 (Q4–6 B1 as "above A2", Q7 B2 as "above B1", Q1–3 A1 as "below A2"): fine as
+  **reference only** for the model, like Q7's below-B1 reference?
+- `min_words` for each part, set from calibration (it must not reject a valid A1 answer made of words and phrases).

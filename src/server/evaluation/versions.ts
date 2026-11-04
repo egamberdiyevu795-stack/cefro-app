@@ -50,7 +50,12 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   descriptors (rubric multilevel-q7/2.0.0), with strictly verified quotes. The 0–5 band is computed in code
  *   (domain/evaluation/multilevel/band-scoring.ts). Pronunciation and pausing come from an optional audio step
  *   (AUDIO_ASSESSMENT); without it the result is provisional. 1-based question numbering throughout. New quality gate.
+ * - speaking-evaluator/3.1.0 — First live run of the Part 2 band anchors (advice task): question statuses 7/7
+ *   correct, but language over-rated by one level (a B1 answer scored band 4, a B2 answer band 5). Prompt gains a
+ *   calibration section: what counts as simple vs complex grammar, everyday vs topic vocabulary, simple vs B2 linkers,
+ *   "accuracy is not range", choose the lower level when in doubt, and fluency from a transcript capped near the
+ *   language level. New prompt hash; scoring, schema and gate unchanged.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.0.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.1.0";
 
 export { EVALUATION_SCHEMA_VERSION };

@@ -11,6 +11,13 @@
 > describe versions ≤ 2.4.1 and are kept as history; their real-run findings informed the 3.0.0 rules (evidence,
 > plain-language numbers, honest retry review).
 >
+> **Evaluator 3.1.0 (calibration).** The first live run of the Part 2 band anchors (advice task, Gemini,
+> 3.0.0 prompt) hit 5/7: every question status was right (including the Q3 trap), but language was over-rated
+> by one level (A2 B1 → B2 = band 4; A4 B2 → above_B2 = band 5; A3 over-rated too but capped by coverage). 3.1.0
+> adds a strict calibration section to the prompt (simple vs complex structures, everyday vs topic vocabulary,
+> simple vs B2 linkers, "accuracy is not range", lower level when in doubt, transcript-only fluency capped near
+> the language level). Re-run `npm run eval:live` to validate.
+>
 > **Verbatim transcription regression.** A live run turned a learner's "nobody will helps" into "nobody helps".
 > Both transcription prompts now ask for a verbatim, disfluent transcript and name the error types models "fix".
 > `T12-verbatim-regression` (`TRANSCRIPTION_SAMPLES=T12 npm run eval:transcription:controlled`) FAILS if "nobody

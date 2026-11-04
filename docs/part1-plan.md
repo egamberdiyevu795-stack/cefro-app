@@ -1,8 +1,7 @@
 # Part 1 plan: Part 1.1 (Questions 1–3) and Part 1.2 (Questions 4–6)
 
-Status: **plan only, nothing built.** Revision 2 adds the owner's answers (2026-11-04): the official descriptors, the
-scoring rules and the content decisions. Every code change below starts **after** the other session's Part 2
-evaluator/scoring/results work is merged, on a fresh branch from `main` (§6).
+Status: **plan only, nothing built; all open questions decided** (owner, 2026-11-04; see §5). Part 1
+implementation starts **only after Part 2 is merged and live-tested**, on a fresh branch from `main` (§6).
 
 The approach is the same as Part 2 (official Question 7, `multilevel-q7`): **the model judges, code scores.** The
 model judges each question's status and each feature's level against the official descriptors, quoting the
@@ -52,14 +51,18 @@ this, one question after another, with no pause for preparation:
 
 Question audio:
 
-- **Pre-generated audio files per question**, either recorded by a person or generated with text-to-speech when
-  the content is written. They are stored with the content and versioned with the task, so every student hears the
-  same audio and nothing depends on a speech API at practice time. Which source to use is still open (§7).
+- **Text-to-speech, pre-generated (decision 16):** one audio file per question, generated when the content is
+  written with **one clear, neutral English voice** used for every task. The files are stored with the task and
+  versioned with it, so every student hears the same audio and nothing depends on a speech API at practice time.
+  The voice and the generator settings are recorded with the content, so changed wording can be regenerated with
+  the same voice.
 - One short chime sound file (original or freely licensed, source recorded like the pictures).
 - Browsers block autoplay, so the part starts with a "Start" button. That tap unlocks audio for the whole part.
 - If a question's audio fails to load or play, the question text is still on screen. The app plays the chime and
   starts the countdown anyway, and records the failure as an analytics event. The part never gets stuck.
-- No replay button: the exam reads each question once. The text stays on screen while the student speaks.
+- No replay button: the exam reads each question once.
+- **The question text stays visible while the student speaks** in v1, because this is practice (decision 18). A
+  later "exam mode" option may hide it to match the exam more closely. Not in v1.
 
 The recorder must not record the question audio or the chime, or the transcript would contain the examiner's words
 and the evaluator could quote them as the student's. So the recorder is **paused** while the question audio and the
@@ -94,10 +97,10 @@ In the exam, Parts 1.1 and 1.2 run one after the other with one introduction. Ea
 (decision 5), so in the data they stay **two attempts with one recording each**: the recording rule and the scoring
 are unchanged. In the UI:
 
-- v1: Part 1.1 and Part 1.2 can each be practised on their own (one short introduction screen each).
-- A "Part 1 (exam order)" mode runs them back to back after one introduction, and shows both bands at the end.
-  This needs only a small session wrapper in the UI that starts the second attempt when the first upload has
-  started. Whether this mode is in v1 or comes later is open (§7).
+- **v1: Part 1.1 and Part 1.2 are separate practices** (one short introduction screen each) (decision 17).
+- **Later, not in v1:** a "Part 1 (exam order)" mode that runs them back to back after one introduction and shows
+  both bands at the end. It needs only a small session wrapper in the UI that starts the second attempt when the
+  first upload has started.
 
 ### Recording (decided): one continuous recording per part
 
@@ -476,22 +479,29 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 14. Delivery as in the exam: each question is read aloud (recorded or TTS audio) and shown on screen, and a chime
     signals "start speaking".
 15. In the exam, Parts 1.1 and 1.2 run back to back with one introduction; each still has its own band.
+16. Question audio for v1: text-to-speech, pre-generated with one clear, neutral English voice, stored with the task.
+17. "Exam order" mode (1.1 then 1.2 after one introduction): later, not in v1. v1 = Part 1.1 and Part 1.2 as
+    separate practices.
+18. The question text stays visible while the student speaks in v1 (it is practice). Possible later "exam mode"
+    option that hides it.
+19. Part 1.2 word minimum: keep `min_relevant_words: 5` until there are real answers to set it from.
+20. Part 1 implementation starts only after Part 2 is merged **and live-tested**.
 
 ## 6. Order of work
 
-1. Wait for the other session's Part 2 work to merge; branch from the new `main`.
+1. Wait until the Part 2 work is merged **and live-tested** (decision 20); then branch from the new `main`.
 2. **PR A — generalise** (no Part 2 behaviour change): levels, features and statuses per rubric; prompt and gate
    wording from the rubric. Part 2 tests pass unchanged; evaluator version bump.
 3. **PR B — Part 1.1:** rubric file, task type + content (timings from the PDF), stepper UI, offsets, anchor tests.
 4. **PR C — Part 1.2:** rubric file, licensed pictures + panel, Q4 partial hint, anchor tests.
 5. Live calibration on the six anchors (both providers), results in `AI_EVALUATION_QUALITY.md`.
 
-## 7. Still to confirm (small)
+## 7. Still to confirm
 
-- The real Part 1.2 minimum word count, from real answers (replaces or adds to the 5-word safety floor).
-- Question audio source: a recorded human voice (closer to the exam, needs a speaker and re-recording when wording
-  changes) or TTS generated when the content is written (cheap, consistent, easy to update). My recommendation is TTS
-  for v1, with a natural voice at a moderate speed, swapped for recordings later if students find it unnatural.
-- "Part 1 (exam order)" mode (1.1 then 1.2 after one introduction): in v1, or after the two parts work on their own?
-- Should the question text stay on screen while the student speaks? This plan keeps it visible, which is slightly
-  easier than the exam if the exam shows it only briefly or not at all.
+Nothing open. All earlier questions are decided in §5 (decisions 16–19 closed the last four).
+
+Revisit later, with real data:
+
+- The Part 1.2 word minimum (decision 19), once there are real answers.
+- Recorded voice instead of TTS, if students find the TTS voice unnatural.
+- The "exam order" mode (decision 17) and the "exam mode" that hides the question text (decision 18).

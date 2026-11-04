@@ -1,6 +1,6 @@
 # Part 3 plan: official Question 8 (balanced argument, target C1, band 0–6)
 
-Status: **plan complete.** No code has been changed. All decisions are recorded in [section 5](#5-decisions).
+Status: **plan closed.** No code has been changed. All decisions are recorded in [section 5](#5-decisions).
 Implementation waits until Part 2 is merged and live-tested, the same as Part 1.
 
 Part 3 reuses the Part 2 design ([`ARCHITECTURE.md` › AI evaluation](ARCHITECTURE.md#ai-evaluation)): **the model
@@ -209,8 +209,9 @@ exact .5 rounds **down** (Part 2's `bestFitLevel`, generalised to a ladder from 
 
 \* **Band-6 gate** (decision 7): the `above_C1` cap of 6 applies only when the language level is `above_C1` **and**
 grammar and vocabulary are each judged `above_C1`. Otherwise an `above_C1` language level is capped at 5.
-Pronunciation (judged up to C1 only) and fluency/cohesion are not part of the gate. Config:
-`scoring.top_band_requires: ["grammar", "vocabulary"]`.
+Pronunciation (judged up to C1 only) and fluency/cohesion are not part of the gate. Config: reuse the Part 2
+mechanism from PR #5, `scoring.above_target_requires: ["grammar", "vocabulary"]` (`rubric-config.ts`,
+`band-scoring.ts`); no new mechanism.
 
 ### Resulting band table
 
@@ -278,9 +279,9 @@ clarifications to 7, 8 and 9 below).
 | 4 | Model vs code (dependence) | **The model decides in v1.** Code overrides only in the clear case: `copied_ratio ≥ 0.50` **and** `points_read ≥ 4` → `reads_prompts`. Every other disagreement is logged and flagged, not applied. Thresholds are reviewed on real recordings before code gets more power. | The overlap measure is only calibrated on synthetic anchors. |
 | 5 | Reading out | **Reading the list = band 1 whatever the language** (official text). Briefly naming a point and then explaining it in your own words is **not** reading: the overlap measure must not count a short point name followed by the student's own content (section 6, "named" runs). Band-1 feedback headline: **"Say the ideas in your own words."** | Official band 1; naming a point is normal exam technique. |
 | 6 | Overlap thresholds | Ship with the thresholds in section 6 as **flag-only** (except the clear-case override in decision 4). Collect ~20 real recordings across bands and review false flags before any further change. | Follows from decision 4: with the model deciding, wrong thresholds only produce log entries. |
-| 7 | Pronunciation and band 6 | The audio step judges pronunciation **up to C1 only, never `above_C1`**, and pronunciation **never blocks band 6**. Band 6 requires the language level `above_C1` **and** grammar and vocabulary each `above_C1` (band-6 gate, section 4); otherwise the cap is 5. | The C1 pronunciation text ("Pronunciation is intelligible") cannot separate C1 from above C1; grammar and vocabulary are where "above C1" is visible in a transcript. Intended to mirror Part 2's band-5 rule. Note: Part 2's current code (`band-scoring.ts`) gates band 5 on the *mean* level only, with no grammar/vocabulary condition, so Part 3 is stricter than Part 2 as built today. |
+| 7 | Pronunciation and band 6 | The audio step judges pronunciation **up to C1 only, never `above_C1`**, and pronunciation **never blocks band 6**. Band 6 requires the language level `above_C1` **and** grammar and vocabulary each `above_C1` (band-6 gate, section 4); otherwise the cap is 5. | The C1 pronunciation text ("Pronunciation is intelligible") cannot separate C1 from above C1; grammar and vocabulary are where "above C1" is visible in a transcript. Mirrors Part 2's band-5 rule. **Implementation: reuse `scoring.above_target_requires` from PR #5** (Part 2: band 5 needs grammar and vocabulary above target; not yet on `main` when this plan was written). Part 3 sets it to `["grammar", "vocabulary"]` in `multilevel_q8.json`; do not write a second mechanism. Kept as written after review. |
 | 8 | Rebuttals | "Some people say X, but…" = point X is **addressed** (`restated`), so X's side counts as covered (cap 4). X is **developed** only if the student gives at least one real reason or example *supporting* X before rebutting it; the rebuttal develops the student's own side, not X's. So `both_sides_full` (cap 6) needs a genuine supporting reason on each side. A counter-argument that never states X does not cover X's side (anchor 3). Test: fixture R1 (section 8). | Presenting the opposing view covers the section; a balanced argument also gives that view's reasons. |
-| 9 | Topics | **Allowed:** education, technology, environment, health, work, cities, transport, media, sport, including policy-style statements ("X should be banned / required / taxed"), because the real exam uses public-debate topics. **Avoid:** weapons, religion, party politics, crime, personal tragedy. Ship **3 topics** first, each with its own anchor set; the reviewer picks 3 from the 5 candidates in section 9. | Students need practice with policy statements like the official sample, without its sensitive subject. |
+| 9 | Topics | **Allowed:** education, technology, environment, health, work, cities, transport, media, sport, including policy-style statements ("X should be banned / required / taxed"), because the real exam uses public-debate topics. **Avoid:** weapons, religion, party politics, crime, personal tragedy. Ship **3 topics** in v1, each with its own anchor set: cars in city centres, T2 (smartphones under 14) and T3 (tax on sugary drinks and fast food). T1, T4 and T5 are kept for later (section 9). | Students need practice with policy statements like the official sample, without its sensitive subject. |
 | 10 | Session flow | Part 3 runs **alone**, like Part 2: the UI shows the Part band (`Part 3: 4/6 · Higher B2`) and the C1 target, never an overall exam level. A full mock test with an overall level is a separate later plan. | Same contract as Part 2; an overall level needs all parts. |
 
 ---
@@ -364,6 +365,7 @@ who paraphrases closely. 4-gram matching keeps that small, but the thresholds mu
 | Audio step | `audio-assessment.ts`, `multilevel-audio-assessment.ts` | **Reused**; descriptors passed from the Q8 rubric so it can judge C1 / above C1. |
 | Feature fields, errors, error patterns, strengths, retry review | `model-output.ts` | **Reused** as shared building blocks; level enum comes from the rubric's ladder. |
 | `bestFitLevel`, `lowestFeature`, `FIX_PRIORITY`, provisional flag | `band-scoring.ts`, `levels.ts` | **Reused**, generalised from the fixed 4-step ladder to the rubric's ladder. |
+| Band-6 gate | `scoring.above_target_requires` (PR #5) | **Reused** with `["grammar", "vocabulary"]` (decision 7). |
 | Rubric file + Zod config validation | `multilevel_q7.json`, `rubric-config.ts` | **Same pattern**; new `multilevel_q8.json`. Config schema becomes a union: `question_count`/`topic_cap` for Q7, `coverage_cap`/`dependence_cap`/`overlap_thresholds` for Q8. |
 | B2 / B1 / below-B1 descriptor text | `multilevel_q7.json` | **Reused verbatim** (Q8 refers to the Q7 features). |
 | Quality gate | `quality-gate.ts` | **Reused** (strict quotes, concrete fixes, no pronunciation from text, no internal names). Q8 additions: point ids exactly F1–F3, A1–A3; `development_evidence` required for `developed`; `prompt_dependence.evidence` quotes checked; `coherent_and_sustained=false` with `own_development` triggers the one regeneration. |
@@ -544,10 +546,22 @@ Pure unit tests, no model call. Each case fixes the model judgements as input an
 
 ---
 
-## 9. Candidate topics (reviewer picks 3)
+## 9. Topics
 
-Policy-style statements in the allowed areas (decision 9). Each needs its own six anchors once chosen. The anchor
-topic above (cars in city centres) can also be one of the three.
+Policy-style statements in the allowed areas (decision 9).
+
+### v1 (ship these three)
+
+| # | Topic | Anchors |
+| --- | --- | --- |
+| 1 | Cities should ban private cars from their centres. (section 8) | **Done**: anchors 0–5, fixtures N1 and R1. |
+| 2 | T2 — Children under 14 should not be allowed to own a smartphone. | **Still needed**: anchors 0–5 (one per band, same profiles as section 8: below B1; reads the list; heavily dependent B1; one side only, B2; both sides full, B2; both sides full, C1) and an R1-style rebuttal fixture (two points per side, one side only stated then rebutted → cap 4). |
+| 3 | T3 — Governments should put a special tax on sugary drinks and fast food. | **Still needed**: the same set as T2 (anchors 0–5 and an R1-style fixture). |
+
+The naming fixture N1 tests the overlap code, not the topic, so one copy (topic 1) is enough. Each new anchor set
+needs its overlap numbers measured and recorded as in section 6 before it is used for calibration.
+
+### Later topics (not in v1)
 
 **T1. Education — "Homework should be banned in primary schools."**
 

@@ -368,7 +368,26 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
       );
       break;
     case "processing":
-      content = (
+      content = polling.lost ? (
+        <div className="mx-auto max-w-xl">
+          <Alert
+            tone="danger"
+            title="We couldn't find this answer"
+            actions={
+              <Button
+                onClick={() =>
+                  state.retryOf ? dispatch({ type: "retryRequested", attempt: state.retryOf }) : backToBrief()
+                }
+              >
+                Record a new answer
+              </Button>
+            }
+          >
+            Your recording was sent, but we can no longer find it on our side, so its feedback can&apos;t be shown.
+            This can happen if you signed in or out in another tab. Please record your answer again.
+          </Alert>
+        </div>
+      ) : (
         <ProcessingPanel
           status={polling.attempt?.status ?? state.attempts[phase.attemptId]?.status ?? null}
           isUploading={false}

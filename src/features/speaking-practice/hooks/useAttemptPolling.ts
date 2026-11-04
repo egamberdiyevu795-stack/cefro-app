@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attempt";
 import { fetchAttempt } from "../lib/api-client";
+import { LOST_AFTER_NOT_FOUND, nextNotFoundCount } from "../lib/attempt-lost";
 
 /** Short enough that finished feedback appears almost at once; each poll is one small read. */
 const POLL_INTERVAL_MS = 1000;
@@ -19,7 +20,9 @@ const CONNECTION_WARNING_AFTER_MS = 30_000;
  * Polls an attempt until it is completed or failed. Network blips are
  * tolerated (polling continues); only a long outage surfaces a warning,
  * and polling resumes at once when the tab becomes visible again or the
- * browser reports that it is back online.
+ * browser reports that it is back online. If the server keeps answering that
+ * the attempt does not exist, polling stops and `lost` is set instead of
+ * spinning forever.
  */
 export function useAttemptPolling(
   attemptId: string | null,
@@ -30,6 +33,7 @@ export function useAttemptPolling(
   const [attempt, setAttempt] = useState<AttemptView | null>(null);
   const [isSlow, setIsSlow] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [lost, setLost] = useState(false);
   const onSettledRef = useRef(onSettled);
   useEffect(() => {
     onSettledRef.current = onSettled;
@@ -43,6 +47,7 @@ export function useAttemptPolling(
     let timer: ReturnType<typeof setTimeout> | undefined;
     const startedAt = Date.now();
     let lastContactAt = startedAt;
+    let notFoundInARow = 0;
 
     const schedule = (delayMs: number) => {
       clearTimeout(timer);
@@ -56,6 +61,7 @@ export function useAttemptPolling(
         const { attempt: latest } = await fetchAttempt(attemptId);
         if (cancelled) return;
         lastContactAt = Date.now();
+        notFoundInARow = nextNotFoundCount(notFoundInARow, { ok: true });
         setConnectionError(null);
         setAttempt(latest);
         const inProgress = IN_PROGRESS_STATUSES.includes(latest.status) && !latest.isStalled;
@@ -64,8 +70,16 @@ export function useAttemptPolling(
           onSettledRef.current(latest);
           return;
         }
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+        notFoundInARow = nextNotFoundCount(notFoundInARow, { ok: false, error });
+        if (notFoundInARow >= LOST_AFTER_NOT_FOUND) {
+          // The server is reachable and keeps saying this attempt does not exist: waiting longer won't change that.
+          settled = true;
+          setConnectionError(null);
+          setLost(true);
+          return;
+        }
         // A hidden tab or a sleeping phone is not a connection problem: only count time the page was visible.
         const visible = typeof document === "undefined" || document.visibilityState === "visible";
         if (visible && Date.now() - lastContactAt >= CONNECTION_WARNING_AFTER_MS) {
@@ -105,8 +119,9 @@ export function useAttemptPolling(
       window.removeEventListener("focus", resume);
       setIsSlow(false);
       setConnectionError(null);
+      setLost(false);
     };
   }, [attemptId, restartKey]);
 
-  return { attempt, isSlow, connectionError };
+  return { attempt, isSlow, connectionError, lost };
 }

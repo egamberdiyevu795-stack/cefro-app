@@ -23,10 +23,8 @@ import {
 /**
  * Expected values from docs/part3-plan.md section 6 ("Measured on the anchors").
  *
- * tokens, copied_ratio, points_read, named runs and the code level match the plan exactly. The plan's novel-word counts
- * came from an uncommitted scratch script whose stopword list was not recorded; this module uses the NLTK English list
- * plus function-word contractions, so its counts differ by a few words (`novel`, with the plan's value in `planNovel`).
- * Each count stays on the same side of the heavily_dependent threshold (25) as the plan's, so the code level is the same.
+ * All values match the plan exactly. For novel_content_words this module is the reference: its stopword list (NLTK
+ * English plus function-word contractions) defines the counts, and the plan's table was updated to them.
  */
 const ANCHORS: {
   name: string;
@@ -35,18 +33,17 @@ const ANCHORS: {
   copiedRatio: number;
   pointsRead: number;
   novel: number;
-  planNovel: number;
   namedRuns: number;
   code: PromptDependence;
 }[] = [
-  { name: "Anchor 0", text: ANCHOR_0, tokens: 49, copiedRatio: 0.0, pointsRead: 0, novel: 15, planNovel: 15, namedRuns: 0, code: "heavily_dependent" },
-  { name: "Anchor 1", text: ANCHOR_1, tokens: 81, copiedRatio: 0.81, pointsRead: 6, novel: 2, planNovel: 2, namedRuns: 0, code: "reads_prompts" },
-  { name: "Anchor 2", text: ANCHOR_2, tokens: 100, copiedRatio: 0.29, pointsRead: 3, novel: 15, planNovel: 14, namedRuns: 0, code: "heavily_dependent" },
-  { name: "Anchor 3", text: ANCHOR_3, tokens: 156, copiedRatio: 0.0, pointsRead: 0, novel: 62, planNovel: 60, namedRuns: 0, code: "own_development" },
-  { name: "Anchor 4", text: ANCHOR_4, tokens: 171, copiedRatio: 0.0, pointsRead: 0, novel: 63, planNovel: 60, namedRuns: 0, code: "own_development" },
-  { name: "Anchor 5", text: ANCHOR_5, tokens: 223, copiedRatio: 0.0, pointsRead: 0, novel: 85, planNovel: 91, namedRuns: 1, code: "own_development" },
-  { name: "Fixture N1", text: FIXTURE_N1, tokens: 72, copiedRatio: 0.0, pointsRead: 0, novel: 31, planNovel: 33, namedRuns: 2, code: "own_development" },
-  { name: "Fixture R1", text: FIXTURE_R1, tokens: 158, copiedRatio: 0.0, pointsRead: 0, novel: 56, planNovel: 59, namedRuns: 2, code: "own_development" },
+  { name: "Anchor 0", text: ANCHOR_0, tokens: 49, copiedRatio: 0.0, pointsRead: 0, novel: 15, namedRuns: 0, code: "heavily_dependent" },
+  { name: "Anchor 1", text: ANCHOR_1, tokens: 81, copiedRatio: 0.81, pointsRead: 6, novel: 2, namedRuns: 0, code: "reads_prompts" },
+  { name: "Anchor 2", text: ANCHOR_2, tokens: 100, copiedRatio: 0.29, pointsRead: 3, novel: 15, namedRuns: 0, code: "heavily_dependent" },
+  { name: "Anchor 3", text: ANCHOR_3, tokens: 156, copiedRatio: 0.0, pointsRead: 0, novel: 62, namedRuns: 0, code: "own_development" },
+  { name: "Anchor 4", text: ANCHOR_4, tokens: 171, copiedRatio: 0.0, pointsRead: 0, novel: 63, namedRuns: 0, code: "own_development" },
+  { name: "Anchor 5", text: ANCHOR_5, tokens: 223, copiedRatio: 0.0, pointsRead: 0, novel: 85, namedRuns: 1, code: "own_development" },
+  { name: "Fixture N1", text: FIXTURE_N1, tokens: 72, copiedRatio: 0.0, pointsRead: 0, novel: 31, namedRuns: 2, code: "own_development" },
+  { name: "Fixture R1", text: FIXTURE_R1, tokens: 158, copiedRatio: 0.0, pointsRead: 0, novel: 56, namedRuns: 2, code: "own_development" },
 ];
 
 describe("tokenize", () => {
@@ -66,15 +63,13 @@ describe("tokenize", () => {
 });
 
 describe("measurePromptOverlap: cars anchors (plan section 6)", () => {
-  it.each(ANCHORS)("$name", ({ text, tokens, copiedRatio, pointsRead, novel, planNovel, namedRuns, code }) => {
+  it.each(ANCHORS)("$name", ({ text, tokens, copiedRatio, pointsRead, novel, namedRuns, code }) => {
     const overlap = measurePromptOverlap(text, CARS_PROMPT);
     expect(overlap.token_count).toBe(tokens);
     expect(overlap.copied_ratio.toFixed(2)).toBe(copiedRatio.toFixed(2));
     expect(overlap.points_read).toBe(pointsRead);
     expect(overlap.named_runs).toBe(namedRuns);
     expect(overlap.novel_content_words).toBe(novel);
-    const threshold = DEFAULT_PROMPT_OVERLAP_CONFIG.heavily_dependent.min_novel_content_words;
-    expect(overlap.novel_content_words < threshold).toBe(planNovel < threshold);
     expect(overlap.code_dependence).toBe(code);
   });
 

@@ -168,7 +168,7 @@ descriptor, and each rubric marks it as reference in `descriptor_sources`, as `m
 | `above_target_requires` | `["grammar", "vocabulary"]` | `["grammar", "vocabulary"]` |
 | `language_cap` | below_A1 0 · A1 2 · A2 4 · above_A2 5 | below_A2 0 · A2 2 · B1 4 · above_B1 5 |
 | `meets_target_band` | 3 | 3 |
-| `min_relevant_words` (safety floor) | 5 | 5 |
+| `min_relevant_words` (safety floor) | 0 = **no floor** | 5 |
 
 1. `on_topic_count` = questions with a status that counts: `on_topic` in Part 1.1; `on_topic` or `partial` in
    Part 1.2.
@@ -178,10 +178,13 @@ descriptor, and each rubric marks it as reference in `descriptor_sources`, as `m
    - the answer is memorised/irrelevant, or no question is on topic;
    - the language is at index 0: in Part 1.2 "below A2"; in Part 1.1 "below_A1", which means **only** no meaningful
      language (there is no below-A1 descriptor, so weak but meaningful A1 language is never band 0);
-   - **fewer than `min_relevant_words` (5) relevant words in the whole part** (no ratable sample). Relevant words =
-     words inside the verified evidence quotes of questions that count as on topic, fillers (um, uh …) excluded, so
-     the count comes from code, not from the model. This is a safety floor only; the real per-part minimum is set
-     later from real answers. Part 2's own `min_words` is unchanged.
+   - **Part 1.2 only:** fewer than `min_relevant_words` (5) relevant words in the whole part (no ratable sample).
+     Relevant words = words inside the verified evidence quotes of questions that count as on topic, fillers
+     (um, uh …) excluded, so the count comes from code, not from the model. This is a safety floor only; the real
+     minimum is set later from real answers.
+   - **Part 1.1 has no word floor** (`min_relevant_words: 0` switches the check off). The question statuses decide:
+     any relevant answer counts, even one word, and the language level handles quality.
+   - Part 2's own `min_words` is unchanged.
 4. Otherwise `band = min(topic_cap, language_cap)`. **Band 5** needs all three questions on topic, an overall
    language level above the target, **and** grammar and vocabulary each above the target. This is the same as the
    Part 2 rule in the other session's branch (`above_target_requires`). If any of these fails, the band stays at 4
@@ -385,9 +388,10 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 |---|---|
 | Silence / noise only | Speech guard rejects before evaluation (no band) |
 | One memorised "my hobby" paragraph for all of Part 1.1 | `memorized_or_irrelevant` → band 0 |
-| Part 1.1, words and phrases for all three ("Football. TV." / "Plov. Very good." / "My mother.") | 7 relevant words ≥ 5; all on_topic; grammar/vocab A1 → language cap 2, topic cap 4 → band 2 |
-| Part 1.1, "Football." / "Plov." / "Mother." | 3 relevant words < 5 → band 0 (no ratable sample) |
-| Exactly 5 relevant words in the part | Not below the floor → scored normally |
+| Part 1.1, one word per question ("Football." / "Plov." / "Mother.") | No word floor in Part 1.1; all three on_topic; grammar A1, vocabulary A1, fluency A1–A2 → mean rounds to A1 → language cap 2, topic cap 4 → **band 2** (Higher A1: at least two on topic, A1 language) |
+| Part 1.1, one relevant word for one question only, other two missing | One on topic, A1 → topic cap 1 → band 1 (not band 0) |
+| Part 1.2, 4 relevant words in the whole part (e.g. Q4 "Family. Burger." / Q5 "Home, yes." / Q6 missing) | Fewer than 5 → band 0 (no ratable sample) |
+| Part 1.2, exactly 5 relevant words | Not below the floor → scored normally |
 | Part 1.2, Q4 describes only picture A | Q4 `partial` (counts); feedback contains "compare the two pictures" |
 | Part 1.2, Q5 = "I prefer home." | Q5 `partial` (counts); feedback asks for a reason |
 | Part 1.1 output contains `partial` or `minimal` | Quality gate rejects (status not allowed in this rubric) |
@@ -413,8 +417,11 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 11. Borrowed descriptors approved, as background for the model only, never as band text: "above A2" = Questions 4–6
     B1 text; "above B1" = Question 7 B2 text; "below A2" = Questions 1–3 A1 text. Part 1.1 has no "below A1" text:
     band 0 there means no meaningful language or all responses off-topic, nothing else.
-12. Minimum word count: set from real answers later. For now only a safety floor, as a config value
-    (`min_relevant_words: 5`): fewer than 5 relevant words in the whole part = band 0 (no ratable sample).
+12. Minimum word count (corrected 2026-11-04): set from real answers later. For now, as config values:
+    - **Part 1.1: no word floor** (`min_relevant_words: 0`). Answer statuses decide; any relevant answer counts,
+      even one word. "Football. / Plov. / Mother." gives band 2 (Higher A1).
+    - **Part 1.2: safety floor** `min_relevant_words: 5`: fewer than 5 relevant words in the whole part = band 0
+      (no ratable sample).
 13. Timings: still waiting for `Speaking_format.pdf`; they stay config placeholders.
 
 ## 6. Order of work
@@ -429,4 +436,4 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 ## 7. Still to confirm (small)
 
 - The timings from `Speaking_format.pdf` (and whether the questions are also read aloud).
-- The real per-part minimum word count, from real answers (replaces or adds to the 5-word safety floor).
+- The real Part 1.2 minimum word count, from real answers (replaces or adds to the 5-word safety floor).

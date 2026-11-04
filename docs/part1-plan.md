@@ -22,41 +22,89 @@ transcript exactly. `band-scoring.ts` computes the 0–5 band from a per-part ru
 
 ## 1. Task format
 
-### Timings are config, not code
+Source: official UZBMB `Speaking_format.pdf` (received 2026-11-04).
 
-The official format document (UZBMB `Speaking_format.pdf`) has not arrived yet, so **no timing is fixed in this
-plan or in code**. Each task's content file carries per-question values that the UI and the metrics read:
+### Timings (official, stored as config)
+
+| Part | Level | Questions | Preparation | Speaking time per question | Speaking total |
+|---|---|---|---|---|---|
+| 1.1 | A1–A2 | 1, 2, 3 | **none** | 30 s · 30 s · 30 s | 1 min 30 s |
+| 1.2 | B1 | 4, 5, 6 | **none** | 45 s · 30 s · 30 s | 1 min 45 s |
+
+The values live in each task's content file, never as literals in components or the evaluator:
 
 ```ts
-questions: [{ text, prepSeconds, speakingSeconds, partialHint? }, …]
+questions: [{ text, audio, prepSeconds: 0, speakingSeconds: 30, partialHint? }, …]
 ```
 
-The values are filled in from the PDF when it arrives. Until then, tests use their own fixture values. No timing
-literal goes into components or the evaluator.
+`prepSeconds` stays in the shape (always 0 for Part 1) so the same stepper can serve other parts later. A content
+test checks every Part 1.1 task is 3 × 30 s and every Part 1.2 task is 45 + 30 + 30 s, all with 0 preparation.
 
-### Part 1.1 — Questions 1–3 (personal questions)
+### How each question is delivered (as in the exam)
 
-- Three short questions about the student (home, family, free time, study, food …), shown **one at a time**.
-  Example task: *"What do you usually do at the weekend?"*, *"What is your favourite food? Why?"*,
+In the exam the examiner's voice reads each question and a chime signals "start speaking". The practice flow copies
+this, one question after another, with no pause for preparation:
+
+1. The question appears on screen ("Question 2 of 3" + text) **and** its audio plays.
+2. A chime plays. The speaking countdown (30 s or 45 s) starts at the chime.
+3. When the countdown ends, the next question starts automatically (back to step 1). After the last one the part
+   ends and the upload starts.
+
+Question audio:
+
+- **Pre-generated audio files per question**, either recorded by a person or generated with text-to-speech when
+  the content is written. They are stored with the content and versioned with the task, so every student hears the
+  same audio and nothing depends on a speech API at practice time. Which source to use is still open (§7).
+- One short chime sound file (original or freely licensed, source recorded like the pictures).
+- Browsers block autoplay, so the part starts with a "Start" button. That tap unlocks audio for the whole part.
+- If a question's audio fails to load or play, the question text is still on screen. The app plays the chime and
+  starts the countdown anyway, and records the failure as an analytics event. The part never gets stuck.
+- No replay button: the exam reads each question once. The text stays on screen while the student speaks.
+
+The recorder must not record the question audio or the chime, or the transcript would contain the examiner's words
+and the evaluator could quote them as the student's. So the recorder is **paused** while the question audio and the
+chime play and **resumed** at the chime (`MediaRecorder.pause()` / `resume()`). It stays one recording file. Using
+headphones is recommended on screen, and echo cancellation stays on.
+
+### Part 1.1 — Questions 1–3 (familiar personal topics)
+
+- Three questions about familiar personal topics (home, family, friends, interests), presented one after another.
+  Example task (our own wording): *"What do you usually do at the weekend?"*, *"What is your favourite food? Why?"*,
   *"Who do you spend the most time with in your family?"*
-- Per question: optional preparation, then a speaking countdown (both from config). Shows "Question 1 of 3", the
-  question text and a countdown ring. The next question appears when the time ends.
+- 30 s per question, no preparation. The screen shows the question number and text and a countdown ring.
 - Only the full part can be practised (no single-question mode for now).
 
-### Part 1.2 — Questions 4–6 (two pictures, then two questions)
+### Part 1.2 — Questions 4–6 (two pictures on one topic)
 
-- Two pictures on one theme (e.g. *A: a family cooking at home*, *B: friends eating at a fast-food restaurant*).
-  They stay on screen for all three questions.
-- **Question 4:** describe the two pictures and compare them.
-- **Questions 5 and 6:** two questions on the same theme, from the student's own experience and opinion.
-- Preparation and speaking time per question come from config.
+- Two pictures on one topic, on screen from the start of Question 4 to the end of Question 6.
+- **Question 4 (45 s):** say what you see in the pictures and compare them. The official sample wording is *"Look at
+  the photographs. What do you see in these pictures?"*
+- **Questions 5 and 6 (30 s each):** questions on the same topic. Official sample: *"What are some advantages of
+  walking over driving?"*, *"Why do some people prefer having a car of their own?"* (pictures: a man driving a car /
+  people walking across a city street).
+- No preparation: the pictures appear with Question 4's audio.
+- Our tasks follow this pattern but use our own topics, questions and pictures. We do not reuse the official sample
+  questions or pictures as practice content (decision 9). The sample is used only as a format reference, and its
+  wording style is a guide for writing Question 4 prompts.
 - Only the full part can be practised.
+
+### Part 1.1 and 1.2 back to back
+
+In the exam, Parts 1.1 and 1.2 run one after the other with one introduction. Each part still gets its own band
+(decision 5), so in the data they stay **two attempts with one recording each**: the recording rule and the scoring
+are unchanged. In the UI:
+
+- v1: Part 1.1 and Part 1.2 can each be practised on their own (one short introduction screen each).
+- A "Part 1 (exam order)" mode runs them back to back after one introduction, and shows both bands at the end.
+  This needs only a small session wrapper in the UI that starts the second attempt when the first upload has
+  started. Whether this mode is in v1 or comes later is open (§7).
 
 ### Recording (decided): one continuous recording per part
 
-- One recording runs for the whole part while the app advances the questions on screen.
-- The client records the start time of each question relative to the recording start,
-  `question_offsets_ms: [0, t2, t3]`, and sends it with the upload.
+- One recording runs for the whole part while the app advances the questions. It is paused during each question's
+  audio and chime (see above), so the file holds only the student's speech.
+- The client records the start time of each question's speaking window in recording time (i.e. after pauses are
+  removed), `question_offsets_ms: [0, t2, t3]`, and sends it with the upload.
 - Stored on the attempt (a small JSON column or the existing attempt metadata, decided in the PR); no `responses`
   table, no change to the one-recording-per-attempt rule.
 - The evaluator gets the whole transcript with the question order and the offsets as context, and quotes each
@@ -244,9 +292,10 @@ descriptor, and each rubric marks it as reference in `descriptor_sources`, as `m
 |---|---|
 | `multilevel_q1_3.json`, `multilevel_q4_6.json` + `RubricId` entries | §2 text verbatim; versions `…/1.0.0` |
 | `SpeakingTaskType`: `"short_answers"` (1.1), `"picture_questions"` (1.2) | Closed union, as today |
-| Task content: per-question `{text, prepSeconds, speakingSeconds, partialHint?}`; `images[]` with licence fields | Timings filled from `Speaking_format.pdf` |
+| Task content: per-question `{text, audio, prepSeconds, speakingSeconds, partialHint?}`; `images[]` with licence fields | Official timings (§1); a content test enforces them |
+| Question audio files (recorded or TTS, made when the content is written) + one chime file | Stored and versioned with the content; chime source/licence recorded |
 | Content: one A2 task (1.1) and one B1 task (1.2) | Pictures freely licensed, sources recorded |
-| Practice UI: question stepper inside one recording; picture panel | Extract the generic recording session from `PracticeExperience.tsx` first |
+| Practice UI: question stepper inside one recording (audio → chime → countdown → next), recorder paused during question audio; picture panel; "Start" tap to unlock audio | Extract the generic recording session from `PracticeExperience.tsx` first |
 | `question_offsets_ms` on upload → attempt → evaluator; per-question time used in metrics | |
 | Per-part speech-guard thresholds and `min_relevant_words` | Today tuned for one 2-minute answer |
 | Tests: descriptor text vs §2; image licence fields; anchor judgements → `scoreBand` (§4); status allow-lists | Unit tests; anchors also as live calibration cases |
@@ -402,7 +451,7 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 
 ## 5. Decisions recorded (owner, 2026-11-04)
 
-1. Timings come from the official `Speaking_format.pdf` (to be sent). Until then they are config values only.
+1. Timings come from the official `Speaking_format.pdf` and are stored as config values (filled in, see 13).
 2. One continuous recording per part with a timestamp per question, for v1.
 3. Official descriptors as in §2, verbatim; the lower level for Questions 1–3 is A1; Part 1.1 has no cohesion.
 4. Caps work exactly like Part 2, shifted down; band 5 needs all three on topic and grammar and vocabulary above
@@ -422,7 +471,11 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
       even one word. "Football. / Plov. / Mother." gives band 2 (Higher A1).
     - **Part 1.2: safety floor** `min_relevant_words: 5`: fewer than 5 relevant words in the whole part = band 0
       (no ratable sample).
-13. Timings: still waiting for `Speaking_format.pdf`; they stay config placeholders.
+13. Timings (official `Speaking_format.pdf`, received 2026-11-04): Part 1.1 = 3 × 30 s, Part 1.2 = 45 s + 30 s +
+    30 s, no preparation in either. Questions are presented one after another.
+14. Delivery as in the exam: each question is read aloud (recorded or TTS audio) and shown on screen, and a chime
+    signals "start speaking".
+15. In the exam, Parts 1.1 and 1.2 run back to back with one introduction; each still has its own band.
 
 ## 6. Order of work
 
@@ -435,5 +488,10 @@ Mean 3 → **above_B1** → language cap 5; full coverage + grammar and vocabula
 
 ## 7. Still to confirm (small)
 
-- The timings from `Speaking_format.pdf` (and whether the questions are also read aloud).
 - The real Part 1.2 minimum word count, from real answers (replaces or adds to the 5-word safety floor).
+- Question audio source: a recorded human voice (closer to the exam, needs a speaker and re-recording when wording
+  changes) or TTS generated when the content is written (cheap, consistent, easy to update). My recommendation is TTS
+  for v1, with a natural voice at a moderate speed, swapped for recordings later if students find it unnatural.
+- "Part 1 (exam order)" mode (1.1 then 1.2 after one introduction): in v1, or after the two parts work on their own?
+- Should the question text stay on screen while the student speaks? This plan keeps it visible, which is slightly
+  easier than the exam if the exam shows it only briefly or not at all.

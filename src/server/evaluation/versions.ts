@@ -66,7 +66,12 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   feedback written one level above the student (no C1 for B1 students), missing-question model answers give a
  *   should / shouldn't frame instead of an invented opinion; the gate allows pronunciation practice tips in
  *   instruction fields but still blocks judgements of the student's pronunciation.
+ * - speaking-evaluator/3.4.0 — First 3.3.0 live run (high thinking, ×3): anchors 7/7 on every run, but S03/S07/S12 fell
+ *   to band 0 (fluency and cohesion both rated below_B1 → mean 0.5 → below B1). The 3.2.0 below-B1 cues contradicted
+ *   the official descriptors: simple linkers ARE the B1 cohesion descriptor, and short sentences are not a fluency
+ *   problem (pausing / false starts / reformulations are). Cues realigned. Also: no level codes in student text,
+ *   concrete fluency techniques (5 of 7 regenerations were generic fluency advice), no intonation talk.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.3.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.4.0";
 
 export { EVALUATION_SCHEMA_VERSION };

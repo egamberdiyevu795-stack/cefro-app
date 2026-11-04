@@ -87,8 +87,8 @@ Examiners most often over-rate by one level. Accuracy is not range: an answer wi
 The rules above only say what is NOT enough for a higher level; they never lift an answer to B1. Use below_B1 for a feature when the below-B1 reference fits:
 - Grammar: basic mistakes in most sentences (missing verbs or "to", wrong tense in a past story, "she go", missing plurals).
 - Vocabulary: only very basic words, with noticeable wrong word choices or word order (e.g. "much happy", "make sport", "big problem is").
-- Cohesion: mostly a list of short separate sentences; links are at most and / but / because / also, used between short points rather than connecting developed ideas.
-- Fluency (from the transcript): mostly very short sentences or fragments, broken phrases, a list of points, or stopping well before the time.
+- Cohesion: ideas are hardly linked at all, the answer is a list of points (the official below-B1 text). Simple linkers such as and / but / because / so used between ideas are NOT below_B1: that is exactly the B1 descriptor ("uses only simple cohesive devices").
+- Fluency (from the transcript): frequent pausing, false starts and reformulations that are visible in the transcript (many fillers, broken or restarted phrases) or in <speech_metrics>. Short, simple sentences said without hesitation are a grammar/cohesion matter, not a fluency problem.
 Grammar, strictly by the descriptors: B1 requires simple structures to be used CORRECTLY. Count basic errors in simple structures of these three kinds: subject-verb agreement (e.g. "she don't", "the rules is"), the verb form after do / does / did / will / would / can / should / must (e.g. "can goes", "didn't went", "should to go"), and a missing "be" in continuous forms (e.g. "we going", "she reading"). If such errors recur systematically, that is 3 or more instances across 2 or more of these kinds, grammar is below_B1 (the Higher A2 reference fits), whatever complex structures are also attempted.
 B1 needs the B1 descriptor to fit: simple structures mostly CORRECT, enough everyday vocabulary to answer, and ideas joined into some connected sentences. When basic grammar mistakes are systematic, check each other feature against the below-B1 reference before choosing B1.
 
@@ -117,7 +117,11 @@ Everything you write for the student to copy (model_answer, error corrections, e
 - B2 or above_B2 student → natural, strong B2: still spoken and plain, never formal academic C1 style.
 Corrections fix the error and keep the student's words and level; do not rewrite the sentence into a more advanced one. Suggest one next step, not a jump to C1.
 
-# 8. Style
+# 8. Wording rules for the student
+- Never write the level codes "above_B2" or "below_B1" (or any field name) in student text: say "above B2" or "below B1".
+- Fluency feedback is about pauses, fillers, restarts and speaking time only; do not mention intonation, accent or sounds. Its how_to_improve names one concrete technique (e.g. "Plan the first sentence of each answer during preparation", "Pause silently at a full stop instead of saying 'um'"), never "speak more fluently", "practise more" or "add more details".
+
+# 9. Style
 Write notes and instructions to the student as "you", in short, simple sentences a ${task.level === "B2" ? "B1–B2" : task.level} learner understands. If you use a grammar term, add a short example. No flattery.`;
 }
 

@@ -1,6 +1,7 @@
 # Teaching plan: which lesson each evaluator problem leads to
 
-Status: **plan only.** No code, no content written yet. Open questions are in [section 7](#7-open-questions).
+Status: **plan approved** (owner, 2026-11-05). No code, no content written yet. All open questions are decided in
+[section 7](#7-decisions).
 
 Sources this plan follows (so the lessons match what the evaluator really reports):
 
@@ -106,7 +107,8 @@ Notes:
 ## 2. Lesson map
 
 Lesson ids are `L-…`. "Target" is the level the lesson moves the student **to**: one step above where the
-evaluator placed them (open question 4).
+evaluator placed them on that feature (decision 4). A student already above the part's target gets the lesson that
+aims at the band-5 / band-6 condition: grammar and vocabulary each above target.
 
 ### 2a. Task lessons (question status and Part 3)
 
@@ -140,8 +142,9 @@ Where one lesson covers several problems:
 
 ### 2b. Language lessons (features)
 
-One lesson per feature per step. Grammar and vocabulary steps have **sub-lessons** for common error patterns
-(section 4 explains how one is chosen).
+One lesson per feature per step. Grammar and vocabulary steps list **sub-lessons** for common error patterns. In v1
+only the general lesson for each step is used (chosen by feature + level, decision 1); the sub-lessons come with the
+later mistake codes (section 4).
 
 | Lesson | Title | Target | One-line goal | Covers |
 | --- | --- | --- | --- | --- |
@@ -167,7 +170,7 @@ One lesson per feature per step. Grammar and vocabulary steps have **sub-lessons
 | L-C2 | Show the link | B2 | Use *however, for example, as a result, although, on the other hand*. | P-CO-B1 |
 | L-C3 | Signpost the argument | C1 | Use a range: *whereas, which means that, that's why, firstly… finally, to sum up*. | P-CO-B2 |
 | L-C4 | Cohesion that sounds natural | above C1 | Avoid over-using linkers; use reference (*this, such a…*) and ellipsis. | P-CO-C1 |
-| **Pronunciation** (audio only) | | | | |
+| **Pronunciation** (audio only; tips only until the audio check is on, decision 8) | | | | |
 | L-P1 | Clear words | A2 | Clear vowels and word endings (*-s, -ed, -t*), stress on the right syllable in common words. | P-PR-A1, P-PR-A2 |
 | L-P2 | Stress and chunks | B1–B2 | Stress the key word in a sentence; pause between chunks, not inside them. | P-PR-B1 |
 | L-P3 | Intonation | C1 | Rising / falling tone for lists, questions and contrast. | P-PR-B2 |
@@ -189,10 +192,10 @@ One lesson = one skill, one screen flow, **about 8–12 minutes** including the 
 | Step | Content | Time |
 | --- | --- | --- |
 | 1. Why this lesson | One line linking to the result: "Your answer to Question 3 was a story, but the question asks for your opinion." Uses the evaluator's own note / quote. | 10 s |
-| 2. Short explanation | At most ~120 words, plain English at the lesson's level. One rule or one habit, never a list of rules. | 1 min |
-| 3. Examples | 3–4 short pairs *weaker → better*, written by us. When the result has a matching error (with its correction) or a `model_answer`, it is shown first, marked "from your answer". | 1–2 min |
-| 4. Speaking drill | 3–5 short spoken prompts, 15–30 s each, that practise only this skill (e.g. "Answer in one sentence, then add *because…*"). Recorded; the student listens back and ticks a 2–3 item checklist. | 3–4 min |
-| 5. Retry the same task | The same task as the original attempt, with the lesson's goal shown as the retry focus. The existing retry flow and `retry_review` judge it (achieved / partly / not). | 1.5–3 min speaking + prep (task timings) |
+| 2. Short explanation | At most ~120 words, plain English at the lesson's level. One rule or one habit, never a list of rules. A1–A2 lessons add a short Uzbek explanation under the English one (decision 3). | 1 min |
+| 3. Examples | 3–4 short pairs *weaker → better*, written by us and marked as made up. When the result has a matching error (with its correction) or a `model_answer`, it is shown first, marked "from your answer". | 1–2 min |
+| 4. Speaking drill | 3–5 short spoken prompts, 15–30 s each, that practise only this skill (e.g. "Answer in one sentence, then add *because…*"). Recorded; the student listens back and ticks a 2–3 item checklist. **Self-check only, no AI scoring** (decision 2). Pronunciation lessons have no drill until the audio check is on (decision 8). | 3–4 min |
+| 5. Retry the same task | The same task as the original attempt, with the lesson's goal shown as the retry focus. The existing retry flow and `retry_review` judge it (achieved / partly / not). This is the only AI-scored step. | 1.5–3 min speaking + prep (task timings) |
 
 Shape of one lesson file (proposal, for the build stage):
 
@@ -205,12 +208,14 @@ interface Lesson {
   targetLevel: "A2" | "B1" | "B2" | "C1" | "above_C1";
   problems: ProblemCode[];  // the P-… codes from section 1
   parts: (1.1 | 1.2 | 2 | 3)[];
-  explanation: string;      // ≤ 120 words
-  examples: { weaker: string; better: string; note?: string }[]; // 3–4
-  drill: { prompt: string; seconds: number }[];                  // 3–5
+  explanation: string;      // ≤ 120 words, English
+  explanationUz?: string;   // short Uzbek explanation, required for A1–A2 lessons (decision 3)
+  examples: { weaker: string; better: string; note?: string; madeUp: true }[]; // 3–4, always made up (decision 7)
+  drill: { prompt: string; seconds: number }[];                  // 3–5; [] for pronunciation until audio is on
   checklist: string[];      // 2–3 self-check items
   retryObjective: string;   // matches the retry_focus wording style
-  author: string; writtenAt: string; reviewedBy?: string;        // content sources, section 6
+  draftedBy: "ai" | "human"; writtenAt: string;
+  reviewedBy?: string; reviewedAt?: string; // must be set before the lesson is used (decision 7)
 }
 ```
 
@@ -240,15 +245,16 @@ model. The second retry focus item stays as text on the result screen ("Also try
 | | otherwise | L-T4 (C1 variant) |
 | `feature` | feature + the student's level on it + the part | section 2b, one step up |
 
-**Grammar and vocabulary sub-lessons.** When the fix is grammar or vocabulary, the first `error_patterns` entry of
-that type picks the sub-lesson (e.g. "Missing -s after he/she/it" → L-G2a). Today the pattern name is free text, so
-there are two options (open question 1):
+**Feature lessons in v1 (decision 1): feature + level only.** The lesson is the one for that feature whose target
+is one step above the student's level on it (decision 4). If the student is already above the part's target on that
+feature, the lesson aims at the band-5 condition (Part 3: band 6): grammar and vocabulary each above target, so the
+lesson is the grammar or vocabulary one, whichever is not yet above target (grammar first, as in `FIX_PRIORITY`).
+The evaluator's free-text `error_patterns` and errors are still shown inside the lesson as "from your answer"
+examples, but they do not choose the lesson.
 
-- **(a, recommended)** add a closed `pattern_code` field to `errorPatternSchema` (G2a…G4d, V2a…V2d, `other`), so code
-  maps it exactly. This is a schema + prompt change and an evaluator version bump, done in the build stage.
-- **(b)** match the free-text name with keywords. No schema change, but unreliable.
-
-If no pattern matches, the student gets the general lesson for that step (e.g. L-G2 without a sub-lesson).
+**Later: mistake codes.** A closed `pattern_code` field on `errorPatternSchema` (G2a…G4d, V2a…V2d, `other`) will pick
+the sub-lesson (e.g. "Missing -s after he/she/it" → L-G2a). It changes the prompt, so it comes in a later evaluator
+version, **after Part 2 is merged and live-tested**, with its own live check. Until then, no sub-lesson is chosen.
 
 **After the retry** (`retry_review` on the lesson's objective):
 
@@ -258,8 +264,8 @@ If no pattern matches, the student gets the general lesson for that step (e.g. L
 | partly_achieved | Same lesson once more with the second example set (each lesson has two). |
 | not_achieved twice | Step down: the same skill one level lower if it exists (e.g. L-T4 B2 → B1), else move to the next biggest fix and mark the skill "come back later". |
 
-A student never sees the same lesson more than twice in a row. A lesson library (browse all lessons) is a separate
-question (open question 5); the default flow is one recommended lesson only.
+A student never sees the same lesson more than twice in a row. v1 shows only the lesson chosen from the biggest fix; a lesson
+library (browse all lessons) comes later (decision 5).
 
 ---
 
@@ -283,12 +289,13 @@ Same order as the parts ship: Part 2 is the first live part, then Part 1, then P
 
 1. **Wave 1 — Part 2 task lessons** (cap the band most often, cheap to write): L-T1, L-T3, L-T4 (B2), L-T6, L-T7,
    L-T8. Plus the lesson screen flow and the "biggest fix → lesson" mapping.
-2. **Wave 2 — Part 2 language lessons** (B1 → B2 is the common gap): L-G3 (a–d), L-V3, L-F2, L-F3, L-C2, L-C3, then
-   L-G4, L-V4. Needs the `pattern_code` decision first.
-3. **Wave 3 — Part 1** (after Part 1 ships): L-T2, L-T5, L-T4 (B1), L-G1, L-G2 (a–f), L-V1, L-V2 (a–d), L-F1, L-C1.
+2. **Wave 2 — Part 2 language lessons** (B1 → B2 is the common gap): L-G3, L-V3, L-F2, L-F3, L-C2, L-C3, then L-G4,
+   L-V4, as general lessons (decision 1). Sub-lessons (L-G3a–d etc.) are written once mistake codes exist.
+3. **Wave 3 — Part 1** (after Part 1 ships): L-T2, L-T5, L-T4 (B1), L-G1, L-G2, L-V1, L-V2, L-F1, L-C1, each with
+   the Uzbek explanation where it is an A1–A2 lesson.
 4. **Wave 4 — Part 3** (after Part 3 ships): L-T9, L-T10, L-T11, L-T4 (C1), L-T12, L-G5, L-V5, L-F4, L-C4.
-5. **Wave 5 — pronunciation** (L-P1–L-P3): only once the audio step is on by default, because a retry can check
-   pronunciation only with audio.
+5. **Pronunciation** (L-P1–L-P3): **tips only** (explanation + examples, no drill) until the audio check is on
+   (decision 8); drills and a checked retry are added once it is on by default.
 
 Within a wave, write the lessons for the most frequent biggest fixes first, measured from stored results once there
 are real attempts.
@@ -297,6 +304,9 @@ are real attempts.
 
 ## 6. Content sources
 
+- **Drafting (decision 7):** an AI writes the first draft of each lesson; the owner reviews **every** lesson before it
+  is used. Each draft marks every example as made up and lists the problem codes (section 1) it covers. A lesson with
+  no `reviewedBy` is never shown to students.
 - **All lesson text, examples and drills are our own writing.** No copied or lightly reworded textbook material
   (no exercises, example sentences or explanations taken from published course books or grammar books), no
   official exam questions or pictures, no content from other exam-prep apps or websites.
@@ -308,26 +318,25 @@ are real attempts.
   time, from their own result.
 - Topics follow the same allowed list as Part 3 (decision 9): no weapons, religion, party politics, crime, personal
   tragedy.
-- Each lesson file records author, date and reviewer (section 3 shape), like the picture licence fields.
+- Each lesson file records who drafted it, the date and the reviewer (section 3 shape), like the picture licence
+  fields.
 - Audio: generated with our TTS voice. Any sound or image from outside must be original or CC0 / freely licensed,
   with the source recorded, as for task pictures.
 
 ---
 
-## 7. Open questions
+## 7. Decisions
 
-1. **Error pattern codes.** Add a closed `pattern_code` list to the evaluator output (recommended, needs an evaluator
-   version bump), or match free-text pattern names?
-2. **Drill checking.** Is the drill self-checked only (recommended for v1, no extra AI cost), or should each drill
-   recording also be checked by the model?
-3. **Explanation language.** English only, or an Uzbek (and/or Russian) version of the explanation for A1–A2
-   lessons?
-4. **Lesson target.** One step above the student's level (recommended), or always the part's target level (e.g.
-   always B2 lessons in Part 2, even for a below-B1 student)?
-5. **Lesson library.** Only the one recommended lesson, or also a page where students can browse every lesson?
-6. **Repeat rule.** Is "same lesson at most twice, then step down or move on" (section 4) right?
-7. **AI-assisted drafting.** May lessons be drafted with an AI model and then edited and reviewed by a person, or
-   must they be written by hand from the start? Who reviews them (a teacher)?
-8. **Pronunciation.** Keep pronunciation lessons for wave 5 (only with audio on), or write them earlier as
-   tips-only lessons without a checked retry?
-9. **Part 3 conclusion (L-T12).** Fine as "second item only", given that the conclusion has no band effect?
+All decided by the owner, 2026-11-05.
+
+| # | Topic | Decision |
+| --- | --- | --- |
+| 1 | Mistake codes | Yes, but not now. **v1 chooses the lesson by feature + level only.** Fixed mistake codes (`pattern_code`) come in a later evaluator version, after Part 2 is merged and live-tested, because they change the prompt and need their own live check. |
+| 2 | Drill checking | **Self-check in v1** (no extra Gemini cost). Only the full-task retry is AI-scored. |
+| 3 | Explanation language | **English for all lessons.** A1–A2 lessons also get a short Uzbek explanation. Russian later, if users ask for it. |
+| 4 | Lesson level | **One level above the student's current level for that feature.** If the student is already above the part's target, the lesson aims at the band-5 condition (grammar and vocabulary above target; band 6 in Part 3). |
+| 5 | Lesson library | Later, not v1. **v1 = only the lesson chosen from the biggest fix.** |
+| 6 | Repeat rule | Yes: **at most twice in a row**, then an easier version or the next fix. |
+| 7 | Writing | **AI writes first drafts; the owner reviews every lesson before it is used.** Each draft marks its examples as made up and lists the problem codes it covers. |
+| 8 | Pronunciation | **Tips only until the audio check is on.** No pronunciation drills before then. |
+| 9 | "Weigh it up" (L-T12) | Second suggestion only, never the biggest fix. Approved. |

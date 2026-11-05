@@ -41,12 +41,17 @@ every question is better than a long answer to one.
 
 ## 3. Examples
 
+Example topic (made up, **not** the retry task): *"Describe a time when someone helped you."*
+Q1 Who helped you, and what situation were you in? · Q2 How did they help you, and how did you feel? ·
+Q3 Do you think people help each other less today than in the past? Why or why not?
+The examples never use the advice topic, so lesson sentences can't be copied into the retry.
+
 | # | Problem | Weaker | Better | Note | Made up |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Question 2 half missing | "My uncle told me to study economics. He is a very clever man, he works in a bank in Tashkent and he always knows about money." | "My uncle told me to study economics instead of music. In the end I followed his advice, and I'm glad I did, because I found a good job quickly." | Question 2 has two parts: what the advice was **and** whether you followed it. | yes |
-| 2 | Question 3 missing (time ran out) | "…and then we went home, and my brother was still angry, and the next day… so yes, that's it." | "…so that was my experience. As for young people in general, I don't think they should always follow older people's advice, because times change." | One bridge sentence ("As for young people in general…") moves you from your story to Question 3. | yes |
-| 3 | Question 1 missing | "The advice was to save some money every month." | "It was my older sister who gave me this advice, when I got my first part-time job last summer. She told me to save some money every month." | Question 1 asks **who** gave the advice **and** what situation you were in. Say both first. | yes |
-| 4 | Questions 1–2 missing (no specific time) | "Advice is very important. Older people have a lot of experience, so we should listen to them." | "One time I remember well is when my grandmother advised me not to give up the piano. I was fourteen and bored with practising." | Questions 1 and 2 are about **one specific time**. General talk about advice does not answer them. | yes |
+| 1 | Question 2 missing (skipped) | "…my neighbour saw that my bike was broken. Anyway, I think people today help each other less, because everyone is busy." | "…my neighbour saw that my bike was broken. He fixed the chain for me in ten minutes, and I felt really grateful. As for people today, I think they help each other less, because everyone is busy." | The student jumps from the story (Question 1) straight to the opinion (Question 3): how they helped and how you felt is never said. Answer the questions in order. | yes |
+| 2 | Question 3 missing (time ran out) | "…and then he drove me home, and my mother made tea for him, and he told us about his job… so yes, that's it." | "…so that was what happened. As for people in general, I think they still help each other, but more often online than face to face." | One bridge sentence ("As for people in general…") moves you from your story to Question 3. | yes |
+| 3 | Question 1 missing | "He carried my bags to the bus, and I felt very relieved." | "It was a stranger at the bus station, when I was moving to Tashkent with three heavy bags. He carried them to the bus for me, and I felt very relieved." | Question 1 asks **who** helped you **and** what situation you were in. "He" alone doesn't say who. Say both first. | yes |
+| 4 | Questions 1–2 missing (no specific time) | "Helping people is very important. In our culture, neighbours always help each other." | "One time I remember well is when a classmate helped me catch up after I was ill for two weeks. I was in Year 10 and worried about my exams." | Questions 1 and 2 are about **one specific time**. General talk about helping does not answer them. | yes |
 
 ## 4. Speaking drill
 
@@ -54,15 +59,15 @@ Record each prompt, listen back, then tick the checklist. Self-check only, no AI
 
 | # | Prompt | Time |
 | --- | --- | --- |
-| 1 | In one sentence, say who gave you advice and what situation you were in. | 15 s |
-| 2 | In one sentence, say what the advice was and whether you followed it. | 15 s |
-| 3 | Say one sentence that moves from your story to your opinion ("As for young people in general…"), then give your opinion. | 20 s |
-| 4 | Answer all three questions in 30 seconds, about one sentence for each. | 30 s |
+| 1 | Who gave you advice, and what situation were you in? Answer, then add one detail (when, where or why). | 20 s |
+| 2 | What was the advice, and did you follow it? Answer, then add one reason or what happened next. | 20 s |
+| 3 | Move from your story to your opinion ("As for young people in general…"), give your opinion, then add one reason. | 20 s |
+| 4 | **Planning drill.** You have 60 seconds, as in the preparation minute. Say your three notes aloud, one for each question (who + situation / advice + followed or not / opinion + reason). | 60 s |
 
 **Checklist**
 
-- [ ] I said something for every question.
-- [ ] Each answer started with a sentence that answers that question.
+- [ ] My plan had a note for every question.
+- [ ] Each answer started with a sentence that answers that question, then added a reason or a detail.
 - [ ] I said whether I followed the advice.
 
 ## 5. Retry the same task

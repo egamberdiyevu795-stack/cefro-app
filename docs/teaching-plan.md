@@ -219,6 +219,10 @@ interface Lesson {
 }
 ```
 
+**Lesson examples never use the retry task's topic.** The weaker → better examples use a different topic of the
+same kind (e.g. Part 2 "Describe a time when someone helped you" for lessons retried on the advice task), so students
+cannot copy lesson sentences into the retry. The drills and the retry stay on the retry task.
+
 Examples and drill prompts get TTS audio with the same voice as the Part 1 question audio.
 
 ---

@@ -47,12 +47,17 @@ precise vocabulary and longer sentences. Short on time? Keep the answer and the 
 
 ## 3. Examples
 
+Example topic (made up, **not** the retry task): *"Describe a time when someone helped you."*
+Q1 Who helped you, and what situation were you in? · Q2 How did they help you, and how did you feel? ·
+Q3 Do you think people help each other less today than in the past? Why or why not?
+The examples never use the advice topic, so lesson sentences can't be copied into the retry.
+
 | # | Problem | Weaker | Better | Note | Made up |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Question 1, bare sentence (`minimal`) | "My teacher gave me advice." | "My English teacher gave me some advice in my last year at school, when I was panicking about my exams. She could see I was studying until two in the morning and getting nowhere." | Answer (who) + situation + a detail of what was happening. | yes |
-| 2 | Question 2, bare sentence (`minimal`) | "She told me to sleep more, and I did." | "She told me to stop studying late at night, because a tired brain can't remember anything. I took her advice, and within a week my practice test results went up." | Answer + reason (*because…*) + what happened when you followed it. | yes |
-| 3 | Question 3, bare sentence (`minimal`) | "No, they shouldn't." | "No, I don't think they should always follow it. Older people have experience, but the world changes quickly, so some advice is out of date. For example, my grandparents think a government job is the only safe career, while many of my friends do well in IT." | Answer + reason + example: the full three steps. | yes |
-| 4 | Question 3, touched on but not answered (`partial`) | "Older people know a lot of things about life." | "On the whole, I think young people should listen to older people, but not blindly. They know a lot about life, so their advice is worth hearing, but in the end we have to make our own decisions." | The question asks "should…?", so say yes, no or "it depends" first, then the reason. | yes |
+| 1 | Question 1, bare sentence (`minimal`) | "My friend helped me." | "My best friend helped me last spring, when my laptop broke two days before a big project was due. I had lost almost all my work and didn't know what to do." | Answer (who) + situation + a detail of what was happening. | yes |
+| 2 | Question 2, bare sentence (`minimal`) | "He lent me his laptop, and I was happy." | "He lent me his own laptop for the whole weekend, even though he needed it himself, so I could finish on time. I was so grateful that I bought him dinner afterwards." | Answer + reason (*so I could…*) + what happened next. | yes |
+| 3 | Question 3, bare sentence (`minimal`) | "Yes, less." | "Yes, I think people help each other less than in the past. Life is busier now, so people have less time for their neighbours. For example, my grandparents knew everyone in their street, while I hardly know anyone in my building." | Answer + reason + example: the full three steps. | yes |
+| 4 | Question 3, touched on but not answered (`partial`) | "People are very busy these days." | "On the whole, I'd say people help each other less face to face, but more in other ways. Everyone is busy, so we rarely visit neighbours, but many people help strangers online, for example by answering questions in forums." | The question asks "do you think…?", so say yes, no or "it depends" first, then the reason. | yes |
 
 ## 4. Speaking drill
 

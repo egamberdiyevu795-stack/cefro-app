@@ -39,12 +39,18 @@ a friend who told you what to do. You can look at the picture for an idea, but t
 
 ## 3. Examples
 
+Example topic (made up, **not** the retry task): *"Describe a time when someone helped you."*
+Q1 Who helped you, and what situation were you in? · Q2 How did they help you, and how did you feel? ·
+Q3 Do you think people help each other less today than in the past? Why or why not?
+Example picture (made up): a young man helping an older woman carry shopping bags in the street.
+The examples never use the advice topic, so lesson sentences can't be copied into the retry.
+
 | # | Problem | Weaker | Better | Note | Made up |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Describes the scene instead of Question 1 | "In the picture I can see an old man and a young girl. They are sitting on a bench in a park." | "When I was choosing a university, my grandfather sat me down and gave me some advice." | Question 1 asks who gave **you** advice. Start with your own story. | yes |
-| 2 | Uses the word "advice" about the picture | "The man is giving advice to the girl, and she is listening carefully." | "My grandfather told me to choose a subject I enjoy, not just one that pays well, and I took his advice." | Saying "advice" about the people in the picture does not count. Say what **your** advice was and whether you followed it. | yes |
-| 3 | Guesses about the people instead of Question 3 | "Maybe he is her grandfather. I think he is telling her about life." | "In my view, young people shouldn't follow older people's advice blindly, because times change, but it's always worth listening." | Question 3 asks for your general opinion, not a guess about the picture. | yes |
-| 4 | Starts with the picture and stays there | "This picture shows a park. The man looks old and wise, and the girl looks a bit worried." | "This picture reminds me of my grandfather. Last year, when I was worried about which university to apply to, he gave me some advice." | One short link from the picture to your own story is fine, as long as the story follows straight away. | yes |
+| 1 | Describes the scene instead of Question 1 | "In the picture I can see a young man and an old woman. They are standing in the street." | "When I first moved to a new city, my landlady helped me find my way around." | Question 1 asks who helped **you**. Start with your own story. | yes |
+| 2 | Uses the topic word about the picture | "The young man is helping the woman, and she is smiling." | "She showed me where the market and the bus stop were, and I felt much less lonely." | Saying "helping" about the people in the picture does not count. Say how **you** were helped and how you felt. | yes |
+| 3 | Guesses about the people instead of Question 3 | "Maybe she is his grandmother. I think he is a kind person." | "In my view, people in big cities help each other less than before, because they don't know their neighbours, but in villages it's still different." | Question 3 asks for your general opinion, not a guess about the picture. | yes |
+| 4 | Starts with the picture and stays there | "This picture shows a street. The bags look heavy and the woman looks tired." | "This picture reminds me of my first week in Tashkent. I was carrying all my things from the station when a stranger offered to help." | One short link from the picture to your own story is fine, as long as the story follows straight away. | yes |
 
 ## 4. Speaking drill
 

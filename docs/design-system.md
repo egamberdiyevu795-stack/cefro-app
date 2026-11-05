@@ -1,0 +1,91 @@
+# CEFRO design system
+
+Every new page (dashboard, feedback screen, lessons, tests) is built only from these tokens and components.
+Tokens live in one file: `src/app/design-system.css` (a Tailwind v4 `@theme`, so each token is also a utility class,
+e.g. `--color-card` → `bg-card`). Components live in `src/components/ds/`. The first page built on it is `/dashboard`.
+
+The older pages (home, login, register, practice) still use the earlier tokens in `globals.css` until they are redone.
+
+## Rules
+
+- No colours beyond the tokens below. No new hues; status is shown by word and glyph, never by colour.
+- No gradients, except the soft one inside the radar chart.
+- One shadow (`shadow-card`). Nothing heavier.
+- No emojis. Icons come from `components/ds/Icon.tsx`.
+- Photos and avatars are neutral blocks (`bg-block-1…4`) until real images exist.
+- When unsure, choose the quieter option: grey over colour, regular over bold, less over more.
+
+## Colour
+
+| Token | Value | Utility | Used for |
+| --- | --- | --- | --- |
+| `--color-page` | `#e9e9ec` | `bg-page` | Behind everything (the outermost grey). |
+| `--color-shell` | `#f4f4f5` | `bg-shell` | The large rounded frame that holds the app on desktop. |
+| `--color-card` | `#fcfcfc` | `bg-card` | Cards; the phone bottom bar; halo behind small chart text. |
+| `--color-well` | `#ececee` | `bg-well` | Quiet fills inside a card: goal pill, quiet button, progress-bar track, icon-button hover. |
+| `--color-line` | `#e7e7e9` | `border-line`, `bg-line` | Thin dividers (card header, stat-row divider, top-bar divider), radar grid. |
+| `--color-fg` | `#151517` | `text-fg` | Titles, values, list names, body. |
+| `--color-fg-muted` | `#5e5f64` | `text-fg-muted` | Labels ("Attempts this month"), secondary cells, placeholders, "See all". |
+| `--color-fg-subtle` | `#a3a4a9` | `text-fg-subtle` | Icons only (inactive sidebar, status glyphs, clock). Not for text: too low contrast. |
+| `--color-primary` | `#151517` | `bg-primary` | Primary pill button, active sidebar square, goal check square. |
+| `--color-on-primary` | `#ffffff` | `text-on-primary` | Text and glyphs on `primary` and on `block-*`. |
+| `--color-accent` | `#1f3be8` | `bg-accent`, `border-accent` | The only hue: radar outline and dots, progress-bar fill, quote rule, focus ring. |
+| `--color-radar-core` | `#2f7bff` | — | Radar fill gradient, centre. |
+| `--color-radar-edge` | `#d9ecff` | — | Radar fill gradient, edge. |
+| `--color-lime` | `#c8f26c` | `bg-lime` | Positive-change label only ("+1 band"). |
+| `--color-on-lime` | `#263409` | `text-on-lime` | Text on the lime label. |
+| `--color-block-1…4` | `#76777c` … `#424347` | `bg-block-1…4` | Neutral stand-ins for photos (exam-part tiles) and avatars (list thumbs). All pass 4.5:1 with white text. |
+
+## Type
+
+One family: Inter (`font-ui`, loaded with `next/font/google` in `src/app/layout.tsx`, weights 300–600).
+
+| Token | Size / line | Utility | Used for |
+| --- | --- | --- | --- |
+| `--text-caption` | 11 / 16 px | `text-caption` | Small meta: "Current band", tile subtitles, "Try instead", lime label. |
+| `--text-label` | 12 / 16 px | `text-label` | Stat rows, list cells, status labels, header actions ("Last 30 days", "See all"). |
+| `--text-body` | 13 / 20 px | `text-body` | List names (semibold), buttons (medium), search, quotes. |
+| `--text-lead` | 15 / 20 px | `text-lead` | The word beside the big number ("· target B2"), medium. |
+| `--text-title` | 17 / 24 px | `text-title` | Card titles, medium weight, slight negative tracking. Quiet: never bold. |
+| `--text-stat` | 36 px / 1 | `text-stat` | The one big number per card ("Band 3"), **light** (300), tight tracking. |
+
+Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for values and list names.
+
+## Shape and elevation
+
+| Token | Value | Utility | Used for |
+| --- | --- | --- | --- |
+| `--radius-shell` | 40 px | `rounded-shell` | Desktop app frame. |
+| `--radius-card` | 24 px | `rounded-card` | Cards. |
+| `--radius-tile` | 16 px | `rounded-tile` | Tiles inside a card (exam parts). |
+| `--radius-icon` | 12 px | `rounded-icon` | Active sidebar square. |
+| (Tailwind) | full | `rounded-full` | Pill buttons, labels, goal pill, progress bars, icon buttons, thumbs. |
+| `--shadow-card` | two very soft layers | `shadow-card` | Cards and the desktop frame. The heaviest shadow allowed. |
+
+## Layout
+
+- **Desktop (≥ 1024 px):** `bg-page`, then a rounded `bg-shell` frame (max 1280 px, 24 px padding). Left: a 48 px icon
+  rail with the wordmark on top. Right: the top bar (search left; quiet text actions, a thin divider and a bell right),
+  then a two-column grid (`1fr` | `~0.44fr`, 16 px gaps). Cards use 24 px padding.
+- **Phone (< 1024 px):** one column, 16 px side gutters, 20 px card padding. The rail becomes a fixed bottom bar with the
+  same items and the same black active square; the page gets bottom padding so nothing hides under it.
+- A card may be split into separate cards on phones (the dashboard's progress card) by making it `display: contents`
+  below `lg`; its halves then take their own `order`.
+
+## Components (`src/components/ds`)
+
+| Component | What it is |
+| --- | --- |
+| `Card`, `CardHeader` | Rounded `bg-card` surface with the soft shadow. Header: quiet title, optional action on the right, thin divider under it. |
+| `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"). Optional leading icon. |
+| `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
+| `StatusLabel` | Grey glyph + dark word: Passed (check), Pending (hourglass), Failed (cross). No colour. |
+| `DeltaLabel` | Small lime pill for an improvement. Only for positive change. |
+| `StatRow` | `label │ value` row inside a `<dl>`: muted label, thin divider, right-aligned semibold value. |
+| `ProgressBar` | 4 px accent bar on a `well` track, with progressbar semantics. |
+| `GoalBar` | Grey pill with a black check square, a sentence, and a faint fill for how far along the goal is. |
+| `RadarChart` | Radar on ordinal rings (e.g. Below B1, B1, B2, Above B2), thin grey grid, accent outline and dots, the soft gradient fill. Includes a text version for screen readers. |
+| `ListRow`, `Thumb` | List row: round neutral thumb, semibold name, aligned cells (shared grid template), row menu. `Thumb` is the neutral avatar/photo placeholder. |
+| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` black square with a white glyph. |
+| `TopBar`, `TopBarLink` | Search field and quiet text actions with small grey glyphs. |
+| `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |

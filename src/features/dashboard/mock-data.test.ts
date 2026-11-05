@@ -3,7 +3,7 @@ import { bestFitLevel, scoreBand } from "@/domain/evaluation/multilevel/band-sco
 import { FEATURES, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import { multilevelRubricConfigSchema } from "@/domain/evaluation/multilevel/rubric-config";
 import rawQ7 from "@/server/evaluation/rubrics/multilevel_q7.json";
-import { BIGGEST_FIX, EXAM_PARTS, PROGRESS, RADAR_AXES, SKILL_LEVELS } from "./mock-data";
+import { BIGGEST_FIX, EXAM_PARTS, EXAM_PARTS_FIRST_VISIT, PROGRESS, RADAR_AXES, SKILL_LEVELS } from "./mock-data";
 
 const q7 = multilevelRubricConfigSchema.parse(rawQ7);
 
@@ -43,5 +43,10 @@ describe("dashboard mock data matches the scoring rules", () => {
   it("no band appears without a label, and Part 3 (no band table yet) has neither", () => {
     for (const p of EXAM_PARTS) expect(p.band === null).toBe(p.bandLabel === null);
     expect(EXAM_PARTS.find((p) => p.part === "Part 3")?.band).toBeNull();
+  });
+
+  it("first visit lists every part, none tried", () => {
+    expect(EXAM_PARTS_FIRST_VISIT.map((p) => p.part)).toEqual(EXAM_PARTS.map((p) => p.part));
+    expect(EXAM_PARTS_FIRST_VISIT.every((p) => p.band === null && p.bandLabel === null)).toBe(true);
   });
 });

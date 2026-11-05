@@ -11,15 +11,52 @@
 import type { BandScoringInput } from "@/domain/evaluation/multilevel/band-scoring";
 import { FEATURES, FEATURE_LABELS, FEATURE_LEVELS, LEVEL_LABELS, levelValue, type Feature } from "@/domain/evaluation/multilevel/levels";
 import type { NavItem, RadarAxis } from "@/components/ds";
+import type { FeatureFlag, FeatureFlags } from "@/config/features";
 
-export const NAV_ITEMS: readonly NavItem[] = [
+/**
+ * Prototype toggle: which state the dashboard shows. "first-visit" = no attempts yet (no level, no chart, no list).
+ * `/dashboard?state=first-visit` or `?state=returning` overrides it for one page view.
+ */
+export type DashboardState = "returning" | "first-visit";
+export const DASHBOARD_STATE: DashboardState = "returning";
+
+/** Navigation. Items with a `flag` are future features: shown as "Coming soon" when the flag is on, hidden when off. */
+export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag }> = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
   { href: "/", label: "Practice", icon: "mic" },
-  { href: "/dashboard#lessons", label: "Lessons", icon: "book" },
-  { href: "/dashboard#tests", label: "Tests", icon: "tests" },
-  { href: "/dashboard#profile", label: "Profile", icon: "user" },
-  { href: "/dashboard#settings", label: "Settings", icon: "settings" },
+  { href: "/lessons", label: "Lessons", icon: "book", flag: "lessons" },
+  { href: "/history", label: "History", icon: "clock", flag: "history" },
+  { href: "/settings", label: "Settings", icon: "settings", flag: "settings" },
 ];
+
+export function navItemsFor(flags: FeatureFlags): NavItem[] {
+  return NAV_ITEMS.flatMap(({ flag, ...item }) => (flag === undefined ? [item] : flags[flag] ? [{ ...item, soon: true }] : []));
+}
+
+/**
+ * The recommended next task: Part 2 is the part furthest below its target. Part 2 is 1 min preparation + 2 min
+ * speaking. Only one Part 2 task exists so far, and the Biggest fix card already retries it, so this one is a mocked
+ * new task that links to the practice list.
+ */
+export const PRACTISE_NEXT = {
+  task: "A skill you learned",
+  part: "Part 2",
+  minutes: 3,
+  reason: "Part 2 is below your target",
+  href: "/",
+};
+
+/** Exam date (future feature, flag `examCountdown`). Today in the mock is 05.11.26. */
+export const EXAM_COUNTDOWN = { days: 23, date: "28.11.26" };
+
+/** First visit: where "Start your first practice" goes (the practice list) and what the card says. */
+export const FIRST_VISIT = {
+  welcome: "Welcome to CEFRO",
+  title: "Find your level",
+  text: "Answer one short speaking task. You will see your level for each skill and the one thing to fix first.",
+  minutes: 3,
+  href: "/",
+};
 
 /**
  * Skill levels from the latest scored Part 2 attempt. Pronunciation is "not_assessed" (the audio check did not run), so
@@ -74,12 +111,20 @@ export const RADAR_AXES: readonly RadarAxis[] = RADAR_ORDER.map((feature) => {
  * - Part 2 (Q7, target B2): src/server/evaluation/rubrics/multilevel_q7.json (checked by mock-data.test.ts).
  * - Part 3: no band table exists yet, so no band is shown.
  */
-export const EXAM_PARTS: ReadonlyArray<{ part: string; name: string; band: number | null; bandLabel: string | null; href: string }> = [
+export type ExamPart = { part: string; name: string; band: number | null; bandLabel: string | null; href: string };
+
+export const EXAM_PARTS: readonly ExamPart[] = [
   { part: "Part 1.1", name: "Personal questions", band: 5, bandLabel: "Above A2", href: "/" },
   { part: "Part 1.2", name: "Compare pictures", band: 4, bandLabel: "Higher B1", href: "/" },
   { part: "Part 2", name: "Long turn", band: 2, bandLabel: "Higher B1", href: "/practice/speaking/b2-part2-advice-from-someone" },
   { part: "Part 3", name: "Argument", band: null, bandLabel: null, href: "/" },
 ];
+
+/** First visit: the same parts, none tried yet. */
+export const EXAM_PARTS_FIRST_VISIT: readonly ExamPart[] = EXAM_PARTS.map((p) => ({ ...p, band: null, bandLabel: null }));
+
+/** Future actions in each attempt's row menu (flag `attemptMenu`). */
+export const ATTEMPT_MENU_ITEMS = ["Delete", "Report a wrong score"] as const;
 
 /**
  * Each attempt shows its CEFR level as the main value (never a band, never Passed/Failed).

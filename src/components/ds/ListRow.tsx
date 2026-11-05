@@ -1,10 +1,9 @@
 import { cx } from "./cx";
-import { IconButton } from "./PillButton";
 
 /**
  * One row of a list card: round thumbnail, bold name, then cells, then a row menu.
  * `columns` is the grid template for the cells between the name and the menu, so every row in a list lines up.
- * A cell with `phone: false` is hidden below the `sm` breakpoint.
+ * A cell with `phone: false` is hidden below the `sm` breakpoint. `menu` is an optional trailing control (row menu).
  */
 export function ListRow({
   thumb,
@@ -13,7 +12,7 @@ export function ListRow({
   cells,
   columns,
   titleClassName,
-  menuLabel,
+  menu,
 }: {
   thumb: React.ReactNode;
   title: string;
@@ -21,7 +20,7 @@ export function ListRow({
   cells: Array<{ content: React.ReactNode; className?: string; phone?: boolean }>;
   columns: string;
   titleClassName?: string;
-  menuLabel: string;
+  menu?: React.ReactNode;
 }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
@@ -37,7 +36,7 @@ export function ListRow({
           </span>
         ))}
       </div>
-      <IconButton icon="more" label={menuLabel} size={28} />
+      {menu}
     </li>
   );
 }

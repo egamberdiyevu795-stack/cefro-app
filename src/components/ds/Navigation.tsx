@@ -1,22 +1,28 @@
 import Link from "next/link";
+import { ComingSoonButton } from "./ComingSoon";
 import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
+import { NAV_ITEM, NAV_ITEM_ACTIVE, NAV_ITEM_IDLE, TEXT_ACTION } from "./styles";
 
-export type NavItem = { href: string; label: string; icon: IconName };
+/** `soon`: a future item (feature flag on): same look, tapping it says "Coming soon". */
+export type NavItem = { href: string; label: string; icon: IconName; soon?: boolean };
 
 /** One navigation icon. Active = near-black rounded square with a white glyph; inactive = grey glyph. */
 export function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
+  if (item.soon) {
+    return (
+      <ComingSoonButton label={item.label} className={cx(NAV_ITEM, NAV_ITEM_IDLE)}>
+        <Icon name={item.icon} size={20} />
+      </ComingSoonButton>
+    );
+  }
   return (
     <Link
       href={item.href}
       aria-label={item.label}
       aria-current={active ? "page" : undefined}
       title={item.label}
-      className={cx(
-        "flex size-11 items-center justify-center rounded-icon transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        active ? "bg-primary text-on-primary" : "text-fg-subtle hover:text-fg",
-      )}
+      className={cx(NAV_ITEM, active ? NAV_ITEM_ACTIVE : NAV_ITEM_IDLE)}
     >
       <Icon name={item.icon} size={20} />
     </Link>
@@ -33,7 +39,7 @@ export function Sidebar({ items, activeHref }: { items: readonly NavItem[]; acti
         "lg:static lg:border-0 lg:bg-transparent lg:p-0",
       )}
     >
-      <ul className="flex items-center justify-between lg:flex-col lg:justify-start lg:gap-3">
+      <ul className="flex items-center justify-around lg:flex-col lg:justify-start lg:gap-3">
         {items.map((item) => (
           <li key={item.label}>
             <SidebarItem item={item} active={item.href === activeHref} />
@@ -44,30 +50,42 @@ export function Sidebar({ items, activeHref }: { items: readonly NavItem[]; acti
   );
 }
 
-/** Top bar: search on the left, quiet text actions and a bell on the right. */
-export function TopBar({ searchPlaceholder, actions }: { searchPlaceholder: string; actions: React.ReactNode }) {
+/** Top bar: optional search on the left, quiet text actions on the right. */
+export function TopBar({ search, actions }: { search?: React.ReactNode; actions: React.ReactNode }) {
   return (
     <div className="flex h-12 items-center gap-4">
-      <label className="flex min-w-0 flex-1 items-center gap-2 text-fg-muted">
-        <Icon name="search" size={16} className="shrink-0" />
-        <span className="sr-only">Search</span>
-        <input
-          type="search"
-          placeholder={searchPlaceholder}
-          className="w-full min-w-0 bg-transparent text-body text-fg outline-none placeholder:text-fg-muted"
-        />
-      </label>
+      <div className="min-w-0 flex-1">{search}</div>
       <div className="flex items-center gap-4">{actions}</div>
     </div>
   );
 }
 
-/** A quiet text action with a small grey glyph, for the top bar. */
-export function TopBarLink({ href, icon, children }: { href: string; icon: IconName; children: React.ReactNode }) {
+/** Search entry point that is not built yet: looks like the search field, says "Coming soon" when tapped. */
+export function SearchSoon({ placeholder }: { placeholder: string }) {
   return (
-    <Link href={href} className="hidden items-center gap-2 text-body font-medium text-fg hover:text-fg-muted sm:inline-flex">
+    <ComingSoonButton label="Search" className="flex w-full min-w-0 items-center gap-2 text-left text-body text-fg-muted hover:text-fg">
+      <Icon name="search" size={16} className="shrink-0" />
+      <span className="truncate">{placeholder}</span>
+    </ComingSoonButton>
+  );
+}
+
+/** A quiet text action with a small grey glyph, for the top bar. `soon` makes it a "Coming soon" button. */
+export function TopBarLink({ href, icon, soon, children }: { href: string; icon: IconName; soon?: boolean; children: string }) {
+  const inner = (
+    <>
       <Icon name={icon} size={16} className="text-fg-subtle" />
       {children}
+    </>
+  );
+  const className = cx("hidden sm:inline-flex", TEXT_ACTION);
+  return soon ? (
+    <ComingSoonButton label={children} className={className}>
+      {inner}
+    </ComingSoonButton>
+  ) : (
+    <Link href={href} className={className}>
+      {inner}
     </Link>
   );
 }

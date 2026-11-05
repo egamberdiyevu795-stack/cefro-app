@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
+import { FOCUS_RING, ICON_BUTTON } from "./styles";
 
 type Variant = "primary" | "quiet" | "light";
 type Size = "md" | "sm";
@@ -43,7 +44,7 @@ export function PillButton({
       className={cx(
         "inline-flex items-center justify-center rounded-full font-medium transition-colors",
         SIZES[size],
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        FOCUS_RING,
         VARIANTS[variant],
         className,
       )}
@@ -61,11 +62,7 @@ export function IconButton({ icon, label, size = 32, className }: { icon: IconNa
       type="button"
       aria-label={label}
       style={{ width: size, height: size }}
-      className={cx(
-        "inline-flex shrink-0 items-center justify-center rounded-full text-fg-subtle transition-colors hover:bg-well hover:text-fg",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        className,
-      )}
+      className={cx(ICON_BUTTON, className)}
     >
       <Icon name={icon} size={18} />
     </button>

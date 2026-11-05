@@ -32,6 +32,30 @@ the moved files are byte-for-byte identical (git shows them as 100% renames).
 
 API routes (`src/app/api/**`) did not move.
 
+## Feature flags
+
+Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
+notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons / History / Settings, the attempt
+row menu (Delete, Report a wrong score) and the exam date countdown. ("See all" on Recent attempts follows `history`,
+since it leads there.)
+
+- **Flag on** (prototype default): the element is shown exactly as designed; tapping it shows a small "Coming soon".
+- **Flag off:** the element is not rendered. Neighbours fill the space (e.g. "Practise next" takes the full row when
+  the countdown is off; the search row disappears on phones).
+- Preview with every flag off: `/dashboard?flags=off`. Turn flags off before a page ships; delete a flag when its
+  feature is real.
+
+## Dashboard states
+
+- **Returning** (has attempts): Practise next, exam countdown*, Speaking progress + radar, Exam parts, Recent
+  attempts, Biggest fix. Phone order: Practise next, countdown*, progress, biggest fix, radar, recent attempts, exam parts.
+- **First visit** (no attempts yet): no level, no chart, no list. "Welcome to CEFRO", "Find your level" with a
+  "Start your first practice" button, countdown*, and the four exam part tiles (all "Start"; four in a row on desktop).
+- Toggle: `DASHBOARD_STATE` in `src/features/dashboard/mock-data.ts`, or `/dashboard?state=first-visit`.
+- Screenshots: `docs/design-system/dashboard-{normal,first-visit,flags-off}-{desktop,phone}.png`.
+
+\* flagged.
+
 ## Levels and bands
 
 - An overall **level** is a CEFR level (Below B1, B1, B2, Above B2). The top of the dashboard shows only the level and
@@ -148,7 +172,9 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `GoalBar` | Grey pill with a black check square, a sentence, and a faint fill for how far along the goal is. |
 | `RadarChart` | Radar on ordinal rings (Below B1, B1, B2, Above B2), thin grey grid, accent outline and dots, the soft gradient fill. A skill that was not assessed (`value: null`, e.g. pronunciation when the audio check did not run) gets a dashed axis, a hollow dashed point at the axis end, no polygon vertex, and the label "Not assessed". **No text under 11 px:** two fixed-size versions are picked by the chart's own width (container query). At 23rem (368 px) and wider: full names and ring names at their natural size. Narrower: short names (Gram, Vocab, Flu, Coh, Pron), no ring names, and the level of each skill listed under the chart. The list is always there for screen readers. |
 | Part tile (pattern, dashboard) | `well` tile with `rounded-tile`: part (caption, semibold) and its name, the band as the largest text (`text-title`, "Band 2"), its label below (`text-label`, muted, "Higher B1"), and a small `light` pill ("Practise"; "Start" for an untried part, same tile). |
-| `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), row menu. `Thumb` is the neutral avatar/photo placeholder. |
-| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` black square with a white glyph. |
-| `TopBar`, `TopBarLink` | Search field and quiet text actions with small grey glyphs. |
+| `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), optional trailing `menu`. `Thumb` is the neutral avatar/photo placeholder. |
+| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` black square with a white glyph. An item with `soon: true` looks the same and says "Coming soon". |
+| `TopBar`, `TopBarLink`, `SearchSoon` | Optional search on the left, quiet text actions with small grey glyphs on the right. `TopBarLink soon` and `SearchSoon` are future entry points that say "Coming soon". |
+| `ComingSoonButton`, `ComingSoonMenu`, `ComingSoonToast` | Future controls behind a feature flag. The button takes the real control's classes (from `styles.ts`), so it looks identical; tapping it shows the toast. The menu is a ⋮ button with a small card menu whose items all say "Coming soon" (closes on Escape or outside tap). The toast is one small near-black pill ("Coming soon") near the bottom, a polite live region; mount it once per page. |
+| `styles.ts` | Shared class strings (focus ring, icon button, nav item, text actions), so server and client components render a control the same way. |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |

@@ -6,6 +6,7 @@ export { RadarChart, type RadarAxis } from "./RadarChart";
 export { ListRow, Thumb } from "./ListRow";
 export { Sidebar, SidebarItem, TopBar, TopBarLink, SearchSoon, type NavItem } from "./Navigation";
 export { ComingSoonButton, ComingSoonMenu, ComingSoonToast, announceComingSoon } from "./ComingSoon";
+export { Menu, type MenuItem } from "./Menu";
 export { Icon, type IconName } from "./Icon";
 export { cx } from "./cx";
 export * as styles from "./styles";

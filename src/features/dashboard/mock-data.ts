@@ -34,28 +34,34 @@ export function navItemsFor(flags: FeatureFlags): NavItem[] {
 }
 
 /**
- * The recommended next task: Part 2 is the part furthest below its target. Part 2 is 1 min preparation + 2 min
- * speaking. Only one Part 2 task exists so far, and the Biggest fix card already retries it, so this one is a mocked
- * new task that links to the practice list.
+ * The recommended next task: Part 2 is the biggest step towards B2. Part 2 is 1 min preparation + 2 min speaking.
+ * Only one Part 2 task exists so far, and the Biggest fix card already retries it, so this one is a mocked new task
+ * with its own mock route (src/app/dashboard/task/[taskId]).
  */
 export const PRACTISE_NEXT = {
+  id: "a-skill-you-learned",
   task: "A skill you learned",
   part: "Part 2",
+  preparationMinutes: 1,
+  speakingMinutes: 2,
   minutes: 3,
-  reason: "Part 2 is below your target",
-  href: "/",
+  reason: "Biggest step towards B2",
+  href: "/dashboard/task/a-skill-you-learned",
 };
+
+/** Mocked signed-in account for the nav's Account menu. Log out is real (the app's sign-out endpoint). */
+export const ACCOUNT = { name: "Student", email: "student@example.com" };
 
 /** Exam date (future feature, flag `examCountdown`). Today in the mock is 05.11.26. */
 export const EXAM_COUNTDOWN = { days: 23, date: "28.11.26" };
 
-/** First visit: where "Start your first practice" goes (the practice list) and what the card says. */
+/** First visit: what the welcome card says. "Start your first practice" goes to the recommended part (Part 2). */
 export const FIRST_VISIT = {
   welcome: "Welcome to CEFRO",
   title: "Find your level",
   text: "Answer one short speaking task. You will see your level for each skill and the one thing to fix first.",
   minutes: 3,
-  href: "/",
+  href: "/practice/speaking/b2-part2-advice-from-someone",
 };
 
 /**
@@ -111,7 +117,15 @@ export const RADAR_AXES: readonly RadarAxis[] = RADAR_ORDER.map((feature) => {
  * - Part 2 (Q7, target B2): src/server/evaluation/rubrics/multilevel_q7.json (checked by mock-data.test.ts).
  * - Part 3: no band table exists yet, so no band is shown.
  */
-export type ExamPart = { part: string; name: string; band: number | null; bandLabel: string | null; href: string };
+export type ExamPart = {
+  part: string;
+  name: string;
+  band: number | null;
+  bandLabel: string | null;
+  href: string;
+  /** Set on the one recommended part (first visit): shown on the tile, with the black Start pill. */
+  recommendation?: string;
+};
 
 export const EXAM_PARTS: readonly ExamPart[] = [
   { part: "Part 1.1", name: "Personal questions", band: 5, bandLabel: "Above A2", href: "/" },
@@ -120,8 +134,16 @@ export const EXAM_PARTS: readonly ExamPart[] = [
   { part: "Part 3", name: "Argument", band: null, bandLabel: null, href: "/" },
 ];
 
-/** First visit: the same parts, none tried yet. */
-export const EXAM_PARTS_FIRST_VISIT: readonly ExamPart[] = EXAM_PARTS.map((p) => ({ ...p, band: null, bandLabel: null }));
+/**
+ * First visit: the same parts, none tried yet. Part 2 is recommended: one answer covers all five skills against the
+ * B2 descriptors, so it shows the level fastest. Its tile carries the screen's one black action.
+ */
+export const EXAM_PARTS_FIRST_VISIT: readonly ExamPart[] = EXAM_PARTS.map((p) => ({
+  ...p,
+  band: null,
+  bandLabel: null,
+  ...(p.part === "Part 2" ? { recommendation: "Start with Part 2 · shows your level fastest" } : {}),
+}));
 
 /** Future actions in each attempt's row menu (flag `attemptMenu`). */
 export const ATTEMPT_MENU_ITEMS = ["Delete", "Report a wrong score"] as const;

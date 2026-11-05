@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ComingSoonButton, ComingSoonToast, Icon, Sidebar, SearchSoon, TopBar, TopBarLink, cx, styles } from "@/components/ds";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { DASHBOARD_STATE, EXAM_PARTS, EXAM_PARTS_FIRST_VISIT, navItemsFor, type DashboardState } from "@/features/dashboard/mock-data";
+import { AccountMenu } from "@/features/dashboard/AccountMenu";
 import {
   BiggestFixCard,
   ExamCountdownCard,
@@ -28,8 +29,9 @@ export const metadata: Metadata = { title: "Dashboard" };
  *   row 3: [ Recent attempts           ] [ Biggest fix     ]
  * Returning, phone: practise next, countdown*, progress, biggest fix, radar, recent attempts, exam parts.
  *
- * First visit, desktop: [ Find your level ] [ Exam countdown* ] then [ Exam parts, four in a row ].
- * First visit, phone: find your level, countdown*, exam parts.
+ * First visit, desktop: [ Find your level (with the "When is your exam?" prompt*) ] then [ Exam parts, four in a row ].
+ * First visit, phone: find your level, exam parts.
+ * The Account item (with Log out) is always in the nav, whatever the flags.
  *
  * * flagged; when it is off, the card beside it takes the full row.
  */
@@ -44,7 +46,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
       <div className="mx-auto flex max-w-[1280px] gap-6 px-4 pt-4 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
           <Wordmark className="hidden lg:flex lg:h-12" />
-          <Sidebar items={navItemsFor(flags)} activeHref="/dashboard" />
+          <Sidebar items={navItemsFor(flags)} activeHref="/dashboard" last={<AccountMenu />} />
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -97,9 +99,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               </>
             ) : (
               <>
-                <FindYourLevelCard className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
-                {countdown && <ExamCountdownCard className="order-2 lg:order-none lg:col-start-2 lg:row-start-1" />}
-                <ExamPartsCard parts={EXAM_PARTS_FIRST_VISIT} wide className="order-3 lg:order-none lg:col-span-2 lg:row-start-2" />
+                <FindYourLevelCard flags={flags} className="lg:col-span-2" />
+                <ExamPartsCard parts={EXAM_PARTS_FIRST_VISIT} wide className="lg:col-span-2" />
               </>
             )}
           </main>

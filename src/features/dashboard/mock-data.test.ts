@@ -3,7 +3,7 @@ import { bestFitLevel, scoreBand } from "@/domain/evaluation/multilevel/band-sco
 import { FEATURES, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import { multilevelRubricConfigSchema } from "@/domain/evaluation/multilevel/rubric-config";
 import rawQ7 from "@/server/evaluation/rubrics/multilevel_q7.json";
-import { BIGGEST_FIX, EXAM_PARTS, EXAM_PARTS_FIRST_VISIT, PROGRESS, RADAR_AXES, SKILL_LEVELS } from "./mock-data";
+import { BIGGEST_FIX, EXAM_PARTS, EXAM_PARTS_FIRST_VISIT, PRACTISE_NEXT, PROGRESS, RADAR_AXES, SKILL_LEVELS } from "./mock-data";
 
 const q7 = multilevelRubricConfigSchema.parse(rawQ7);
 
@@ -48,5 +48,15 @@ describe("dashboard mock data matches the scoring rules", () => {
   it("first visit lists every part, none tried", () => {
     expect(EXAM_PARTS_FIRST_VISIT.map((p) => p.part)).toEqual(EXAM_PARTS.map((p) => p.part));
     expect(EXAM_PARTS_FIRST_VISIT.every((p) => p.band === null && p.bandLabel === null)).toBe(true);
+  });
+
+  it("first visit recommends exactly one part (Part 2), and only first visit recommends", () => {
+    expect(EXAM_PARTS_FIRST_VISIT.filter((p) => p.recommendation).map((p) => p.part)).toEqual(["Part 2"]);
+    expect(EXAM_PARTS.some((p) => p.recommendation)).toBe(false);
+  });
+
+  it("Practise next opens its own mock task route and adds up its minutes", () => {
+    expect(PRACTISE_NEXT.href).toBe(`/dashboard/task/${PRACTISE_NEXT.id}`);
+    expect(PRACTISE_NEXT.preparationMinutes + PRACTISE_NEXT.speakingMinutes).toBe(PRACTISE_NEXT.minutes);
   });
 });

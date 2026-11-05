@@ -29,8 +29,8 @@ export function SidebarItem({ item, active }: { item: NavItem; active: boolean }
   );
 }
 
-/** Left icon rail on desktop; a fixed bottom bar on phones. Same items, same active square. */
-export function Sidebar({ items, activeHref }: { items: readonly NavItem[]; activeHref: string }) {
+/** Left icon rail on desktop; a fixed bottom bar on phones. Same items, same active square. `last` = an extra item at the end (account). */
+export function Sidebar({ items, activeHref, last }: { items: readonly NavItem[]; activeHref: string; last?: React.ReactNode }) {
   return (
     <nav
       aria-label="Main"
@@ -45,6 +45,7 @@ export function Sidebar({ items, activeHref }: { items: readonly NavItem[]; acti
             <SidebarItem item={item} active={item.href === activeHref} />
           </li>
         ))}
+        {last && <li>{last}</li>}
       </ul>
     </nav>
   );

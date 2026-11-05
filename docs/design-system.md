@@ -32,6 +32,12 @@ the moved files are byte-for-byte identical (git shows them as 100% renames).
 
 API routes (`src/app/api/**`) did not move.
 
+## One primary action per screen
+
+Only one near-black (`primary`) action per screen. Every other action uses the grey `quiet` pill (or `light` on a
+`well` tile). Dashboard: returning = "Practise next · Start" (Biggest fix "Start retry" is grey); first visit = the
+recommended part's "Start" (Part 2), so "Start your first practice" is grey and goes to the same task.
+
 ## Feature flags
 
 Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
@@ -49,8 +55,14 @@ since it leads there.)
 
 - **Returning** (has attempts): Practise next, exam countdown*, Speaking progress + radar, Exam parts, Recent
   attempts, Biggest fix. Phone order: Practise next, countdown*, progress, biggest fix, radar, recent attempts, exam parts.
-- **First visit** (no attempts yet): no level, no chart, no list. "Welcome to CEFRO", "Find your level" with a
-  "Start your first practice" button, countdown*, and the four exam part tiles (all "Start"; four in a row on desktop).
+- **First visit** (no attempts yet): no level, no chart, no list. "Welcome to CEFRO", "Find your level" with a grey
+  "Start your first practice" button and a small "When is your exam? · Add date" prompt*, then the four exam part tiles
+  (four in a row on desktop). Part 2 is recommended ("Start with Part 2 · shows your level fastest", black Start); the
+  other three use the tile pill.
+- **Account** (with Log out) is always in the nav, whatever the flags. It opens a small menu: mocked name and email,
+  then Log out (the app's real sign-out endpoint, then the sign-in page).
+- **Practise next** opens its task directly. The task is mocked, so it opens a mock route,
+  `/dashboard/task/a-skill-you-learned`, which stands in for the real task screen.
 - Toggle: `DASHBOARD_STATE` in `src/features/dashboard/mock-data.ts`, or `/dashboard?state=first-visit`.
 - Screenshots: `docs/design-system/dashboard-{normal,first-visit,flags-off}-{desktop,phone}.png`.
 
@@ -175,6 +187,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), optional trailing `menu`. `Thumb` is the neutral avatar/photo placeholder. |
 | `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` black square with a white glyph. An item with `soon: true` looks the same and says "Coming soon". |
 | `TopBar`, `TopBarLink`, `SearchSoon` | Optional search on the left, quiet text actions with small grey glyphs on the right. `TopBarLink soon` and `SearchSoon` are future entry points that say "Coming soon". |
+| `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Used by the row menu and the Account menu. |
 | `ComingSoonButton`, `ComingSoonMenu`, `ComingSoonToast` | Future controls behind a feature flag. The button takes the real control's classes (from `styles.ts`), so it looks identical; tapping it shows the toast. The menu is a ⋮ button with a small card menu whose items all say "Coming soon" (closes on Escape or outside tap). The toast is one small near-black pill ("Coming soon") near the bottom, a polite live region; mount it once per page. |
 | `styles.ts` | Shared class strings (focus ring, icon button, nav item, text actions), so server and client components render a control the same way. |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |

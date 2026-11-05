@@ -72,7 +72,11 @@ export function ExamCountdownCard({ className }: { className?: string }) {
   );
 }
 
-export function FindYourLevelCard({ className }: { className?: string }) {
+/**
+ * First visit. The screen's one black action is the recommended part's Start (Exam parts), so this card's button is
+ * the grey pill and goes to the same task. The exam-date prompt is flagged (`examCountdown`).
+ */
+export function FindYourLevelCard({ flags, className }: { flags: FeatureFlags; className?: string }) {
   return (
     <Card aria-labelledby="find-title" className={cx("flex flex-col justify-center", className)}>
       <p className="text-label text-fg-muted">{FIRST_VISIT.welcome}</p>
@@ -81,9 +85,19 @@ export function FindYourLevelCard({ className }: { className?: string }) {
       </h2>
       <p className="mt-3 max-w-md text-body text-fg-muted">{FIRST_VISIT.text}</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PillButton href={FIRST_VISIT.href}>Start your first practice</PillButton>
+        <PillButton href={FIRST_VISIT.href} variant="quiet">
+          Start your first practice
+        </PillButton>
         <span className="text-label text-fg-muted">About {FIRST_VISIT.minutes} min</span>
       </div>
+      {flags.examCountdown && (
+        <div className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-4">
+          <p className="text-label text-fg-muted">When is your exam?</p>
+          <ComingSoonButton label="Add exam date" className={styles.SMALL_ACTION}>
+            Add date
+          </ComingSoonButton>
+        </div>
+      )}
     </Card>
   );
 }
@@ -169,9 +183,14 @@ export function ExamPartsCard({ parts, wide = false, className }: { parts: reado
               <h3 className="text-caption font-semibold text-fg">{p.part}</h3>
               <p className="truncate text-caption text-fg-muted">{p.name}</p>
               <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{tried ? `Band ${p.band}` : "No band"}</p>
-              <p className="text-label text-fg-muted">{p.bandLabel ?? "Not tried yet"}</p>
-              <div className="mt-3">
-                <PillButton href={p.href} variant="light" size="sm" label={`${tried ? "Practise" : "Start"} ${p.part}`}>
+              <p className="text-label text-fg-muted">{p.recommendation ?? p.bandLabel ?? "Not tried yet"}</p>
+              <div className="mt-auto pt-3">
+                <PillButton
+                  href={p.href}
+                  variant={p.recommendation ? "primary" : "light"}
+                  size="sm"
+                  label={`${tried ? "Practise" : "Start"} ${p.part}`}
+                >
                   {tried ? "Practise" : "Start"}
                 </PillButton>
               </div>
@@ -265,7 +284,7 @@ export function BiggestFixCard({ className }: { className?: string }) {
         />
       </div>
       <div className="mt-auto pt-5">
-        <PillButton href={BIGGEST_FIX.retryHref} icon="retry" className="w-full">
+        <PillButton href={BIGGEST_FIX.retryHref} icon="retry" variant="quiet" className="w-full">
           Start retry
         </PillButton>
       </div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { cx } from "./cx";
 import { Icon } from "./Icon";
+import { Menu } from "./Menu";
 import { ICON_BUTTON } from "./styles";
 
 /**
@@ -54,58 +55,14 @@ export function ComingSoonToast() {
   );
 }
 
-/** Row menu (⋮) whose items are all future actions: picking one says "Coming soon". Closes on Escape or outside click. */
+/** Row menu (⋮) whose items are all future actions: picking one says "Coming soon". */
 export function ComingSoonMenu({ label, items }: { label: string; items: readonly string[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        aria-label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className={cx(ICON_BUTTON, "size-7")}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <Icon name="more" size={18} />
-      </button>
-      {open && (
-        <ul role="menu" className="absolute right-0 top-full z-10 mt-1 min-w-44 rounded-tile border border-line bg-card p-1 shadow-card">
-          {items.map((item) => (
-            <li key={item} role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="w-full rounded-icon px-3 py-2 text-left text-label text-fg hover:bg-well focus-visible:bg-well focus-visible:outline-none"
-                onClick={() => {
-                  setOpen(false);
-                  announceComingSoon(item);
-                }}
-              >
-                {item}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <Menu
+      label={label}
+      trigger={<Icon name="more" size={18} />}
+      triggerClassName={cx(ICON_BUTTON, "size-7")}
+      items={items.map((item) => ({ label: item, onSelect: () => announceComingSoon(item) }))}
+    />
   );
 }

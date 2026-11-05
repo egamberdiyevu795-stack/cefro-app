@@ -1,18 +1,68 @@
 import { useId } from "react";
 
-export type RadarAxis = { label: string; /** Ring index, 0 = innermost. */ value: number };
+export type RadarAxis = {
+  label: string;
+  /** Short label for narrow charts (e.g. "Gram"). */
+  short: string;
+  /** Ring index, 0 = innermost; null = not assessed (dashed point, no polygon vertex). */
+  value: number | null;
+};
+
+const NOT_ASSESSED_TEXT = "Not assessed";
 
 /**
  * Radar chart on ordinal rings (not percentages): each ring is a level, innermost first.
  * Thin grey grid, accent outline with dots, and the design system's only gradient as the fill.
+ *
+ * Text is never drawn below 11 px: the chart has two fixed-size versions and picks one from the width of its own box
+ * (a container query). Wide (≥ 23rem): full skill names and ring names. Narrow: short names, no ring names, and the
+ * levels listed under the chart. The list is always present for screen readers.
  */
 export function RadarChart({ axes, rings, label }: { axes: readonly RadarAxis[]; rings: readonly string[]; label: string }) {
+  return (
+    <figure className="@container m-0">
+      <div className="hidden @min-[23rem]:block">
+        <RadarSvg variant="full" axes={axes} rings={rings} label={label} />
+      </div>
+      <div className="@min-[23rem]:hidden">
+        <RadarSvg variant="compact" axes={axes} rings={rings} label={label} />
+      </div>
+      <figcaption className="@min-[23rem]:sr-only">
+        <ul className="mt-4 border-t border-line pt-3">
+          {axes.map((a) => (
+            <li key={a.label} className="flex items-center justify-between gap-4 py-1 text-label">
+              <span className="text-fg-muted">{a.label}</span>
+              <span className="font-semibold text-fg">{a.value === null ? NOT_ASSESSED_TEXT : rings[a.value]}</span>
+            </li>
+          ))}
+        </ul>
+      </figcaption>
+    </figure>
+  );
+}
+
+const VARIANTS = {
+  // Rendered at its natural size when the box is ≥ 23rem (368 px), so 12-unit text is 12 px.
+  full: { W: 368, H: 300, R: 98, axisFont: 12, ringFont: 11, gap: 14 },
+  // Natural size 300 px; may shrink to ~0.86 in the narrowest box, so 13-unit text stays ≥ 11 px.
+  compact: { W: 300, H: 250, R: 82, axisFont: 13, ringFont: 0, gap: 12 },
+} as const;
+
+function RadarSvg({
+  variant,
+  axes,
+  rings,
+  label,
+}: {
+  variant: keyof typeof VARIANTS;
+  axes: readonly RadarAxis[];
+  rings: readonly string[];
+  label: string;
+}) {
   const gradientId = useId();
-  const W = 420;
-  const H = 320;
+  const { W, H, R, axisFont, ringFont, gap } = VARIANTS[variant];
   const cx = W / 2;
-  const cy = H / 2 + 4;
-  const R = 120;
+  const cy = H / 2 + 6;
   const n = axes.length;
 
   const point = (i: number, r: number) => {
@@ -20,47 +70,70 @@ export function RadarChart({ axes, rings, label }: { axes: readonly RadarAxis[];
     return [cx + r * Math.cos(a), cy + r * Math.sin(a)] as const;
   };
   const ringRadius = (ring: number) => (R * (ring + 1)) / rings.length;
-  const polygon = (rFor: (i: number) => number) =>
-    axes.map((_, i) => point(i, rFor(i)).map((v) => v.toFixed(1)).join(",")).join(" ");
+  const fmt = (p: readonly [number, number]) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
 
-  const data = axes.map((a, i) => point(i, ringRadius(a.value)));
+  const assessed = axes.flatMap((a, i) => (a.value === null ? [] : [point(i, ringRadius(a.value))]));
 
   return (
-    <figure className="m-0">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={label}>
-        <defs>
-          <radialGradient id={gradientId} cx="50%" cy="50%" r="60%">
-            <stop offset="0%" stopColor="var(--color-radar-core)" stopOpacity="1" />
-            <stop offset="100%" stopColor="var(--color-radar-edge)" stopOpacity="0.7" />
-          </radialGradient>
-        </defs>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width={W}
+      height={H}
+      className="mx-auto block h-auto max-w-full overflow-visible"
+      role="img"
+      aria-label={label}
+    >
+      <defs>
+        <radialGradient id={gradientId} cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stopColor="var(--color-radar-core)" stopOpacity="1" />
+          <stop offset="100%" stopColor="var(--color-radar-edge)" stopOpacity="0.7" />
+        </radialGradient>
+      </defs>
 
-        {rings.map((_, r) => (
-          <polygon key={r} points={polygon(() => ringRadius(r))} fill="none" stroke="var(--color-line)" strokeWidth="1" />
-        ))}
-        {axes.map((_, i) => {
-          const [x, y] = point(i, R);
-          return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--color-line)" strokeWidth="1" />;
-        })}
+      {rings.map((_, r) => (
+        <polygon key={r} points={axes.map((_, i) => fmt(point(i, ringRadius(r)))).join(" ")} fill="none" stroke="var(--color-line)" />
+      ))}
+      {axes.map((a, i) => {
+        const [x, y] = point(i, R);
+        return (
+          <line
+            key={a.label}
+            x1={cx}
+            y1={cy}
+            x2={x}
+            y2={y}
+            stroke={a.value === null ? "var(--color-fg-subtle)" : "var(--color-line)"}
+            strokeDasharray={a.value === null ? "3 3" : undefined}
+          />
+        );
+      })}
 
+      {assessed.length >= 3 && (
         <polygon
-          points={data.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")}
+          points={assessed.map(fmt).join(" ")}
           fill={`url(#${gradientId})`}
           stroke="var(--color-accent)"
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
-        {data.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="3" fill="var(--color-accent)" />
-        ))}
+      )}
+      {assessed.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="3" fill="var(--color-accent)" />
+      ))}
+      {/* Not assessed: a hollow dashed point at the end of the axis, outside the data. */}
+      {axes.map((a, i) => {
+        if (a.value !== null) return null;
+        const [x, y] = point(i, R);
+        return <circle key={a.label} cx={x} cy={y} r="5" fill="var(--color-card)" stroke="var(--color-fg-muted)" strokeDasharray="2 2" />;
+      })}
 
-        {/* Ring names along the top axis, right of it. */}
-        {rings.map((name, r) => (
+      {ringFont > 0 &&
+        rings.map((name, r) => (
           <text
             key={name}
             x={cx + 5}
-            y={cy - ringRadius(r) + 11}
-            fontSize="10"
+            y={cy - ringRadius(r) + ringFont}
+            fontSize={ringFont}
             fill="var(--color-fg-muted)"
             stroke="var(--color-card)"
             strokeWidth="3"
@@ -70,19 +143,24 @@ export function RadarChart({ axes, rings, label }: { axes: readonly RadarAxis[];
           </text>
         ))}
 
-        {axes.map((a, i) => {
-          const [x, y] = point(i, R + 18);
-          const anchor = Math.abs(x - cx) < 4 ? "middle" : x > cx ? "start" : "end";
-          return (
-            <text key={a.label} x={x} y={y + 4} textAnchor={anchor} fontSize="12" fill="var(--color-fg)">
-              {a.label}
-            </text>
-          );
-        })}
-      </svg>
-      <figcaption className="sr-only">
-        {axes.map((a) => `${a.label}: ${rings[a.value]}`).join("; ")}
-      </figcaption>
-    </figure>
+      {axes.map((a, i) => {
+        const [x, y] = point(i, R + gap);
+        const anchor = Math.abs(x - cx) < 4 ? "middle" : x > cx ? "start" : "end";
+        const top = y < cy - R / 2;
+        const showNote = a.value === null && variant === "full";
+        // Labels near the top sit on their point; lower ones are nudged down so they clear the axis end.
+        const baseY = top ? y : y + axisFont / 3;
+        return (
+          <text key={a.label} x={x} y={baseY} textAnchor={anchor} fontSize={axisFont} fill="var(--color-fg)">
+            {variant === "full" ? a.label : a.short}
+            {showNote && (
+              <tspan x={x} dy={axisFont + 2} fontSize="11" fill="var(--color-fg-muted)">
+                {NOT_ASSESSED_TEXT}
+              </tspan>
+            )}
+          </text>
+        );
+      })}
+    </svg>
   );
 }

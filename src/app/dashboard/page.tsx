@@ -90,11 +90,11 @@ export default function DashboardPage() {
               <div className={`order-1 lg:order-none ${SPLIT_HALF}`}>
                 <CardHeader title="Speaking progress" className="lg:hidden" action={<PeriodPicker />} />
                 <div className="flex items-start justify-between">
-                  <p className="text-caption text-fg-muted">Current band</p>
+                  <p className="text-caption text-fg-muted">Current level</p>
                   <DeltaLabel label={PROGRESS.changeDescription}>{PROGRESS.changeLabel}</DeltaLabel>
                 </div>
                 <p className="mt-1 flex items-baseline gap-2">
-                  <span className="text-stat font-light tracking-[-0.03em]">{PROGRESS.band}</span>
+                  <span className="text-stat font-light tracking-[-0.03em]">{PROGRESS.level}</span>
                   <span className="text-lead font-medium">· target {PROGRESS.target}</span>
                 </p>
                 <dl className="mt-6">
@@ -103,7 +103,7 @@ export default function DashboardPage() {
                   ))}
                 </dl>
                 <div className="mt-6">
-                  <GoalBar value={PROGRESS.goal.value}>{PROGRESS.goal.text}</GoalBar>
+                  <GoalBar value={PROGRESS.goal.value}>Next: {PROGRESS.next}</GoalBar>
                 </div>
               </div>
 
@@ -125,8 +125,8 @@ export default function DashboardPage() {
                       className={`flex aspect-[1.08] flex-col justify-end rounded-tile p-3 text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${BLOCK_BG[p.tone]}`}
                     >
                       <span className="text-body font-semibold">{p.part}</span>
-                      <span className="text-caption">{p.name}</span>
-                      <span className="mt-1 text-caption">{p.band}</span>
+                      <span className="text-caption">{p.band === null ? "Not tried yet" : `Band ${p.band} · ${p.bandLabel}`}</span>
+                      <span className="mt-1 text-caption">{p.name}</span>
                     </Link>
                   </li>
                 ))}
@@ -153,12 +153,13 @@ export default function DashboardPage() {
                       </Thumb>
                     }
                     title={a.task}
+                    subtitle={a.part}
                     titleClassName="col-span-2 sm:col-span-1"
                     columns={ATTEMPT_COLUMNS}
                     menuLabel={`Options for ${a.task}`}
                     cells={[
                       { content: <StatusLabel status={a.status} />, className: "justify-self-end sm:justify-self-auto" },
-                      { content: a.band, className: "text-fg-muted sm:text-fg" },
+                      { content: a.level, className: "text-fg-muted sm:text-fg" },
                       {
                         content: (
                           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">

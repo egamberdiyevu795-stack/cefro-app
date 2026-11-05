@@ -8,6 +8,7 @@ import { IconButton } from "./PillButton";
 export function ListRow({
   thumb,
   title,
+  subtitle,
   cells,
   columns,
   titleClassName,
@@ -15,6 +16,7 @@ export function ListRow({
 }: {
   thumb: React.ReactNode;
   title: string;
+  subtitle?: string;
   cells: Array<{ content: React.ReactNode; className?: string }>;
   columns: string;
   titleClassName?: string;
@@ -24,7 +26,10 @@ export function ListRow({
     <li className="flex items-center gap-3 py-2.5">
       {thumb}
       <div className={cx("grid min-w-0 flex-1 items-center gap-x-4 gap-y-1", columns)}>
-        <span className={cx("text-body font-semibold text-fg sm:truncate", titleClassName)}>{title}</span>
+        <span className={cx("min-w-0", titleClassName)}>
+          <span className="block text-body font-semibold text-fg sm:truncate">{title}</span>
+          {subtitle && <span className="block text-caption text-fg-muted">{subtitle}</span>}
+        </span>
         {cells.map((cell, i) => (
           <span key={i} className={cx("flex min-w-0 items-center text-label text-fg", cell.className)}>
             {cell.content}

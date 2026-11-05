@@ -123,7 +123,7 @@ export type ExamPart = {
   band: number | null;
   bandLabel: string | null;
   href: string;
-  /** Set on the one recommended part (first visit): shown on the tile, with the black Start pill. */
+  /** Set on the one recommended part (first visit): shown on the tile with a "Recommended" label. */
   recommendation?: string;
 };
 
@@ -136,7 +136,7 @@ export const EXAM_PARTS: readonly ExamPart[] = [
 
 /**
  * First visit: the same parts, none tried yet. Part 2 is recommended: one answer covers all five skills against the
- * B2 descriptors, so it shows the level fastest. Its tile carries the screen's one black action.
+ * B2 descriptors, so it shows the level fastest. "Start your first practice" (the black action) goes to it.
  */
 export const EXAM_PARTS_FIRST_VISIT: readonly ExamPart[] = EXAM_PARTS.map((p) => ({
   ...p,

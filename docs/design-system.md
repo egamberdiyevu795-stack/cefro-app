@@ -36,7 +36,7 @@ API routes (`src/app/api/**`) did not move.
 
 Only one near-black (`primary`) action per screen. Every other action uses the grey `quiet` pill (or `light` on a
 `well` tile). Dashboard: returning = "Practise next · Start" (Biggest fix "Start retry" is grey); first visit = the
-recommended part's "Start" (Part 2), so "Start your first practice" is grey and goes to the same task.
+welcome card's "Start your first practice" (it goes to the recommended part, Part 2). All part tiles use the white tile pill.
 
 ## Feature flags
 
@@ -55,10 +55,10 @@ since it leads there.)
 
 - **Returning** (has attempts): Practise next, exam countdown*, Speaking progress + radar, Exam parts, Recent
   attempts, Biggest fix. Phone order: Practise next, countdown*, progress, biggest fix, radar, recent attempts, exam parts.
-- **First visit** (no attempts yet): no level, no chart, no list. "Welcome to CEFRO", "Find your level" with a grey
-  "Start your first practice" button and a small "When is your exam? · Add date" prompt*, then the four exam part tiles
-  (four in a row on desktop). Part 2 is recommended ("Start with Part 2 · shows your level fastest", black Start); the
-  other three use the tile pill.
+- **First visit** (no attempts yet): no level, no chart, no list. "Welcome to CEFRO", "Find your level" with the black
+  "Start your first practice" button (goes to Part 2) and a small "When is your exam? · Add date" prompt*, then the four exam part tiles
+  (four in a row on desktop). Part 2 is recommended: a small "Recommended" label and "Start with Part 2 · shows your
+  level fastest"; all four tiles use the same white tile "Start" pill.
 - **Account** (with Log out) is always in the nav, whatever the flags. It opens a small menu: mocked name and email,
   then Log out (the app's real sign-out endpoint, then the sign-in page).
 - **Practise next** opens its task directly. The task is mocked, so it opens a mock route,

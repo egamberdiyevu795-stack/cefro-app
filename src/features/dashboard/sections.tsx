@@ -73,8 +73,8 @@ export function ExamCountdownCard({ className }: { className?: string }) {
 }
 
 /**
- * First visit. The screen's one black action is the recommended part's Start (Exam parts), so this card's button is
- * the grey pill and goes to the same task. The exam-date prompt is flagged (`examCountdown`).
+ * First visit. "Start your first practice" is the screen's one black action; it goes to the recommended part (Part 2),
+ * whose tile only carries a "Recommended" label. The exam-date prompt is flagged (`examCountdown`).
  */
 export function FindYourLevelCard({ flags, className }: { flags: FeatureFlags; className?: string }) {
   return (
@@ -85,7 +85,7 @@ export function FindYourLevelCard({ flags, className }: { flags: FeatureFlags; c
       </h2>
       <p className="mt-3 max-w-md text-body text-fg-muted">{FIRST_VISIT.text}</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PillButton href={FIRST_VISIT.href} variant="quiet">
+        <PillButton href={FIRST_VISIT.href}>
           Start your first practice
         </PillButton>
         <span className="text-label text-fg-muted">About {FIRST_VISIT.minutes} min</span>
@@ -180,17 +180,17 @@ export function ExamPartsCard({ parts, wide = false, className }: { parts: reado
           const tried = p.band !== null;
           return (
             <li key={p.part} className="flex flex-col rounded-tile bg-well p-3">
-              <h3 className="text-caption font-semibold text-fg">{p.part}</h3>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <h3 className="whitespace-nowrap text-caption font-semibold text-fg">{p.part}</h3>
+                {p.recommendation && (
+                  <span className="rounded-full bg-card px-2 text-caption font-medium text-fg-muted">Recommended</span>
+                )}
+              </div>
               <p className="truncate text-caption text-fg-muted">{p.name}</p>
               <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{tried ? `Band ${p.band}` : "No band"}</p>
               <p className="text-label text-fg-muted">{p.recommendation ?? p.bandLabel ?? "Not tried yet"}</p>
               <div className="mt-auto pt-3">
-                <PillButton
-                  href={p.href}
-                  variant={p.recommendation ? "primary" : "light"}
-                  size="sm"
-                  label={`${tried ? "Practise" : "Start"} ${p.part}`}
-                >
+                <PillButton href={p.href} variant="light" size="sm" label={`${tried ? "Practise" : "Start"} ${p.part}`}>
                   {tried ? "Practise" : "Start"}
                 </PillButton>
               </div>

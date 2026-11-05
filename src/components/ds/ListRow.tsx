@@ -4,6 +4,7 @@ import { IconButton } from "./PillButton";
 /**
  * One row of a list card: round thumbnail, bold name, then cells, then a row menu.
  * `columns` is the grid template for the cells between the name and the menu, so every row in a list lines up.
+ * A cell with `phone: false` is hidden below the `sm` breakpoint.
  */
 export function ListRow({
   thumb,
@@ -16,8 +17,8 @@ export function ListRow({
 }: {
   thumb: React.ReactNode;
   title: string;
-  subtitle?: string;
-  cells: Array<{ content: React.ReactNode; className?: string }>;
+  subtitle?: React.ReactNode;
+  cells: Array<{ content: React.ReactNode; className?: string; phone?: boolean }>;
   columns: string;
   titleClassName?: string;
   menuLabel: string;
@@ -31,7 +32,7 @@ export function ListRow({
           {subtitle && <span className="block text-caption text-fg-muted">{subtitle}</span>}
         </span>
         {cells.map((cell, i) => (
-          <span key={i} className={cx("flex min-w-0 items-center text-label text-fg", cell.className)}>
+          <span key={i} className={cx(cell.phone === false ? "hidden sm:flex" : "flex", "min-w-0 items-center text-label text-fg", cell.className)}>
             {cell.content}
           </span>
         ))}

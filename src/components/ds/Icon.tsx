@@ -67,20 +67,8 @@ const PATHS = {
     </>
   ),
   check: <path d="m6 12.5 4 4 8-9" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />,
-  passed: (
-    <>
-      <circle cx="12" cy="12" r="9" fill="currentColor" />
-      <path d="m8.5 12.2 2.4 2.4 4.6-5" fill="none" stroke="var(--color-card)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </>
-  ),
-  pending: (
+  scoring: (
     <path d="M7 3h10M7 21h10M8 3v3.5l4 5.5 4-5.5V3M8 21v-3.5l4-5.5 4 5.5V21" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-  ),
-  failed: (
-    <>
-      <circle cx="12" cy="12" r="9" fill="currentColor" />
-      <path d="m9 9 6 6m0-6-6 6" stroke="var(--color-card)" strokeWidth="2" strokeLinecap="round" />
-    </>
   ),
   clock: (
     <>

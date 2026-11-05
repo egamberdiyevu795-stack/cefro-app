@@ -35,10 +35,12 @@ API routes (`src/app/api/**`) did not move.
 ## Levels and bands
 
 - An overall **level** is a CEFR level (Below B1, B1, B2, Above B2). The top of the dashboard shows only the level and
-  the target ("B1 · target B2", "Next: B2"). Never a band there.
+  the target ("B1 · target B2"), and a measurable goal ("2 of 4 skills at B2": assessed skills at B2 or above; a
+  skill that was not assessed is not counted). Never a band there.
 - A **band** (0–5) belongs to one exam part, and each part has its own band table (Part 2: 3 = Lower B2,
   4 = Higher B2; Part 1.2: 3 = Lower B1, 4 = Higher B1). So a band is always shown with its part and its label
-  ("Part 2 · Band 2 · Higher B1") and only in the Exam parts tiles. Lists show the level of each attempt.
+  ("Part 2 · Band 2 · Higher B1") and only in the Exam parts tiles. Lists show the level of each attempt as
+  the main value. There is no Passed/Failed; the only status is "Scoring…" while an answer is being processed.
 - The dashboard mock data is checked against the real Part 2 scorer by `src/features/dashboard/mock-data.test.ts`.
   Part 3 has no band table yet, so it shows no band.
 
@@ -70,7 +72,7 @@ API routes (`src/app/api/**`) did not move.
 | `--color-radar-edge` | `#d9ecff` | — | Radar fill gradient, edge. |
 | `--color-lime` | `#c8f26c` | `bg-lime` | Positive-change label only ("+1 band"). |
 | `--color-on-lime` | `#263409` | `text-on-lime` | Text on the lime label. |
-| `--color-block-1…4` | `#737479` … `#424347` | `bg-block-1…4` | Neutral stand-ins for photos (exam-part tiles) and avatars (list thumbs). |
+| `--color-block-1…4` | `#737479` … `#424347` | `bg-block-1…4` | Neutral stand-ins for photos and avatars (list thumbs). |
 
 ## Contrast (WCAG AA)
 
@@ -137,15 +139,16 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | Component | What it is |
 | --- | --- |
 | `Card`, `CardHeader` | Rounded `bg-card` surface with the soft shadow. Header: quiet title, optional action on the right, thin divider under it. |
-| `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"). Optional leading icon. |
+| `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"); `light` = card-white, for pills that sit on a `well` surface. Sizes `md` (36 px, 13 px text) and `sm` (28 px, 12 px text). Optional leading icon and `label` (accessible name when the visible text repeats, e.g. "Practise Part 2"). |
 | `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
-| `StatusLabel` | Grey glyph + dark word: Passed (check), Pending (hourglass), Failed (cross). No colour. On attempts: Passed = reached the part's target band, Failed = below it, Pending = still being scored. |
+| `ScoringLabel` | The only attempt status: grey hourglass + "Scoring…", shown in place of the level while an answer is processed. No Passed/Failed, no colour. |
 | `DeltaLabel` | Small lime pill for an improvement. Only for positive change. |
 | `StatRow` | `label │ value` row inside a `<dl>`: muted label, thin divider, right-aligned semibold value. |
 | `ProgressBar` | 4 px accent bar on a `well` track, with progressbar semantics. |
 | `GoalBar` | Grey pill with a black check square, a sentence, and a faint fill for how far along the goal is. |
 | `RadarChart` | Radar on ordinal rings (Below B1, B1, B2, Above B2), thin grey grid, accent outline and dots, the soft gradient fill. A skill that was not assessed (`value: null`, e.g. pronunciation when the audio check did not run) gets a dashed axis, a hollow dashed point at the axis end, no polygon vertex, and the label "Not assessed". **No text under 11 px:** two fixed-size versions are picked by the chart's own width (container query). At 23rem (368 px) and wider: full names and ring names at their natural size. Narrower: short names (Gram, Vocab, Flu, Coh, Pron), no ring names, and the level of each skill listed under the chart. The list is always there for screen readers. |
-| `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template), row menu. `Thumb` is the neutral avatar/photo placeholder. |
+| Part tile (pattern, dashboard) | `well` tile with `rounded-tile`: part (caption, semibold) and its name, the band as the largest text (`text-title`, "Band 2"), its label below (`text-label`, muted, "Higher B1"), and a small `light` pill ("Practise"; "Start" for an untried part, same tile). |
+| `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), row menu. `Thumb` is the neutral avatar/photo placeholder. |
 | `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` black square with a white glyph. |
 | `TopBar`, `TopBarLink` | Search field and quiet text actions with small grey glyphs. |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |

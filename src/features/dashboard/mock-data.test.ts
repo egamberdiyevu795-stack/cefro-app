@@ -27,6 +27,10 @@ describe("dashboard mock data matches the scoring rules", () => {
     expect(PROGRESS.target).toBe(q7.target_level);
   });
 
+  it("goal counts assessed skills at B2 or above, leaving out pronunciation (not assessed)", () => {
+    expect(PROGRESS.goal).toEqual({ atTarget: 2, assessed: 4, label: "2 of 4 skills at B2" });
+  });
+
   it("pronunciation is shown as not assessed and the score is provisional", () => {
     expect(RADAR_AXES.find((a) => a.label === "Pronunciation")?.value).toBeNull();
     expect(score.provisional).toBe(true);

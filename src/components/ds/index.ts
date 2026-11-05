@@ -1,6 +1,6 @@
 export { Card, CardHeader } from "./Card";
 export { PillButton, IconButton } from "./PillButton";
-export { StatusLabel, DeltaLabel, type Status } from "./Labels";
+export { ScoringLabel, DeltaLabel } from "./Labels";
 export { StatRow, ProgressBar, GoalBar } from "./Stats";
 export { RadarChart, type RadarAxis } from "./RadarChart";
 export { ListRow, Thumb } from "./ListRow";

@@ -13,7 +13,7 @@ import {
   RadarChart,
   Sidebar,
   StatRow,
-  StatusLabel,
+  ScoringLabel,
   Thumb,
   TopBar,
   TopBarLink,
@@ -32,10 +32,7 @@ export const metadata: Metadata = { title: "Dashboard" };
  * The progress card is `display: contents` on phones so its two halves become separate cards that can be reordered.
  */
 
-/** Full class names so Tailwind can see them. */
-const BLOCK_BG = { 1: "bg-block-1", 2: "bg-block-2", 3: "bg-block-3", 4: "bg-block-4" } as const;
-
-const ATTEMPT_COLUMNS = "grid-cols-[auto_1fr_auto] sm:grid-cols-[minmax(0,1.5fr)_1fr_0.8fr_0.9fr_0.8fr]";
+const ATTEMPT_COLUMNS = "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.6fr)_1fr_0.9fr_0.8fr]";
 
 /** Blocks that are their own card on phones and plain halves inside the progress card on desktop. */
 const SPLIT_HALF = "rounded-card bg-card p-5 shadow-card lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none";
@@ -103,7 +100,7 @@ export default function DashboardPage() {
                   ))}
                 </dl>
                 <div className="mt-6">
-                  <GoalBar value={PROGRESS.goal.value}>Next: {PROGRESS.next}</GoalBar>
+                  <GoalBar value={PROGRESS.goal.atTarget / PROGRESS.goal.assessed}>{PROGRESS.goal.label}</GoalBar>
                 </div>
               </div>
 
@@ -119,15 +116,16 @@ export default function DashboardPage() {
               <CardHeader id="parts-title" title="Exam parts" action={<IconButton icon="more" label="Exam parts options" size={28} />} />
               <ul className="grid grid-cols-2 gap-3">
                 {EXAM_PARTS.map((p) => (
-                  <li key={p.part}>
-                    <Link
-                      href="/"
-                      className={`flex aspect-[1.08] flex-col justify-end rounded-tile p-3 text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${BLOCK_BG[p.tone]}`}
-                    >
-                      <span className="text-body font-semibold">{p.part}</span>
-                      <span className="text-caption">{p.band === null ? "Not tried yet" : `Band ${p.band} · ${p.bandLabel}`}</span>
-                      <span className="mt-1 text-caption">{p.name}</span>
-                    </Link>
+                  <li key={p.part} className="flex flex-col rounded-tile bg-well p-3">
+                    <h3 className="text-caption font-semibold text-fg">{p.part}</h3>
+                    <p className="truncate text-caption text-fg-muted">{p.name}</p>
+                    <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{p.band === null ? "No band" : `Band ${p.band}`}</p>
+                    <p className="text-label text-fg-muted">{p.bandLabel ?? "Not tried yet"}</p>
+                    <div className="mt-3">
+                      <PillButton href={p.href} variant="light" size="sm" label={`${p.band === null ? "Start" : "Practise"} ${p.part}`}>
+                        {p.band === null ? "Start" : "Practise"}
+                      </PillButton>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -153,14 +151,21 @@ export default function DashboardPage() {
                       </Thumb>
                     }
                     title={a.task}
-                    subtitle={a.part}
-                    titleClassName="col-span-2 sm:col-span-1"
+                    subtitle={
+                      <>
+                        {a.part}
+                        <span className="sm:hidden"> · {a.date}</span>
+                      </>
+                    }
                     columns={ATTEMPT_COLUMNS}
                     menuLabel={`Options for ${a.task}`}
                     cells={[
-                      { content: <StatusLabel status={a.status} />, className: "justify-self-end sm:justify-self-auto" },
-                      { content: a.level, className: "text-fg-muted sm:text-fg" },
                       {
+                        content: a.level === null ? <ScoringLabel /> : <span className="text-body font-semibold">{a.level}</span>,
+                        className: "justify-self-end sm:justify-self-auto",
+                      },
+                      {
+                        phone: false,
                         content: (
                           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                             <Icon name="clock" size={14} className="text-fg-subtle" />
@@ -168,7 +173,7 @@ export default function DashboardPage() {
                           </span>
                         ),
                       },
-                      { content: a.date, className: "justify-self-end text-fg-muted sm:justify-self-auto sm:text-fg" },
+                      { phone: false, content: a.date },
                     ]}
                   />
                 ))}
@@ -185,12 +190,17 @@ export default function DashboardPage() {
               <p className="mt-1 text-body font-medium text-fg">{BIGGEST_FIX.fix}</p>
               <div className="mt-5 border-t border-line pt-4">
                 <div className="mb-2 flex items-center justify-between text-label">
-                  <span className="text-fg-muted">Fixed in recent attempts</span>
+                  <span className="text-fg-muted">
+                    Still in {BIGGEST_FIX.stillIn} of your last {BIGGEST_FIX.lastAnswers} answers
+                  </span>
                   <span className="font-semibold">
-                    {BIGGEST_FIX.fixedIn} of {BIGGEST_FIX.seenIn}
+                    {BIGGEST_FIX.stillIn}/{BIGGEST_FIX.lastAnswers}
                   </span>
                 </div>
-                <ProgressBar value={BIGGEST_FIX.fixedIn / BIGGEST_FIX.seenIn} label="Recent attempts where this was fixed" />
+                <ProgressBar
+                  value={BIGGEST_FIX.stillIn / BIGGEST_FIX.lastAnswers}
+                  label={`Mistake still in ${BIGGEST_FIX.stillIn} of your last ${BIGGEST_FIX.lastAnswers} answers`}
+                />
               </div>
               <div className="mt-auto pt-5">
                 <PillButton href={BIGGEST_FIX.retryHref} icon="retry" className="w-full">

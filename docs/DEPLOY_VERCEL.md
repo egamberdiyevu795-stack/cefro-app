@@ -90,16 +90,23 @@ cancelled does not run.
 that, Vercel would build and publish every push to `main` on its own, immediately and unmigrated, regardless of the
 workflow. With it, the workflow is the only thing that deploys production.
 
-**What a Preview does.** A Vercel Preview runs the production build (`NODE_ENV=production`), so the start-up configuration
-check (`src/server/config/boot-check.ts`) applies to it, and it fails in either direction:
+**What a Preview does.** A Vercel Preview runs the production build (`NODE_ENV=production`), so the configuration check
+(`src/server/config/boot-check.ts`) applies to it. At start-up it logs every problem (variable names only, never a
+value); it is then enforced on every request that needs the configuration: every API route answers 503
+`service_not_configured`, `/api/health` answers 503 "unavailable", and the app's pages (home, login, register, practice)
+fail with HTTP 500. It fails in either direction:
 
-- *With Turso credentials* (a variable ticked for Preview by mistake): the boot check reports "Database credentials are
-  present in a Vercel Preview or Development environment…" (variable names and that sentence only, never a value) and the
-  application **does not start normally**: Next.js reports "Failed to prepare server" and **every route, pages and
-  `/api/health` included, returns HTTP 500**. The database initialisation (`getDb`) also refuses the same configuration
-  before any network request, as a second layer.
-- *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the same
-  boot check fails ("required on Vercel…") and the Preview also returns HTTP 500 on every route.
+- *With Turso credentials* (a variable ticked for Preview by mistake): the check reports "Database credentials are
+  present in a Vercel Preview or Development environment…" and everything that can reach the database is refused as
+  above. The database initialisation (`getDb`) also refuses the same configuration before any network request, as a
+  second layer.
+- *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the
+  same check fails ("required on Vercel…") and the same routes are refused.
+
+The one exception is the **`/dashboard` design prototype** (`/dashboard`, `/dashboard/task/…`): it renders mocked data
+only, reads no secret and never opens the database, so it works in a Preview with no environment variables at all. (Until
+November 2026 a failed check made the start-up hook throw, which made Next.js answer 500 on every route, the prototype
+included.)
 
 So a Preview of this application is **not usable as a running app** unless it has its own database. That is deliberate:
 the Preview is kept away from real data rather than half-working. If you want working Previews, create a **second** Turso

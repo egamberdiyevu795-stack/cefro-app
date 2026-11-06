@@ -1,4 +1,5 @@
 import "server-only";
+import { assertServerConfigured } from "./config/boot-check";
 import { HttpError } from "./errors";
 import { isDatabaseUnavailable, safeDatabaseMessage } from "./db/errors";
 import { logger } from "./logging/logger";
@@ -15,12 +16,16 @@ export function errorResponse(status: number, code: string, message: string, ret
  * Wrap a route handler so that expected errors (HttpError) become clean
  * JSON responses and unexpected ones are logged and returned as a generic
  * 500 — technical details never reach the client.
+ *
+ * In production, a server with missing provider or sign-in configuration refuses every wrapped route with 503
+ * before the handler runs (see server/config/boot-check.ts).
  */
 export function withErrorHandling<Args extends unknown[]>(
   handler: (...args: Args) => Promise<Response>,
 ): (...args: Args) => Promise<Response> {
   return async (...args: Args) => {
     try {
+      assertServerConfigured();
       return await handler(...args);
     } catch (error) {
       if (error instanceof HttpError) {

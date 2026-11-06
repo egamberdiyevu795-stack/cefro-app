@@ -251,11 +251,15 @@ that hits its budget) may still be billed (see section 7).
   a missing key for the selected real provider, or a mock provider in production.
 - `describeProviderMode(env)` distinguishes **`real`** (both providers real) from **`development_mock`** (any
   mock). Mock providers remain refused when `NODE_ENV=production`.
-- At server start (`src/instrumentation.ts` → `boot-check.ts`, skipped during `next build`): in production a
-  problem makes registration throw, so Next.js reports "Failed to prepare server" and every request returns
-  500 (verified with `next start`); health checks fail and a bad deploy is visible. The process itself stays up
-  because Next does not exit on an instrumentation error. In development and tests it only logs, so mock mode
-  and test overrides keep working.
+- At server start (`src/instrumentation.ts` → `boot-check.ts`, skipped during `next build`) every problem is
+  logged (variable names only). It does not throw: a throwing hook makes Next.js answer 500 on every route ("Failed
+  to prepare server"), which also took down the `/dashboard` design prototype, which needs no secret.
+- In production the check is enforced per request (`assertServerConfigured`): every API route through
+  `withErrorHandling` (503 `service_not_configured`), the app's pages through `src/app/(site)/layout.tsx` (500; the
+  layout calls `connection()` so the check runs per request, not once at build time), and `/api/health` (503), so
+  a bad deploy still fails its health check. Only `/dashboard` (mocked data, no database) is outside it. Verified
+  with `next start` and no environment variables. In development and tests nothing is refused, so mock mode and
+  test overrides keep working.
 - `POST /api/speaking/attempts` repeats the check and returns 503 `service_not_configured` before buffering or
   storing anything. The browser keeps the recording and the existing "try sending again" path works once the
   server is fixed. The response carries no variable names.

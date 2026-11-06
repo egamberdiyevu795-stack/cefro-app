@@ -44,8 +44,9 @@ evaluator are clearly labelled in the UI. Both are refused when
 
 Practice works without an account. `/register` and `/login` add optional accounts (email + password, via the
 `better-auth` library); what an anonymous visitor practised is attached to the account when they register or sign in.
-In production set `AUTH_SECRET` (32+ random characters) and `APP_URL` (https): the server refuses to start healthy
-without them. Email is not verified and there is no password reset yet. Design and limits:
+In production set `AUTH_SECRET` (32+ random characters) and `APP_URL` (https): without them the
+app's pages, every API route and `/api/health` refuse to serve (the `/dashboard` design prototype, which uses mocked
+data only, still renders). Email is not verified and there is no password reset yet. Design and limits:
 [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md#11-identity-and-accounts-stage-4).
 
 ### Trying it on a public URL (Vercel)

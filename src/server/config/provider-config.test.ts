@@ -14,7 +14,7 @@ vi.mock("./env", () => ({
 const logs = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }));
 vi.mock("@/server/logging/logger", () => ({ logger: logs }));
 
-import { checkProvidersAtBoot } from "./boot-check";
+import { assertServerConfigured, checkProvidersAtBoot, isServerConfigured } from "./boot-check";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
 import { describeProviderMode, validateAuthConfig, validateDatabaseConfig, validateProviderConfig } from "./provider-config";
 
@@ -96,9 +96,10 @@ describe("checkProvidersAtBoot", () => {
     expect(logs.info).toHaveBeenCalledWith("Provider configuration OK", expect.objectContaining({ mode: "real" }));
   });
 
-  it("throws in production (making the server unhealthy), naming only variables", () => {
+  it("logs every problem in production, naming only variables, but never throws (a throw would 500 every route)", () => {
     state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "sk-do-not-print" });
-    expect(() => checkProvidersAtBoot()).toThrow(/GEMINI_API_KEY/);
+    expect(() => checkProvidersAtBoot()).not.toThrow();
+    expect(logs.error).toHaveBeenCalledWith("Provider configuration problem", expect.objectContaining({ variable: "GEMINI_API_KEY" }));
     expect(JSON.stringify(logs.error.mock.calls)).not.toContain("sk-do-not-print");
   });
 
@@ -115,6 +116,46 @@ describe("checkProvidersAtBoot", () => {
     const original = process.env.NODE_ENV;
     expect(() => checkProvidersAtBoot()).not.toThrow(); // vitest runs with NODE_ENV=test
     expect(process.env.NODE_ENV).toBe(original);
+  });
+});
+
+describe("assertServerConfigured (enforced per route: API wrapper, app pages, health)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    state.throwOnParse = false;
+  });
+
+  it("refuses with 503 in production when anything is missing, without revealing values", () => {
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "sk-do-not-print" });
+    expect(isServerConfigured()).toBe(false);
+    let thrown: unknown;
+    try {
+      assertServerConfigured();
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ status: 503, code: "service_not_configured" });
+    expect(JSON.stringify(thrown)).not.toContain("sk-do-not-print");
+    expect(String((thrown as Error).message)).not.toContain("sk-do-not-print");
+  });
+
+  it("refuses in production when the environment cannot be parsed", () => {
+    state.throwOnParse = true;
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(isServerConfigured()).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("passes in production when complete, and never refuses in development or tests", () => {
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com" });
+    expect(() => assertServerConfigured()).not.toThrow();
+    state.env = env({ NODE_ENV: "development" });
+    expect(() => assertServerConfigured()).not.toThrow();
+    state.env = env({ NODE_ENV: "test" });
+    expect(() => assertServerConfigured()).not.toThrow();
   });
 });
 
@@ -137,13 +178,13 @@ describe("validateAuthConfig", () => {
     expect(JSON.stringify(validateAuthConfig(env({ NODE_ENV: "production", AUTH_SECRET: INSECURE_DEV_AUTH_SECRET })))).not.toContain(INSECURE_DEV_AUTH_SECRET);
   });
 
-  it("makes the production boot check fail without it", () => {
+  it("makes the production per-route check refuse without it", () => {
     vi.clearAllMocks();
     state.throwOnParse = false;
     state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" });
-    expect(() => checkProvidersAtBoot()).toThrow(/AUTH_SECRET/);
+    expect(() => assertServerConfigured()).toThrow();
     state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", AUTH_SECRET: SECRET, APP_URL: "https://app.example.com" });
-    expect(() => checkProvidersAtBoot()).not.toThrow();
+    expect(() => assertServerConfigured()).not.toThrow();
   });
 });
 

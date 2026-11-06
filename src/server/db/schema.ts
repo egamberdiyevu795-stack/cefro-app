@@ -54,6 +54,10 @@ export const users = sqliteTable("users", {
    * cookie keeps resolving to the surviving user.
    */
   mergedIntoUserId: text("merged_into_user_id").references((): AnySQLiteColumn => users.id),
+  /** The student's exam date, "YYYY-MM-DD" (a calendar day in Uzbekistan). Null until they give one. */
+  examDate: text("exam_date"),
+  /** When the student answered "When is your exam?" with Skip (ISO time). Cleared when they save a date. */
+  examDateSkippedAt: text("exam_date_skipped_at"),
   createdAt: dateTimestamps.createdAt,
 }, (table) => [uniqueIndex("users_email_uq").on(table.email)]);
 

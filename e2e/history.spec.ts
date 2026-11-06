@@ -29,7 +29,7 @@ test("History: empty state, then the student's attempts newest first, retries, t
   await expect(page.getByRole("link", { name: "Start your first practice" })).toHaveAttribute("href", TASK_URL);
   await expect(page.getByRole("link", { name: "History" })).toHaveAttribute("aria-current", "page");
   await page.goto("/dashboard");
-  await expect(page.getByRole("region", { name: "Recent attempts" })).toContainText("No attempts yet");
+  await expect(page.getByRole("heading", { name: "Find your level" })).toBeVisible(); // nothing scored: the first visit
 
   // Two attempts: a first one and its retry. Not enough scored attempts for the chart.
   await page.goto(TASK_URL);
@@ -89,7 +89,7 @@ test("History: empty state, then the student's attempts newest first, retries, t
   await expect(otherPage.getByRole("heading", { name: "No attempts yet" })).toBeVisible();
   expect(await otherPage.content()).not.toContain(first);
   await otherPage.goto("/dashboard");
-  await expect(otherPage.getByRole("region", { name: "Recent attempts" })).toContainText("No attempts yet");
+  await expect(otherPage.getByRole("heading", { name: "Find your level" })).toBeVisible();
   await other.close();
 
   // Phone: no horizontal scroll.

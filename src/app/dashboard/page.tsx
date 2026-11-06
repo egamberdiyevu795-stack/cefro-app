@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { ComingSoonButton, ComingSoonToast, Icon, Sidebar, SearchSoon, TopBar, TopBarLink, cx, styles } from "@/components/ds";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
-import { DASHBOARD_STATE, EXAM_PARTS, EXAM_PARTS_FIRST_VISIT, navItemsFor, type DashboardState } from "@/features/dashboard/mock-data";
+import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
+import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
+import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
+import type { HistoryAttempt } from "@/domain/speaking/history";
 import { AccountMenu } from "@/features/dashboard/AccountMenu";
+import { ExamDate } from "@/features/dashboard/ExamDate";
+import { navItemsFor } from "@/features/dashboard/mock-data";
+import { dashboardFix, partTiles, practiseNext, progress, scoredAttempts, type TaskInfo } from "@/features/dashboard/progress";
 import {
   BiggestFixCard,
-  ExamCountdownCard,
   ExamPartsCard,
   FindYourLevelCard,
   PractiseNextCard,
@@ -14,64 +19,70 @@ import {
   RECENT_ATTEMPT_COUNT,
   RecentAttemptsCard,
   Wordmark,
+  type ExamPartTileView,
 } from "@/features/dashboard/sections";
-import { toHistoryRows, type HistoryRow } from "@/features/history/view-model";
-import { listAttemptHistory } from "@/server/attempts/attempt-service";
+import { toHistoryRows } from "@/features/history/view-model";
+import { getAttemptViewForUser, listAttemptHistory } from "@/server/attempts/attempt-service";
+import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { readExamDate } from "@/server/exam-date/exam-date-store";
 import { findCurrentUserId } from "@/server/identity/current-user";
-import { logger } from "@/server/logging/logger";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-/**
- * The student's own latest attempts (the History page's rows), or null when they cannot be read: the rest of the
- * dashboard is mocked, so a database problem only replaces this card's list with a line, never the whole page.
- */
-async function recentAttempts(): Promise<HistoryRow[] | null> {
-  try {
-    const userId = await findCurrentUserId();
-    if (!userId) return [];
-    const attempts = await listAttemptHistory(userId);
-    return toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts);
-  } catch (error) {
-    logger.error("Could not read recent attempts for the dashboard", { error });
-    return null;
-  }
-}
+/** The recommended first part: Part 2 shows the level fastest (one answer covers all five skills). */
+const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
 
 /*
- * Design prototype: every value on this page is mocked (features/dashboard/mock-data.ts), except Recent attempts,
- * which lists the student's real attempts (the same rows as /history) and links to History with "See all".
+ * The student's dashboard, from their own attempts (`listAttemptHistory`, the same owner rule as History and the
+ * result page) and their exam date. Every number is computed by the pure functions in features/dashboard/progress.ts.
  *
- * Prototype switches (for screenshots and reviews):
- *   ?state=first-visit | returning   overrides DASHBOARD_STATE in mock-data.ts
- *   ?flags=off                        turns every feature flag off (src/config/features.ts)
- *
- * Returning, desktop (like the reference): wide left column, narrow right column.
- *   row 1: [ Practise next             ] [ Exam countdown* ]
+ * Returning (at least one scored answer), desktop:
+ *   row 1: [ Practise next             ] [ Exam date*      ]
  *   row 2: [ Speaking progress + radar ] [ Exam parts      ]
  *   row 3: [ Recent attempts           ] [ Biggest fix     ]
- * Returning, phone: practise next, countdown*, progress, biggest fix, radar, recent attempts, exam parts.
- *
- * First visit, desktop: [ Find your level (with the "When is your exam?" prompt*) ] then [ Exam parts, four in a row ].
- * First visit, phone: find your level, exam parts.
+ * Returning, phone: practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
+ * First visit (nothing scored yet): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
  * The Account item (with Log out) is always in the nav, whatever the flags.
  *
- * * flagged; when it is off, the card beside it takes the full row.
+ * * flag `examCountdown`; with it off, or when the student chose Skip, Practise next takes the full row.
+ * `?flags=off` previews the page with every flag off.
  */
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const query = await props.searchParams;
-  const state: DashboardState = query.state === "first-visit" || query.state === "returning" ? query.state : DASHBOARD_STATE;
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
-  const countdown = flags.examCountdown;
   await connection();
-  const recent = state === "returning" ? await recentAttempts() : [];
+  const now = new Date();
+
+  const userId = await findCurrentUserId();
+  const attempts: HistoryAttempt[] = userId ? await listAttemptHistory(userId) : [];
+  const stored = userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+
+  const tasks: TaskInfo[] = listSpeakingTasks().map(({ id, title, part, level, preparationSeconds, speakingSeconds }) => ({
+    id, title, part, level, preparationSeconds, speakingSeconds,
+  }));
+  const target = getSpeakingRubric(getSpeakingTask(RECOMMENDED_TASK_ID)!).targetLevel as FeatureLevel;
+  const summary = progress(attempts, { target, now });
+  const latestScored = scoredAttempts(attempts)[0];
+  const transcript = latestScored && userId ? ((await getAttemptViewForUser(userId, latestScored.id)).transcript?.text ?? "") : "";
+  const fix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript, target });
+  const next = practiseNext(attempts, tasks);
+  const tiles: ExamPartTileView[] = partTiles(attempts, tasks).map((t) => ({ ...t, part: t.partLabel }));
+  const recent = toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts);
+
+  const today = todayIn(now);
+  const exam = examDateState(stored, now);
+  const examSlot = (variant: "card" | "inline", className?: string) =>
+    flags.examCountdown && exam.kind !== "skipped" ? (
+      <ExamDate state={exam} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant={variant} className={className} />
+    ) : null;
+  const countdown = flags.examCountdown && exam.kind !== "skipped";
 
   return (
     <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
       <div className="mx-auto flex max-w-[1280px] px-4 pt-4 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
           <Wordmark className="hidden lg:flex lg:h-12" />
-          <Sidebar items={navItemsFor(flags)} activeHref="/dashboard" last={<AccountMenu />} />
+          <Sidebar items={navItemsFor(flags)} activeHref="/dashboard" last={<AccountMenu source="real" />} />
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -108,24 +119,29 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
           </header>
 
           <main id="main" className="grid grid-cols-1 gap-4 pb-28 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:pb-0">
-            {state === "returning" ? (
+            {summary && fix && next ? (
               <>
-                <PractiseNextCard className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
-                {countdown && <ExamCountdownCard className="order-2 lg:order-none lg:col-start-2 lg:row-start-1" />}
+                <PractiseNextCard next={next} className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
+                {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
                 <ProgressCard
+                  progress={summary}
                   flags={flags}
                   className="lg:col-start-1 lg:row-start-2"
                   progressClassName="order-3 lg:order-none"
                   radarClassName="order-5 lg:order-none"
                 />
-                <ExamPartsCard parts={EXAM_PARTS} className="order-7 lg:order-none lg:col-start-2 lg:row-start-2" />
+                <ExamPartsCard parts={tiles} className="order-7 lg:order-none lg:col-start-2 lg:row-start-2" />
                 <RecentAttemptsCard flags={flags} rows={recent} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
-                <BiggestFixCard className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
+                <BiggestFixCard fix={fix} className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
             ) : (
               <>
-                <FindYourLevelCard flags={flags} className="lg:col-span-2" />
-                <ExamPartsCard parts={EXAM_PARTS_FIRST_VISIT} wide className="lg:col-span-2" />
+                <FindYourLevelCard exam={examSlot("inline")} className="lg:col-span-2" />
+                <ExamPartsCard
+                  parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
+                  wide
+                  className="lg:col-span-2"
+                />
               </>
             )}
           </main>

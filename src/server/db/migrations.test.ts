@@ -150,6 +150,15 @@ describe("fresh database", () => {
   });
 });
 
+describe("exam date migration (0005)", () => {
+  it("only adds two nullable columns to users", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0005_exam_date.sql"), "utf8");
+    expect(sql).toContain("ALTER TABLE `users` ADD `exam_date` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `exam_date_skipped_at` text;");
+    expect(sql).not.toMatch(/DROP|DELETE|UPDATE|NOT NULL|CREATE/i);
+  });
+});
+
 describe("upgrading a database created by an earlier release", () => {
   /** Rows as the pre-Stage-3 application wrote them (migrations 0000 and 0001 only). */
   async function seedOldDatabase(file: string) {

@@ -331,7 +331,8 @@ function assessedLevel(level: PronunciationLevel): FeatureLevel | null {
  * - own words: how their answer started and the model answer to question 1.
  * The goal is always the evaluator's first retry focus, the one "Retry with this goal" carries.
  */
-function biggestFix(result: MultilevelResult, prompts: readonly string[], transcript: string): BiggestFixView {
+/** The result page's Biggest fix card for one result; also the dashboard's. */
+export function biggestFix(result: MultilevelResult, prompts: readonly string[], transcript: string): BiggestFixView {
   const fix = result.scoring.biggest_fix;
   const focus: MultilevelRetryFocus | undefined = result.retry_focus[0];
   const a = result.assessment;

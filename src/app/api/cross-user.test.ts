@@ -34,6 +34,9 @@ import { GET as getTaskAttempts } from "./speaking/tasks/[taskId]/attempts/route
 import { POST as postSession } from "./sessions/route";
 import { GET as getMe } from "./account/me/route";
 import HistoryPage from "../history/page";
+import { PUT as putExamDate } from "./account/exam-date/route";
+import { users } from "@/server/db/schema";
+import { todayIn, addDays } from "@/domain/exam-date";
 import type { HistoryView } from "@/features/history/view-model";
 
 /** The History page as this actor's browser gets it: the view it renders (the shell around it is not needed). */
@@ -148,6 +151,45 @@ describe("History page: only the owner's attempts (same owner check as the resul
   it("an attempt id that is not yours, put in the query, changes nothing", async () => {
     const view = await historyFor(actors.bob, { part: attemptOfA, show: attemptOfA });
     expect(view.total).toBe(0);
+  });
+});
+
+describe("exam date: saved per user, only ever the caller's own", () => {
+  const put = (body: unknown) => putExamDate(new Request("http://localhost/api/account/exam-date", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
+  const dateOf = async (email: string) =>
+    (await db.select({ examDate: users.examDate, skipped: users.examDateSkippedAt }).from(users).where(eq(users.email, email)).get())!;
+  const inDays = (n: number) => addDays(todayIn(new Date()), n);
+
+  it("saves alice's date on alice only; bob's stays empty", async () => {
+    actAs(actors.alice);
+    expect((await put({ date: inDays(20) })).status).toBe(204);
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(20), skipped: null });
+    expect(await dateOf("bob@example.com")).toEqual({ examDate: null, skipped: null });
+  });
+
+  it("refuses a past date, a malformed one and an empty body (400), changing nothing", async () => {
+    actAs(actors.alice);
+    for (const body of [{ date: inDays(-1) }, { date: "28.11.26" }, { date: "2026-02-30" }, {}, { userId: "x", date: 5 }]) {
+      const response = await put(body);
+      expect(response.status).toBe(400);
+      expect((await json(response)).error.code).toBe("invalid_exam_date");
+    }
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: null, skipped: null });
+  });
+
+  it("Skip is remembered, and saving a date later clears it", async () => {
+    actAs(actors.alice);
+    expect((await put({ skip: true })).status).toBe(204);
+    expect((await dateOf("alice@example.com")).skipped).not.toBeNull();
+    await put({ date: inDays(3) });
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(3), skipped: null });
+  });
+
+  it("an anonymous visitor's date carries over when they create an account", async () => {
+    jar.clear();
+    expect((await put({ date: inDays(30) })).status).toBe(204); // gets an anonymous identity on the way
+    expect((await signUp("carol@example.com", PASSWORD, { ip: "10.4.9.9" })).status).toBe(200);
+    expect((await dateOf("carol@example.com")).examDate).toBe(inDays(30));
   });
 });
 

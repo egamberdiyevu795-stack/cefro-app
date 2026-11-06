@@ -41,9 +41,9 @@ welcome card's "Start your first practice" (it goes to the recommended part, Par
 
 Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
 notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons / Settings, the attempt
-row menu (Delete, Report a wrong score) and the exam date countdown. `history` is now a built feature behind its flag
-(on): the sidebar item and "See all" are real links to `/history`; with the flag off they are not rendered and
-`/history` is a 404.
+row menu (Delete, Report a wrong score). Two flags now cover built features (both on): `history` (the sidebar item and
+"See all" are real links to `/history`; off: not rendered and `/history` is a 404) and `examCountdown` (the real exam
+date: question, countdown, Edit; off: not rendered and Practise next takes the full row).
 
 - **Flag on** (prototype default): the element is shown exactly as designed; tapping it shows a small "Coming soon".
 - **Flag off:** the element is not rendered. Neighbours fill the space (e.g. "Practise next" takes the full row when
@@ -51,23 +51,78 @@ row menu (Delete, Report a wrong score) and the exam date countdown. `history` i
 - Preview with every flag off: `/dashboard?flags=off`. Turn flags off before a page ships; delete a flag when its
   feature is real.
 
-## Dashboard states
+## Dashboard (real data)
 
-- **Returning** (has attempts): Practise next, exam countdown*, Speaking progress + radar, Exam parts, Recent
-  attempts, Biggest fix. Phone order: Practise next, countdown*, progress, biggest fix, radar, recent attempts, exam parts.
-- **First visit** (no attempts yet): no level, no chart, no list. "Welcome to CEFRO", "Find your level" with the black
-  "Start your first practice" button (goes to Part 2) and a small "When is your exam? · Add date" prompt*, then the four exam part tiles
-  (four in a row on desktop). Part 2 is recommended: a small "Recommended" label and "Start with Part 2 · shows your
-  level fastest"; all four tiles use the same white tile "Start" pill.
-- **Account** (with Log out) is always in the nav, whatever the flags. It opens a small menu: name and email, then Log
-  out (the app's real sign-out endpoint, then the sign-in page). On the dashboard and result prototypes the account is
-  mocked; on real pages it is the signed-in student's (see "Account menu" below).
-- **Practise next** opens its task directly. The task is mocked, so it opens a mock route,
-  `/dashboard/task/a-skill-you-learned`, which stands in for the real task screen.
-- Toggle: `DASHBOARD_STATE` in `src/features/dashboard/mock-data.ts`, or `/dashboard?state=first-visit`.
-- Screenshots: `docs/design-system/dashboard-{normal,first-visit,flags-off}-{desktop,phone}.png`.
+Everything on `/dashboard` about the student comes from their own attempts (`listAttemptHistory`, the same owner rule
+as History and the result page) and their exam date. Only the first visit's wording, the navigation and the flagged
+"Coming soon" controls are fixed. Every number is computed by pure, unit-tested functions in
+`features/dashboard/progress.ts` (and `domain/exam-date.ts`); the page only loads data and lays out cards.
 
-\* flagged.
+"Scored" = a completed Multilevel result that is a rating: not "too short to rate", not old-method, not still being
+scored, not failed.
+
+- **First visit** = no scored answer yet (a brand-new student, or one whose answers are all still scoring or failed):
+  "Welcome to CEFRO", "Find your level", the black "Start your first practice" (Part 2), "When is your exam?"*, then
+  the four part tiles (Part 2 "Recommended"). No level, chart or list.
+- **Current level and Skills by level:** per skill, the **middle value** of the last 3 scored answers (of 2, the mean
+  of the two rounded as the scorer rounds: an exact .5 goes down; an answer that did not assess a skill, e.g.
+  pronunciation without audio, is left out for that skill only; never assessed = "Not assessed" on the radar). The
+  overall level is computed from those skill levels exactly as the scorer computes an answer's language level
+  (`bestFitLevel`). Under it: "Based on your last 3 answers" / "your last 2 answers" / "your last answer". The target
+  is Part 2's rubric target (B2).
+- **"x of 4 skills at B2":** the same skill levels; skills at or above the target out of the assessed ones (5 when
+  pronunciation was assessed).
+- **"Up from …"** (lime): the level of the 3 scored answers before those, computed the same way, when it is lower.
+  Hidden with fewer than 3 earlier scored answers, and when the level did not go up.
+- **Stats:** attempts this month, parts practised (of 4), recorded speaking time this month (months in Uzbekistan time).
+- **Biggest fix:** the latest scored answer's biggest fix, the same content as its result page (label, quote, "Try
+  instead" / "Next step"), and the grey "Start retry" (a retry of that answer, with its goal). **"Still in X of your
+  last 4 answers"** counts, among the last 4 scored answers, those with the same problem: the same skill below the
+  target; the same question of the same task not answered on topic; or (own words) a memorised / off-question answer.
+  Shown only when the latest answer itself still has the problem and there are at least 2 answers.
+- **Practise next** (the black "Start"): (1) the latest attempt is a retry that was not scored (failed, too short)
+  → "Finish your goal": that retry again; (2) the latest scored answer is a retry whose goal is "Not yet" (or partly
+  there) → "Your goal isn't met yet": that retry again, with the same goal (`?retry=<the original attempt>`), the goal
+  shown on the card; (3) otherwise the task practised least recently ("Not practised yet" first, else "Last practised
+  04.11.26"). The mocked "A skill you learned" task and its `/dashboard/task/…` route are gone.
+- **Exam parts:** the latest scored band per part with its label, "Practise"; a part with nothing scored: "No band",
+  "Not tried yet", "Start". Parts without a task yet (1.1, 1.2, 3) link to the task list.
+- **Recent attempts:** the History rows (latest 4); the flagged row menu is hidden on phones, where it squeezed the
+  task name onto two lines.
+- **Phone order:** Practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
+- **Account** (with Log out) is always in the nav, whatever the flags, now the real account (`source="real"`).
+- `?flags=off` still previews every flag off. The `?state=` switch and `DASHBOARD_STATE` are gone (the state follows
+  the data).
+
+\* flag `examCountdown`.
+
+### Exam date
+
+- Stored per user: `users.exam_date` ("YYYY-MM-DD", a day in Uzbekistan) and `users.exam_date_skipped_at`
+  (migration `0005_exam_date`, two nullable columns). Saved through `PUT /api/account/exam-date` (`{ date }` or
+  `{ skip: true }`), always for the caller (signed-in account or the browser's anonymous identity). A date must be today
+  or later, within two years; anything else is a 400 with a plain message. An anonymous visitor's date (or Skip) moves
+  to their account when they sign up, unless the account already has one.
+- **No date:** "When is your exam?" with a date picker, the grey "Save" and "Skip" (on the first visit inside the
+  welcome card; on the returning dashboard in the countdown's place). Skip is remembered: the question is not asked
+  again; saving a date later clears it.
+- **Date set:** "Your exam · in 23 days · 28.11.26" ("in 1 day", "today") with "Edit" (the same picker, with Cancel).
+- **Past date:** the countdown is hidden and the student is asked "When is your next exam?" ("Your exam date,
+  01.11.26, has passed.").
+- Days are counted in Uzbekistan's calendar, so the countdown is the same wherever the device is.
+- The date field's border is `fg-subtle` (3.64:1 on the card: an input boundary needs 3:1).
+
+### Checks and screenshots
+
+- `features/dashboard/progress.test.ts` (middle value, the scorer's rounding, last 3 only, what counts as scored,
+  "x of 4", "Up from", stats, biggest fix and "Still in", every Practise next case, part tiles), `domain/exam-date.test.ts`,
+  `app/api/cross-user.test.ts` (exam date per user, validation, Skip, carried over on sign-up),
+  `server/db/migrations.test.ts` (0005 is additive), `e2e/dashboard.spec.ts` (new student, Skip, date saved and edited,
+  1 then 3 answers, another browser sees nothing, no horizontal scroll at 390 px).
+- Screenshots (1440 px and 390 px, seeded data; Part 1.1 / 1.2 rows are relabelled Part 2 results, as Part 1 has no
+  evaluator yet): `docs/design-system/dashboard-{first-visit,one-answer,normal,exam-date,exam-passed,flags-off}-{desktop,phone}.png`.
+  `normal` = many answers, no exam date yet; `exam-date` = the same with a date set. Audited in the browser: no
+  horizontal scroll, smallest text 11 px, exactly one black button on each.
 
 ## Levels and bands
 
@@ -78,7 +133,7 @@ row menu (Delete, Report a wrong score) and the exam date countdown. `history` i
   4 = Higher B2; Part 1.2: 3 = Lower B1, 4 = Higher B1). So a band is always shown with its part and its label
   ("Part 2 · Band 2 · Higher B1") and only in the Exam parts tiles. Lists show the level of each attempt as
   the main value. There is no Passed/Failed; the only status is "Scoring…" while an answer is being processed.
-- The dashboard mock data is checked against the real Part 2 scorer by `src/features/dashboard/mock-data.test.ts`.
+- The dashboard's level is checked against the real Part 2 scorer by `src/features/dashboard/progress.test.ts`.
   Part 3 has no band table yet, so it shows no band.
 
 ## Rules
@@ -373,7 +428,6 @@ without JavaScript and a filtered view has its own address.
 - Screenshots (1440 px and 390 px, seeded data; the Part 1.1 / 1.2 rows are relabelled Part 2 results, as Part 1 has
   no evaluator yet): `docs/design-system/history-{full,filtered,empty,few}-{desktop,phone}.png`. Audited in the browser:
   no horizontal scroll, smallest text 11 px, one black button on the empty state and none elsewhere.
-- Not updated: the dashboard screenshots still show the earlier mocked Recent attempts.
 
 ## Page failures
 

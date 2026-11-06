@@ -104,6 +104,16 @@ Also, once it is in:
 Cut from `real-result-page` (step 6), so it comes after it, merge commit. Contains: the History page, real Recent
 attempts on the dashboard, Part 2 playing Part 1's chime file. No database migration.
 
+## After that: `claude/dashboard-real-data` (adds a database migration)
+
+Cut from `history-page`, so it comes after it, merge commit. Contains: the dashboard on real data, the exam date.
+
+**Migration `0005_exam_date`:** adds two nullable columns to `users` (`exam_date`, `exam_date_skipped_at`). Additive
+only: no table is rebuilt and no row changes. Local databases apply it when they open; **the hosted database needs
+`npm run db:migrate` before (or as) this branch is deployed**, as with every migration: the app refuses to start on
+a hosted database whose migrations are behind. Any other branch that adds a migration after this one must be
+renumbered `0006`.
+
 ## Corrections to earlier notes
 
 - `docs/design-system.md` called `friendly-darwin-l73xx9` "PR #5's branch". **PR #5 is

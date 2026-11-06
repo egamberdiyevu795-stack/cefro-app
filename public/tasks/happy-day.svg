@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">Three friends smiling together by a lake</title>
+  <desc id="d">Original illustration made for CEFRO, released under CC0 1.0. Three young friends stand together on the grass beside a lake on a sunny day. They are all smiling, and the one in the middle has both arms raised. Birds fly over the water.</desc>
+  <!-- sky, lake and grass -->
+  <rect width="480" height="360" fill="#e8f1f8"/>
+  <circle cx="400" cy="70" r="36" fill="#fbe7a1"/>
+  <path d="M0 196 Q80 168 160 186 Q240 160 320 184 Q400 170 480 188 V220 H0Z" fill="#b6d4ae"/>
+  <rect y="210" width="480" height="44" fill="#bcdcef"/>
+  <path d="M60 228 h40 M180 236 h50 M330 226 h46" stroke="#e8f1f8" stroke-width="3" stroke-linecap="round"/>
+  <path d="M0 250 Q240 236 480 252 V360 H0Z" fill="#cfe6c4"/>
+  <!-- birds -->
+  <path d="M110 96 q8 -8 14 0 q6 -8 14 0" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M158 120 q6 -6 11 0 q5 -6 11 0" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- friend left -->
+  <g>
+    <rect x="132" y="262" width="11" height="58" fill="#4b5563"/>
+    <rect x="147" y="262" width="11" height="58" fill="#4b5563"/>
+    <rect x="128" y="316" width="17" height="8" rx="3" fill="#2f2f2f"/>
+    <rect x="145" y="316" width="17" height="8" rx="3" fill="#2f2f2f"/>
+    <path d="M124 268 Q122 208 145 204 Q168 208 166 268Z" fill="#5b7fa6"/>
+    <path d="M128 214 Q118 238 124 262" fill="none" stroke="#5b7fa6" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="124" cy="265" r="6" fill="#c98e66"/>
+    <path d="M162 214 Q178 226 186 220" fill="none" stroke="#5b7fa6" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="190" cy="218" r="6" fill="#c98e66"/>
+    <circle cx="145" cy="180" r="20" fill="#c98e66"/>
+    <path d="M125 178 Q126 156 145 156 Q166 156 166 180 Q158 166 145 167 Q132 167 125 178Z" fill="#222"/>
+    <path d="M136 180 q4 -4 8 0" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+    <path d="M148 180 q4 -4 8 0" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+    <path d="M136 188 Q145 198 154 188Z" fill="#ffffff" stroke="#7a3f2f" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+  <!-- friend in the middle, arms raised -->
+  <g>
+    <rect x="227" y="256" width="11" height="62" fill="#3f6f8f"/>
+    <rect x="242" y="256" width="11" height="62" fill="#3f6f8f"/>
+    <rect x="223" y="314" width="17" height="8" rx="3" fill="#d9534f"/>
+    <rect x="240" y="314" width="17" height="8" rx="3" fill="#d9534f"/>
+    <path d="M218 262 Q216 200 240 196 Q264 200 262 262Z" fill="#e8835a"/>
+    <path d="M222 206 Q204 184 200 152" fill="none" stroke="#e8835a" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="199" cy="146" r="6.5" fill="#e9b98f"/>
+    <path d="M258 206 Q276 184 280 152" fill="none" stroke="#e8835a" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="281" cy="146" r="6.5" fill="#e9b98f"/>
+    <path d="M220 160 Q218 134 240 134 Q262 134 260 162 L262 200 Q250 194 248 180 L232 180 Q228 194 218 200Z" fill="#b5651d"/>
+    <circle cx="240" cy="168" r="20" fill="#e9b98f"/>
+    <path d="M221 162 Q226 144 241 146 Q256 146 259 162 Q246 152 232 156 Q226 158 221 162Z" fill="#b5651d"/>
+    <path d="M231 168 q4 -4 8 0" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+    <path d="M243 168 q4 -4 8 0" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+    <path d="M231 176 Q240 187 249 176Z" fill="#ffffff" stroke="#8a4b3a" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+  <!-- friend right -->
+  <g>
+    <rect x="322" y="262" width="11" height="58" fill="#4b5563"/>
+    <rect x="337" y="262" width="11" height="58" fill="#4b5563"/>
+    <rect x="318" y="316" width="17" height="8" rx="3" fill="#2f2f2f"/>
+    <rect x="335" y="316" width="17" height="8" rx="3" fill="#2f2f2f"/>
+    <path d="M314 268 Q312 208 335 204 Q358 208 356 268Z" fill="#7a9e5a"/>
+    <path d="M318 214 Q302 226 294 220" fill="none" stroke="#7a9e5a" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="290" cy="218" r="6" fill="#d9a07a"/>
+    <path d="M352 214 Q362 238 356 262" fill="none" stroke="#7a9e5a" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="356" cy="265" r="6" fill="#d9a07a"/>
+    <path d="M316 176 Q314 152 336 152 Q358 152 356 178 L358 210 Q346 204 344 190 L328 190 Q324 204 314 210Z" fill="#3b2a20"/>
+    <circle cx="335" cy="180" r="20" fill="#d9a07a"/>
+    <path d="M316 174 Q322 156 337 158 Q352 158 355 174 Q342 164 328 168 Q322 170 316 174Z" fill="#3b2a20"/>
+    <path d="M326 180 q4 -4 8 0" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+    <path d="M338 180 q4 -4 8 0" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+    <path d="M326 188 Q335 198 344 188Z" fill="#ffffff" stroke="#8a4b3a" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+</svg>

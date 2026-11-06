@@ -54,7 +54,7 @@ test("Journey A: an anonymous visitor practises and gets feedback without any ac
   await expect(header(page).getByRole("menuitem", { name: "Sign in" })).toBeVisible();
   await expect(header(page).getByRole("menuitem", { name: "Create account" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByText("Start practice").click();
+  await page.getByRole("link", { name: /Advice from someone/ }).click();
   await recordAndSubmit(page);
   await expect(page.getByRole("button", { name: "Retry with this goal" })).toBeVisible();
   await expect(header(page)).toHaveAttribute("data-state", "anonymous");

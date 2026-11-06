@@ -85,10 +85,12 @@ test("after answers: real level, skills, Practise next, exam parts, biggest fix 
   await expect(fix.getByRole("link", { name: "Start retry" })).toHaveAttribute("href", /\?retry=[0-9a-f-]{36}$/);
   await expect(page.getByTestId("still-in")).toHaveCount(0);
 
-  // Practise next: the one black button.
+  // Practise next: the one black button, on the next task not practised yet (Advice from someone was just answered).
   await expect(blacks(page)).toHaveCount(1);
-  const next = page.getByRole("region", { name: "Advice from someone" });
+  const next = page.getByRole("region", { name: "An important decision" });
   await expect(next).toContainText("Practise next");
+  await expect(next).toContainText("Not practised yet");
+  await expect(next.locator(BLACK)).toHaveAttribute("href", "/practice/speaking/b2-part2-important-decision");
   await expect(next.locator(BLACK)).toHaveText("Start");
 
   // The exam date question is on the returning dashboard too.

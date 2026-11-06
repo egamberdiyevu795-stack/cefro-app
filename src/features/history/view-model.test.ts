@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
+import { listSpeakingTasks } from "@/content/speaking";
 import { examPartOf } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
@@ -209,5 +210,26 @@ describe("exam parts and dates", () => {
   it("dates are dd.mm.yy in Uzbekistan time", () => {
     expect(formatDate("2026-11-04T09:00:00.000Z")).toBe("04.11.26");
     expect(formatDate("2026-11-04T20:00:00.000Z")).toBe("05.11.26"); // 01:00 in Tashkent
+  });
+});
+
+describe("with the 7 real Part 2 tasks", () => {
+  const tasks = listSpeakingTasks();
+  const list = tasks.map((t, i) => attempt({ day: i, taskId: t.id, title: t.title }));
+
+  it("lists one row per task, newest first, each with its own title, under All and under Part 2", () => {
+    const all = view(list);
+    expect(all.rows.map((r) => r.title)).toEqual([...tasks].reverse().map((t) => t.title));
+    expect(all.rows.every((r) => r.partLabel === "Part 2")).toBe(true);
+    expect(view(list, { part: "2" }).rows).toHaveLength(7);
+    // Every attempt is Part 2, so the chart shows them all, whatever task they came from.
+    expect(all.chart?.points).toHaveLength(7);
+  });
+
+  it("renders every title, one black button at most, no text under 11 px", () => {
+    const html = render(view(list));
+    for (const t of tasks) expect(html).toContain(t.title);
+    expect((html.match(BLACK) ?? []).length).toBe(0);
+    expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
   });
 });

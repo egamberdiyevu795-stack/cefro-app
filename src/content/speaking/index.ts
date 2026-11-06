@@ -1,5 +1,11 @@
 import type { SpeakingTask } from "@/domain/speaking/task";
 import { b2Part2AdviceFromSomeone } from "./b2/part-2-advice-from-someone";
+import { b2Part2ATradition } from "./b2/part-2-a-tradition";
+import { b2Part2GoalYouSet } from "./b2/part-2-goal-you-set";
+import { b2Part2HappyDay } from "./b2/part-2-happy-day";
+import { b2Part2ImportantDecision } from "./b2/part-2-important-decision";
+import { b2Part2TryingAndFailing } from "./b2/part-2-trying-and-failing";
+import { b2Part2WorkingInATeam } from "./b2/part-2-working-in-a-team";
 
 /**
  * Registry of available speaking tasks.
@@ -8,7 +14,16 @@ import { b2Part2AdviceFromSomeone } from "./b2/part-2-advice-from-someone";
  * content library grows, this module is the single seam to replace with a
  * CMS or database-backed source — callers only use the functions below.
  */
-const TASKS: readonly SpeakingTask[] = [b2Part2AdviceFromSomeone];
+/** In the order the task list shows them. "Advice from someone" stays first: it is the recommended first practice. */
+const TASKS: readonly SpeakingTask[] = [
+  b2Part2AdviceFromSomeone,
+  b2Part2ImportantDecision,
+  b2Part2GoalYouSet,
+  b2Part2WorkingInATeam,
+  b2Part2TryingAndFailing,
+  b2Part2ATradition,
+  b2Part2HappyDay,
+];
 
 export function listSpeakingTasks(): readonly SpeakingTask[] {
   return TASKS;

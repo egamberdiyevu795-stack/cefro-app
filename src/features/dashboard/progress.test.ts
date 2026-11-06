@@ -4,6 +4,7 @@ import { FEATURES, type FeatureLevel, type PronunciationLevel } from "@/domain/e
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { multilevelRubricConfigSchema } from "@/domain/evaluation/multilevel/rubric-config";
 import type { HistoryAttempt } from "@/domain/speaking/history";
+import { listSpeakingTasks } from "@/content/speaking";
 import rawQ7 from "@/server/evaluation/rubrics/multilevel_q7.json";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
 import {
@@ -245,5 +246,38 @@ describe("exam part tiles", () => {
     ]);
     expect(tiles[2].href).toBe(`/practice/speaking/${TASK}`);
     expect(tiles[0].href).toBe("/"); // no Part 1.1 task yet: the task list
+  });
+});
+
+describe("with the 7 real Part 2 tasks", () => {
+  const ALL: TaskInfo[] = listSpeakingTasks().map(({ id, title, part, level, preparationSeconds, speakingSeconds }) => ({
+    id, title, part, level, preparationSeconds, speakingSeconds,
+  }));
+  const on = (taskId: string, day: number) => attempt(day, { taskId, title: ALL.find((t) => t.id === taskId)!.title });
+
+  it("Practise next goes through every task: never practised first (in list order), then the one practised least recently", () => {
+    expect(ALL).toHaveLength(7);
+    expect(practiseNext([], ALL)).toMatchObject({ title: "Advice from someone", reason: "Not practised yet", minutes: 3, partLabel: "Part 2" });
+    expect(practiseNext([on(ALL[0].id, 1)], ALL)).toMatchObject({ title: "An important decision", reason: "Not practised yet", href: `/practice/speaking/${ALL[1].id}` });
+
+    // Five tried (newest = index 0): the first never-practised one is next.
+    const five = sorted(ALL.slice(0, 5).map((t, i) => on(t.id, 10 - i)));
+    expect(practiseNext(five, ALL)).toMatchObject({ title: "A tradition", reason: "Not practised yet" });
+
+    // All seven tried: the one practised longest ago, whatever its place in the list.
+    const days = [3, 5, 1, 2, 9, 4, 6]; // "Trying and failing" (9 days ago) is the oldest
+    const all = sorted(ALL.map((t, i) => on(t.id, days[i])));
+    expect(practiseNext(all, ALL)).toMatchObject({ title: "Trying and failing", reason: "Last practised 28.10.26", href: `/practice/speaking/${ALL[4].id}` });
+  });
+
+  it("a retry goal still wins over the task rotation", () => {
+    const original = on(ALL[3].id, 3);
+    const retry = attempt(1, { taskId: ALL[3].id, title: ALL[3].title, previousAttemptId: original.id, status: "failed", result: null });
+    expect(practiseNext(sorted([original, retry]), ALL)).toMatchObject({ title: "Working in a team", reason: "Finish your goal", href: `/practice/speaking/${ALL[3].id}?retry=${original.id}` });
+  });
+
+  it("the Part 2 tile shows the latest Part 2 band whichever task it came from", () => {
+    const tiles = partTiles(sorted([on(ALL[0].id, 3), { ...on(ALL[6].id, 1), result: result("A4-b2-all-three") }]), ALL);
+    expect(tiles[2]).toMatchObject({ partLabel: "Part 2", band: 4, href: `/practice/speaking/${ALL[0].id}` });
   });
 });

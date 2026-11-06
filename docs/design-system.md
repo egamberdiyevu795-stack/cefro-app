@@ -348,6 +348,16 @@ itself (it used to come from the `(site)` layout), except in mock mode.
 - Screenshots: `docs/design-system/practice-{brief,brief-retry,mic-asking,mic-denied,mic-none,preparation,preparation-retry,recording-retry,recording-early-warning,scoring-retry,result-goal-met,result-not-yet}-{desktop,phone}.png`.
 
 
+## Part 2 tasks
+
+Seven Part 2 tasks (`src/content/speaking/b2/`), all the same shape: 1 min preparation, 2 min speaking, 3 questions
+(1 and 2 about the student's own story, 3 a general opinion), one picture. "Advice from someone" stays first in the
+list (the recommended first practice); then An important decision, A goal you set, Working in a team, Trying and
+failing, A tradition, A happy day. Pictures are original flat SVGs (480 × 360, no text, no brands, no real people,
+CC0), listed with source and licence in `public/tasks/README.md`. The picture shows the topic, never an answer.
+Practise next rotates through them (never practised first, then the one practised longest ago). Checked at 390 px:
+no horizontal scroll, smallest text 11 px, one black button ("Start preparation") on each brief.
+
 ## Real attempts on the result page
 
 The practice page shows the result page's own components for a stored attempt, so a real attempt looks exactly like

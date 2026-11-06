@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A teenager sitting on the ground after falling off a skateboard</title>
+  <desc id="d">Original illustration made for CEFRO, released under CC0 1.0. A teenage boy in a helmet sits on the ground in a park, one hand on his knee. His skateboard has rolled away from him and lies upside down on the path.</desc>
+  <!-- sky and park -->
+  <rect width="480" height="360" fill="#e8f1f8"/>
+  <circle cx="408" cy="64" r="30" fill="#fbe7a1"/>
+  <path d="M0 236 Q120 214 240 228 T480 222 V360 H0Z" fill="#cfe6c4"/>
+  <rect x="40" y="140" width="18" height="100" rx="6" fill="#9a7653"/>
+  <circle cx="49" cy="126" r="44" fill="#8fc185"/>
+  <circle cx="84" cy="150" r="28" fill="#7db174"/>
+  <circle cx="128" cy="222" r="18" fill="#7db174"/>
+  <circle cx="152" cy="226" r="14" fill="#8fc185"/>
+  <!-- path -->
+  <path d="M0 282 Q240 266 480 284 V328 Q240 310 0 330Z" fill="#dcdce0"/>
+  <!-- teenager sitting -->
+  <g>
+    <path d="M206 300 L246 270 L276 302" fill="none" stroke="#3f6f8f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M206 306 L280 312" fill="none" stroke="#3f6f8f" stroke-width="16" stroke-linecap="round"/>
+    <rect x="272" y="298" width="22" height="10" rx="4" fill="#2f2f2f"/>
+    <rect x="278" y="308" width="22" height="10" rx="4" fill="#2f2f2f"/>
+    <path d="M186 306 Q184 246 210 242 Q234 246 230 306Z" fill="#d9534f"/>
+    <path d="M226 256 Q238 262 246 270" fill="none" stroke="#d9534f" stroke-width="11" stroke-linecap="round"/>
+    <circle cx="248" cy="272" r="6" fill="#e9b98f"/>
+    <path d="M190 258 Q178 280 182 300" fill="none" stroke="#d9534f" stroke-width="11" stroke-linecap="round"/>
+    <circle cx="183" cy="304" r="6" fill="#e9b98f"/>
+    <circle cx="210" cy="218" r="20" fill="#e9b98f"/>
+    <path d="M188 216 Q188 192 210 192 Q232 192 232 216 Z" fill="#e8835a"/>
+    <rect x="186" y="212" width="48" height="6" rx="3" fill="#c96f53"/>
+    <circle cx="206" cy="224" r="2.1" fill="#333"/>
+    <circle cx="219" cy="224" r="2.1" fill="#333"/>
+    <path d="M208 233 L218 233" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- skateboard, upside down, rolled away -->
+  <g>
+    <line x1="318" y1="290" x2="336" y2="290" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/>
+    <line x1="312" y1="300" x2="334" y2="300" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/>
+    <rect x="352" y="298" width="92" height="10" rx="5" fill="#5b7fa6"/>
+    <rect x="364" y="290" width="14" height="8" fill="#9ca3af"/>
+    <rect x="418" y="290" width="14" height="8" fill="#9ca3af"/>
+    <circle cx="371" cy="287" r="7" fill="#f3f3f3" stroke="#9ca3af" stroke-width="2"/>
+    <circle cx="425" cy="287" r="7" fill="#f3f3f3" stroke="#9ca3af" stroke-width="2"/>
+  </g>
+</svg>

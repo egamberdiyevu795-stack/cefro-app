@@ -33,7 +33,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   page.on("pageerror", (error) => errors.push(String(error)));
 
   await page.goto("/");
-  await page.getByText("Start practice").click();
+  await page.getByRole("link", { name: /Advice from someone/ }).click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
 
   // Attempt 1: record → upload → Scoring… → the new result page at the attempt's own address, from the stored attempt.

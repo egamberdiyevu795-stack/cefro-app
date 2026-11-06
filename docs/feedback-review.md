@@ -93,7 +93,7 @@ is not mentioned.
 **How to check (can be automated):** in runs where `audio.status` is `not_assessed`, flag fluency `note`,
 `how_to_improve` and `how_to_check` that match
 `/smooth|fluent|without (any |noticeable |visible )?(pauses?|hesitations?|fillers?)|pace|slow|fast|speed/i`.
-In this fixture set, 3.6-flash wrote such a note in almost every run.
+In this fixture set, 15 of the 19 runs have such a fluency text.
 
 ## 3. No ready-made sentences on the task's own topic: examples use a different topic
 
@@ -126,8 +126,7 @@ lines 69–72, added in PR #3). This rule leaves it as it is. If on-topic senten
 separate decision about `model_answer`, not part of this rule.
 
 **How to check:** for each run, extract quoted sentences in the fields above and flag ones containing task words
-(`advice`, `advise`, `older`, `young people`, plus the task's prompts). These fixtures have at least one in most
-B1/B2 runs.
+(`advice`, `advise`, `older`, `young people`, plus the task's prompts). In these fixtures, 8 of the 15 runs of A1–A5 have one.
 
 ## 4. Goals describe a skill, never a required phrase
 
@@ -187,8 +186,7 @@ The answer reads as B1 on the result page ("Higher B1") although its grammar not
   control."* Run 3 already did this on 3.6-flash. Risk: it double-counts grammar.
 - **b. Scorer (rubric config, not the prompt):** let a below_B1 grammar level cap the language level, e.g. "grammar
   below_B1 ⇒ language level below_B1", or a lower language cap. This is deterministic, but it is a change to the
-  official-scale logic in `band-scoring.ts` / `multilevel_q7.json`. It must be checked against every anchor (A1–A5
-  have no below-B1 feature, so they would not move).
+  official-scale logic in `band-scoring.ts` / `multilevel_q7.json`. It must be checked against every anchor (no run of A1–A5 has a below-B1 feature, so they would not move).
 
 **How to check on 3.8-flash:** run `A0-below-b1` at least 5 times with the current prompt. Record the four levels and
 the band for each run. If it is band 0 every time, close the issue. If it splits like 3.6-flash, try option a first

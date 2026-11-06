@@ -36,10 +36,11 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   await page.getByText("Start practice").click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
 
-  // Attempt 1: record → upload → Scoring… → the new result page, from the stored attempt.
+  // Attempt 1: record → upload → Scoring… → the new result page at the attempt's own address, from the stored attempt.
   await recordAndSubmit(page);
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
   await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  await expect(page).toHaveURL(/\/result\/[0-9a-f-]{36}$/);
   await expect(page.getByTestId("development-evaluator")).toContainText("Development evaluator");
   // The new page's cards, and nothing from the old report.
   for (const title of ["Questions", "Biggest fix", "Skills", "Your answer"]) await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
@@ -56,6 +57,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   await recordAndSubmit(page, 3000);
   await expect(page.getByTestId("goal-card")).toBeVisible(); // on Scoring…
   await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  const retryUrl = page.url();
   await expect(page.getByText(/^Band [0-5] → [0-5]$/)).toBeVisible();
   await expect(page.getByText(/^·?(Goal met|Not yet)/).first()).toBeVisible();
 
@@ -68,13 +70,44 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   await page.getByRole("button", { name: "Back to attempt 2 result" }).click();
   await expect(resultHeading(page)).toBeVisible();
 
-  // Reload: attempts persist and can be reopened on the new result page.
+  // Reload: the result reopens at its own address, still compared with attempt 1.
+  await page.goto(retryUrl);
+  await expect(resultHeading(page)).toBeVisible();
+  await expect(page.getByText(/^Band [0-5] → [0-5]$/)).toBeVisible();
+
+  // History: attempts persist and each links to its result.
   await page.goto(TASK_URL);
-  await expect(page.getByRole("button", { name: /Attempt 2/ })).toBeVisible();
-  await page.getByRole("button", { name: /Attempt 1/ }).click();
+  await expect(page.getByRole("link", { name: /Attempt 2/ })).toHaveAttribute("href", new URL(retryUrl).pathname);
+  await page.getByRole("link", { name: /Attempt 1/ }).click();
+  await expect(page).toHaveURL(/\/result\/[0-9a-f-]{36}$/);
   await expect(resultHeading(page)).toBeVisible();
 
   expect(errors).toEqual([]);
+});
+
+test("a result has its own address: a reload reopens it; another browser, or an unknown id, gets the not-found screen (404)", async ({ page, browser }) => {
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page, 1500);
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  const url = page.url();
+  expect(url).toMatch(/\/result\/[0-9a-f-]{36}$/);
+
+  const owner = await page.reload();
+  expect(owner!.status()).toBe(200);
+  await expect(resultHeading(page)).toBeVisible();
+
+  // Someone else (another browser: its own anonymous identity) gets exactly what a missing id gets.
+  const stranger = await browser.newContext();
+  const other = await stranger.newPage();
+  const foreign = await other.goto(url);
+  expect(foreign!.status()).toBe(404);
+  await expect(other.getByRole("heading", { name: "We can’t find this page" })).toBeVisible();
+  await expect(other.getByText(/Part 2 · Band/)).toHaveCount(0);
+  const missing = await other.goto("/result/11111111-1111-4111-8111-111111111111");
+  expect(missing!.status()).toBe(404);
+  await expect(other.getByRole("heading", { name: "We can’t find this page" })).toBeVisible();
+  expect((await other.goto("/result/not-an-id"))!.status()).toBe(404);
+  await stranger.close();
 });
 
 test("when the minute of preparation ends, recording starts by itself, with the beep and 'Speak now'", async ({ page }) => {
@@ -256,11 +289,15 @@ test("upload failure keeps the recording and it can be resent", async ({ page })
 });
 
 test("a failed evaluation shows a friendly message and can be retried without re-recording", async ({ page }) => {
-  // Make the first status poll report an evaluation failure, as the server would.
-  let failOnce = true;
+  // Every status read reports an evaluation failure, as the server would, until the student presses "Try again".
+  // (Not just the first: in development React runs the result page's first read twice and drops one.)
+  let failing = true;
+  await page.route(/\/api\/speaking\/attempts\/[0-9a-f-]+\/process$/, (route) => {
+    failing = false;
+    return route.continue();
+  });
   await page.route(/\/api\/speaking\/attempts\/[0-9a-f-]+$/, async (route) => {
-    if (!failOnce || route.request().method() !== "GET") return route.continue();
-    failOnce = false;
+    if (!failing || route.request().method() !== "GET") return route.continue();
     const response = await route.fetch();
     const body = await response.json();
     body.attempt = { ...body.attempt, status: "failed", failure: { stage: "evaluation", code: "evaluation_quality_rejected" }, evaluation: null };

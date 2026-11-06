@@ -56,8 +56,8 @@ export type AnswerAudio = { src: string; durationMs: number | null };
 /* --------------------------------------------------------------------------------------------------- scored result */
 
 /**
- * Phone, top to bottom: result, questions, biggest fix, skills, your answer.
- * Desktop: [result, biggest fix, your answer] | [questions, skills]. The columns are `display: contents` on phones so
+ * Phone, top to bottom: result, questions, biggest fix, patterns (when there are any), skills, your answer.
+ * Desktop: [result, biggest fix, patterns, your answer] | [questions, skills]. The columns are `display: contents` on phones so
  * the cards take their own `order`.
  */
 export function ScoredResult({
@@ -82,11 +82,12 @@ export function ScoredResult({
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <ResultCard view={view} onCompare={onCompare ?? null} className="order-1 lg:order-none" />
         <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} flags={flags} className="order-3 lg:order-none" />
-        <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} audio={audio} className="order-5 lg:order-none" />
+        {view.patterns.length > 0 && <PatternsCard patterns={view.patterns} className="order-4 lg:order-none" />}
+        <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} audio={audio} className="order-6 lg:order-none" />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <QuestionsCard view={view} className="order-2 lg:order-none" />
-        <SkillsCard view={view} className="order-4 lg:order-none" />
+        <SkillsCard view={view} className="order-5 lg:order-none" />
       </div>
     </div>
   );
@@ -249,6 +250,26 @@ function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultVie
           </ComingSoonButton>
         )}
       </div>
+    </Card>
+  );
+}
+
+/** Repeated mistakes, under the biggest fix: name, how many times, one quote. Hidden when there are none. */
+function PatternsCard({ patterns, className }: { patterns: ResultView["patterns"]; className?: string }) {
+  return (
+    <Card aria-labelledby="patterns-title" className={className} data-testid="patterns">
+      <CardHeader id="patterns-title" title="Patterns in this answer" />
+      <ul className="-my-1 divide-y divide-line">
+        {patterns.map((p) => (
+          <li key={p.name} className="py-3">
+            <p className="flex items-baseline justify-between gap-3">
+              <span className="text-body font-semibold text-fg">{p.name}</span>
+              <span className="shrink-0 text-label text-fg-muted">{p.count === 1 ? "once" : `${p.count} times`}</span>
+            </p>
+            <blockquote className="mt-1.5 border-l-2 border-accent pl-3 text-body text-fg">&ldquo;{p.quote}&rdquo;</blockquote>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

@@ -8,7 +8,6 @@ import { mockAttemptKey, mockRetryAttempt } from "@/features/result/mock-data";
 import { AppShell } from "@/features/shell/AppShell";
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
 import { assertServerConfigured } from "@/server/config/boot-check";
-import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 
 export async function generateMetadata(props: PageProps<"/practice/speaking/[taskId]">): Promise<Metadata> {
   const { taskId } = await props.params;
@@ -52,7 +51,6 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
     <AppShell flags={flags} account={mock ? "mock" : "real"}>
       <PracticeExperience
         task={task}
-        bandLabels={getSpeakingRubric(speakingTask).config.bands.map(({ band, label }) => ({ band, label }))}
         flags={flags}
         mock={mock ? { retry: mockRetry } : null}
         initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : null}

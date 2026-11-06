@@ -1,6 +1,7 @@
 /**
- * The start-of-speaking signal: one short beep when recording starts, like the exam's signal that the speaking time
- * has begun. Generated with Web Audio (no sound file).
+ * The start-of-speaking signal: one short beep, then recording starts, like the exam's signal that the speaking time
+ * has begun. Generated with Web Audio (no sound file). As in the Part 1 plan (docs/part1-plan.md), the beep is not
+ * recorded: `playChime()` resolves when it has finished, and the recorder starts after that.
  *
  * Browsers only let a page play sound after the student has interacted with it, so `primeChime()` is called from the
  * "Start preparation" click; the beep a minute later (when preparation runs out) is then allowed. Sound failures are
@@ -18,10 +19,14 @@ export function primeChime(): void {
   }
 }
 
-export function playChime(): void {
+/** How long the beep lasts; recording starts after it. */
+export const CHIME_MS = 400;
+
+/** Plays the beep and resolves when it has finished (at once when sound is unavailable). */
+export function playChime(): Promise<void> {
   try {
     if (!context) primeChime();
-    if (!context) return;
+    if (!context) return Promise.resolve();
     const start = context.currentTime + 0.01;
     const tone = context.createOscillator();
     const gain = context.createGain();
@@ -34,8 +39,10 @@ export function playChime(): void {
     gain.gain.linearRampToValueAtTime(0, start + 0.35);
     tone.connect(gain).connect(context.destination);
     tone.start(start);
-    tone.stop(start + 0.4);
+    tone.stop(start + CHIME_MS / 1000);
+    return new Promise((resolve) => setTimeout(resolve, CHIME_MS));
   } catch {
     // No sound; the screen still shows that recording started.
+    return Promise.resolve();
   }
 }

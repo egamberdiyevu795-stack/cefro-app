@@ -185,3 +185,24 @@ describe("result page markup", () => {
     expect(source.status).toBe("completed");
   });
 });
+
+describe("patterns in this answer", () => {
+  it("A0-below-b1: at most 3, in the evaluator's order, each with its count and the first error's quote", () => {
+    const view = scored({ anchor: "A0-below-b1", run: "1" });
+    const a = LIVE_36_FLASH_FIXTURES["A0-below-b1"].runs[0].evaluation.result.assessment;
+    expect(view.patterns).toHaveLength(3);
+    view.patterns.forEach((p, i) => {
+      expect(p.name).toBe(a.error_patterns[i].name);
+      expect(p.count).toBe(a.errors.filter((e) => e.pattern === p.name).length);
+      expect(p.quote).toBe(a.errors.find((e) => e.pattern === p.name)!.quote);
+    });
+    const html = render(stateFor({ anchor: "A0-below-b1" }));
+    expect(html).toContain("Patterns in this answer");
+    expect(html).toContain("2 times");
+  });
+
+  it("no patterns: the section is hidden", () => {
+    expect(scored({ anchor: "A4-b2-all-three" }).patterns).toEqual([]);
+    expect(render(stateFor({ anchor: "A4-b2-all-three" }))).not.toContain("Patterns in this answer");
+  });
+});

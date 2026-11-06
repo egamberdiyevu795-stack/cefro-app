@@ -82,7 +82,7 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
     // The same attempt, now owned by the account.
     const after = await (await page.request.get(`/api/speaking/tasks/${TASK}/attempts`)).json();
     expect(after.attempts.map((a: { id: string }) => a.id)).toEqual([firstAttemptId]);
-    await page.getByRole("button", { name: /Attempt 1/ }).click();
+    await page.getByRole("link", { name: /Attempt 1/ }).click();
     await expect(resultHeading(page)).toBeVisible();
 
     // Continue practising as the account: the new attempt is number 2.
@@ -100,14 +100,14 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(header(page)).toHaveAttribute("data-state", "authenticated");
     await page.goto(TASK_URL);
-    await expect(page.getByRole("button", { name: /Attempt 2/ })).toBeVisible(); // the account's history, on a "new device"
+    await expect(page.getByRole("link", { name: /Attempt 2/ })).toBeVisible(); // the account's history, on a "new device"
     const attempts = (await (await page.request.get(`/api/speaking/tasks/${TASK}/attempts`)).json()).attempts as { id: string }[];
 
     await logOut(page);
     await expect(header(page)).toHaveAttribute("data-state", "anonymous");
     expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
     await page.goto(TASK_URL);
-    await expect(page.getByRole("button", { name: /Attempt \d/ })).toHaveCount(0); // the history was the account's
+    await expect(page.getByRole("link", { name: /Attempt \d/ })).toHaveCount(0); // the history was the account's
     for (const attempt of attempts) {
       expect((await page.request.get(`/api/speaking/attempts/${attempt.id}`)).status()).toBe(404);
       expect((await page.request.get(`/api/speaking/attempts/${attempt.id}/audio`)).status()).toBe(404);

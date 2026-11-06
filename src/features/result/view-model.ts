@@ -122,6 +122,16 @@ export interface BiggestFixView {
   check: string | null;
 }
 
+/** A repeated mistake: the evaluator's pattern name, how many of the listed errors it covers, and one of them. */
+export interface PatternRow {
+  name: string;
+  count: number;
+  quote: string;
+}
+
+/** At most this many patterns are shown. */
+export const MAX_PATTERNS = 3;
+
 export interface SkillRow {
   feature: Feature;
   name: string;
@@ -159,6 +169,8 @@ export interface ResultView {
   zeroReason: MultilevelResult["scoring"]["zero_reason"];
   questions: QuestionRow[];
   fix: BiggestFixView;
+  /** "Patterns in this answer": empty when the evaluator listed none (the section is then hidden). */
+  patterns: PatternRow[];
   skills: SkillRow[];
   pronunciationNote: string | null;
   transcript: string;
@@ -223,6 +235,7 @@ export function buildResultView(
       reason: q.note,
     })),
     fix: biggestFix(result, ctx.task.prompts, ctx.transcript),
+    patterns: patternRows(result),
     skills: FEATURES.map((feature) => skillRow(result, feature, prev)),
     pronunciationNote: result.audio.status === "not_assessed" ? AUDIO_REASON[result.audio.reason ?? "disabled"] : null,
     transcript: ctx.transcript,
@@ -271,6 +284,21 @@ function skillQuote(result: MultilevelResult, feature: Feature): { quote: string
   if (strengths[0]) return { quote: strengths[0].quote, label: "What you did well" };
   if (errors[0]) return { quote: errors[0].quote, label: "To improve" };
   return { quote: first ?? null, label: null };
+}
+
+/**
+ * The evaluator's error patterns, in its own order (most important first), each with the number of listed errors that
+ * belong to it and the first one's quote. A pattern no listed error belongs to has no quote and is left out.
+ */
+function patternRows(result: MultilevelResult): PatternRow[] {
+  const { errors, error_patterns } = result.assessment;
+  return error_patterns
+    .map((p) => {
+      const own = errors.filter((e) => e.pattern === p.name);
+      return own.length ? { name: p.name, count: own.length, quote: own[0].quote } : null;
+    })
+    .filter((row): row is PatternRow => row !== null)
+    .slice(0, MAX_PATTERNS);
 }
 
 function skillRow(result: MultilevelResult, feature: Feature, prev: MultilevelResult | null): SkillRow {

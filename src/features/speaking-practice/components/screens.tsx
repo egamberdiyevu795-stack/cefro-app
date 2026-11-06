@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Card, CardHeader, Icon, PillAction, ProgressBar, ScoringLabel, cx, styles } from "@/components/ds";
 import type { AttemptSummary } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -417,16 +418,8 @@ export function NothingRecordedCard({ onRecordAgain }: { onRecordAgain: () => vo
 
 /* --------------------------------------------------------------------------------------------------------- history */
 
-/** Earlier attempts at this task, so a student can reopen feedback after a reload. */
-export function AttemptsCard({
-  attempts,
-  onOpen,
-  openingId,
-}: {
-  attempts: AttemptSummary[];
-  onOpen: (attemptId: string) => void;
-  openingId: string | null;
-}) {
+/** Earlier attempts at this task, each a link to its result page (/result/[id]). */
+export function AttemptsCard({ attempts }: { attempts: AttemptSummary[] }) {
   if (attempts.length === 0) return null;
   return (
     <Card aria-labelledby="attempts-title">
@@ -434,17 +427,12 @@ export function AttemptsCard({
       <ul className="-my-1 divide-y divide-line">
         {attempts.map((attempt) => (
           <li key={attempt.id}>
-            <button
-              type="button"
-              onClick={() => onOpen(attempt.id)}
-              disabled={openingId !== null}
-              className={cx("flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left disabled:opacity-60", styles.FOCUS_RING)}
+            <Link
+              href={`/result/${encodeURIComponent(attempt.id)}`}
+              className={cx("flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left hover:bg-well/50", styles.FOCUS_RING)}
             >
               <span>
-                <span className="block text-body font-semibold text-fg">
-                  Attempt {attempt.attemptNumber}
-                  {openingId === attempt.id && <span className="ml-2 text-label font-normal text-fg-muted">opening…</span>}
-                </span>
+                <span className="block text-body font-semibold text-fg">Attempt {attempt.attemptNumber}</span>
                 <span className="block text-caption text-fg-muted">{formatDateTime(attempt.createdAt)}</span>
               </span>
               {attempt.band ? (
@@ -456,7 +444,7 @@ export function AttemptsCard({
               ) : (
                 <ScoringLabel />
               )}
-            </button>
+            </Link>
           </li>
         ))}
       </ul>

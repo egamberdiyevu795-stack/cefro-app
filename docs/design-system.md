@@ -202,8 +202,8 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   evaluator's own `SpeakingEvaluation` (`result: MultilevelResult`), plus the rubric's band table. Real attempts plug in
   by building that `ResultSource` from the database instead of `features/result/mock-data.ts`.
 - **Quality report optional.** `evaluation.quality` is optional and never read; the page shows no warning for it.
-- **Phone, top to bottom:** Result ("Part 2 · Band 2 · Higher B1", a band meter with the target named, the distance
-  to the target, "Provisional" when pronunciation was not assessed) → Questions (one row each: Answered / Partly
+- **Phone, top to bottom:** Result ("Part 2 · Band 2 · Higher B1", a 0–5 band meter (band 0 exists) with the target named, the distance
+  to the target, "Pronunciation wasn't checked in this attempt." when it was not assessed) → Questions (one row each: Answered / Partly
   answered / Not counted, with a check, half circle or cross glyph and the evaluator's one-line note) → Biggest fix
   (the student's quote, "Try instead", the retry goal, the black "Retry with this goal", flagged "Lesson for this fix")
   → Skills (each feature folded in a `<details>`: level, then quote and why; Pronunciation "Not assessed" when the audio
@@ -217,8 +217,8 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   too_short`; no speech = failure `transcription_empty`; black "Record again"), Retry ("Band 2 → 3", lime "+1 band",
   "Goal met" read from the evaluator's retry review, else from the judgements: the last goal's skill went up a level or
   its question is now answered; skill rows show "B1 → B2").
-- **Switches:** `?anchor=<fixture id>` (`&run=1..3`; default is the first run with the anchor's expected band, so
-  `A0-below-b1` shows run 3, band 0), `?state=scoring|too-short|no-speech|retry`, `?flags=off`.
+- **Switches:** `?anchor=<fixture id>` (`&run=1..3`, default run 1; `A0-below-b1` run 1 is band 2, run 3 is the
+  band 0 run), `?state=scoring|too-short|no-speech|retry`, `?flags=off`.
 - **New flags:** `fixLesson`, `recordingPlayback`. **New icons:** `play`, `partly`, `cross`. **New style:** `PILL_QUIET`.
 - **Checks:** `src/features/result/view-model.test.ts` builds all 19 saved runs, renders every anchor and state with
   flags on and off, and asserts one black button (none while scoring) and no text under 11 px. The screenshots were

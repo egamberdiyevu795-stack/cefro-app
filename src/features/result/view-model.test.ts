@@ -62,9 +62,11 @@ describe("result page view model (saved live fixtures, no provider)", () => {
     expect(view.fix.tryInstead).toBe(LIVE_36_FLASH_FIXTURES["A1-b1-only-q3"].runs[0].evaluation.result.assessment.questions[0].model_answer);
   });
 
-  it("A0-below-b1 defaults to the run with the expected band 0 (run 3) and says why", () => {
-    expect(selectMock({ anchor: "A0-below-b1" }).run).toBe(3);
-    const view = scored({ anchor: "A0-below-b1" });
+  it("A0-below-b1 defaults to run 1 (band 2); runs 2 and 3 stay available, run 3 is band 0 and says why", () => {
+    expect(selectMock({ anchor: "A0-below-b1" }).run).toBe(1);
+    expect(scored({ anchor: "A0-below-b1" }).headline).toBe("Part 2 · Band 2 · Higher B1");
+    expect(scored({ anchor: "A0-below-b1", run: "2" }).band).toBe(2);
+    const view = scored({ anchor: "A0-below-b1", run: "3" });
     expect(view.band).toBe(0);
     expect(view.zeroReason).toBe("below_B1");
     expect(view.target.text).toBe("3 bands to your target, Band 3 · Lower B2");
@@ -76,12 +78,15 @@ describe("result page view model (saved live fixtures, no provider)", () => {
     expect(view.fix.quote).toBe("I would like to talk about my favourite hobby, which is playing football.");
   });
 
-  it("pronunciation is 'Not assessed' (audio step off in every saved run) and the band is provisional", () => {
+  it("pronunciation is 'Not assessed' (audio step off in every saved run) and the page says it wasn't checked", () => {
     const view = scored({ anchor: "A4-b2-all-three" });
     expect(view.skills.find((s) => s.feature === "pronunciation")).toMatchObject({ level: null, levelLabel: "Not assessed" });
     expect(view.provisional).toBe(true);
     expect(view.target.text).toBe("1 band above your target, Band 3 · Lower B2");
-    expect(view.pronunciationNote).toMatch(/audio check didn't run/);
+    expect(view.pronunciationNote).toBe("Pronunciation wasn't checked in this attempt.");
+    const html = render(stateFor({ anchor: "A4-b2-all-three" }));
+    expect(html).toContain("Pronunciation wasn&#x27;t checked in this attempt.");
+    expect(html).not.toMatch(/provisional/i);
   });
 
   it("states: scoring while evaluating, couldn't score for too short (real scorer) and no speech", () => {

@@ -73,7 +73,7 @@ function ResultCard({ view, className }: { view: ResultView; className?: string 
       <BandMeter band={view.band} bandMax={view.bandMax} target={view.target.band} className="mt-5" />
       <p className="mt-3 text-body text-fg">{view.target.text}</p>
       {view.zeroReason && ZERO_TEXT[view.zeroReason] && <p className="mt-1 text-label text-fg-muted">{ZERO_TEXT[view.zeroReason]}</p>}
-      {view.provisional && <p className="mt-1 text-label text-fg-muted">Provisional: pronunciation wasn&rsquo;t assessed, so this band may change.</p>}
+      {view.provisional && <p className="mt-1 text-label text-fg-muted">Pronunciation wasn&rsquo;t checked in this attempt.</p>}
       {retry?.goalText && (
         <p className="mt-4 border-t border-line pt-3 text-label text-fg-muted">
           Last goal: <span className="text-fg">{retry.goalText}</span>
@@ -83,20 +83,22 @@ function ResultCard({ view, className }: { view: ResultView; className?: string 
   );
 }
 
-/** One segment per band (1…max): filled up to the band; the target segment is named under it. Not colour alone: the words carry it. */
+/** One segment per band (0…max, band 0 exists): filled up to the band; the target segment is named under it. Not colour alone: the words carry it. */
 function BandMeter({ band, bandMax, target, className }: { band: number; bandMax: number; target: number; className?: string }) {
-  const segments = Array.from({ length: bandMax }, (_, i) => i + 1);
+  const segments = Array.from({ length: bandMax + 1 }, (_, i) => i);
+  const columns = { gridTemplateColumns: `repeat(${bandMax + 1}, minmax(0, 1fr))` };
   return (
-    <div className={className} role="img" aria-label={`Band ${band} of ${bandMax}. Target: band ${target}.`}>
-      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${bandMax}, minmax(0, 1fr))` }}>
+    <div className={className} role="img" aria-label={`Band ${band} on a scale of 0 to ${bandMax}. Target: band ${target}.`}>
+      <div className="grid gap-1" style={columns}>
         {segments.map((n) => (
           <div key={n} className={cx("h-1.5 rounded-full", n <= band ? "bg-accent" : "bg-well")} />
         ))}
       </div>
-      <div className="mt-1.5 grid gap-1" style={{ gridTemplateColumns: `repeat(${bandMax}, minmax(0, 1fr))` }}>
+      <div className="mt-1.5 grid gap-1" style={columns}>
         {segments.map((n) => (
           <span key={n} className={cx("text-caption", n === target ? "font-semibold text-fg" : "text-fg-muted")}>
-            {n === target ? `${n} · Target` : n}
+            {n}
+            {n === target && <span className="block">Target</span>}
           </span>
         ))}
       </div>
@@ -203,7 +205,7 @@ function SkillsCard({ view, className }: { view: ResultView; className?: string 
               </summary>
               <div className="pb-4 pr-7">
                 {s.level === null ? (
-                  <p className="text-body text-fg-muted">{view.pronunciationNote ?? "This skill wasn't assessed."} The band is provisional until it is.</p>
+                  <p className="text-body text-fg-muted">{view.pronunciationNote ?? "Pronunciation wasn't checked in this attempt."}</p>
                 ) : (
                   <>
                     {s.quote && <blockquote className="border-l-2 border-accent pl-3 text-body text-fg">“{s.quote}”</blockquote>}

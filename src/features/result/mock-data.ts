@@ -4,8 +4,8 @@
  * same view model real attempts will use. Loading them never calls a provider.
  *
  * Switches (for screenshots and reviews):
- *   ?anchor=<id>   which fixture (default A2-b1-all-three); ?run=1..3 picks a run (default: the first run whose band
- *                  is the anchor's expected band, e.g. run 3 for A0-below-b1)
+ *   ?anchor=<id>   which fixture (default A2-b1-all-three); &run=1..3 picks a run (default run 1; for A0-below-b1
+ *                  that is band 2, and run 3 is the band 0 run)
  *   ?state=        scored (default) | scoring | too-short | no-speech | retry
  */
 import { scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
@@ -42,8 +42,7 @@ export function selectMock(query: { anchor?: string | string[]; run?: string | s
   const anchor = one(query.anchor) && LIVE_36_FLASH_FIXTURES[one(query.anchor)!] ? one(query.anchor)! : DEFAULT_ANCHOR;
   const file = LIVE_36_FLASH_FIXTURES[anchor];
   const requested = Number(one(query.run));
-  const expectedRun = file._fixture.bands.findIndex((b) => b === file._fixture.expectedBand) + 1 || 1;
-  const run = Number.isInteger(requested) && requested >= 1 && requested <= file.runs.length ? requested : expectedRun;
+  const run = Number.isInteger(requested) && requested >= 1 && requested <= file.runs.length ? requested : 1;
   const state = (RESULT_STATES as readonly string[]).includes(one(query.state) ?? "") ? (one(query.state) as ResultMockState) : "scored";
   return { anchor, run, state, file };
 }

@@ -155,10 +155,10 @@ const VERDICT: Record<QuestionStatus, { verdict: QuestionVerdict; label: string 
 };
 
 const AUDIO_REASON: Record<NonNullable<MultilevelResult["audio"]["reason"]>, string> = {
-  disabled: "The audio check didn't run for this answer, so pronunciation wasn't scored.",
-  no_audio: "There was no recording to listen to, so pronunciation wasn't scored.",
-  failed: "The audio check failed, so pronunciation wasn't scored.",
-  unclear: "The recording was too unclear to judge pronunciation.",
+  disabled: "Pronunciation wasn't checked in this attempt.",
+  no_audio: "Pronunciation wasn't checked in this attempt: there was no recording to listen to.",
+  failed: "Pronunciation wasn't checked in this attempt: the audio check failed.",
+  unclear: "Pronunciation wasn't checked in this attempt: the recording was too unclear.",
 };
 
 export function buildResultView(

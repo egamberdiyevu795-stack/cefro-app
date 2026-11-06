@@ -5,7 +5,11 @@ import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { compareAttempts } from "@/domain/speaking/comparison";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";
+import { getEnv } from "@/server/config/env";
+import { ProviderError } from "@/server/errors";
 import { getEvaluationModel } from "@/server/evaluation";
+import { GeminiEvaluationModel } from "@/server/evaluation/gemini-evaluation-model";
+import type { EvaluationModel } from "@/server/evaluation/types";
 import { costUsd, formatUsd, priceFor } from "@/server/evaluation/pricing";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { evaluateSpeaking, type SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
@@ -35,6 +39,13 @@ import { writeReport } from "./report";
  * (src/server/evaluation/pricing.ts; override prices with EVAL_PRICE_INPUT_PER_M / EVAL_PRICE_OUTPUT_PER_M).
  *
  * Keys are read from the environment and never printed.
+ *
+ * Rate-limited (e.g. free-tier) runs, test-only switches, all off by default:
+ *   EVAL_SEQUENTIAL=1     every evaluation one at a time (repeats are otherwise sent in parallel)
+ *   EVAL_PAUSE_MS=8000    pause between evaluations (stay under the per-minute request limit)
+ *   EVAL_SDK_RETRIES=0    Gemini only: same client as the app, but the SDK's automatic 408/429/5xx retries are off.
+ *                         Instead a 429 waits (Google's "retry in Ns", else 65 s) and is retried ONCE; a second 429,
+ *                         or a per-day / zero quota, stops every remaining evaluation and the report says what finished.
  */
 const selection = evaluatorSelection();
 if (!selection.configured) console.log(`\nLIVE evaluation skipped: ${selection.hint}\n`);
@@ -47,6 +58,68 @@ const samples = B2_PART2_SAMPLES.filter((s) => selected(s.id));
 const runInjection = selected(PART2_INJECTION_PROBE.id);
 const runRetry = selected("RETRY");
 const anchorById = (prefix: string) => PART2_BAND_ANCHORS.find((a) => a.id.startsWith(prefix))!;
+
+const SEQUENTIAL = process.env.EVAL_SEQUENTIAL === "1";
+const PAUSE_MS = Math.max(0, Number(process.env.EVAL_PAUSE_MS || 0));
+const NO_SDK_RETRIES = process.env.EVAL_SDK_RETRIES === "0";
+
+/** The configured evaluator; with EVAL_SDK_RETRIES=0 (Gemini) the same client with the SDK's retries switched off. */
+function liveModel(): EvaluationModel {
+  const env = getEnv();
+  if (!NO_SDK_RETRIES || env.EVALUATION_PROVIDER !== "gemini" || !env.GEMINI_API_KEY) return getEvaluationModel();
+  return new GeminiEvaluationModel({
+    apiKey: env.GEMINI_API_KEY,
+    model: env.GEMINI_EVALUATION_MODEL,
+    maxTokens: env.GEMINI_EVALUATION_MAX_TOKENS,
+    thinkingLevel: env.GEMINI_THINKING_LEVEL,
+    temperature: env.GEMINI_TEMPERATURE,
+    structuredOutput: env.GEMINI_STRUCTURED_OUTPUT,
+    timeoutMs: env.EVALUATION_TIMEOUT_MS,
+    maxRetries: 0,
+  });
+}
+
+/** Requests sent (model calls incl. regenerations, plus rate-limited and failed ones) and why the run stopped, if it did. */
+const pacing = { requests: 0, rateLimited: 0, lastEndedAt: 0, stopped: null as string | null };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function rateLimitInfo(error: unknown): { daily: boolean; zero: boolean; waitMs: number } | null {
+  if (!(error instanceof ProviderError) || error.failureCode !== "provider_rate_limited") return null;
+  const text = error.message;
+  const retryIn = /retry in ([\d.]+)\s*s/i.exec(text);
+  return {
+    daily: /per ?day|PerDay|daily/i.test(text),
+    zero: /limit:\s*0\b/.test(text),
+    waitMs: retryIn ? Math.ceil(Number(retryIn[1]) * 1000) + 5_000 : 65_000,
+  };
+}
+
+/** One evaluation, paced; a 429 is waited out and retried once (see the header). */
+async function pacedEvaluate(input: EvaluationInput): Promise<SpeakingEvaluation> {
+  for (let attempt = 1; ; attempt++) {
+    if (pacing.stopped) throw new Error(`not run: ${pacing.stopped}`);
+    const wait = pacing.lastEndedAt + PAUSE_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    try {
+      const result = await evaluateSpeaking(input, liveModel());
+      pacing.requests += result.modelCalls;
+      return result;
+    } catch (error) {
+      pacing.requests += 1;
+      const limit = rateLimitInfo(error);
+      if (!limit || !NO_SDK_RETRIES) throw error;
+      pacing.rateLimited += 1;
+      if (limit.daily || limit.zero || attempt > 1) {
+        pacing.stopped = limit.daily ? "daily request limit reached (429)" : limit.zero ? "quota is 0 for this model (429)" : "rate limited twice in a row (429)";
+        throw error;
+      }
+      console.log(`429 rate limit: waiting ${Math.round(limit.waitMs / 1000)} s, then one retry`);
+      await sleep(limit.waitMs);
+    } finally {
+      pacing.lastEndedAt = Date.now();
+    }
+  }
+}
 
 function inputFor(
   task: SpeakingTask,
@@ -89,7 +162,10 @@ const unstable = (row: Row) => new Set(bandsOf(row)).size > 1;
 
 /** Evaluate one sample REPEAT times in parallel; failed calls are recorded, not thrown, so every run is reported. */
 async function evaluateRepeated(task: SpeakingTask, sample: { id: string; transcript: string; durationMs: number }, row: Row) {
-  const settled = await Promise.allSettled(Array.from({ length: REPEAT }, () => evaluateSpeaking(inputFor(task, sample), getEvaluationModel())));
+  const run = () => pacedEvaluate(inputFor(task, sample));
+  const settled: PromiseSettledResult<SpeakingEvaluation>[] = [];
+  if (SEQUENTIAL) for (let i = 0; i < REPEAT; i++) settled.push(...(await Promise.allSettled([run()])));
+  else settled.push(...(await Promise.allSettled(Array.from({ length: REPEAT }, run))));
   for (const s of settled) {
     if (s.status === "fulfilled") row.runs.push(s.value);
     else row.errors.push(s.reason instanceof Error ? `${s.reason.name}: ${s.reason.message}` : String(s.reason));
@@ -126,6 +202,8 @@ const anchorExpected = (a: BandAnchor) =>
 
 const nothingSelected = anchors.length + samples.length + Number(runInjection) + Number(runRetry) === 0;
 
+const retryLines: string[] = [];
+
 describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set (×${REPEAT} runs per sample)`, () => {
   const rows: Row[] = [];
 
@@ -159,26 +237,27 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
   });
 
   it.skipIf(!runInjection)(`${PART2_INJECTION_PROBE.id}: an instruction inside the transcript is ignored`, async () => {
-    const { result } = await evaluateSpeaking(inputFor(adviceTask, PART2_INJECTION_PROBE), getEvaluationModel());
+    const { result } = await pacedEvaluate(inputFor(adviceTask, PART2_INJECTION_PROBE));
     expect(result.scoring.band, judgements(result)).toBeLessThanOrEqual(2);
   });
 
   // Soft check: reported for review, does not fail the run.
   it.skipIf(!runRetry)("RETRY A2 → A4: a weak → strong retry is reviewed and compared honestly", async () => {
-    const first = await evaluateSpeaking(inputFor(adviceTask, anchorById("A2")), getEvaluationModel());
-    const second = await evaluateSpeaking(
+    const first = await pacedEvaluate(inputFor(adviceTask, anchorById("A2")));
+    const second = await pacedEvaluate(
       inputFor(adviceTask, anchorById("A4"), { attemptNumber: 1, transcript: anchorById("A2").transcript, retryFocus: first.result.retry_focus }),
-      getEvaluationModel(),
     );
     const verdict = compareAttempts({ evaluation: first.result, metrics: null }, { evaluation: second.result, metrics: null }).verdict;
     const notes = [`verdict: ${verdict}`];
     if (!second.result.assessment.retry_review) notes.push("REVIEW: retry_review missing on a retry");
     if (!/improvement/.test(verdict)) notes.push("REVIEW: weak → strong retry not reported as an improvement");
+    const fmt = (e: SpeakingEvaluation) => `${judgements(e.result)} (${(e.latencyMs / 1000).toFixed(1)}s)`;
+    retryLines.push(`- A2 (first): ${fmt(first)}`, `- A4 (retry of A2): ${fmt(second)}`, `- ${notes.join("; ")}`);
     console.log(`\nRETRY A2 → A4: ${notes.join("; ")}\n`);
   });
 
   it.skipIf(anchors.length + samples.length === 0)("writes the report", () => {
-    const model = getEvaluationModel();
+    const model = liveModel();
     const all = rows.flatMap((r) => r.runs);
     const latencies = all.map((e) => e.latencyMs).sort((a, b) => a - b);
     const avg = latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null;
@@ -224,6 +303,8 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
       `Latency per evaluation: average ${sec(avg)}, p90 ${sec(p90)} over ${latencies.length} evaluations (target: average under 60s)`,
       `Regenerated drafts: ${all.filter((e) => e.modelCalls > 1).length} · tokens in/out: ${all.reduce((a, e) => a + (e.inputTokens ?? 0), 0)}/${all.reduce((a, e) => a + (e.outputTokens ?? 0), 0)}`,
       costLine,
+      `Requests sent: ${pacing.requests} (rate-limited: ${pacing.rateLimited})${SEQUENTIAL ? ` · one at a time, ${PAUSE_MS / 1000} s pause` : ""}${NO_SDK_RETRIES ? " · SDK retries off" : ""} · stopped early: ${pacing.stopped ?? "no"}`,
+      ...(retryLines.length ? ["", "## Retry pair A2 → A4", "", ...retryLines] : []),
       "",
       "| Sample | Expected | Bands per run | Stability | Language run 1 (grammar / vocabulary / fluency / cohesion) | Questions run 1 | Expectations |",
       "|---|---|---|---|---|---|---|",

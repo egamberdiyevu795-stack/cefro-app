@@ -1,0 +1,582 @@
+{
+  "_fixture": {
+    "model": "gemini-3.6-flash",
+    "production": false,
+    "warning": "NOT the production model. Production evaluates with gemini-3.8-flash; this free-tier run used gemini-3.6-flash, so bands and judgements may differ from production.",
+    "anchor": "A4-b2-all-three",
+    "expectedBand": 4,
+    "bands": [
+      4,
+      4,
+      4
+    ],
+    "runAt": "2026-11-06",
+    "commit": "4edee53 (evaluator 3.5.0)",
+    "source": "eval-reports/evaluation-set-2026-11-06T09-59-29-104Z.json",
+    "settings": "EVAL_REPEAT=3, one at a time, 8 s pause, SDK retries off; transcript only (no audio)",
+    "savedFromRun": [
+      "result",
+      "latencyMs",
+      "modelCalls",
+      "inputTokens",
+      "outputTokens",
+      "model (answering model)",
+      "modelConfig (except audioAssessment)"
+    ],
+    "rebuiltFromCode": [
+      "evaluatorVersion",
+      "rubricVersion",
+      "schemaVersion",
+      "promptHash (deterministic)",
+      "modelConfig.audioAssessment",
+      "provider",
+      "isDevelopmentProvider"
+    ],
+    "notSaved": "quality (the quality-gate report) was not written to the report and is left out; qualityPassed is true where the live test asserted it, null where it did not reach that check."
+  },
+  "runs": [
+    {
+      "run": 1,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "I'd like to talk about some advice I received from my grandfather a few years ago. I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                "note": "You clearly explained who gave you advice and the situation you were facing.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "He advised me to go through every mistake and make a study plan based on them. I followed his advice, although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score.",
+                "note": "You described the advice clearly and explained that you followed it successfully.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "As for whether young people should always follow advice from older people, I don't think they should do it blindly. Older people usually have more life experience, so their advice is worth listening to. However, the world is changing quickly, and some advice about careers or technology may be out of date. In my view, young people should listen carefully, but make their own decisions in the end.",
+                "note": "You gave a clear, well-supported opinion about whether young people should follow older people's advice.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B2",
+                "evidence": [
+                  "I had just failed an important maths exam",
+                  "so disappointed that I was thinking about giving up",
+                  "although it took a lot of effort"
+                ],
+                "note": "You accurately used complex structures like the past perfect, result clauses, and reported speech.",
+                "how_to_improve": "To reach above B2, try using structures like inversion or participle clauses, for example: 'Not only did I follow his advice, but I also created a study schedule.'",
+                "how_to_check": "Check your next attempt to ensure you include a structure starting with 'Not only...' followed by an inverted auxiliary verb."
+              },
+              "vocabulary": {
+                "level": "B2",
+                "evidence": [
+                  "giving up on my plan to study engineering",
+                  "do it blindly",
+                  "out of date",
+                  "make their own decisions"
+                ],
+                "note": "You used a good range of topic vocabulary and natural expressions accurately.",
+                "how_to_improve": "To move towards above B2, introduce more nuanced idiomatic phrases such as 'a double-edged sword' or 'with hindsight'.",
+                "how_to_check": "Listen to your recording to verify that you used an advanced phrase like 'with hindsight' correctly when reflecting."
+              },
+              "fluency": {
+                "level": "B2",
+                "evidence": [
+                  "I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                  "As for whether young people should always follow advice from older people, I don't think they should do it blindly."
+                ],
+                "note": "You spoke smoothly and continuously for 110 seconds without noticeable pauses or fillers.",
+                "how_to_improve": "To move towards above B2 fluency, practice connecting long, complex thoughts across multi-clause sentences seamlessly without pausing for breath.",
+                "how_to_check": "Review your recording to make sure your transitions between detailed points sound natural and uninterrupted."
+              },
+              "cohesion": {
+                "level": "B2",
+                "evidence": [
+                  "although it took a lot of effort",
+                  "As for whether young people should always follow advice from older people",
+                  "However, the world is changing quickly",
+                  "In my view, young people should listen carefully"
+                ],
+                "note": "You effectively used discourse markers like 'although', 'as for', and 'however' to connect your ideas.",
+                "how_to_improve": "To aim for above B2 cohesion, practice using advanced linking phrases like 'having said that' or 'which in turn'.",
+                "how_to_check": "Check if you replaced basic contrast connectors with expressions like 'having said that' to connect opposing views."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                "note": "You used past perfect and continuous structures accurately to set up a narrative."
+              },
+              {
+                "feature": "cohesion",
+                "quote": "As for whether young people should always follow advice from older people, I don't think they should do it blindly.",
+                "note": "You used 'As for whether' smoothly to transition to the final discussion question."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "B2",
+            "language_mean": 2,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 4,
+            "language_cap": 4,
+            "band": 4,
+            "label": "Higher B2",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": true,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "To reach above B2, try using structures like inversion or participle clauses, for example: 'Not only did I follow his advice, but I also created a study schedule.'",
+              "success_check": "Check your next attempt to ensure you include a structure starting with 'Not only...' followed by an inverted auxiliary verb.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "To move towards above B2, introduce more nuanced idiomatic phrases such as 'a double-edged sword' or 'with hindsight'.",
+              "success_check": "Listen to your recording to verify that you used an advanced phrase like 'with hindsight' correctly when reflecting.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 28712,
+        "modelCalls": 1,
+        "inputTokens": 6306,
+        "outputTokens": 5983
+      }
+    },
+    {
+      "run": 2,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "I'd like to talk about some advice I received from my grandfather a few years ago. I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                "note": "You clearly stated who gave the advice and what situation you were in.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "He advised me to go through every mistake and make a study plan based on them. I followed his advice, although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score.",
+                "note": "You explained what advice you received and confirmed that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "As for whether young people should always follow advice from older people, I don't think they should do it blindly. Older people usually have more life experience, so their advice is worth listening to. However, the world is changing quickly, and some advice about careers or technology may be out of date.",
+                "note": "You gave a clear opinion on whether young people should follow older people's advice and explained your reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B2",
+                "evidence": [
+                  "I had just failed an important maths exam",
+                  "I was so disappointed that I was thinking about giving up",
+                  "advised me to go through every mistake and make a study plan based on them",
+                  "although it took a lot of effort"
+                ],
+                "note": "You used complex grammatical structures such as the past perfect tense and reported speech accurately.",
+                "how_to_improve": "Try adding a third conditional sentence to reflect on past choices, such as 'If I hadn't listened to him, I would have given up'.",
+                "how_to_check": "Look at your written script to ensure you used an 'If + past perfect, would have + past participle' structure."
+              },
+              "vocabulary": {
+                "level": "B2",
+                "evidence": [
+                  "giving up on my plan to study engineering",
+                  "do it blindly",
+                  "life experience",
+                  "out of date"
+                ],
+                "note": "You used natural topic collocations and appropriate vocabulary throughout your answer.",
+                "how_to_improve": "Include nuanced opinion phrases such as 'take it with a grain of salt' or 'weigh up the options'.",
+                "how_to_check": "Check if your text contains precise expressions when presenting your viewpoint."
+              },
+              "fluency": {
+                "level": "B2",
+                "evidence": [
+                  "I'd like to talk about some advice I received from my grandfather a few years ago.",
+                  "When he noticed how upset I was, he told me that failing once doesn't mean you aren't capable",
+                  "I followed his advice, although it took a lot of effort"
+                ],
+                "note": "You spoke continuously for 110 of the 120 seconds without visible pauses or reformulations.",
+                "how_to_improve": "Group your words into longer phrasal units to keep a smooth flow across full sentences.",
+                "how_to_check": "Listen back to your audio to verify that you connect clauses without stopping after short phrases."
+              },
+              "cohesion": {
+                "level": "B2",
+                "evidence": [
+                  "although it took a lot of effort",
+                  "As for whether young people should",
+                  "However, the world is changing quickly",
+                  "In my view, young people should listen carefully"
+                ],
+                "note": "You used a range of cohesive devices like 'as for', 'although', and 'however' to structure your response.",
+                "how_to_improve": "Use complex transition linkers such as 'consequently' or 'on the other hand' when shifting between arguments.",
+                "how_to_check": "Verify that your contrasting points are connected with formal discourse markers."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan",
+                "note": "You used the past perfect tense and a so...that result clause correctly."
+              },
+              {
+                "feature": "cohesion",
+                "quote": "As for whether young people should always follow advice from older people, I don't think they should do it blindly.",
+                "note": "You used 'as for whether' smoothly to move on to the final prompt question."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "B2",
+            "language_mean": 2,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 4,
+            "language_cap": 4,
+            "band": 4,
+            "label": "Higher B2",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": true,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Try adding a third conditional sentence to reflect on past choices, such as 'If I hadn't listened to him, I would have given up'.",
+              "success_check": "Look at your written script to ensure you used an 'If + past perfect, would have + past participle' structure.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Include nuanced opinion phrases such as 'take it with a grain of salt' or 'weigh up the options'.",
+              "success_check": "Check if your text contains precise expressions when presenting your viewpoint.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 24521,
+        "modelCalls": 1,
+        "inputTokens": 6306,
+        "outputTokens": 4900
+      }
+    },
+    {
+      "run": 3,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "I'd like to talk about some advice I received from my grandfather a few years ago. I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                "note": "You explained that your grandfather gave you advice when you failed a maths exam.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "He advised me to go through every mistake and make a study plan based on them. I followed his advice, although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score.",
+                "note": "You described the advice to review mistakes and confirmed that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "As for whether young people should always follow advice from older people, I don't think they should do it blindly. Older people usually have more life experience, so their advice is worth listening to. However, the world is changing quickly, and some advice about careers or technology may be out of date. In my view, young people should listen carefully, but make their own decisions in the end.",
+                "note": "You shared your opinion that young people should not follow advice blindly because times change.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B2",
+                "evidence": [
+                  "I had just failed an important maths exam",
+                  "I was so disappointed that I was thinking about giving up",
+                  "he told me that failing once doesn't mean you aren't capable",
+                  "when I retook the exam a few months later, I passed with a much higher score"
+                ],
+                "note": "You used several complex structures accurately, such as the past perfect tense and reported speech.",
+                "how_to_improve": "Try adding a third conditional sentence (for example, 'If I hadn't listened to him, I would have given up') to show even greater grammatical range.",
+                "how_to_check": "Check your recorded response to see if you included an 'if' clause with 'had' and 'would have'."
+              },
+              "vocabulary": {
+                "level": "B2",
+                "evidence": [
+                  "giving up on my plan to study engineering",
+                  "do it blindly",
+                  "out of date",
+                  "make their own decisions"
+                ],
+                "note": "You used effective topic-specific vocabulary and natural collocations throughout your answer.",
+                "how_to_improve": "Incorporate more formal or precise vocabulary such as 'valuable insights' or 'hindsight' when discussing advice.",
+                "how_to_check": "Review your answer to see if you replaced common words with more advanced vocabulary."
+              },
+              "fluency": {
+                "level": "B2",
+                "evidence": [
+                  "I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                  "As for whether young people should always follow advice from older people, I don't think they should do it blindly."
+                ],
+                "note": "You spoke smoothly without fillers and maintained a consistent pace.",
+                "how_to_improve": "Practice connecting long sentences in natural thought groups without taking pauses mid-sentence.",
+                "how_to_check": "Listen back to your recording and verify that your speech flows continuously from one idea to the next."
+              },
+              "cohesion": {
+                "level": "B2",
+                "evidence": [
+                  "although it took a lot of effort",
+                  "As for whether young people should always follow advice",
+                  "However, the world is changing quickly",
+                  "In my view, young people should listen carefully"
+                ],
+                "note": "You linked your ideas clearly using effective connectors like 'although', 'however', and 'in my view'.",
+                "how_to_improve": "Use a wider variety of transition phrases like 'on the other hand' or 'as a result' to connect contrasting points.",
+                "how_to_check": "Check your transcript to ensure you used different cohesive devices for different logical connections."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "I had just failed an important maths exam",
+                "note": "You used the past perfect tense accurately to set the background of your story."
+              },
+              {
+                "feature": "vocabulary",
+                "quote": "do it blindly",
+                "note": "You used this idiomatic expression accurately and in the right context."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "B2",
+            "language_mean": 2,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 4,
+            "language_cap": 4,
+            "band": 4,
+            "label": "Higher B2",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": true,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Try adding a third conditional sentence (for example, 'If I hadn't listened to him, I would have given up') to show even greater grammatical range.",
+              "success_check": "Check your recorded response to see if you included an 'if' clause with 'had' and 'would have'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Incorporate more formal or precise vocabulary such as 'valuable insights' or 'hindsight' when discussing advice.",
+              "success_check": "Review your answer to see if you replaced common words with more advanced vocabulary.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 19044,
+        "modelCalls": 1,
+        "inputTokens": 6306,
+        "outputTokens": 3892
+      }
+    }
+  ]
+}

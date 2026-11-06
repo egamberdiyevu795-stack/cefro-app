@@ -1,5 +1,5 @@
 export { Card, CardHeader } from "./Card";
-export { PillButton, IconButton } from "./PillButton";
+export { PillButton, PillAction, IconButton } from "./PillButton";
 export { ScoringLabel, DeltaLabel } from "./Labels";
 export { StatRow, ProgressBar, GoalBar } from "./Stats";
 export { RadarChart, type RadarAxis } from "./RadarChart";

@@ -27,14 +27,15 @@ test("browser → real recording path → real transcription → real evaluation
   await page.goto(TASK_URL);
   await page.getByRole("button", { name: "Start preparation" }).click(); // opens the (fake) microphone: playback starts now
   await expect(page.getByText("to prepare")).toBeVisible();
-  await page.getByRole("button", { name: /start speaking/ }).click();
-  await expect(page.getByRole("button", { name: "Finish answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   // Preparation is skipped immediately, so recording starts about a second after playback began: wait for the speech to end.
   await page.waitForTimeout((speechSeconds + 1.5) * 1000);
   const startedAt = Date.now();
-  await page.getByRole("button", { name: "Finish answer" }).click();
-  await expect(page.locator("audio")).toBeVisible();
-  await page.getByRole("button", { name: "Submit for feedback" }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  // Under a minute of speech opens the early-finish warning first.
+  const finishAnyway = page.getByRole("button", { name: "Finish anyway" });
+  if (await finishAnyway.isVisible()) await finishAnyway.click();
 
   // Real transcription + real evaluation. Generous: observed ~15-45 s, regeneration possible.
   await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 4 * 60_000 });

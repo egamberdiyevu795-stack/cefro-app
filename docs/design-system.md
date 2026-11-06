@@ -4,7 +4,9 @@ Every new page (dashboard, feedback screen, lessons, tests) is built only from t
 Tokens live in one file: `src/app/design-system.css` (a Tailwind v4 `@theme`, so each token is also a utility class,
 e.g. `--color-card` → `bg-card`). Components live in `src/components/ds/`. The first page built on it is `/dashboard`.
 
-The older pages (home, login, register, practice) still use the earlier tokens in `globals.css` until they are redone.
+The older pages (home, login, register) still use the earlier tokens in `globals.css` until they are redone. The
+practice page's own steps (brief, preparation, recording, scoring) are on the design system; the screens after
+scoring on that page (feedback report, comparison, upload and processing errors) still use the earlier tokens.
 
 ## Merge order (read before merging)
 
@@ -25,7 +27,7 @@ the moved files are byte-for-byte identical (git shows them as 100% renames).
 | moved | `src/app/page.tsx` → `src/app/(site)/page.tsx` |
 | moved | `src/app/login/page.tsx` → `src/app/(site)/login/page.tsx` |
 | moved | `src/app/register/page.tsx` → `src/app/(site)/register/page.tsx` |
-| moved | `src/app/practice/speaking/[taskId]/page.tsx` → `src/app/(site)/practice/speaking/[taskId]/page.tsx` |
+| moved | `src/app/practice/speaking/[taskId]/page.tsx` → `src/app/(site)/practice/speaking/[taskId]/page.tsx` (moved back out of `(site)` by the practice flow, see below) |
 | added | `src/app/(site)/layout.tsx` (the skip link, header and `<main>` that used to be in the root layout) |
 | edited | `src/app/layout.tsx` (now only `<html>`, `<body>` and fonts; adds Inter) |
 | edited | `src/app/globals.css` (imports `design-system.css`; its own tokens unchanged) |
@@ -175,7 +177,8 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | Component | What it is |
 | --- | --- |
 | `Card`, `CardHeader` | Rounded `bg-card` surface with the soft shadow. Header: quiet title, optional action on the right, thin divider under it. |
-| `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"); `light` = card-white, for pills that sit on a `well` surface. Sizes `md` (36 px, 13 px text) and `sm` (28 px, 12 px text). Optional leading icon and `label` (accessible name when the visible text repeats, e.g. "Practise Part 2"). |
+| `PillAction` | The same pill as a `<button>` (actions that stay on the page: start, finish, try again). Same variants and sizes as `PillButton`. |
+| `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"); `light` = card-white, for pills that sit on a `well` surface. Sizes `lg` (44 px, 13 px text: the one main action of a practice step, easy to hit on a phone), `md` (36 px, 13 px text) and `sm` (28 px, 12 px text). Optional leading icon and `label` (accessible name when the visible text repeats, e.g. "Practise Part 2"). |
 | `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
 | `ScoringLabel` | The only attempt status: grey hourglass + "Scoring…", shown in place of the level while an answer is processed. No Passed/Failed, no colour. |
 | `DeltaLabel` | Small lime pill for an improvement. Only for positive change. |
@@ -190,6 +193,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Used by the row menu and the Account menu. |
 | `ComingSoonButton`, `ComingSoonMenu`, `ComingSoonToast` | Future controls behind a feature flag. The button takes the real control's classes (from `styles.ts`), so it looks identical; tapping it shows the toast. The menu is a ⋮ button with a small card menu whose items all say "Coming soon" (closes on Escape or outside tap). The toast is one small near-black pill ("Coming soon") near the bottom, a polite live region; mount it once per page. |
 | `styles.ts` | Shared class strings (focus ring, icon button, nav item, text actions), so server and client components render a control the same way. |
+| `AppShell` (`features/shell`) | The task-page frame (result, practice): page, shell, rail / bottom bar, back link. `account={false}` leaves out the mocked Account menu; `headerEnd` adds header content (the practice page's real sign-in state). |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |
 
 ## Result page (`/result`)
@@ -213,14 +217,66 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   their own words and the evaluator's instruction when there is no error); a question → what they said for it, or the
   question itself when they said nothing, and the model answer; own words → how the answer began and a model answer.
   The goal is the evaluator's first retry focus.
-- **States:** Scoring… (steps, no black button), Couldn't score (too short to rate = the scorer's `zero_reason:
+- **Retry goal:** "Retry with this goal" opens the practice page as a retry of this attempt (`?retry=<attempt id>`; in
+  the prototype `?mock=1&retry=<fixture id>&run=n`). The goal is shown on every practice screen and on Scoring…, and the
+  retry result says **"Goal met"** or **"Not yet"** (a partly met goal is "Not yet · partly there"), with "Your goal: …"
+  under the band.
+- **States:** Scoring… (steps, no black button; a retry shows "Your goal: …"), Couldn't score (too short to rate = the scorer's `zero_reason:
   too_short`; no speech = failure `transcription_empty`; black "Record again"), Retry ("Band 2 → 3", lime "+1 band",
   "Goal met" read from the evaluator's retry review, else from the judgements: the last goal's skill went up a level or
   its question is now answered; skill rows show "B1 → B2").
 - **Switches:** `?anchor=<fixture id>` (`&run=1..3`, default run 1; `A0-below-b1` run 1 is band 2, run 3 is the
-  band 0 run), `?state=scoring|too-short|no-speech|retry`, `?flags=off`.
+  band 0 run), `?state=scoring|too-short|no-speech|retry`, `?flags=off`, `&from=<fixture id>&fromRun=n` (the attempt
+  a retry comes from: its goal on Scoring… and the one the retry result checks), `&next=1` (Scoring… opens the result
+  after about 4 s: used by the practice page's mock mode).
 - **New flags:** `fixLesson`, `recordingPlayback`. **New icons:** `play`, `partly`, `cross`. **New style:** `PILL_QUIET`.
 - **Checks:** `src/features/result/view-model.test.ts` builds all 19 saved runs, renders every anchor and state with
   flags on and off, and asserts one black button (none while scoring) and no text under 11 px. The screenshots were
   audited in the browser: no horizontal scroll, smallest text 11 px, lowest text contrast 5.26:1.
 - Screenshots: `docs/design-system/result-{a2,a4,a0-below-b1,scoring,too-short,no-speech,retry}-{desktop,phone}.png`.
+
+
+## Practice flow, Part 2 (`/practice/speaking/[taskId]`)
+
+The steps a student goes through before the result, on the design system. The recorder, upload, polling and
+evaluation code are the app's real ones; only the screens changed. The page moved out of the `(site)` route group into
+`src/app/practice/speaking/[taskId]/` (same URL) to use the task-page shell; it runs the server-configuration check
+itself (it used to come from the `(site)` layout), except in mock mode.
+
+- **Phone, top to bottom:** the step card (title or timer, the goal of a retry, the one action), then the questions
+  and the picture. **Desktop:** [questions and picture] | [step card]. The picture is beside the questions when their
+  card is wide enough (container query), else above them on the brief and below them while preparing and recording,
+  where the questions matter most.
+- **1. Brief:** "Speaking · Part 2 · Practice" (or "Retry"), the task title, the topic line, Prepare 1 min / Speak
+  2 min tiles, the picture with "You don't need to describe the picture", the 3 questions, the black **"Start
+  preparation"**. A retry also has "Practise without the goal". Earlier attempts (real mode) are listed under it.
+- **2. Preparation:** "Preparation", a 1-minute countdown with a thin bar, one line of advice, the quiet **"Start
+  speaking now"** (no black button: waiting is the main action). Recording starts by itself at 0:00.
+- **3. Recording:** a dot + the word "Recording" and a live 5-bar microphone level (never colour alone), a 2-minute
+  countdown and bar, "You've spoken for 0:23", the black **"Finish"**. Finishing under 1 minute (`EARLY_FINISH_MS`
+  in `lib/practice-flow.ts`) opens "Finish already?" in the card instead: black "Keep speaking" (focused), quiet
+  "Finish anyway"; the recording keeps running. At 0:00 it finishes by itself, without the warning.
+- **4. After Finish:** the answer is sent at once (there is no listen-back step any more) and the result page's
+  **"Scoring…"** state is shown (the same `ScoringResult` component, with a quiet line if checking is slow). Real
+  results then show the existing feedback report (not redone yet).
+- **Retry:** opened from "Retry with this goal" (`?retry=<attempt id>`) or the old report's "Retry this task". A small
+  well card **"Your goal: …"** (the evaluator's first retry focus) is on the brief (with "You'll know it worked: …"),
+  preparation, recording and Scoring…. The answer is sent with the previous attempt's id, as before, so the evaluator's
+  retry review judges it.
+- **Microphone states** (in the brief card's action area; after the brief, on their own card): **asking** ("Allow
+  microphone access", while the browser's prompt is open, no button), **denied** ("Microphone access is blocked" and
+  how to allow it on a computer, iPhone/iPad Safari and Android Chrome; black "Try again"), **no microphone** (connect
+  one or use a phone; black "Try again"), plus unsupported browser (no button) and recorder failed ("Try again").
+- **Mock mode `?mock=1`:** no session, history, analytics or upload, and no API call at all (asserted by the e2e
+  test). The real recorder still runs. Finish opens `/result?state=scoring&next=1` (with `&from=` for a retry), which
+  opens the mock result after ~4 s; a mock retry result says "Goal met" (retry of A2-b1-all-three) or "Not yet"
+  (retry of A3-b2-q3-missing). Every practice link on the result prototype uses mock mode, so the whole loop clicks
+  through without API keys: result → Retry with this goal → brief → preparation → recording → Scoring… → result.
+  The mocked Account menu is shown only in mock mode; the real page keeps the real sign-in state in its header.
+- **New:** `PillAction`, pill size `lg`, icons `stop` and `micOff`, `AppShell`.
+- **Checks:** `components/screens.test.ts` (one black button per screen, none while preparing, while the browser asks
+  for the microphone or with an unsupported browser; no text under 11 px; questions and picture on every screen; the
+  goal on every retry screen; the goal hand-off to Scoring… and "Goal met" / "Not yet"); `e2e/practice-flow.spec.ts`
+  (real flow, microphone states, early finish, mock loop). Screenshots audited in the browser at 1440 px and 390 px:
+  no horizontal scroll, smallest text 11 px, one black button where expected.
+- Screenshots: `docs/design-system/practice-{brief,brief-retry,mic-asking,mic-denied,mic-none,preparation,preparation-retry,recording-retry,recording-early-warning,scoring-retry,result-goal-met,result-not-yet}-{desktop,phone}.png`.

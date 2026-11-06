@@ -35,7 +35,15 @@ export interface ResultSource {
 }
 
 export type ResultPageState =
-  | { kind: "scoring"; task: ResultSource["task"]; step: "saved" | "transcribing" | "scoring"; transcript: string | null; durationMs: number }
+  | {
+      kind: "scoring";
+      task: ResultSource["task"];
+      step: "saved" | "transcribing" | "scoring";
+      transcript: string | null;
+      durationMs: number;
+      /** A retry: the goal it was given (the previous attempt's first retry focus). */
+      goal: string | null;
+    }
   | { kind: "not_scored"; task: ResultSource["task"]; reason: "too_short" | "no_speech"; transcript: string | null; wordCount: number | null; durationMs: number }
   | { kind: "failed"; task: ResultSource["task"]; failure: AttemptFailure | null }
   | { kind: "scored"; view: ResultView };
@@ -45,7 +53,8 @@ export function resultPageState(source: ResultSource): ResultPageState {
   const { task } = source;
   if (source.status !== "completed" && source.status !== "failed") {
     const step = source.status === "evaluating" ? "scoring" : source.status === "transcribing" ? "transcribing" : "saved";
-    return { kind: "scoring", task, step, transcript: source.transcript, durationMs: source.recordingDurationMs };
+    const goal = source.previous?.evaluation.result.retry_focus[0]?.objective ?? null;
+    return { kind: "scoring", task, step, transcript: source.transcript, durationMs: source.recordingDurationMs, goal };
   }
   if (source.status === "failed" || !source.evaluation) {
     // transcription_empty = no speech found, or too few words recognised to score.
@@ -369,7 +378,9 @@ export function compareWithPrevious(prev: MultilevelResult, current: MultilevelR
   return { previousBand: prev.scoring.band, band: current.scoring.band, goal, goalText: focus?.objective ?? null };
 }
 
-export const GOAL_LABEL: Record<NonNullable<RetryComparison["goal"]>, string> = { met: "Goal met", partly: "Goal partly met", not_met: "Goal not met yet" };
+/** Two answers for the student: met, or not yet. "Partly" is still "Not yet", with a quieter note that it is close. */
+export const GOAL_LABEL: Record<NonNullable<RetryComparison["goal"]>, string> = { met: "Goal met", partly: "Not yet", not_met: "Not yet" };
+export const GOAL_NOTE: Partial<Record<NonNullable<RetryComparison["goal"]>, string>> = { partly: "partly there" };
 
 function firstSentence(text: string): string {
   const match = text.trim().match(/^.*?[.!?](\s|$)/);

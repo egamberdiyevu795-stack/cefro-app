@@ -7,11 +7,16 @@
  *   ?anchor=<id>   which fixture (default A2-b1-all-three); &run=1..3 picks a run (default run 1; for A0-below-b1
  *                  that is band 2, and run 3 is the band 0 run)
  *   ?state=        scored (default) | scoring | too-short | no-speech | retry
+ *   &from=<id>&fromRun=1..3   the attempt a retry comes from (default A2-b1-all-three run 1): its first retry focus is
+ *                  the goal the "Scoring…" state shows and the retry result checks ("Goal met" / "Not yet")
+ *   &next=1        on "Scoring…": open the result after a few seconds (mock mode of the practice page)
  */
 import { scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
 import { FEATURES } from "@/domain/evaluation/multilevel/levels";
 import type { BandScoringConfig } from "@/domain/evaluation/multilevel/rubric-config";
+import type { AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
+import type { MockAttemptKey } from "@/features/speaking-practice/lib/practice-flow";
 import { PART2_BAND_ANCHORS } from "../../../test/evaluation-samples/part2-band-anchors";
 import { LIVE_36_FLASH_FIXTURES, type LiveFixtureFile } from "../../../test/fixtures/live-3.6-flash";
 import { countWords, type ResultEvaluation, type ResultSource } from "./view-model";
@@ -34,17 +39,84 @@ export interface MockSelection {
   run: number;
   state: ResultMockState;
   file: LiveFixtureFile;
+  /** The attempt this one retries, when the query names one (`from`). */
+  from: MockAttemptKey | null;
+  /** "Scoring…" opens the result by itself (`next=1`). */
+  next: boolean;
+}
+
+type Query = Record<string, string | string[] | undefined>;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+/** A saved run, or null when the anchor is unknown. The run falls back to 1 when it is missing or out of range. */
+export function mockAttemptKey(anchor: string | undefined, run: string | undefined): MockAttemptKey | null {
+  if (!anchor || !LIVE_36_FLASH_FIXTURES[anchor]) return null;
+  const requested = Number(run);
+  const runs = LIVE_36_FLASH_FIXTURES[anchor].runs.length;
+  return { anchor, run: Number.isInteger(requested) && requested >= 1 && requested <= runs ? requested : 1 };
 }
 
 /** Reads the query switches; unknown values fall back to the defaults. */
-export function selectMock(query: { anchor?: string | string[]; run?: string | string[]; state?: string | string[] }): MockSelection {
-  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-  const anchor = one(query.anchor) && LIVE_36_FLASH_FIXTURES[one(query.anchor)!] ? one(query.anchor)! : DEFAULT_ANCHOR;
+export function selectMock(query: Query): MockSelection {
+  const { anchor, run } = mockAttemptKey(one(query.anchor), one(query.run)) ?? { anchor: DEFAULT_ANCHOR, run: 1 };
   const file = LIVE_36_FLASH_FIXTURES[anchor];
-  const requested = Number(one(query.run));
-  const run = Number.isInteger(requested) && requested >= 1 && requested <= file.runs.length ? requested : 1;
   const state = (RESULT_STATES as readonly string[]).includes(one(query.state) ?? "") ? (one(query.state) as ResultMockState) : "scored";
-  return { anchor, run, state, file };
+  const from = mockAttemptKey(one(query.from), one(query.fromRun));
+  return { anchor, run, state, file, from, next: one(query.next) === "1" };
+}
+
+/** The attempt a retry comes from: the one named by `from`, else the default retry pair's first attempt. */
+function retryPrevious(selection: MockSelection): MockAttemptKey {
+  return selection.from ?? RETRY_PREVIOUS;
+}
+
+/** The attempt the page shows, as a key for "Retry with this goal". */
+export function shownAttempt(selection: MockSelection): MockAttemptKey {
+  return selection.state === "retry" ? RETRY_CURRENT : { anchor: selection.anchor, run: selection.run };
+}
+
+/** Where "Scoring…" goes next in mock mode: the retry result when it was a retry, else the default scored result. */
+export function mockResultHref(selection: MockSelection): string {
+  if (!selection.from) return `/result?anchor=${encodeURIComponent(DEFAULT_ANCHOR)}`;
+  return `/result?${new URLSearchParams({ state: "retry", from: selection.from.anchor, fromRun: String(selection.from.run) })}`;
+}
+
+/**
+ * A saved run as the attempt a mock retry comes from, in the shape the practice page gets from the API. Only its
+ * evaluation (the retry focus) is used: mock mode never uploads.
+ */
+export function mockRetryAttempt(key: MockAttemptKey, task: PublicSpeakingTask): AttemptView {
+  const saved = evaluationOf(key.anchor, key.run);
+  const a = anchorOf(key.anchor);
+  return {
+    id: `mock-${key.anchor}-${key.run}`,
+    taskId: task.id,
+    taskVersion: task.version,
+    attemptNumber: 1,
+    previousAttemptId: null,
+    status: "completed",
+    failure: null,
+    isStalled: false,
+    recordingDurationMs: a.durationMs,
+    retryFocus: null,
+    transcript: { text: a.transcript, provider: "fixture", model: saved.model },
+    metrics: null,
+    evaluation: {
+      result: saved.result,
+      meta: {
+        evaluatorVersion: saved.evaluatorVersion,
+        rubricVersion: saved.rubricVersion,
+        schemaVersion: saved.schemaVersion,
+        provider: saved.provider,
+        model: saved.model,
+        createdAt: LIVE_36_FLASH_FIXTURES[key.anchor]._fixture.runAt,
+        latencyMs: saved.latencyMs,
+        isDevelopmentProvider: false,
+      },
+    },
+    createdAt: LIVE_36_FLASH_FIXTURES[key.anchor]._fixture.runAt,
+    completedAt: LIVE_36_FLASH_FIXTURES[key.anchor]._fixture.runAt,
+  };
 }
 
 function evaluationOf(anchor: string, run: number): ResultEvaluation {
@@ -68,8 +140,16 @@ export function mockResultSource(selection: MockSelection, task: PublicSpeakingT
 
   switch (selection.state) {
     case "scoring":
-      // Transcription is done by the time the attempt is being scored, so the transcript is already there.
-      return { ...base, status: "evaluating", recordingDurationMs: a.durationMs, transcript: a.transcript, evaluation: null };
+      // Transcription is done by the time the attempt is being scored, so the transcript is already there. A retry
+      // carries the attempt it comes from, so the page can show its goal.
+      return {
+        ...base,
+        status: "evaluating",
+        recordingDurationMs: a.durationMs,
+        transcript: a.transcript,
+        evaluation: null,
+        previous: selection.from ? { evaluation: evaluationOf(selection.from.anchor, selection.from.run) } : null,
+      };
 
     case "no-speech":
       return {
@@ -111,7 +191,7 @@ export function mockResultSource(selection: MockSelection, task: PublicSpeakingT
         recordingDurationMs: anchorOf(RETRY_CURRENT.anchor).durationMs,
         transcript: anchorOf(RETRY_CURRENT.anchor).transcript,
         evaluation: evaluationOf(RETRY_CURRENT.anchor, RETRY_CURRENT.run),
-        previous: { evaluation: evaluationOf(RETRY_PREVIOUS.anchor, RETRY_PREVIOUS.run) },
+        previous: { evaluation: evaluationOf(retryPrevious(selection).anchor, retryPrevious(selection).run) },
       };
 
     default:
@@ -129,10 +209,12 @@ export function mockResultSource(selection: MockSelection, task: PublicSpeakingT
 export function describeMock(selection: MockSelection): string {
   const saved = "saved output of gemini-3.6-flash, not the production model";
   switch (selection.state) {
-    case "retry":
-      return `${RETRY_PREVIOUS.anchor} run ${RETRY_PREVIOUS.run} → ${RETRY_CURRENT.anchor} run ${RETRY_CURRENT.run} · ${saved}`;
+    case "retry": {
+      const prev = retryPrevious(selection);
+      return `${prev.anchor} run ${prev.run} → ${RETRY_CURRENT.anchor} run ${RETRY_CURRENT.run} · ${saved}`;
+    }
     case "scoring":
-      return `attempt still being scored (${selection.anchor} transcript), no evaluation yet`;
+      return `attempt still being scored (${selection.anchor} transcript), no evaluation yet${selection.from ? `, retry of ${selection.from.anchor} run ${selection.from.run}` : ""}${selection.next ? " · the result opens in a few seconds" : ""}`;
     case "no-speech":
       return "attempt that failed with no speech found, no evaluation";
     case "too-short":

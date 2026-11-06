@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Card, CardHeader, ComingSoonButton, DeltaLabel, Icon, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
-import { GOAL_LABEL, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
+import { practiceHref as practiceLink } from "@/features/speaking-practice/lib/practice-flow";
+import { GOAL_LABEL, GOAL_NOTE, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
 
 /*
  * Result page sections. Built only from components/ds and the design-system tokens; values come from the view model.
@@ -12,7 +13,7 @@ import { GOAL_LABEL, formatDuration, type QuestionVerdict, type ResultPageState,
 
 type Task = { id: string; title: string; part: number; prompts: readonly string[] };
 
-const practiceHref = (task: { id: string }) => `/practice/speaking/${task.id}`;
+const practiceHref = (task: { id: string }) => practiceLink(task.id);
 
 /* --------------------------------------------------------------------------------------------------- scored result */
 
@@ -21,12 +22,12 @@ const practiceHref = (task: { id: string }) => `/practice/speaking/${task.id}`;
  * Desktop: [result, biggest fix, your answer] | [questions, skills]. The columns are `display: contents` on phones so
  * the cards take their own `order`.
  */
-export function ScoredResult({ view, task, flags }: { view: ResultView; task: Task; flags: FeatureFlags }) {
+export function ScoredResult({ view, task, flags, retryHref }: { view: ResultView; task: Task; flags: FeatureFlags; retryHref?: string }) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.62fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <ResultCard view={view} className="order-1 lg:order-none" />
-        <BiggestFixCard view={view} task={task} flags={flags} className="order-3 lg:order-none" />
+        <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} flags={flags} className="order-3 lg:order-none" />
         <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} className="order-5 lg:order-none" />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">
@@ -60,6 +61,7 @@ function ResultCard({ view, className }: { view: ResultView; className?: string 
               <span aria-hidden="true" className="text-fg-muted">·</span>
               <Icon name={retry.goal === "met" ? "check" : retry.goal === "partly" ? "partly" : "cross"} size={14} className="text-fg-subtle" />
               {GOAL_LABEL[retry.goal]}
+              {GOAL_NOTE[retry.goal] && <span className="text-fg-muted">· {GOAL_NOTE[retry.goal]}</span>}
             </span>
           )}
         </div>
@@ -87,7 +89,7 @@ function ResultCard({ view, className }: { view: ResultView; className?: string 
       {view.provisional && <p className="mt-1 text-label text-fg-muted">Pronunciation wasn&rsquo;t checked in this attempt.</p>}
       {retry?.goalText && (
         <p className="mt-4 border-t border-line pt-3 text-label text-fg-muted">
-          Last goal: <span className="text-fg">{retry.goalText}</span>
+          Your goal: <span className="text-fg">{retry.goalText}</span>
         </p>
       )}
     </Card>
@@ -145,7 +147,8 @@ function QuestionsCard({ view, className }: { view: ResultView; className?: stri
   );
 }
 
-function BiggestFixCard({ view, task, flags, className }: { view: ResultView; task: Task; flags: FeatureFlags; className?: string }) {
+/** "Retry with this goal" opens the practice page as a retry of this attempt (`retryHref`), which carries the goal. */
+function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultView; retryHref: string; flags: FeatureFlags; className?: string }) {
   const { fix } = view;
   return (
     <Card aria-labelledby="fix-title" className={className}>
@@ -171,7 +174,7 @@ function BiggestFixCard({ view, task, flags, className }: { view: ResultView; ta
         </div>
       )}
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <PillButton href={practiceHref(task)} icon="retry" className="w-full sm:w-auto">
+        <PillButton href={retryHref} icon="retry" className="w-full sm:w-auto">
           Retry with this goal
         </PillButton>
         {flags.fixLesson && (
@@ -283,8 +286,19 @@ const STEPS = [
   { key: "scoring", label: "Scoring your answer" },
 ] as const;
 
-/** Waiting for the result. No black button: there is nothing to do yet. */
-export function ScoringResult({ state, flags }: { state: Extract<ResultPageState, { kind: "scoring" }>; flags: FeatureFlags }) {
+/**
+ * Waiting for the result. No black button: there is nothing to do yet. A retry shows its goal. `notice` is a quiet
+ * line for a slow or interrupted check (practice page).
+ */
+export function ScoringResult({
+  state,
+  flags,
+  notice,
+}: {
+  state: Extract<ResultPageState, { kind: "scoring" }>;
+  flags: FeatureFlags;
+  notice?: string | null;
+}) {
   const current = STEPS.findIndex((s) => s.key === state.step);
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4">
@@ -294,6 +308,16 @@ export function ScoringResult({ state, flags }: { state: Extract<ResultPageState
           Scoring…
         </h1>
         <p className="mt-3 text-body text-fg-muted">This usually takes under a minute. You can leave this page; the result will wait for you.</p>
+        {notice && (
+          <p role="status" className="mt-2 text-body text-fg">
+            {notice}
+          </p>
+        )}
+        {state.goal && (
+          <p role="note" aria-label="Your goal" data-testid="goal-card" className="mt-4 rounded-tile bg-well p-3 text-body text-fg">
+            <span className="font-semibold">Your goal:</span> {state.goal}
+          </p>
+        )}
         <ol className="mt-5 divide-y divide-line border-t border-line">
           {STEPS.map((step, i) => (
             <li key={step.key} className="flex min-h-11 items-center justify-between gap-3 py-2">
@@ -318,7 +342,15 @@ export function ScoringResult({ state, flags }: { state: Extract<ResultPageState
 }
 
 /** Couldn't score: too short to rate, or no speech found. "Record again" is the black button. */
-export function NotScoredResult({ state, flags }: { state: Extract<ResultPageState, { kind: "not_scored" }>; flags: FeatureFlags }) {
+export function NotScoredResult({
+  state,
+  flags,
+  recordHref,
+}: {
+  state: Extract<ResultPageState, { kind: "not_scored" }>;
+  flags: FeatureFlags;
+  recordHref?: string;
+}) {
   const tooShort = state.reason === "too_short";
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4">
@@ -342,7 +374,7 @@ export function NotScoredResult({ state, flags }: { state: Extract<ResultPageSta
           ))}
         </ol>
         <div className="mt-6">
-          <PillButton href={practiceHref(state.task)} icon="mic" className="w-full sm:w-auto">
+          <PillButton href={recordHref ?? practiceHref(state.task)} icon="mic" className="w-full sm:w-auto">
             Record again
           </PillButton>
         </div>
@@ -358,7 +390,7 @@ export function NotScoredResult({ state, flags }: { state: Extract<ResultPageSta
 }
 
 /** Any other failure: the app's existing student-facing copy. */
-export function FailedResult({ state }: { state: Extract<ResultPageState, { kind: "failed" }> }) {
+export function FailedResult({ state, recordHref }: { state: Extract<ResultPageState, { kind: "failed" }>; recordHref?: string }) {
   const copy = describeFailure(state.failure);
   return (
     <div className="mx-auto max-w-2xl">
@@ -369,7 +401,7 @@ export function FailedResult({ state }: { state: Extract<ResultPageState, { kind
         </h1>
         <p className="mt-2 text-body text-fg">{copy.message}</p>
         <div className="mt-6">
-          <PillButton href={practiceHref(state.task)} icon="mic">
+          <PillButton href={recordHref ?? practiceHref(state.task)} icon="mic">
             Record again
           </PillButton>
         </div>

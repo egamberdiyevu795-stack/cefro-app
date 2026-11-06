@@ -2,16 +2,15 @@ import { expect, test, type Page } from "@playwright/test";
 
 const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
 
+/** Brief → preparation → recording → Finish. A short test answer opens the early-finish warning: "Finish anyway". */
 async function recordAndSubmit(page: Page, speakMs = 2500) {
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare")).toBeVisible();
-  await page.getByRole("button", { name: /start speaking/ }).click();
-  await expect(page.getByRole("button", { name: "Finish answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await page.waitForTimeout(speakMs);
-  await page.getByRole("button", { name: "Finish answer" }).click();
-  await expect(page.locator("audio")).toBeVisible();
-  await expectPlayableAudio(page, speakMs);
-  await page.getByRole("button", { name: "Submit for feedback" }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await page.getByRole("button", { name: "Finish anyway" }).click();
 }
 
 /**
@@ -36,7 +35,7 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
 
   // Attempt 1
   await recordAndSubmit(page);
-  await expect(page.getByText("Preparing your feedback")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("Development evaluator").first()).toBeVisible();
   await expect(page.getByText("Your focus for the next attempt")).toBeVisible();
@@ -61,7 +60,7 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
 
   // Attempt 2 (retry)
   await page.getByRole("button", { name: "Retry this task" }).click();
-  await expect(page.getByRole("heading", { name: "Your focus" })).toBeVisible();
+  await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
   await recordAndSubmit(page, 3000);
   await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("Your focus this time")).toBeVisible();
@@ -86,7 +85,7 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
  * The task picture has loaded (a real image, not a broken one), carries the caption, and sits beside the questions
  * ("beside") or above them ("above").
  */
-async function expectPicture(page: Page, layout: "beside" | "above") {
+async function expectPicture(page: Page, layout: "beside" | "above" | "below") {
   const figure = page.getByTestId("task-picture");
   await expect(figure).toBeVisible();
   await expect(figure.getByText("You don't need to describe the picture")).toBeVisible();
@@ -98,8 +97,10 @@ async function expectPicture(page: Page, layout: "beside" | "above") {
   if (layout === "beside") {
     expect(pictureBox.x + pictureBox.width).toBeLessThanOrEqual(questionsBox.x); // picture on the left
     expect(Math.abs(pictureBox.y - questionsBox.y)).toBeLessThan(pictureBox.height); // same row
-  } else {
+  } else if (layout === "above") {
     expect(pictureBox.y + pictureBox.height).toBeLessThanOrEqual(questionsBox.y); // picture above
+  } else {
+    expect(questionsBox.y + questionsBox.height).toBeLessThanOrEqual(pictureBox.y); // questions first
   }
 }
 
@@ -116,27 +117,27 @@ test("the task picture loads beside the questions on every screen (desktop): bri
   await expect(page.getByText("to prepare")).toBeVisible();
   await expectPicture(page, "beside");
 
-  await page.getByRole("button", { name: /start speaking/ }).click();
-  await expect(page.getByRole("button", { name: "Finish answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await expectPicture(page, "beside");
   await page.waitForTimeout(1500);
-  await page.getByRole("button", { name: "Finish answer" }).click();
-  await page.getByRole("button", { name: "Submit for feedback" }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await page.getByRole("button", { name: "Finish anyway" }).click();
   await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
 
   await page.getByRole("button", { name: "Retry this task" }).click();
-  await expect(page.getByRole("heading", { name: "Your focus" })).toBeVisible();
+  await expect(page.getByTestId("goal-card")).toBeVisible();
   await expectPicture(page, "beside");
 });
 
-test("on a phone the task picture is above the questions", async ({ browser }) => {
+test("on a phone the picture is above the questions on the brief, below them while preparing", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
   const page = await context.newPage();
   await page.goto(TASK_URL);
   await expectPicture(page, "above");
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare")).toBeVisible();
-  await expectPicture(page, "above");
+  await expectPicture(page, "below");
   await context.close();
 });
 
@@ -149,7 +150,70 @@ test("microphone permission denied shows guidance", async ({ browser }) => {
   await page.goto(TASK_URL);
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("Microphone access is blocked")).toBeVisible();
+  await expect(page.getByText("iPhone or iPad (Safari)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await context.close();
+});
+
+test("no microphone found, and the permission prompt state while the browser asks", async ({ browser }) => {
+  const none = await browser.newContext();
+  await none.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("Not found", "NotFoundError"));
+  });
+  let page = await none.newPage();
+  await page.goto(`${TASK_URL}?mock=1`);
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("No microphone found")).toBeVisible();
+  await none.close();
+
+  const asking = await browser.newContext();
+  await asking.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = () => new Promise(() => {});
+  });
+  page = await asking.newPage();
+  await page.goto(`${TASK_URL}?mock=1`);
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("Allow microphone access")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start preparation" })).toHaveCount(0);
+  await asking.close();
+});
+
+test("finishing very early asks first; Keep speaking goes on recording", async ({ page }) => {
+  await page.goto(`${TASK_URL}?mock=1`);
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(page.getByText(/^Finish already\?/)).toBeVisible();
+  await page.getByRole("button", { name: "Keep speaking" }).click();
+  await expect(page.getByText("Recording", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
+});
+
+test("mock mode: the whole loop without API calls, and a retry's goal on every screen to 'Goal met'", async ({ page }) => {
+  const apiCalls: string[] = [];
+  page.on("request", (r) => {
+    if (new URL(r.url()).pathname.startsWith("/api/")) apiCalls.push(r.url());
+  });
+  await page.goto(`${TASK_URL}?mock=1`);
+  await recordAndSubmit(page, 1000);
+  await expect(page).toHaveURL(/\/result\?state=scoring/);
+  await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Band 2/ })).toBeVisible({ timeout: 15_000 });
+
+  // "Retry with this goal" carries the goal through brief, preparation, recording and Scoring… to the result.
+  await page.getByRole("link", { name: "Retry with this goal" }).click();
+  const goal = page.getByTestId("goal-card");
+  await expect(goal).toContainText("Your goal:");
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(goal).toBeVisible();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await expect(goal).toBeVisible();
+  await page.waitForTimeout(1000);
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await page.getByRole("button", { name: "Finish anyway" }).click();
+  await expect(page.getByTestId("goal-card")).toBeVisible();
+  await expect(page.getByText("Goal met")).toBeVisible({ timeout: 15_000 });
+  expect(apiCalls).toEqual([]);
 });
 
 test("upload failure keeps the recording and it can be resent", async ({ page }) => {

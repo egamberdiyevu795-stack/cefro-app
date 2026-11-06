@@ -4,7 +4,7 @@ import { Icon, type IconName } from "./Icon";
 import { FOCUS_RING, ICON_BUTTON } from "./styles";
 
 type Variant = "primary" | "quiet" | "light";
-type Size = "md" | "sm";
+type Size = "lg" | "md" | "sm";
 
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-primary text-on-primary hover:bg-primary/85",
@@ -14,6 +14,8 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const SIZES: Record<Size, string> = {
+  // The one main action of a full-screen step (practice: "Start preparation", "Finish"): 44 px, easy to hit on a phone.
+  lg: "h-11 gap-2 px-6 text-body",
   md: "h-9 gap-2 px-5 text-body",
   sm: "h-7 gap-1.5 px-3 text-label",
 };
@@ -52,6 +54,46 @@ export function PillButton({
       {icon && <Icon name={icon} size={size === "sm" ? 14 : 16} />}
       {children}
     </Link>
+  );
+}
+
+/** The same pill as a `<button>`, for actions that stay on the page (start, finish, try again). */
+export function PillAction({
+  onClick,
+  variant = "primary",
+  size = "md",
+  icon,
+  disabled,
+  autoFocus,
+  className,
+  children,
+}: {
+  onClick: () => void;
+  variant?: Variant;
+  size?: Size;
+  icon?: IconName;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      autoFocus={autoFocus}
+      className={cx(
+        "inline-flex items-center justify-center rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+        SIZES[size],
+        FOCUS_RING,
+        VARIANTS[variant],
+        className,
+      )}
+    >
+      {icon && <Icon name={icon} size={size === "sm" ? 14 : 16} />}
+      {children}
+    </button>
   );
 }
 

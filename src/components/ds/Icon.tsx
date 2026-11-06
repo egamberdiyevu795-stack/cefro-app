@@ -97,6 +97,16 @@ const PATHS = {
     </>
   ),
   cross: <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />,
+  /** Practice: "Finish" (stop recording), and a microphone that is blocked or missing. */
+  stop: <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" />,
+  micOff: (
+    <>
+      <rect x="8.5" y="3" width="7" height="12" rx="3.5" fill="currentColor" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 4l16 16" stroke="var(--color-card)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;

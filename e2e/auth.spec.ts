@@ -10,12 +10,11 @@ const uniqueEmail = (label: string) => `${label}-${run}-${++counter}@example.com
 async function recordAndSubmit(page: Page, speakMs = 2500) {
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare")).toBeVisible();
-  await page.getByRole("button", { name: /start speaking/ }).click();
-  await expect(page.getByRole("button", { name: "Finish answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await page.waitForTimeout(speakMs);
-  await page.getByRole("button", { name: "Finish answer" }).click();
-  await expect(page.locator("audio")).toBeVisible();
-  await page.getByRole("button", { name: "Submit for feedback" }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await page.getByRole("button", { name: "Finish anyway" }).click(); // a test answer is far under a minute
   await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
 }
 

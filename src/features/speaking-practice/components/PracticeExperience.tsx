@@ -1,30 +1,36 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import type { FeatureFlags } from "@/config/features";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
+import { ScoringResult } from "@/features/result/sections";
 import { useAttemptPolling } from "../hooks/useAttemptPolling";
 import { useAudioLevel } from "../hooks/useAudioLevel";
-import { useAudioRecorder } from "../hooks/useAudioRecorder";
+import { useAudioRecorder, type Recording } from "../hooks/useAudioRecorder";
 import { useDeadline } from "../hooks/useDeadline";
-import { setAnalyticsSession, track } from "../lib/analytics";
+import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, fetchTaskAttempts, restartProcessing, startSession, submitRecording } from "../lib/api-client";
 import { shouldAutoRestart } from "../lib/failure-messages";
-import { initialPracticeState, practiceReducer } from "../lib/practice-machine";
-import { AttemptHistory } from "./AttemptHistory";
-import { BriefPanel } from "./BriefPanel";
+import { initialPracticeState, practiceReducer, type PracticeState } from "../lib/practice-machine";
+import { isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
 import { ComparisonView } from "./ComparisonView";
 import { FailurePanel } from "./FailurePanel";
 import { FeedbackReport, isEvaluated } from "./FeedbackReport";
-import { MicrophoneError } from "./MicrophoneError";
-import { PreparationPanel } from "./PreparationPanel";
-import { ProcessingPanel } from "./ProcessingPanel";
-import { RecordingPanel } from "./RecordingPanel";
-import { RetryBriefPanel } from "./RetryBriefPanel";
-import { ReviewPanel } from "./ReviewPanel";
-import { TaskHeader } from "./TaskHeader";
+import {
+  AttemptsCard,
+  BriefCard,
+  MicrophoneCard,
+  MicrophoneState,
+  NothingRecordedCard,
+  PracticeLayout,
+  PreparationCard,
+  RecordingCard,
+  TaskCard,
+} from "./screens";
 import { UploadFailedPanel } from "./UploadFailedPanel";
 
 function newClientAttemptId(): string {
@@ -38,24 +44,51 @@ function newClientAttemptId(): string {
 }
 
 /**
- * The B2 Part 2 practice loop: brief → prepare → record → submit →
- * processing → feedback → retry → comparison.
+ * The B2 Part 2 practice loop: brief → prepare → record → (Finish) submit → scoring → feedback → retry → comparison.
  *
- * This component wires state, side effects and analytics together; the
- * panels it renders are presentational.
+ * This component wires state, side effects and analytics together; the screens it renders are presentational
+ * (screens.tsx, on the design system).
+ *
+ * Mock mode (`mock`, from ?mock=1): the real recorder runs, but nothing is sent: no session, history or analytics,
+ * and Finish opens the result page's mock "Scoring…" (then the mock result) instead of uploading.
  */
-export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
-  const [state, dispatch] = useReducer(practiceReducer, initialPracticeState);
+export function PracticeExperience({
+  task,
+  flags,
+  mock = null,
+  initialRetryOf = null,
+  retryAttemptId = null,
+}: {
+  task: PublicSpeakingTask;
+  flags: FeatureFlags;
+  /** Mock mode; `retry` is the saved run a mock retry comes from. */
+  mock?: { retry: MockAttemptKey | null } | null;
+  /** Open as a retry of this attempt (mock mode builds it from a saved run). */
+  initialRetryOf?: AttemptView | null;
+  /** Open as a retry of this attempt, loaded from the API (?retry=<id>, from "Retry with this goal"). */
+  retryAttemptId?: string | null;
+}) {
+  const [state, dispatch] = useReducer(
+    practiceReducer,
+    initialRetryOf,
+    (retryOf): PracticeState => (retryOf ? practiceReducer(initialPracticeState, { type: "retryRequested", attempt: retryOf }) : initialPracticeState),
+  );
   const { phase } = state;
+  const router = useRouter();
+  const isMock = mock !== null;
+  // Mock mode sends nothing, analytics included.
+  const track: typeof trackEvent = useCallback((...args) => (isMock ? undefined : trackEvent(...args)), [isMock]);
   const recorder = useAudioRecorder();
   const level = useAudioLevel(recorder.stream, phase.kind === "recording");
 
   const [history, setHistory] = useState<AttemptSummary[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
+  // Mock mode loads no history.
+  const [historyLoading, setHistoryLoading] = useState(!mock);
   const [openingAttemptId, setOpeningAttemptId] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [isRestarting, setIsRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
+  const [earlyWarning, setEarlyWarning] = useState(false);
 
   const taskId = task.id;
   const retryOfId = state.retryOf?.id ?? null;
@@ -63,17 +96,19 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
   // ── History ──────────────────────────────────────────────────────
   // Refresh after an attempt settles. Failures are ignored: the flow works without history.
   const loadHistory = useCallback(async () => {
+    if (isMock) return;
     try {
       setHistory((await fetchTaskAttempts(taskId)).attempts);
     } catch {
       // Non-critical.
     }
-  }, [taskId]);
+  }, [taskId, isMock]);
 
   // One practice session per visit, issued by the server. If it cannot be created the practice flow
   // still works: the server then creates a session when the recording is submitted.
   const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
+    if (isMock) return;
     let cancelled = false;
     setAnalyticsSession(null);
     startSession()
@@ -88,10 +123,11 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
       sessionIdRef.current = null;
       setAnalyticsSession(null);
     };
-  }, [taskId]);
+  }, [taskId, isMock]);
 
   useEffect(() => {
     track("practice_opened", { taskId });
+    if (isMock) return;
     let cancelled = false;
     fetchTaskAttempts(taskId)
       .then(({ attempts }) => !cancelled && setHistory(attempts))
@@ -100,7 +136,21 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
     return () => {
       cancelled = true;
     };
-  }, [taskId]);
+  }, [taskId, isMock, track]);
+
+  // Opened from "Retry with this goal" (?retry=<id>): load that attempt, then show the brief with its goal.
+  useEffect(() => {
+    if (!retryAttemptId) return;
+    let cancelled = false;
+    fetchAttempt(retryAttemptId)
+      .then(({ attempt }) => {
+        if (!cancelled && attempt.evaluation) dispatch({ type: "retryRequested", attempt });
+      })
+      .catch(() => !cancelled && setPageError("We couldn't load the attempt to retry. You can still practise the task."));
+    return () => {
+      cancelled = true;
+    };
+  }, [retryAttemptId]);
 
   // ── Preparation & recording ──────────────────────────────────────
   const startPreparation = useCallback(async () => {
@@ -113,7 +163,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
     dispatch({ type: "preparationStarted", now: Date.now(), preparationMs: task.preparationSeconds * 1000 });
     if (retryOfId) track("retry_started", { taskId, attemptId: retryOfId });
     track("preparation_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
-  }, [recorder, task.preparationSeconds, taskId, retryOfId]);
+  }, [recorder, task.preparationSeconds, taskId, retryOfId, track]);
 
   const startRecording = useCallback(
     (preparationSkipped: boolean) => {
@@ -122,28 +172,48 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
       dispatch({ type: "recordingStarted", now: Date.now(), speakingMs: task.speakingSeconds * 1000 });
       track("recording_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
     },
-    [recorder, task.speakingSeconds, taskId, retryOfId],
+    [recorder, task.speakingSeconds, taskId, retryOfId, track],
   );
 
+  // Finish sends the answer straight away (no listen-back step): the next screen is "Scoring…".
+  const submitRef = useRef<(recording?: Recording) => Promise<void>>(async () => undefined);
   const finishingRef = useRef(false);
   const finishRecording = useCallback(
     async (reason: "student" | "time_limit") => {
       if (finishingRef.current) return;
       finishingRef.current = true;
+      setEarlyWarning(false);
       const recording = await recorder.stop();
       finishingRef.current = false;
       dispatch({ type: "recordingStopped" });
-      if (recording) {
-        track("recording_completed", {
-          taskId,
-          properties: { durationMs: Math.round(recording.durationMs), reason, mimeType: recording.mimeType },
-        });
+      if (!recording) return; // "Your recording didn't save"
+      track("recording_completed", {
+        taskId,
+        properties: { durationMs: Math.round(recording.durationMs), reason, mimeType: recording.mimeType },
+      });
+      if (mock) {
+        // Mock mode: nothing is uploaded. The microphone goes off and the mock "Scoring…" takes over.
+        recorder.discard();
+        recorder.releaseStream();
+        router.push(mockScoringHref(state.retryOf ? mock.retry : null));
+        return;
       }
+      void submitRef.current(recording);
     },
-    [recorder, taskId],
+    [recorder, taskId, track, mock, router, state.retryOf],
+  );
+
+  // "Finish" very early asks first; the recording keeps running while the warning is open.
+  const requestFinish = useCallback(
+    (remaining: number) => {
+      if (isEarlyFinish(task.speakingSeconds * 1000 - remaining, task.speakingSeconds)) setEarlyWarning(true);
+      else void finishRecording("student");
+    },
+    [finishRecording, task.speakingSeconds],
   );
 
   const reRecord = useCallback(async () => {
+    setEarlyWarning(false);
     track("recording_discarded", { taskId });
     recorder.discard();
     const ready = await recorder.requestMicrophone();
@@ -152,10 +222,11 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
       dispatch({ type: "recordingStarted", now: Date.now(), speakingMs: task.speakingSeconds * 1000 });
       track("recording_started", { taskId, properties: { isRetry: Boolean(retryOfId), reRecord: true } });
     }
-  }, [recorder, task.speakingSeconds, taskId, retryOfId]);
+  }, [recorder, task.speakingSeconds, taskId, retryOfId, track]);
 
   const deadline = phase.kind === "preparing" || phase.kind === "recording" ? phase.endsAt : null;
   const remainingMs = useDeadline(deadline, () => {
+    setEarlyWarning(false);
     if (phase.kind === "preparing") startRecording(false);
     else if (phase.kind === "recording") void finishRecording("time_limit");
   });
@@ -165,8 +236,9 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
   // can never create a second attempt or count against the limits twice.
   const uploadKeyRef = useRef<{ blob: Blob; id: string } | null>(null);
   const submittingRef = useRef(false);
-  const submit = useCallback(async () => {
-    const recording = recorder.recording;
+  const submit = useCallback(async (given?: Recording) => {
+    // Right after Finish the recorder's state has not re-rendered yet, so the recording is passed in.
+    const recording = given ?? recorder.recording;
     if (!recording || submittingRef.current) return;
     if (uploadKeyRef.current?.blob !== recording.blob) {
       uploadKeyRef.current = { blob: recording.blob, id: newClientAttemptId() };
@@ -192,7 +264,10 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
     } finally {
       submittingRef.current = false;
     }
-  }, [recorder, taskId, retryOfId]);
+  }, [recorder, taskId, retryOfId, track]);
+  useEffect(() => {
+    submitRef.current = submit;
+  }, [submit]);
 
   // An upload that failed because the device went offline is sent again as soon as it is back online.
   useEffect(() => {
@@ -254,7 +329,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
         },
       });
     }
-  }, [resultAttempt, taskId]);
+  }, [resultAttempt, taskId, track]);
 
   const openAttempt = useCallback(async (attemptId: string) => {
     setOpeningAttemptId(attemptId);
@@ -285,7 +360,7 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
         setPageError(error instanceof ApiError ? error.userMessage : "We couldn't load the previous attempt.");
       }
     },
-    [state.attempts, taskId],
+    [state.attempts, taskId, track],
   );
 
   const backToBrief = useCallback(() => {
@@ -307,64 +382,108 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
   }, [phase.kind]);
 
   // ── Render ───────────────────────────────────────────────────────
-  const micError = recorder.status === "error" && recorder.error;
-  const retryFocus = state.retryOf?.evaluation?.result.retry_focus ?? null;
+  const micError = recorder.status === "error" ? recorder.error : null;
+  const goal = retryGoalOf(state.retryOf);
+  const taskCard = (questionsFirst: boolean) => <TaskCard task={task} questionsFirst={questionsFirst} />;
+  const retryMicrophone = () => {
+    recorder.discard();
+    if (phase.kind === "brief" || phase.kind === "retryBrief") void startPreparation();
+    else backToBrief();
+  };
+
+  // A microphone problem after the brief replaces the step card (its "Try again" goes back to the brief).
+  if (micError && ["preparing", "recording", "review"].includes(phase.kind)) {
+    return (
+      <PracticeLayout task={taskCard(true)} step={<MicrophoneCard kind={micError} onRetry={retryMicrophone} />} />
+    );
+  }
+
+  const scoring = (status: AttemptView["status"] | null, notice: string | null = null) => (
+    <ScoringResult
+      flags={flags}
+      notice={notice}
+      state={{
+        kind: "scoring",
+        task,
+        step: scoringStep(status),
+        transcript: null,
+        durationMs: recorder.recording?.durationMs ?? (phase.kind === "processing" ? state.attempts[phase.attemptId]?.recordingDurationMs ?? 0 : 0),
+        goal: goal?.objective ?? null,
+      }}
+    />
+  );
 
   let content: React.ReactNode;
   switch (phase.kind) {
     case "brief":
+    case "retryBrief": {
+      const isRetry = phase.kind === "retryBrief" && state.retryOf !== null;
+      const microphone =
+        recorder.status === "requesting" ? (
+          <MicrophoneState kind="asking" onRetry={retryMicrophone} />
+        ) : micError ? (
+          <MicrophoneState kind={micError} onRetry={retryMicrophone} />
+        ) : undefined;
       content = (
-        <BriefPanel
-          task={task}
-          onStart={startPreparation}
-          isRequestingMicrophone={recorder.status === "requesting"}
-          history={
-            <AttemptHistory attempts={history} isLoading={historyLoading} onOpen={openAttempt} openingId={openingAttemptId} />
+        <PracticeLayout
+          task={taskCard(false)}
+          step={
+            <BriefCard
+              task={task}
+              goal={isRetry ? goal : null}
+              onStart={startPreparation}
+              onDropGoal={isRetry ? backToBrief : undefined}
+              microphone={microphone}
+            />
+          }
+          below={
+            !isRetry && !historyLoading && <AttemptsCard attempts={history} onOpen={openAttempt} openingId={openingAttemptId} />
           }
         />
       );
       break;
-    case "retryBrief":
-      content = state.retryOf && (
-        <RetryBriefPanel
-          task={task}
-          previous={state.retryOf}
-          onStart={startPreparation}
-          onCancel={backToBrief}
-          isRequestingMicrophone={recorder.status === "requesting"}
-        />
-      );
-      break;
+    }
     case "preparing":
       content = (
-        <PreparationPanel task={task} remainingMs={remainingMs} focus={retryFocus} onSkip={() => startRecording(true)} />
+        <PracticeLayout
+          task={taskCard(true)}
+          step={<PreparationCard task={task} remainingMs={remainingMs} goal={goal} onSkip={() => startRecording(true)} />}
+        />
       );
       break;
     case "recording":
       content = (
-        <RecordingPanel task={task} remainingMs={remainingMs} level={level} onFinish={() => void finishRecording("student")} />
+        <PracticeLayout
+          task={taskCard(true)}
+          step={
+            <RecordingCard
+              task={task}
+              remainingMs={remainingMs}
+              level={level}
+              goal={goal}
+              earlyWarning={earlyWarning}
+              onFinish={() => requestFinish(remainingMs)}
+              onKeepSpeaking={() => setEarlyWarning(false)}
+              onFinishAnyway={() => void finishRecording("student")}
+            />
+          }
+        />
       );
       break;
     case "review":
+      // Finish sends the answer at once; this shows only while it is being handed over, or when no audio came back.
       content = recorder.recording ? (
-        <ReviewPanel
-          recording={recorder.recording}
-          speakingSeconds={task.speakingSeconds}
-          onSubmit={submit}
-          onReRecord={reRecord}
-        />
+        scoring(null)
       ) : (
-        <Alert tone="danger" title="Your recording didn't save" actions={<Button onClick={reRecord}>Record again</Button>}>
-          The browser didn&apos;t return any audio. Please check your microphone and record again.
-        </Alert>
+        <PracticeLayout task={taskCard(true)} step={<NothingRecordedCard onRecordAgain={reRecord} />} />
       );
       break;
     case "uploading":
-      content = <ProcessingPanel status={null} isUploading isSlow={false} connectionError={null} />;
+      content = scoring(null);
       break;
     case "uploadFailed":
       content = (
-        <UploadFailedPanel message={phase.message} recording={recorder.recording} onRetry={submit} onReRecord={reRecord} />
+        <UploadFailedPanel message={phase.message} recording={recorder.recording} onRetry={() => void submit()} onReRecord={reRecord} />
       );
       break;
     case "processing":
@@ -388,12 +507,14 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
           </Alert>
         </div>
       ) : (
-        <ProcessingPanel
-          status={polling.attempt?.status ?? state.attempts[phase.attemptId]?.status ?? null}
-          isUploading={false}
-          isSlow={polling.isSlow}
-          connectionError={polling.connectionError}
-        />
+        scoring(
+          polling.attempt?.status ?? state.attempts[phase.attemptId]?.status ?? null,
+          polling.connectionError
+            ? "We're having trouble checking on your answer. We'll keep trying."
+            : polling.isSlow
+              ? "This is taking longer than usual. Your recording is saved."
+              : null,
+        )
       );
       break;
     case "result":
@@ -444,21 +565,8 @@ export function PracticeExperience({ task }: { task: PublicSpeakingTask }) {
     }
   }
 
-  const showMicError = micError && ["brief", "retryBrief", "preparing", "recording", "review"].includes(phase.kind);
-
   return (
-    <div className="space-y-6">
-      <TaskHeader task={task} />
-      {showMicError && (
-        <MicrophoneError
-          kind={micError}
-          onRetry={() => {
-            recorder.discard();
-            if (phase.kind === "brief" || phase.kind === "retryBrief") void startPreparation();
-            else backToBrief();
-          }}
-        />
-      )}
+    <div className="space-y-4">
       {pageError && <Alert tone="danger" title="Something went wrong">{pageError}</Alert>}
       {content}
     </div>

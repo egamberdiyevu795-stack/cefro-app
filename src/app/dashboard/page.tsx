@@ -43,7 +43,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
 
   return (
     <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
-      <div className="mx-auto flex max-w-[1280px] gap-6 px-4 pt-4 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
+      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
           <Wordmark className="hidden lg:flex lg:h-12" />
           <Sidebar items={navItemsFor(flags)} activeHref="/dashboard" last={<AccountMenu />} />

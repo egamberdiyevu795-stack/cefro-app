@@ -20,17 +20,22 @@ import type { FeatureFlag, FeatureFlags } from "@/config/features";
 export type DashboardState = "returning" | "first-visit";
 export const DASHBOARD_STATE: DashboardState = "returning";
 
-/** Navigation. Items with a `flag` are future features: shown as "Coming soon" when the flag is on, hidden when off. */
-export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag }> = [
+/**
+ * Navigation. Items with a `flag` are shown only when the flag is on: as "Coming soon" while the feature is not built,
+ * as a real link once it is (`built: true`, e.g. History).
+ */
+export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag; built?: boolean }> = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
   { href: "/", label: "Practice", icon: "mic" },
   { href: "/lessons", label: "Lessons", icon: "book", flag: "lessons" },
-  { href: "/history", label: "History", icon: "clock", flag: "history" },
+  { href: "/history", label: "History", icon: "clock", flag: "history", built: true },
   { href: "/settings", label: "Settings", icon: "settings", flag: "settings" },
 ];
 
 export function navItemsFor(flags: FeatureFlags): NavItem[] {
-  return NAV_ITEMS.flatMap(({ flag, ...item }) => (flag === undefined ? [item] : flags[flag] ? [{ ...item, soon: true }] : []));
+  return NAV_ITEMS.flatMap(({ flag, built, ...item }) =>
+    flag === undefined ? [item] : flags[flag] ? [built ? item : { ...item, soon: true }] : [],
+  );
 }
 
 /**
@@ -147,17 +152,6 @@ export const EXAM_PARTS_FIRST_VISIT: readonly ExamPart[] = EXAM_PARTS.map((p) =>
 
 /** Future actions in each attempt's row menu (flag `attemptMenu`). */
 export const ATTEMPT_MENU_ITEMS = ["Delete", "Report a wrong score"] as const;
-
-/**
- * Each attempt shows its CEFR level as the main value (never a band, never Passed/Failed).
- * `level: null` = still being scored ("Scoring…").
- */
-export const RECENT_ATTEMPTS: ReadonlyArray<{ task: string; part: string; level: string | null; time: string; date: string; tone: 1 | 2 | 3 | 4 }> = [
-  { task: "Advice from someone", part: "Part 2", level: "B1", time: "1 min 48 s", date: "04.11.26", tone: 1 },
-  { task: "Holidays: two pictures", part: "Part 1.2", level: null, time: "1 min 45 s", date: "03.11.26", tone: 3 },
-  { task: "Your hometown", part: "Part 1.1", level: "Above A2", time: "1 min 30 s", date: "01.11.26", tone: 2 },
-  { task: "Free time", part: "Part 1.2", level: "B1", time: "1 min 40 s", date: "29.10.26", tone: 4 },
-];
 
 export const BIGGEST_FIX = {
   feature: "Grammar",

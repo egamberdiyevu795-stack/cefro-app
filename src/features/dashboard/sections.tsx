@@ -7,17 +7,16 @@ import {
   DeltaLabel,
   GoalBar,
   Icon,
-  ListRow,
   PillButton,
   ProgressBar,
   RadarChart,
-  ScoringLabel,
   StatRow,
-  Thumb,
   cx,
   styles,
 } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
+import { AttemptRow } from "@/features/history/sections";
+import type { HistoryRow } from "@/features/history/view-model";
 import {
   ATTEMPT_MENU_ITEMS,
   BIGGEST_FIX,
@@ -27,7 +26,6 @@ import {
   PROGRESS,
   RADAR_AXES,
   RADAR_RINGS,
-  RECENT_ATTEMPTS,
   type ExamPart,
 } from "./mock-data";
 
@@ -202,9 +200,14 @@ export function ExamPartsCard({ parts, wide = false, className }: { parts: reado
   );
 }
 
-const ATTEMPT_COLUMNS = "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.6fr)_1fr_0.9fr_0.8fr]";
+/** How many attempts the dashboard lists; "See all" opens the History page with the rest. */
+export const RECENT_ATTEMPT_COUNT = 4;
 
-export function RecentAttemptsCard({ flags, className }: { flags: FeatureFlags; className?: string }) {
+/**
+ * The student's latest attempts, from the same data and rows as the History page (`rows` = its first rows; null when
+ * they could not be read). Each row opens its result; "See all" opens History (flag `history`).
+ */
+export function RecentAttemptsCard({ flags, rows, className }: { flags: FeatureFlags; rows: readonly HistoryRow[] | null; className?: string }) {
   return (
     <Card aria-labelledby="attempts-title" className={cx("flex flex-col", className)}>
       <CardHeader
@@ -212,49 +215,28 @@ export function RecentAttemptsCard({ flags, className }: { flags: FeatureFlags; 
         title="Recent attempts"
         action={
           flags.history ? (
-            <ComingSoonButton label="See all attempts" className={styles.SMALL_ACTION}>
+            <Link href="/history" aria-label="See all attempts" className={styles.SMALL_ACTION}>
               See all
-            </ComingSoonButton>
+            </Link>
           ) : undefined
         }
       />
-      <ul className="-my-1 flex flex-1 flex-col justify-around">
-        {RECENT_ATTEMPTS.map((a) => (
-          <ListRow
-            key={a.task + a.date}
-            thumb={
-              <Thumb tone={a.tone} size={30}>
-                <Icon name="mic" size={14} />
-              </Thumb>
-            }
-            title={a.task}
-            subtitle={
-              <>
-                {a.part}
-                <span className="sm:hidden"> · {a.date}</span>
-              </>
-            }
-            columns={ATTEMPT_COLUMNS}
-            menu={flags.attemptMenu ? <ComingSoonMenu label={`Options for ${a.task}`} items={ATTEMPT_MENU_ITEMS} /> : undefined}
-            cells={[
-              {
-                content: a.level === null ? <ScoringLabel /> : <span className="text-body font-semibold">{a.level}</span>,
-                className: "justify-self-end sm:justify-self-auto",
-              },
-              {
-                phone: false,
-                content: (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <Icon name="clock" size={14} className="text-fg-subtle" />
-                    {a.time}
-                  </span>
-                ),
-              },
-              { phone: false, content: a.date },
-            ]}
-          />
-        ))}
-      </ul>
+      {rows === null ? (
+        <p className="text-body text-fg-muted">We couldn&apos;t load your attempts right now.</p>
+      ) : rows.length === 0 ? (
+        <p className="text-body text-fg-muted">No attempts yet. Your answers will be listed here.</p>
+      ) : (
+        <ul className="-my-1 flex flex-1 flex-col justify-around">
+          {rows.slice(0, RECENT_ATTEMPT_COUNT).map((row, i) => (
+            <AttemptRow
+              key={row.id}
+              row={row}
+              tone={((i % 4) + 1) as 1 | 2 | 3 | 4}
+              menu={flags.attemptMenu ? <ComingSoonMenu label={`Options for ${row.title}, ${row.date}`} items={ATTEMPT_MENU_ITEMS} /> : undefined}
+            />
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }

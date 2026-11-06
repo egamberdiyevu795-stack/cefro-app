@@ -100,6 +100,28 @@ export async function listAttemptsForUserTask(userId: string, taskId: string): P
     .all();
 }
 
+/**
+ * Every attempt of one user, newest first, with its task snapshot's title, part and level and its recording length.
+ * Only rows whose `userId` is the caller's are ever read: this is the History page's owner check.
+ */
+export async function listAttemptsForUser(userId: string) {
+  const db = await getDb();
+  return db
+    .select({
+      attempt: speakingAttempts,
+      title: speakingTasks.title,
+      part: speakingTasks.part,
+      level: speakingTasks.level,
+      recordingDurationMs: recordings.durationMs,
+    })
+    .from(speakingAttempts)
+    .innerJoin(speakingTasks, and(eq(speakingTasks.id, speakingAttempts.taskId), eq(speakingTasks.version, speakingAttempts.taskVersion)))
+    .leftJoin(recordings, eq(recordings.attemptId, speakingAttempts.id))
+    .where(eq(speakingAttempts.userId, userId))
+    .orderBy(desc(speakingAttempts.createdAt), desc(speakingAttempts.id))
+    .all();
+}
+
 export async function findRecording(attemptId: string): Promise<RecordingRow | undefined> {
   const db = await getDb();
   return db.select().from(recordings).where(eq(recordings.attemptId, attemptId)).get();

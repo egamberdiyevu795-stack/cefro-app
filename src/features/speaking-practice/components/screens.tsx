@@ -242,7 +242,7 @@ export function RecordingCard({
         </h1>
         <LevelMeter level={level} />
       </div>
-      {/* Announced once when recording starts (with the beep), whether preparation ran out or was skipped. */}
+      {/* Announced once when recording starts (after the chime), whether preparation ran out or was skipped. */}
       <p role="status" className="sr-only">
         Recording started. Speak now.
       </p>

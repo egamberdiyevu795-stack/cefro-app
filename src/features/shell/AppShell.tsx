@@ -13,10 +13,13 @@ import { BackLink } from "@/features/result/sections";
 export function AppShell({
   flags,
   account,
+  activeHref = "/",
   children,
 }: {
   flags: FeatureFlags;
   account: "real" | "mock";
+  /** The nav item shown as the current page. */
+  activeHref?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -24,7 +27,7 @@ export function AppShell({
       <div className="mx-auto flex max-w-[1280px] px-4 pt-2 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:pt-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
           <Wordmark className="hidden lg:flex lg:h-12" />
-          <Sidebar items={navItemsFor(flags)} activeHref="/" last={<AccountMenu source={account} />} />
+          <Sidebar items={navItemsFor(flags)} activeHref={activeHref} last={<AccountMenu source={account} />} />
         </aside>
 
         <div className="min-w-0 flex-1">

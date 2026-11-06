@@ -1,6 +1,7 @@
 import "server-only";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
+import type { HistoryAttempt } from "@/domain/speaking/history";
 import { getSpeakingTask } from "@/content/speaking";
 import { trackServerEvent } from "@/server/analytics/track";
 import { HttpError } from "@/server/errors";
@@ -12,7 +13,7 @@ import { createPracticeSession, resolveOwnedSessionId } from "@/server/sessions/
 import { getAudioStorage } from "@/server/storage";
 import * as repo from "./attempt-repository";
 import { containerForMime, sniffAudioContainer } from "./audio-format";
-import { toAttemptSummary, toAttemptView } from "./attempt-views";
+import { toAttemptSummary, toAttemptView, toHistoryAttempt } from "./attempt-views";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -172,6 +173,16 @@ export async function listAttemptSummaries(userId: string, taskId: string): Prom
   const attempts = await repo.listAttemptsForUserTask(userId, taskId);
   const evaluationsByAttempt = await repo.findLatestEvaluationsFor(attempts.map((a) => a.id));
   return attempts.map((attempt) => toAttemptSummary(attempt, evaluationsByAttempt.get(attempt.id)));
+}
+
+/**
+ * The History page's list: every attempt the user owns, newest first. The same owner rule as the result page: only
+ * rows recorded under the caller's canonical user id are read, so no one else's attempt can ever appear.
+ */
+export async function listAttemptHistory(userId: string): Promise<HistoryAttempt[]> {
+  const rows = await repo.listAttemptsForUser(userId);
+  const evaluationsByAttempt = await repo.findLatestEvaluationsFor(rows.map((row) => row.attempt.id));
+  return rows.map((row) => toHistoryAttempt(row, evaluationsByAttempt.get(row.attempt.id)));
 }
 
 export async function getRecordingAudio(

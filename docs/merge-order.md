@@ -94,10 +94,15 @@ Also, once it is in:
 
 - **Where the dev page lives.** `docs/design-system.md` used to say to move it into `(site)`. That is no longer needed:
   the practice page itself left `(site)` in step 5, and a dev page needs no header. Keep it at `src/app/dev/part1-player/`.
-- **Two chimes.** Part 1 uses a placeholder `.wav` (`content/speaking/part1/chime.ts`); Part 2 plays a generated beep
-  (`features/speaking-practice/lib/chime.ts`). Both are original and both are kept out of the recording. Pick one sound
-  for both parts before Part 1 ships.
+- **One chime.** Part 2 now plays Part 1's placeholder `.wav` (`history-page` added the same file, byte-identical, at
+  the same path, so `part1-player` merges without a conflict on it). Once both are in, `lib/chime.ts` can import the
+  path from `content/speaking/part1/chime.ts` instead of repeating it.
 - It still uses the older `components/ui` styles; restyle it with the design system when Part 1 ships.
+
+## After step 6: `claude/history-page`
+
+Cut from `real-result-page` (step 6), so it comes after it, merge commit. Contains: the History page, real Recent
+attempts on the dashboard, Part 2 playing Part 1's chime file. No database migration.
 
 ## Corrections to earlier notes
 

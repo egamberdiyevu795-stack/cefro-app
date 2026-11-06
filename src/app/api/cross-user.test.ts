@@ -12,6 +12,7 @@ vi.mock("next/headers", async () => (await import("../../../test/next-headers-mo
 vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: (task: () => unknown) => void afterTasks.push(task),
+  connection: async () => undefined, // pages call it to opt out of prerendering; there is no request scope in tests
 }));
 
 import { eq } from "drizzle-orm";
@@ -32,6 +33,17 @@ import { POST as postAttempt } from "./speaking/attempts/route";
 import { GET as getTaskAttempts } from "./speaking/tasks/[taskId]/attempts/route";
 import { POST as postSession } from "./sessions/route";
 import { GET as getMe } from "./account/me/route";
+import HistoryPage from "../history/page";
+import type { HistoryView } from "@/features/history/view-model";
+
+/** The History page as this actor's browser gets it: the view it renders (the shell around it is not needed). */
+async function historyFor(actor: Actor, query: Record<string, string> = {}): Promise<HistoryView> {
+  actAs(actor);
+  const page = (await HistoryPage({ params: Promise.resolve({}), searchParams: Promise.resolve(query) } as never)) as React.ReactElement<{
+    children: React.ReactElement<{ view: HistoryView }>;
+  }>;
+  return page.props.children.props.view;
+}
 
 /**
  * Cross-user access through the real route handlers. "Actors" are browsers: each has its own cookie jar, either a
@@ -107,6 +119,35 @@ describe("the owner", () => {
     expect((await audio.arrayBuffer()).byteLength).toBeGreaterThan(0);
     const list = await json(await getTaskAttempts(get("/x"), ctxFor({ taskId: TASK_ID })));
     expect(list.attempts.map((a: { id: string }) => a.id)).toEqual([attemptOfA]);
+  });
+});
+
+describe("History page: only the owner's attempts (same owner check as the result page)", () => {
+  it("lists alice's attempt for alice, and nothing of hers for bob or a new browser", async () => {
+    expect((await historyFor(actors.alice)).rows.map((r) => r.id)).toEqual([attemptOfA]);
+    for (const other of [actors.bob, actors.anonymous]) {
+      const view = await historyFor(other);
+      expect(view.total).toBe(0); // the empty state
+      expect(JSON.stringify(view)).not.toContain(attemptOfA);
+    }
+  });
+
+  it("each browser sees only its own attempts, signed in or anonymous", async () => {
+    actAs(actors.bob);
+    const { body: ofBob } = await upload();
+    // An anonymous browser gets its identity on its first API call, then records its own answer.
+    jar.clear();
+    const { body: ofAnon } = await upload();
+    const anonymous: Actor = new Map(jar);
+
+    expect((await historyFor(actors.alice)).rows.map((r) => r.id)).toEqual([attemptOfA]);
+    expect((await historyFor(actors.bob)).rows.map((r) => r.id)).toEqual([ofBob.attempt.id]);
+    expect((await historyFor(anonymous)).rows.map((r) => r.id)).toEqual([ofAnon.attempt.id]);
+  });
+
+  it("an attempt id that is not yours, put in the query, changes nothing", async () => {
+    const view = await historyFor(actors.bob, { part: attemptOfA, show: attemptOfA });
+    expect(view.total).toBe(0);
   });
 });
 

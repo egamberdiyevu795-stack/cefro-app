@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { ComingSoonButton, ComingSoonToast, Icon, Sidebar, SearchSoon, TopBar, TopBarLink, cx, styles } from "@/components/ds";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { DASHBOARD_STATE, EXAM_PARTS, EXAM_PARTS_FIRST_VISIT, navItemsFor, type DashboardState } from "@/features/dashboard/mock-data";
@@ -10,14 +11,36 @@ import {
   FindYourLevelCard,
   PractiseNextCard,
   ProgressCard,
+  RECENT_ATTEMPT_COUNT,
   RecentAttemptsCard,
   Wordmark,
 } from "@/features/dashboard/sections";
+import { toHistoryRows, type HistoryRow } from "@/features/history/view-model";
+import { listAttemptHistory } from "@/server/attempts/attempt-service";
+import { findCurrentUserId } from "@/server/identity/current-user";
+import { logger } from "@/server/logging/logger";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
+/**
+ * The student's own latest attempts (the History page's rows), or null when they cannot be read: the rest of the
+ * dashboard is mocked, so a database problem only replaces this card's list with a line, never the whole page.
+ */
+async function recentAttempts(): Promise<HistoryRow[] | null> {
+  try {
+    const userId = await findCurrentUserId();
+    if (!userId) return [];
+    const attempts = await listAttemptHistory(userId);
+    return toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts);
+  } catch (error) {
+    logger.error("Could not read recent attempts for the dashboard", { error });
+    return null;
+  }
+}
+
 /*
- * Design prototype: every value on this page is mocked (features/dashboard/mock-data.ts).
+ * Design prototype: every value on this page is mocked (features/dashboard/mock-data.ts), except Recent attempts,
+ * which lists the student's real attempts (the same rows as /history) and links to History with "See all".
  *
  * Prototype switches (for screenshots and reviews):
  *   ?state=first-visit | returning   overrides DASHBOARD_STATE in mock-data.ts
@@ -40,6 +63,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const state: DashboardState = query.state === "first-visit" || query.state === "returning" ? query.state : DASHBOARD_STATE;
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
   const countdown = flags.examCountdown;
+  await connection();
+  const recent = state === "returning" ? await recentAttempts() : [];
 
   return (
     <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
@@ -94,7 +119,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                   radarClassName="order-5 lg:order-none"
                 />
                 <ExamPartsCard parts={EXAM_PARTS} className="order-7 lg:order-none lg:col-start-2 lg:row-start-2" />
-                <RecentAttemptsCard flags={flags} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
+                <RecentAttemptsCard flags={flags} rows={recent} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
                 <BiggestFixCard className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
             ) : (

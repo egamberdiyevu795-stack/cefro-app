@@ -421,7 +421,7 @@ export function compareWithPrevious(prev: MultilevelResult, current: MultilevelR
 }
 
 /** Two answers for the student: met, or not yet. "Partly" is still "Not yet", with a quieter note that it is close. */
-export const GOAL_LABEL: Record<NonNullable<RetryComparison["goal"]>, string> = { met: "Goal met", partly: "Not yet", not_met: "Not yet" };
+export const GOAL_LABEL: Record<NonNullable<RetryComparison["goal"]>, "Goal met" | "Not yet"> = { met: "Goal met", partly: "Not yet", not_met: "Not yet" };
 export const GOAL_NOTE: Partial<Record<NonNullable<RetryComparison["goal"]>, string>> = { partly: "partly there" };
 
 function firstSentence(text: string): string {

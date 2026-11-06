@@ -40,9 +40,10 @@ welcome card's "Start your first practice" (it goes to the recommended part, Par
 ## Feature flags
 
 Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
-notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons / History / Settings, the attempt
-row menu (Delete, Report a wrong score) and the exam date countdown. ("See all" on Recent attempts follows `history`,
-since it leads there.)
+notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons / Settings, the attempt
+row menu (Delete, Report a wrong score) and the exam date countdown. `history` is now a built feature behind its flag
+(on): the sidebar item and "See all" are real links to `/history`; with the flag off they are not rendered and
+`/history` is a 404.
 
 - **Flag on** (prototype default): the element is shown exactly as designed; tapping it shows a small "Coming soon".
 - **Flag off:** the element is not rendered. Neighbours fill the space (e.g. "Practise next" takes the full row when
@@ -258,10 +259,13 @@ itself (it used to come from the `(site)` layout), except in mock mode.
   in `lib/practice-flow.ts`) opens "Finish already?" in the card instead: black "Keep speaking" (focused), quiet
   "Finish anyway"; the recording keeps running. At 0:00 it finishes by itself, without the warning.
 - **Start of speaking:** when the minute of preparation runs out, recording starts by itself (it always did). It now
-  also plays one short beep (`lib/chime.ts`, Web Audio, no sound file; allowed because "Start preparation" was
-  clicked), shows "Speak now" beside "Recording" for 4 s and announces "Recording started. Speak now." to screen
-  readers. Same when the student skips with "Start speaking now". The beep plays first and recording starts when it
-  ends (0.4 s), so the beep is never recorded (as the Part 1 plan requires for its chime). Sound failures are ignored.
+  also plays the chime, shows "Speak now" beside "Recording" for 4 s and announces "Recording started. Speak now." to
+  screen readers. Same when the student skips with "Start speaking now". The chime is **Part 1's sound file**
+  (`public/audio/speaking/part1/placeholder/chime.wav`, byte-identical to the one on `part1-player`, an original
+  placeholder tone), so both parts sound the same; it replaced the generated beep. `lib/chime.ts` loads and decodes it
+  during the "Start preparation" click (which also unlocks audio), plays it with Web Audio, and resolves when it has
+  ended (0.4 s; a watchdog settles it 0.5 s later if the browser never reports the end): recording starts only then,
+  so the chime is never recorded. Sound failures (file missing, decode error, no Web Audio) are ignored.
 - **4. After Finish:** the answer is sent at once (there is no listen-back step any more), then the attempt's own
   result page opens (`/result/[attemptId]`, see "Result address" below): **"Scoring…"** (the same `ScoringResult`
   component, with the transcript as soon as it exists and a quiet line if checking is slow), then the **new result
@@ -332,6 +336,44 @@ on the brief link to it. The `/result` prototype (no id, query switches) is unch
   it is processed. A temporary failure is restarted by itself only if the attempt was still processing when the page
   opened: viewing an old failed attempt never re-runs scoring.
 - Retry and "Record again" go back to the practice page (`?retry=<id>` keeps the goal).
+
+## History (`/history`)
+
+Every attempt of the student, newest first, from the database. The sidebar's History item and the dashboard's "See
+all" lead here. Server-rendered: the filter and "Show more" are links (`?part=1.1|1.2|2|3`, `?show=40`), so it works
+without JavaScript and a filtered view has its own address.
+
+- **Rows:** task title, part, date (dd.mm.yy, Uzbekistan time), the **level** as the main value with "Band 2 · Higher
+  B1" under it (the level is the band's own label without Lower/Higher, so it never contradicts the band), a "Retry"
+  label on retries with "Goal met" (check) or "Not yet" (half circle) once scored, read exactly as the result page
+  reads it (`compareWithPrevious`). "Scoring…" while processing; "Not scored" for failed, stalled, too-short and
+  old-method attempts. The whole row opens `/result/[attemptId]`.
+- **Filter:** "All" plus only the parts the student has tried, in exam order. The active one is a white pill with a
+  check (not colour alone, `aria-current`). A part never tried, or a made-up value, shows All. The part of a task comes
+  from its snapshot (`domain/speaking/exam-part.ts`: part 1 with target A2 is 1.1, with B1 is 1.2).
+- **Band over time:** the selected part (under All, the latest attempt's part), oldest to newest, the last 20 scored
+  attempts, 0 to the part's top band, one accent line with dots, the target band as a dashed line named in a key under
+  the chart ("Target · Band 3"). Hidden below 3 scored attempts of that part (too-short answers are not points). Text
+  is HTML, never scaled SVG text; hovering a dot shows its date and band; a table of every point for screen readers.
+- **Long histories:** 20 rows, then a quiet "Show more" (+20) with "Showing 20 of 45".
+- **Empty state:** "No attempts yet", one line, the black "Start your first practice" (Part 2), the only black button
+  on the page.
+- **Desktop:** title and filter, then [Your attempts] | [Band over time] (the list takes the full width without the
+  chart). **Phone:** filter, chart, list.
+- **Owner only:** the caller is identified exactly as on the result page (`findCurrentUserId`) and only rows recorded
+  under that user id are read (`listAttemptsForUser`). A browser with no identity yet sees the empty state.
+- **Dashboard:** Recent attempts lists the same rows (the latest 4, real data, same row component; the flagged row menu
+  sits beside each row) and "See all" links here. The rest of the dashboard is still mocked. If the attempts cannot be
+  read, only that card says so.
+- **Checks:** `features/history/view-model.test.ts` (order, level and band, statuses, retries and goals, filter,
+  paging, chart threshold and target, markup: one black button only on the empty state, no text under 11 px);
+  `app/api/cross-user.test.ts` (the page as alice, bob, an anonymous browser: each sees only their own; fails if the
+  owner filter is removed); `e2e/history.spec.ts` (empty → record → retry → list, filter, row opens result, chart at 3,
+  dashboard and See all, another browser sees nothing, no horizontal scroll at 390 px).
+- Screenshots (1440 px and 390 px, seeded data; the Part 1.1 / 1.2 rows are relabelled Part 2 results, as Part 1 has
+  no evaluator yet): `docs/design-system/history-{full,filtered,empty,few}-{desktop,phone}.png`. Audited in the browser:
+  no horizontal scroll, smallest text 11 px, one black button on the empty state and none elsewhere.
+- Not updated: the dashboard screenshots still show the earlier mocked Recent attempts.
 
 ## Page failures
 

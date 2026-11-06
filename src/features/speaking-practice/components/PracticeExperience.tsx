@@ -148,7 +148,7 @@ export function PracticeExperience({
   // ── Preparation & recording ──────────────────────────────────────
   const startPreparation = useCallback(async () => {
     setPageError(null);
-    primeChime(); // inside the click, so the beep is allowed when preparation runs out a minute later
+    primeChime(); // inside the click, so the chime is allowed when preparation runs out a minute later
     const ready = await recorder.requestMicrophone();
     if (!ready) {
       track("microphone_permission_denied", { taskId });
@@ -159,7 +159,7 @@ export function PracticeExperience({
     track("preparation_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
   }, [recorder, task.preparationSeconds, taskId, retryOfId, track]);
 
-  // The start-of-speaking beep (whether preparation ran out or was skipped), then recording: the beep is not recorded.
+  // The start-of-speaking chime (whether preparation ran out or was skipped), then recording: the chime is not recorded.
   const startingRef = useRef(false);
   const startRecording = useCallback(
     async (preparationSkipped: boolean) => {

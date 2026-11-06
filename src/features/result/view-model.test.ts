@@ -82,7 +82,7 @@ describe("result page view model (saved live fixtures, no provider)", () => {
     const view = scored({ anchor: "A4-b2-all-three" });
     expect(view.skills.find((s) => s.feature === "pronunciation")).toMatchObject({ level: null, levelLabel: "Not assessed" });
     expect(view.provisional).toBe(true);
-    expect(view.target.text).toBe("1 band above your target, Band 3 · Lower B2");
+    expect(view.target.above).toEqual({ next: "Band 5 · Above B2" });
     expect(view.pronunciationNote).toBe("Pronunciation wasn't checked in this attempt.");
     const html = render(stateFor({ anchor: "A4-b2-all-three" }));
     expect(html).toContain("Pronunciation wasn&#x27;t checked in this attempt.");
@@ -106,6 +106,55 @@ describe("result page view model (saved live fixtures, no provider)", () => {
     expect(source.evaluation && "quality" in source.evaluation).toBe(false);
     const html = render(resultPageState(source));
     expect(html).not.toMatch(/quality|warning/i);
+  });
+});
+
+describe("quote labels come only from the evaluator's lists", () => {
+  it("biggest fix: an error keeps 'You said / Try instead'; a listed strength is 'Your best sentence / Next step'", () => {
+    expect(scored({ anchor: "A2-b1-all-three", run: "1" }).fix).toMatchObject({ quoteLabel: "You said", adviceLabel: "Try instead" });
+    const a4 = scored({ anchor: "A4-b2-all-three", run: "1" }).fix;
+    expect(a4).toMatchObject({ quoteLabel: "Your best sentence", adviceLabel: "Next step" });
+    expect(a4.quote).toBe(LIVE_36_FLASH_FIXTURES["A4-b2-all-three"].runs[0].evaluation.result.assessment.strengths.find((x) => x.feature === "grammar")!.quote);
+  });
+
+  it("biggest fix: not an error and no listed strength → their words as 'You said', never 'best'", () => {
+    // A2 run 3: grammar is the fix but its errors are typed vocabulary and it has no strengths.
+    expect(scored({ anchor: "A2-b1-all-three", run: "3" }).fix).toMatchObject({ quoteLabel: "You said", adviceLabel: "Next step" });
+  });
+
+  it("skills: every label matches a listed strength or error of that skill; unlisted quotes stay unlabelled", () => {
+    let labelled = 0;
+    for (const anchor of FIXTURE_ANCHORS) {
+      LIVE_36_FLASH_FIXTURES[anchor].runs.forEach((run, i) => {
+        const a = run.evaluation.result.assessment;
+        for (const skill of scored({ anchor, run: String(i + 1) }).skills) {
+          if (!skill.quoteLabel) continue;
+          labelled++;
+          const list = skill.quoteLabel === "What you did well" ? a.strengths.filter((x) => x.feature === skill.feature) : a.errors.filter((e) => e.type === skill.feature);
+          const q = skill.quote!.toLowerCase();
+          expect(list.some((x) => q.includes(x.quote.toLowerCase()) || x.quote.toLowerCase().includes(q)), `${anchor} ${i + 1} ${skill.feature}`).toBe(true);
+        }
+      });
+    }
+    expect(labelled).toBeGreaterThan(0);
+    // A2 run 1 fluency has neither a strength nor an error listed: no label.
+    expect(scored({ anchor: "A2-b1-all-three", run: "1" }).skills.find((x) => x.feature === "fluency")!.quoteLabel).toBeNull();
+    expect(scored({ anchor: "A2-b1-all-three", run: "1" }).skills.find((x) => x.feature === "vocabulary")).toMatchObject({ quoteLabel: "To improve", quote: "my speaking became better" });
+  });
+
+  it("answered questions show no note; partly / not counted do", () => {
+    const html = render(stateFor({ anchor: "A3-b2-q3-missing", run: "1" }));
+    const notes = LIVE_36_FLASH_FIXTURES["A3-b2-q3-missing"].runs[0].evaluation.result.assessment.questions;
+    expect(html).not.toContain(notes[0].note.replace(/'/g, "&#x27;"));
+    expect(html).toContain(notes[2].note.replace(/'/g, "&#x27;"));
+  });
+
+  it("above the target: lime 'Above your target' and the next band, no 'band above'", () => {
+    const html = render(stateFor({ anchor: "A4-b2-all-three" }));
+    expect(html).toContain("Above your target");
+    expect(html).toContain("Next: Band 5 · Above B2");
+    expect(html).not.toMatch(/band above/);
+    expect(scored({ anchor: "A5-above-b2" }).target.above).toEqual({ next: null });
   });
 });
 

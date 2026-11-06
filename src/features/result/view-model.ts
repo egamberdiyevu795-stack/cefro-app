@@ -97,7 +97,11 @@ export interface BiggestFixView {
   label: string;
   /** What the quote is: the student's words, or (when nothing was said) the question they missed. */
   quoteKind: "student" | "question";
+  /** "You said" (an error, or their words for a question), "Your best sentence" (a listed strength), "You didn't answer". */
+  quoteLabel: string;
   quote: string;
+  /** "Try instead" after an error or a missed question; "Next step" when the quote is not an error. */
+  adviceLabel: "Try instead" | "Next step";
   tryInstead: string;
   /** The retry goal (the evaluator's first retry focus). Omitted when it would repeat `tryInstead`. */
   goal: string | null;
@@ -112,6 +116,8 @@ export interface SkillRow {
   level: FeatureLevel | null;
   levelLabel: string;
   quote: string | null;
+  /** From the evaluator's lists: a strength ("What you did well") or an error ("To improve"); null when they don't say. */
+  quoteLabel: SkillQuoteLabel | null;
   note: string;
   /** Retries: the level last time, when it differs. */
   previousLevelLabel: string | null;
@@ -133,7 +139,8 @@ export interface ResultView {
   bandLabel: string;
   /** "Part 2 · Band 2 · Higher B1" */
   headline: string;
-  target: { band: number; label: string; distance: number; text: string };
+  /** `text` for below / at the target; above it, `above` instead (the lime label, and the next band if there is one). */
+  target: { band: number; label: string; distance: number; text: string; above: { next: string | null } | null };
   /** True when pronunciation was not assessed: the band may change once it is. */
   provisional: boolean;
   zeroReason: MultilevelResult["scoring"]["zero_reason"];
@@ -177,7 +184,13 @@ export function buildResultView(
     bandMax: s.band_max,
     bandLabel: s.label,
     headline: `Part ${result.part} · Band ${s.band} · ${s.label}`,
-    target: { band: s.target_band, label: targetLabel, distance, text: distanceText(distance, s.target_band, targetLabel) },
+    target: {
+      band: s.target_band,
+      label: targetLabel,
+      distance,
+      text: distanceText(distance, s.target_band, targetLabel),
+      above: distance < 0 ? { next: nextBand(s.band, s.band_max, ctx.bandLabels) } : null,
+    },
     provisional: s.provisional,
     zeroReason: s.zero_reason,
     questions: result.assessment.questions.map((q) => ({
@@ -201,7 +214,40 @@ function distanceText(distance: number, targetBand: number, targetLabel: string)
   const bands = (n: number) => `${n} ${n === 1 ? "band" : "bands"}`;
   if (distance > 0) return `${bands(distance)} to your target, ${target}`;
   if (distance === 0) return `Target reached: ${target}`;
-  return `${bands(-distance)} above your target, ${target}`;
+  return "Above your target";
+}
+
+function nextBand(band: number, bandMax: number, labels: readonly BandLabel[]): string | null {
+  if (band >= bandMax) return null;
+  const label = labels.find((b) => b.band === band + 1)?.label;
+  return `Band ${band + 1}${label ? ` · ${label}` : ""}`;
+}
+
+export type SkillQuoteLabel = "What you did well" | "To improve";
+
+const norm = (text: string) => text.toLowerCase().replace(/\s+/g, " ").trim();
+/** Both are exact substrings of the transcript, so one containing the other means they quote the same words. */
+const sameWords = (a: string, b: string) => norm(a).includes(norm(b)) || norm(b).includes(norm(a));
+
+/**
+ * A skill's quote and what it shows, only from the evaluator's own lists: `strengths` (B2-or-better language) and
+ * `errors` (grammar / vocabulary). The first evidence quote keeps its place when a list names it; otherwise the
+ * skill's listed strength, else its listed error. When no list says, the first quote is shown without a label.
+ */
+function skillQuote(result: MultilevelResult, feature: Feature): { quote: string | null; label: SkillQuoteLabel | null } {
+  const a = result.assessment;
+  const strengths = a.strengths.filter((s) => s.feature === feature);
+  const errors = a.errors.filter((e) => e.type === feature);
+  const first = a.features[feature].evidence[0];
+  if (first) {
+    const good = strengths.some((s) => sameWords(s.quote, first));
+    const bad = errors.some((e) => sameWords(e.quote, first));
+    if (good !== bad) return { quote: first, label: good ? "What you did well" : "To improve" };
+    if (good && bad) return { quote: first, label: null };
+  }
+  if (strengths[0]) return { quote: strengths[0].quote, label: "What you did well" };
+  if (errors[0]) return { quote: errors[0].quote, label: "To improve" };
+  return { quote: first ?? null, label: null };
 }
 
 function skillRow(result: MultilevelResult, feature: Feature, prev: MultilevelResult | null): SkillRow {
@@ -213,7 +259,10 @@ function skillRow(result: MultilevelResult, feature: Feature, prev: MultilevelRe
     name: FEATURE_LABELS[feature],
     level,
     levelLabel: level ? LEVEL_LABELS[level] : "Not assessed",
-    quote: f.evidence[0] ?? null,
+    ...(() => {
+      const { quote, label } = skillQuote(result, feature);
+      return { quote, quoteLabel: label };
+    })(),
     note: f.note,
     previousLevelLabel: prevLevel && level && prevLevel !== level ? LEVEL_LABELS[prevLevel] : null,
   };
@@ -248,9 +297,25 @@ function biggestFix(result: MultilevelResult, prompts: readonly string[], transc
     const error = a.errors.find((e) => e.type === fix.feature);
     if (error) {
       const pattern = error.pattern && a.error_patterns.find((p) => p.name === error.pattern);
-      return withGoal({ label: pattern ? `${label} · ${pattern.name}` : label, quoteKind: "student", quote: error.quote, tryInstead: error.correction });
+      return withGoal({
+        label: pattern ? `${label} · ${pattern.name}` : label,
+        quoteKind: "student",
+        quoteLabel: "You said",
+        quote: error.quote,
+        adviceLabel: "Try instead",
+        tryInstead: error.correction,
+      });
     }
-    return withGoal({ label, quoteKind: "student", quote: f.evidence[0] ?? firstSentence(transcript), tryInstead: f.how_to_improve || (focus?.objective ?? "") });
+    // Not an error: their listed strength for this skill is "Your best sentence"; without one, their own words, unlabelled as best.
+    const strength = a.strengths.find((x) => x.feature === fix.feature);
+    return withGoal({
+      label,
+      quoteKind: "student",
+      quoteLabel: strength ? "Your best sentence" : "You said",
+      quote: strength?.quote ?? f.evidence[0] ?? firstSentence(transcript),
+      adviceLabel: "Next step",
+      tryInstead: f.how_to_improve || (focus?.objective ?? ""),
+    });
   }
 
   if (fix.kind === "question_coverage") {
@@ -261,7 +326,9 @@ function biggestFix(result: MultilevelResult, prompts: readonly string[], transc
     return withGoal({
       label,
       quoteKind: said ? "student" : "question",
+      quoteLabel: said ? "You said" : "You didn't answer",
       quote: said || prompt,
+      adviceLabel: "Try instead",
       tryInstead: q?.model_answer || `Answer it directly, then give a reason or an example.`,
     });
   }
@@ -270,7 +337,9 @@ function biggestFix(result: MultilevelResult, prompts: readonly string[], transc
   return withGoal({
     label: "Own words · Answer the questions",
     quoteKind: "student",
+    quoteLabel: "You said",
     quote: firstSentence(transcript),
+    adviceLabel: "Try instead",
     tryInstead: example || "Start by answering question 1 directly, in your own words.",
   });
 }

@@ -71,7 +71,18 @@ function ResultCard({ view, className }: { view: ResultView; className?: string 
       </h1>
 
       <BandMeter band={view.band} bandMax={view.bandMax} target={view.target.band} className="mt-5" />
-      <p className="mt-3 text-body text-fg">{view.target.text}</p>
+      {view.target.above ? (
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-body text-fg">
+          <DeltaLabel>Above your target</DeltaLabel>
+          {view.target.above.next && (
+            <span>
+              <span aria-hidden="true" className="text-fg-muted">· </span>Next: {view.target.above.next}
+            </span>
+          )}
+        </p>
+      ) : (
+        <p className="mt-3 text-body text-fg">{view.target.text}</p>
+      )}
       {view.zeroReason && ZERO_TEXT[view.zeroReason] && <p className="mt-1 text-label text-fg-muted">{ZERO_TEXT[view.zeroReason]}</p>}
       {view.provisional && <p className="mt-1 text-label text-fg-muted">Pronunciation wasn&rsquo;t checked in this attempt.</p>}
       {retry?.goalText && (
@@ -125,7 +136,7 @@ function QuestionsCard({ view, className }: { view: ResultView; className?: stri
                 <span className="shrink-0 text-label font-medium text-fg">{q.verdictLabel}</span>
               </p>
               <p className="text-label text-fg-muted">{q.prompt}</p>
-              <p className="mt-1 text-body text-fg">{q.reason}</p>
+              {q.verdict !== "answered" && q.reason && <p className="mt-1 text-body text-fg">{q.reason}</p>}
             </div>
           </li>
         ))}
@@ -140,13 +151,13 @@ function BiggestFixCard({ view, task, flags, className }: { view: ResultView; ta
     <Card aria-labelledby="fix-title" className={className}>
       <CardHeader id="fix-title" title="Biggest fix" />
       <p className="text-caption text-fg-muted">{fix.label}</p>
-      <p className="mt-3 text-caption text-fg-muted">{fix.quoteKind === "student" ? "You said" : "You didn't answer"}</p>
+      <p className="mt-3 text-caption text-fg-muted">{fix.quoteLabel}</p>
       {fix.quoteKind === "student" ? (
         <blockquote className="mt-1 border-l-2 border-accent pl-3 text-body text-fg">“{fix.quote}”</blockquote>
       ) : (
         <p className="mt-1 text-body text-fg">{fix.quote}</p>
       )}
-      <p className="mt-4 text-caption text-fg-muted">Try instead</p>
+      <p className="mt-4 text-caption text-fg-muted">{fix.adviceLabel}</p>
       <p className="mt-1 text-lead font-medium text-fg">{fix.tryInstead}</p>
       {(fix.goal || fix.check) && (
         <div className="mt-5 rounded-tile bg-well p-3">
@@ -208,7 +219,12 @@ function SkillsCard({ view, className }: { view: ResultView; className?: string 
                   <p className="text-body text-fg-muted">{view.pronunciationNote ?? "Pronunciation wasn't checked in this attempt."}</p>
                 ) : (
                   <>
-                    {s.quote && <blockquote className="border-l-2 border-accent pl-3 text-body text-fg">“{s.quote}”</blockquote>}
+                    {s.quote && (
+                      <>
+                        {s.quoteLabel && <p className="mb-1 text-caption font-semibold text-fg">{s.quoteLabel}</p>}
+                        <blockquote className="border-l-2 border-accent pl-3 text-body text-fg">“{s.quote}”</blockquote>
+                      </>
+                    )}
                     {s.note && <p className={cx("text-body text-fg-muted", s.quote && "mt-2")}>{s.note}</p>}
                   </>
                 )}

@@ -15,3 +15,6 @@ export const TEXT_ACTION = `items-center gap-2 text-body font-medium text-fg hov
 
 /** Small muted text action (card header: "See all", "Last 30 days", "Edit"). */
 export const SMALL_ACTION = `inline-flex items-center gap-1 text-label text-fg-muted hover:text-fg ${FOCUS_RING}`;
+
+/** The quiet pill (PillButton `quiet`, size md), for a flagged "Coming soon" button that must look like one. */
+export const PILL_QUIET = `inline-flex h-9 items-center justify-center gap-2 rounded-full bg-well px-5 text-body font-medium text-fg transition-colors hover:bg-line ${FOCUS_RING}`;

@@ -88,6 +88,15 @@ const PATHS = {
   retry: (
     <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
   ),
+  play: <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor" />,
+  /** Status glyphs (result page questions): a full check, a half-filled circle, a cross. */
+  partly: (
+    <>
+      <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 4.5a7.5 7.5 0 0 1 0 15Z" fill="currentColor" />
+    </>
+  ),
+  cross: <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />,
 } as const;
 
 export type IconName = keyof typeof PATHS;

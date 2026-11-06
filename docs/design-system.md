@@ -191,3 +191,36 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `ComingSoonButton`, `ComingSoonMenu`, `ComingSoonToast` | Future controls behind a feature flag. The button takes the real control's classes (from `styles.ts`), so it looks identical; tapping it shows the toast. The menu is a ⋮ button with a small card menu whose items all say "Coming soon" (closes on Escape or outside tap). The toast is one small near-black pill ("Coming soon") near the bottom, a polite live region; mount it once per page. |
 | `styles.ts` | Shared class strings (focus ring, icon button, nav item, text actions), so server and client components render a control the same way. |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |
+
+## Result page (`/result`)
+
+Design prototype of the page a student sees after an answer. Mock data only, no model calls: every scored result is a
+saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-flash, **not** the production model).
+
+- **Real types, no UI change later.** The page renders only `ResultPageState`, built by
+  `src/features/result/view-model.ts` from a `ResultSource`: the attempt's status, failure, transcript and the
+  evaluator's own `SpeakingEvaluation` (`result: MultilevelResult`), plus the rubric's band table. Real attempts plug in
+  by building that `ResultSource` from the database instead of `features/result/mock-data.ts`.
+- **Quality report optional.** `evaluation.quality` is optional and never read; the page shows no warning for it.
+- **Phone, top to bottom:** Result ("Part 2 · Band 2 · Higher B1", a band meter with the target named, the distance
+  to the target, "Provisional" when pronunciation was not assessed) → Questions (one row each: Answered / Partly
+  answered / Not counted, with a check, half circle or cross glyph and the evaluator's one-line note) → Biggest fix
+  (the student's quote, "Try instead", the retry goal, the black "Retry with this goal", flagged "Lesson for this fix")
+  → Skills (each feature folded in a `<details>`: level, then quote and why; Pronunciation "Not assessed" when the audio
+  step didn't run) → Your answer (flagged "Play recording", transcript).
+- **Desktop:** [Result, Biggest fix, Your answer] | [Questions, Skills].
+- **Biggest fix** follows the scorer's `biggest_fix`: a feature → the first error of that type and its correction (or
+  their own words and the evaluator's instruction when there is no error); a question → what they said for it, or the
+  question itself when they said nothing, and the model answer; own words → how the answer began and a model answer.
+  The goal is the evaluator's first retry focus.
+- **States:** Scoring… (steps, no black button), Couldn't score (too short to rate = the scorer's `zero_reason:
+  too_short`; no speech = failure `transcription_empty`; black "Record again"), Retry ("Band 2 → 3", lime "+1 band",
+  "Goal met" read from the evaluator's retry review, else from the judgements: the last goal's skill went up a level or
+  its question is now answered; skill rows show "B1 → B2").
+- **Switches:** `?anchor=<fixture id>` (`&run=1..3`; default is the first run with the anchor's expected band, so
+  `A0-below-b1` shows run 3, band 0), `?state=scoring|too-short|no-speech|retry`, `?flags=off`.
+- **New flags:** `fixLesson`, `recordingPlayback`. **New icons:** `play`, `partly`, `cross`. **New style:** `PILL_QUIET`.
+- **Checks:** `src/features/result/view-model.test.ts` builds all 19 saved runs, renders every anchor and state with
+  flags on and off, and asserts one black button (none while scoring) and no text under 11 px. The screenshots were
+  audited in the browser: no horizontal scroll, smallest text 11 px, lowest text contrast 5.26:1.
+- Screenshots: `docs/design-system/result-{a2,a4,a0-below-b1,scoring,too-short,no-speech,retry}-{desktop,phone}.png`.

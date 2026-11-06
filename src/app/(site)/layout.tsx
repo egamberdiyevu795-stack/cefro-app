@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { AccountStatus } from "@/features/account/AccountStatus";
+import { AccountMenu } from "@/features/dashboard/AccountMenu";
 import { assertServerConfigured } from "@/server/config/boot-check";
 
 /**
@@ -22,7 +22,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <Link href="/" className="text-lg font-bold tracking-tight">
             CEFR<span className="text-brand">O</span>
           </Link>
-          <AccountStatus />
+          <div className="ml-auto">
+            <AccountMenu source="real" placement="header" />
+          </div>
         </div>
       </header>
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

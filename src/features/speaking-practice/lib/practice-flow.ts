@@ -12,6 +12,16 @@ export function isEarlyFinish(elapsedMs: number, speakingSeconds: number): boole
   return elapsedMs < Math.min(EARLY_FINISH_MS, (speakingSeconds * 1000) / 2);
 }
 
+/** An attempt that has a stored evaluation and transcript. */
+export type EvaluatedAttempt = AttemptView & {
+  evaluation: NonNullable<AttemptView["evaluation"]>;
+  transcript: NonNullable<AttemptView["transcript"]>;
+};
+
+export function isEvaluated(attempt: AttemptView): attempt is EvaluatedAttempt {
+  return attempt.status === "completed" && attempt.evaluation !== null && attempt.transcript !== null;
+}
+
 /** The retry goal shown on every screen: the evaluator's first retry focus, the one "Retry with this goal" carries. */
 export interface RetryGoal {
   objective: string;

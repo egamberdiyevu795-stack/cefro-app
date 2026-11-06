@@ -27,11 +27,14 @@ export interface ResultSource {
   recordingDurationMs: number;
   /** null until transcription has finished (and when it found no speech). */
   transcript: string | null;
-  evaluation: ResultEvaluation | null;
+  /** Only the evaluator's result is read (a stored attempt keeps `{ result, meta }`, a fixture the whole evaluation). */
+  evaluation: Pick<ResultEvaluation, "result"> | null;
   /** The previous attempt at the same task, for a retry. */
-  previous?: { evaluation: ResultEvaluation } | null;
+  previous?: { evaluation: Pick<ResultEvaluation, "result"> } | null;
   /** The part's band table (rubric config), for the target's label. */
   bandLabels: readonly BandLabel[];
+  /** True when the local development evaluator scored it: the page must say so. */
+  isDevelopmentProvider?: boolean;
 }
 
 export type ResultPageState =
@@ -83,6 +86,7 @@ export function resultPageState(source: ResultSource): ResultPageState {
       durationMs: source.recordingDurationMs,
       bandLabels: source.bandLabels,
       previous: source.previous?.evaluation.result ?? null,
+      isDevelopmentProvider: source.isDevelopmentProvider ?? false,
     }),
   };
 }
@@ -160,6 +164,8 @@ export interface ResultView {
   transcript: string;
   durationMs: number;
   retry: RetryComparison | null;
+  /** Scored by the local development evaluator, not a real assessment. */
+  developmentEvaluator: boolean;
 }
 
 const VERDICT: Record<QuestionStatus, { verdict: QuestionVerdict; label: string }> = {
@@ -179,7 +185,14 @@ const AUDIO_REASON: Record<NonNullable<MultilevelResult["audio"]["reason"]>, str
 
 export function buildResultView(
   result: MultilevelResult,
-  ctx: { task: Pick<PublicSpeakingTask, "title" | "prompts">; transcript: string; durationMs: number; bandLabels: readonly BandLabel[]; previous?: MultilevelResult | null },
+  ctx: {
+    task: Pick<PublicSpeakingTask, "title" | "prompts">;
+    transcript: string;
+    durationMs: number;
+    bandLabels: readonly BandLabel[];
+    previous?: MultilevelResult | null;
+    isDevelopmentProvider?: boolean;
+  },
 ): ResultView {
   const s = result.scoring;
   const targetLabel = ctx.bandLabels.find((b) => b.band === s.target_band)?.label ?? `Band ${s.target_band}`;
@@ -215,6 +228,7 @@ export function buildResultView(
     transcript: ctx.transcript,
     durationMs: ctx.durationMs,
     retry: prev ? compareWithPrevious(prev, result) : null,
+    developmentEvaluator: ctx.isDevelopmentProvider ?? false,
   };
 }
 

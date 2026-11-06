@@ -25,7 +25,10 @@ async function expectPlayableAudio(page: Page, minMs: number) {
   expect(await audio.evaluate((el: HTMLAudioElement) => el.error)).toBeNull();
 }
 
-test("full loop: prepare, record, feedback, retry with focus, honest comparison, history", async ({ page }) => {
+/** The new result page's headline, e.g. "Part 2 · Band 2 · Higher B1" (built from the stored attempt). */
+const resultHeading = (page: Page) => page.getByRole("heading", { name: /^Part 2 · Band [0-5] · (Above B2|Higher B2|Lower B2|Higher B1|Lower B1|Below B1)$/ });
+
+test("full loop on real attempts: record, upload, evaluate (mock providers), new result page, retry with goal, comparison, history", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(String(error)));
 
@@ -33,52 +36,74 @@ test("full loop: prepare, record, feedback, retry with focus, honest comparison,
   await page.getByText("Start practice").click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
 
-  // Attempt 1
+  // Attempt 1: record → upload → Scoring… → the new result page, from the stored attempt.
   await recordAndSubmit(page);
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText("Development evaluator").first()).toBeVisible();
-  await expect(page.getByText("Your focus for the next attempt")).toBeVisible();
-  await expect(page.getByText("Did you answer every point?")).toBeVisible();
-  // Part band only: "Part 2: N/5 · label", the B2 target, and never an overall exam level or a /10 score.
-  await expect(page.getByTestId("band-headline")).toHaveText(/^Part 2: [0-5]\/5 · (Above B2|Higher B2|Lower B2|Higher B1|Lower B1|Below B1)$/);
-  await expect(page.getByText(/^(Meets B2 target|Below B2 target \(need 3\+\))$/)).toBeVisible();
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId("development-evaluator")).toContainText("Development evaluator");
+  // The new page's cards, and nothing from the old report.
+  for (const title of ["Questions", "Biggest fix", "Skills", "Your answer"]) await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await expect(page.getByText("The biggest thing to fix")).toHaveCount(0);
   await expect(page.getByText(/estimated level|\/10\b|Scores by criterion/)).toHaveCount(0);
-  await expect(page.getByTestId("provisional-note")).toHaveText(/Provisional: pronunciation not assessed/);
-  await expect(page.getByTestId("feature-pronunciation").getByText("Not assessed", { exact: true })).toBeVisible();
-  for (const feature of ["grammar", "vocabulary", "fluency", "cohesion"]) {
-    await expect(page.getByTestId(`feature-${feature}`).getByText(/^(Above B2|B2|B1|Below B1)$/)).toBeVisible();
-  }
-  // One 1-based numbering: the checklist names the questions as the task does.
-  await expect(page.getByTestId("question-3")).toContainText("Question 3: Do you think young people should always follow advice from older people?");
-  await expectPlayableAudio(page, 2500);
+  await expect(page.getByText(/^Question [123]$/)).toHaveCount(3);
+  await expect(page.getByText("Pronunciation wasn’t checked in this attempt.")).toBeVisible();
+  await expectPlayableAudio(page, 2500); // the stored recording, from the API
+  await expect(page.getByRole("button", { name: "Retry with this goal" })).toHaveClass(/bg-primary/);
 
-  // The retry CTA comes before the secondary detail (questions, features, transcript).
-  const ctaBox = await page.getByRole("button", { name: "Retry this task" }).boundingBox();
-  const featuresBox = await page.getByText("Your language, feature by feature").boundingBox();
-  expect(ctaBox!.y).toBeLessThan(featuresBox!.y);
-
-  // Attempt 2 (retry)
-  await page.getByRole("button", { name: "Retry this task" }).click();
+  // Attempt 2: the retry carries the goal through every screen, and its result says whether it was met.
+  await page.getByRole("button", { name: "Retry with this goal" }).click();
   await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
   await recordAndSubmit(page, 3000);
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText("Your focus this time")).toBeVisible();
+  await expect(page.getByTestId("goal-card")).toBeVisible(); // on Scoring…
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/^Band [0-5] → [0-5]$/)).toBeVisible();
+  await expect(page.getByText(/^·?(Goal met|Not yet)/).first()).toBeVisible();
 
-  // Comparison — identical mock answers must not be shown as progress.
-  await page.getByRole("button", { name: "Compare with attempt 1" }).click();
+  // Comparison: identical mock answers must not be shown as progress.
+  await page.getByRole("button", { name: "Compare with your last attempt" }).click();
   await expect(page.getByRole("heading", { name: "Attempt 1 vs Attempt 2" })).toBeVisible();
   await expect(page.getByText(/About the same|Slightly/)).toBeVisible();
   await expect(page.getByText("clearly better")).toHaveCount(0);
-  await expect(page.getByText("Practise next")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Practise next" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to attempt 2 result" }).click();
+  await expect(resultHeading(page)).toBeVisible();
 
-  // Reload: attempts persist and can be reopened.
+  // Reload: attempts persist and can be reopened on the new result page.
   await page.goto(TASK_URL);
   await expect(page.getByRole("button", { name: /Attempt 2/ })).toBeVisible();
   await page.getByRole("button", { name: /Attempt 1/ }).click();
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible();
+  await expect(resultHeading(page)).toBeVisible();
 
   expect(errors).toEqual([]);
+});
+
+test("when the minute of preparation ends, recording starts by itself, with the beep and 'Speak now'", async ({ page }) => {
+  // Count the beeps (Web Audio oscillators started) without playing anything.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __beeps: number };
+    w.__beeps = 0;
+    const original = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (this: OscillatorNode, ...args: [number?]) {
+      w.__beeps++;
+      return original.apply(this, args);
+    };
+  });
+  await page.clock.install();
+  await page.goto(`${TASK_URL}?mock=1`);
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __beeps: number }).__beeps)).toBe(0);
+
+  await page.clock.fastForward(59_000);
+  await expect(page.getByRole("heading", { name: "Preparation" })).toBeVisible(); // not yet
+  await page.clock.fastForward(1_500);
+
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
+  await expect(page.getByTestId("speak-now")).toHaveText("Speak now");
+  await expect(page.getByRole("status").filter({ hasText: "Recording started. Speak now." })).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __beeps: number }).__beeps)).toBe(1);
+  await page.clock.fastForward(5_000);
+  await expect(page.getByTestId("speak-now")).toHaveCount(0);
 });
 
 /**
@@ -123,9 +148,9 @@ test("the task picture loads beside the questions on every screen (desktop): bri
   await page.waitForTimeout(1500);
   await page.getByRole("button", { name: "Finish", exact: true }).click();
   await page.getByRole("button", { name: "Finish anyway" }).click();
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
 
-  await page.getByRole("button", { name: "Retry this task" }).click();
+  await page.getByRole("button", { name: "Retry with this goal" }).click();
   await expect(page.getByTestId("goal-card")).toBeVisible();
   await expectPicture(page, "beside");
 });
@@ -227,7 +252,7 @@ test("upload failure keeps the recording and it can be resent", async ({ page })
   await expect(page.getByRole("link", { name: "Download a copy" })).toBeVisible();
   blockUpload = false;
   await page.getByRole("button", { name: "Try sending again" }).click();
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
 });
 
 test("a failed evaluation shows a friendly message and can be retried without re-recording", async ({ page }) => {
@@ -246,7 +271,7 @@ test("a failed evaluation shows a friendly message and can be retried without re
   await expect(page.getByText("We couldn't prepare your feedback")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/quality|rejected|Error/i)).toHaveCount(0); // no technical details
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
 });
 
 test("an attempt the server can no longer find stops polling and offers a new recording", async ({ page }) => {
@@ -299,7 +324,7 @@ test("security headers are sent and nothing the app needs is blocked by them", a
 
   // The recorder, blob: audio preview and polling all work under the policy.
   await recordAndSubmit(page);
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
   expect(violations).toEqual([]);
 });
 
@@ -323,7 +348,7 @@ test("the browser sends its session id with the recording and its analytics even
 
   await page.goto(TASK_URL);
   await recordAndSubmit(page);
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
   await page.waitForTimeout(2000); // let the analytics batch flush
 
   // React strict mode (dev only) mounts effects twice, so more than one request is possible; the first is discarded.
@@ -335,7 +360,7 @@ test("the browser sends its session id with the recording and its analytics even
   expect(sessionIds).toEqual(new Set([uploadSessionId])); // every client event carries the same server-issued session
 });
 
-test("a missed question gets a model answer, and mistakes are grouped by pattern", async ({ page }) => {
+test("a missed question: the new result page shows it as not answered, with the model answer as the biggest fix", async ({ page }) => {
   // Rewrite the (mock) result the way a real evaluation of an answer that skips question 3 would look.
   await page.route(/\/api\/speaking\/attempts\/[0-9a-f-]+$/, async (route) => {
     if (route.request().method() !== "GET") return route.continue();
@@ -343,37 +368,24 @@ test("a missed question gets a model answer, and mistakes are grouped by pattern
     const body = await response.json();
     const result = body.attempt?.evaluation?.result;
     if (result?.kind === "multilevel") {
-      const quote = body.attempt.transcript.text.split(/(?<=[.!?])\s+/)[0];
       result.assessment.questions[2] = {
         id: 3,
         status: "missing",
         evidence: "",
-        note: "You did not talk about schools.",
-        model_answer: "As for schools, I think they should limit phones in lessons, because students concentrate better.",
+        note: "You did not say whether young people should always follow advice.",
+        model_answer: "As for young people, I think they should listen to older people, but decide for themselves.",
       };
-      result.assessment.errors = [
-        { quote, correction: "Corrected one", type: "grammar", pattern: "Missing -s after he/she/it" },
-        { quote: "second slip", correction: "Corrected two", type: "grammar", pattern: "Missing -s after he/she/it" },
-        { quote: "one-off slip", correction: "Corrected three", type: "grammar", pattern: "" },
-      ];
-      result.assessment.error_patterns = [
-        { name: "Missing -s after he/she/it", type: "grammar", rule: "Add -s to the verb after he, she or it: 'it helps'.", how_to_fix: "Check every verb after 'it'." },
-      ];
       result.scoring.biggest_fix = { kind: "question_coverage", question_id: 3 };
     }
     return route.fulfill({ response, json: body });
   });
   await page.goto(TASK_URL);
   await recordAndSubmit(page, 1500);
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 60_000 });
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
 
-  await expect(page.getByRole("heading", { name: /^Answer question 3: / })).toBeVisible();
-  await expect(page.getByTestId("model-answer")).toContainText("As for schools, I think they should limit phones in lessons");
-  await expect(page.getByTestId("question-3")).toContainText("Example: “As for schools");
-  const pattern = page.getByTestId("feature-grammar").getByTestId("error-pattern");
-  await expect(pattern).toContainText("Missing -s after he/she/it");
-  await expect(pattern).toContainText("· 2 times");
-  await expect(pattern).toContainText("Fix: Check every verb after 'it'.");
-  await expect(page.getByTestId("feature-grammar")).toContainText("Other corrections");
-  await page.screenshot({ path: "test-results/model-answer-and-patterns.png", fullPage: true });
+  await expect(page.getByText("Question 3 · Not answered")).toBeVisible();
+  await expect(page.getByText("You didn't answer")).toBeVisible();
+  await expect(page.getByText("As for young people, I think they should listen to older people")).toBeVisible();
+  await expect(page.getByText("You did not say whether young people should always follow advice.")).toBeVisible();
+  await page.screenshot({ path: "test-results/missed-question-result.png", fullPage: true });
 });

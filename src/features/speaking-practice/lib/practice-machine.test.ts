@@ -46,4 +46,11 @@ describe("practiceReducer", () => {
     state = practiceReducer(state, { type: "backToBrief" });
     expect(state.retryOf).toBeNull();
   });
+
+  it("attemptCached keeps an attempt without changing the screen", () => {
+    const shown = practiceReducer(initialPracticeState, { type: "showAttempt", attempt: attempt("b", "completed") });
+    const state = practiceReducer(shown, { type: "attemptCached", attempt: attempt("a", "completed") });
+    expect(state.phase).toEqual({ kind: "result", attemptId: "b" });
+    expect(Object.keys(state.attempts).sort()).toEqual(["a", "b"]);
+  });
 });

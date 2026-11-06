@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { AccountStatus } from "@/features/account/AccountStatus";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { toPublicTask } from "@/domain/speaking/task";
@@ -9,6 +8,7 @@ import { mockAttemptKey, mockRetryAttempt } from "@/features/result/mock-data";
 import { AppShell } from "@/features/shell/AppShell";
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
 import { assertServerConfigured } from "@/server/config/boot-check";
+import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 
 export async function generateMetadata(props: PageProps<"/practice/speaking/[taskId]">): Promise<Metadata> {
   const { taskId } = await props.params;
@@ -48,10 +48,11 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
   const mockRetry = mock ? mockAttemptKey(retry, one(query.run)) : null;
 
   return (
-    // The Account menu is mocked: shown only in mock mode. The real flow keeps the real sign-in state and sign-out.
-    <AppShell flags={flags} account={mock} headerEnd={mock ? undefined : <AccountStatus />}>
+    // The real flow shows the signed-in student's account; mock mode the mocked one.
+    <AppShell flags={flags} account={mock ? "mock" : "real"}>
       <PracticeExperience
         task={task}
+        bandLabels={getSpeakingRubric(speakingTask).config.bands.map(({ band, label }) => ({ band, label }))}
         flags={flags}
         mock={mock ? { retry: mockRetry } : null}
         initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : null}

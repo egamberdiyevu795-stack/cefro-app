@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
 import type { FeatureFlags } from "@/config/features";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
-import { ScoringResult } from "@/features/result/sections";
+import { ComparisonResult, type ComparedAttempt } from "@/features/result/comparison";
+import { attemptAudioUrl, resultSourceFromAttempt } from "@/features/result/from-attempt";
+import { FailedResult, NotScoredResult, ScoredResult, ScoringResult } from "@/features/result/sections";
+import { resultPageState, type BandLabel } from "@/features/result/view-model";
+import { isMultilevel } from "@/domain/evaluation/stored";
 import { useAttemptPolling } from "../hooks/useAttemptPolling";
 import { useAudioLevel } from "../hooks/useAudioLevel";
 import { useAudioRecorder, type Recording } from "../hooks/useAudioRecorder";
@@ -16,22 +18,22 @@ import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, fetchTaskAttempts, restartProcessing, startSession, submitRecording } from "../lib/api-client";
 import { shouldAutoRestart } from "../lib/failure-messages";
 import { initialPracticeState, practiceReducer, type PracticeState } from "../lib/practice-machine";
-import { isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
-import { ComparisonView } from "./ComparisonView";
-import { FailurePanel } from "./FailurePanel";
-import { FeedbackReport, isEvaluated } from "./FeedbackReport";
+import { playChime, primeChime } from "../lib/chime";
+import { isEarlyFinish, isEvaluated, mockScoringHref, retryGoalOf, scoringStep, type EvaluatedAttempt, type MockAttemptKey } from "../lib/practice-flow";
 import {
   AttemptsCard,
   BriefCard,
+  InlineNotice,
   MicrophoneCard,
   MicrophoneState,
+  NoticeCard,
   NothingRecordedCard,
   PracticeLayout,
   PreparationCard,
   RecordingCard,
   TaskCard,
+  UploadFailedCard,
 } from "./screens";
-import { UploadFailedPanel } from "./UploadFailedPanel";
 
 function newClientAttemptId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
@@ -52,14 +54,30 @@ function newClientAttemptId(): string {
  * Mock mode (`mock`, from ?mock=1): the real recorder runs, but nothing is sent: no session, history or analytics,
  * and Finish opens the result page's mock "Scoring…" (then the mock result) instead of uploading.
  */
+/** The comparison's input: a stored, multilevel-scored attempt. */
+function compared(attempt: EvaluatedAttempt): ComparedAttempt | null {
+  const result = attempt.evaluation.result;
+  if (!isMultilevel(result)) return null;
+  return {
+    attemptNumber: attempt.attemptNumber,
+    result,
+    metrics: attempt.metrics,
+    methodology: `${attempt.evaluation.meta.evaluatorVersion}|${attempt.evaluation.meta.rubricVersion}`,
+    transcript: attempt.transcript.text,
+  };
+}
+
 export function PracticeExperience({
   task,
+  bandLabels,
   flags,
   mock = null,
   initialRetryOf = null,
   retryAttemptId = null,
 }: {
   task: PublicSpeakingTask;
+  /** The task's band table (rubric config), for the result page's target label. */
+  bandLabels: readonly BandLabel[];
   flags: FeatureFlags;
   /** Mock mode; `retry` is the saved run a mock retry comes from. */
   mock?: { retry: MockAttemptKey | null } | null;
@@ -155,6 +173,7 @@ export function PracticeExperience({
   // ── Preparation & recording ──────────────────────────────────────
   const startPreparation = useCallback(async () => {
     setPageError(null);
+    primeChime(); // inside the click, so the beep is allowed when preparation runs out a minute later
     const ready = await recorder.requestMicrophone();
     if (!ready) {
       track("microphone_permission_denied", { taskId });
@@ -169,6 +188,7 @@ export function PracticeExperience({
     (preparationSkipped: boolean) => {
       track("preparation_completed", { taskId, properties: { skipped: preparationSkipped } });
       if (!recorder.start()) return;
+      playChime(); // the start-of-speaking beep, whether preparation ran out or was skipped
       dispatch({ type: "recordingStarted", now: Date.now(), speakingMs: task.speakingSeconds * 1000 });
       track("recording_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
     },
@@ -219,6 +239,7 @@ export function PracticeExperience({
     const ready = await recorder.requestMicrophone();
     if (!ready) return;
     if (recorder.start()) {
+      playChime();
       dispatch({ type: "recordingStarted", now: Date.now(), speakingMs: task.speakingSeconds * 1000 });
       track("recording_started", { taskId, properties: { isRetry: Boolean(retryOfId), reRecord: true } });
     }
@@ -316,6 +337,26 @@ export function PracticeExperience({
   // ── Results, retry, comparison ───────────────────────────────────
   const resultAttempt = phase.kind === "result" ? state.attempts[phase.attemptId] : undefined;
 
+  // An attempt by id, wherever this session has it (the attempts it loaded, or the one being retried).
+  const known = useCallback(
+    (id: string | null): AttemptView | undefined => (id ? state.attempts[id] ?? (state.retryOf?.id === id ? state.retryOf : undefined) : undefined),
+    [state.attempts, state.retryOf],
+  );
+  const previousOfResult = known(resultAttempt?.previousAttemptId ?? null);
+
+  // A retry's result compares with the attempt it retried ("Band 2 → 3", "Goal met"): load it when it isn't here yet.
+  const missingPreviousId = resultAttempt?.previousAttemptId && !previousOfResult ? resultAttempt.previousAttemptId : null;
+  useEffect(() => {
+    if (!missingPreviousId) return;
+    let cancelled = false;
+    fetchAttempt(missingPreviousId)
+      .then(({ attempt }) => !cancelled && dispatch({ type: "attemptCached", attempt }))
+      .catch(() => undefined); // the result is still shown, without the comparison
+    return () => {
+      cancelled = true;
+    };
+  }, [missingPreviousId]);
+
   const viewedFeedbackRef = useRef(new Set<string>());
   useEffect(() => {
     if (resultAttempt && isEvaluated(resultAttempt) && !viewedFeedbackRef.current.has(resultAttempt.id)) {
@@ -349,7 +390,7 @@ export function PracticeExperience({
       if (!after.previousAttemptId) return;
       setPageError(null);
       try {
-        const before = state.attempts[after.previousAttemptId] ?? (await fetchAttempt(after.previousAttemptId)).attempt;
+        const before = known(after.previousAttemptId) ?? (await fetchAttempt(after.previousAttemptId)).attempt;
         dispatch({ type: "comparisonRequested", before, after });
         track("comparison_viewed", {
           taskId,
@@ -360,7 +401,7 @@ export function PracticeExperience({
         setPageError(error instanceof ApiError ? error.userMessage : "We couldn't load the previous attempt.");
       }
     },
-    [state.attempts, taskId, track],
+    [known, taskId, track],
   );
 
   const backToBrief = useCallback(() => {
@@ -398,7 +439,7 @@ export function PracticeExperience({
     );
   }
 
-  const scoring = (status: AttemptView["status"] | null, notice: string | null = null) => (
+  const scoring = (status: AttemptView["status"] | null, notice: string | null = null, transcript: string | null = null) => (
     <ScoringResult
       flags={flags}
       notice={notice}
@@ -406,12 +447,15 @@ export function PracticeExperience({
         kind: "scoring",
         task,
         step: scoringStep(status),
-        transcript: null,
+        transcript,
         durationMs: recorder.recording?.durationMs ?? (phase.kind === "processing" ? state.attempts[phase.attemptId]?.recordingDurationMs ?? 0 : 0),
         goal: goal?.objective ?? null,
       }}
     />
   );
+
+  // Record again from a result: a retry stays a retry (same goal), otherwise back to the brief.
+  const recordAgain = () => (state.retryOf ? dispatch({ type: "retryRequested", attempt: state.retryOf }) : backToBrief());
 
   let content: React.ReactNode;
   switch (phase.kind) {
@@ -483,29 +527,15 @@ export function PracticeExperience({
       break;
     case "uploadFailed":
       content = (
-        <UploadFailedPanel message={phase.message} recording={recorder.recording} onRetry={() => void submit()} onReRecord={reRecord} />
+        <UploadFailedCard message={phase.message} recording={recorder.recording} onRetry={() => void submit()} onReRecord={reRecord} />
       );
       break;
     case "processing":
       content = polling.lost ? (
-        <div className="mx-auto max-w-xl">
-          <Alert
-            tone="danger"
-            title="We couldn't find this answer"
-            actions={
-              <Button
-                onClick={() =>
-                  state.retryOf ? dispatch({ type: "retryRequested", attempt: state.retryOf }) : backToBrief()
-                }
-              >
-                Record a new answer
-              </Button>
-            }
-          >
-            Your recording was sent, but we can no longer find it on our side, so its feedback can&apos;t be shown.
-            This can happen if you signed in or out in another tab. Please record your answer again.
-          </Alert>
-        </div>
+        <NoticeCard title="We couldn't find this answer" action={{ label: "Record a new answer", onClick: recordAgain }}>
+          Your recording was sent, but we can no longer find it on our side, so its result can&apos;t be shown. This can happen if you
+          signed in or out in another tab. Please record your answer again.
+        </NoticeCard>
       ) : (
         scoring(
           polling.attempt?.status ?? state.attempts[phase.attemptId]?.status ?? null,
@@ -514,60 +544,81 @@ export function PracticeExperience({
             : polling.isSlow
               ? "This is taking longer than usual. Your recording is saved."
               : null,
+          polling.attempt?.transcript?.text ?? null,
         )
       );
       break;
     case "result":
-      if (!resultAttempt) {
-        content = null;
-      } else if (isEvaluated(resultAttempt)) {
-        content = (
-          <FeedbackReport
-            attempt={resultAttempt}
-            task={task}
-            onRetry={() => dispatch({ type: "retryRequested", attempt: resultAttempt })}
-            onCompare={resultAttempt.previousAttemptId ? () => void compare(resultAttempt) : null}
-            onBack={backToBrief}
-          />
-        );
-      } else {
-        content = (
-          <FailurePanel
-            attempt={resultAttempt}
-            isRestarting={isRestarting}
-            restartError={restartError}
-            onRestart={() => void restart(resultAttempt.id)}
-            // Keep the retry link (and its focus) when a retry attempt has to be re-recorded.
-            onReRecord={() =>
-              state.retryOf ? dispatch({ type: "retryRequested", attempt: state.retryOf }) : backToBrief()
-            }
-          />
-        );
-      }
+      content = resultAttempt ? renderResult(resultAttempt) : null;
       break;
     case "comparison": {
       const before = state.attempts[phase.beforeId];
       const after = state.attempts[phase.afterId];
       content =
-        before && after && isEvaluated(before) && isEvaluated(after) ? (
-          <ComparisonView
-            before={before}
-            after={after}
+        before && after && isEvaluated(before) && isEvaluated(after) && compared(before) && compared(after) ? (
+          <ComparisonResult
+            before={compared(before)!}
+            after={compared(after)!}
+            taskTitle={task.title}
             onRetry={() => dispatch({ type: "retryRequested", attempt: after })}
             onBack={() => dispatch({ type: "backToResult", attemptId: after.id })}
           />
         ) : (
-          <Alert tone="warning" title="These attempts can't be compared yet">
-            Both attempts need completed feedback before they can be compared.
-          </Alert>
+          <NoticeCard
+            title="These attempts can't be compared"
+            action={after ? { label: "Back to your result", icon: "retry", onClick: () => dispatch({ type: "backToResult", attemptId: after.id }) } : null}
+          >
+            Both attempts need a Part {task.part} band. One of them isn&apos;t scored yet, or was scored with an older method.
+          </NoticeCard>
         );
       break;
     }
   }
 
+  /** The new result page, built from the stored attempt (the same view model as the /result prototype). */
+  function renderResult(attempt: AttemptView): React.ReactNode {
+    const source = resultSourceFromAttempt(attempt, { task, bandLabels, previous: previousOfResult ?? null });
+    if (!source) {
+      return (
+        <NoticeCard title="This attempt was scored with an older method" action={{ label: "Practise this task", onClick: backToBrief }}>
+          It has no Part {task.part} band, so it can&apos;t be shown on the new result page. Record a new answer to get one.
+        </NoticeCard>
+      );
+    }
+    const view = resultPageState(source);
+    const audio = { src: attemptAudioUrl(attempt.id), durationMs: attempt.recordingDurationMs };
+    switch (view.kind) {
+      case "scored":
+        return (
+          <ScoredResult
+            view={view.view}
+            task={task}
+            flags={flags}
+            audio={audio}
+            retryHref={() => dispatch({ type: "retryRequested", attempt })}
+            onCompare={view.view.retry && previousOfResult ? () => void compare(attempt) : null}
+          />
+        );
+      case "not_scored":
+        return <NotScoredResult state={view} flags={flags} audio={audio} recordHref={recordAgain} />;
+      case "failed":
+        return (
+          <FailedResult
+            state={view}
+            recordHref={recordAgain}
+            onTryAgain={() => void restart(attempt.id)}
+            isRetrying={isRestarting}
+            retryError={restartError}
+          />
+        );
+      case "scoring":
+        return scoring(attempt.status, null, attempt.transcript?.text ?? null);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {pageError && <Alert tone="danger" title="Something went wrong">{pageError}</Alert>}
+      {pageError && <InlineNotice title="Something went wrong.">{pageError}</InlineNotice>}
       {content}
     </div>
   );

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Card, CardHeader, ComingSoonButton, DeltaLabel, Icon, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
+import { Card, CardHeader, ComingSoonButton, DeltaLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
+import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
 import { practiceHref as practiceLink } from "@/features/speaking-practice/lib/practice-flow";
 import { GOAL_LABEL, GOAL_NOTE, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
 
@@ -15,6 +16,43 @@ type Task = { id: string; title: string; part: number; prompts: readonly string[
 
 const practiceHref = (task: { id: string }) => practiceLink(task.id);
 
+/**
+ * Where an action goes: a link (the prototype, a page of its own) or a callback (the practice page, which keeps its
+ * state and shows the next step in place).
+ */
+export type ActionTarget = string | (() => void);
+
+export function Action({
+  target,
+  variant = "primary",
+  size = "md",
+  icon,
+  disabled,
+  className,
+  children,
+}: {
+  target: ActionTarget;
+  variant?: "primary" | "quiet" | "light";
+  size?: "lg" | "md" | "sm";
+  icon?: IconName;
+  disabled?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return typeof target === "string" ? (
+    <PillButton href={target} variant={variant} size={size} icon={icon} className={className}>
+      {children}
+    </PillButton>
+  ) : (
+    <PillAction onClick={target} variant={variant} size={size} icon={icon} disabled={disabled} className={className}>
+      {children}
+    </PillAction>
+  );
+}
+
+/** A stored recording the student can play back (real attempts only). */
+export type AnswerAudio = { src: string; durationMs: number | null };
+
 /* --------------------------------------------------------------------------------------------------- scored result */
 
 /**
@@ -22,13 +60,29 @@ const practiceHref = (task: { id: string }) => practiceLink(task.id);
  * Desktop: [result, biggest fix, your answer] | [questions, skills]. The columns are `display: contents` on phones so
  * the cards take their own `order`.
  */
-export function ScoredResult({ view, task, flags, retryHref }: { view: ResultView; task: Task; flags: FeatureFlags; retryHref?: string }) {
+export function ScoredResult({
+  view,
+  task,
+  flags,
+  retryHref,
+  onCompare,
+  audio,
+}: {
+  view: ResultView;
+  task: Task;
+  flags: FeatureFlags;
+  /** "Retry with this goal": a link (default: the practice page) or a callback. */
+  retryHref?: ActionTarget;
+  /** A retry: open the side-by-side comparison with the previous attempt. */
+  onCompare?: ActionTarget | null;
+  audio?: AnswerAudio | null;
+}) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.62fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-        <ResultCard view={view} className="order-1 lg:order-none" />
+        <ResultCard view={view} onCompare={onCompare ?? null} className="order-1 lg:order-none" />
         <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} flags={flags} className="order-3 lg:order-none" />
-        <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} className="order-5 lg:order-none" />
+        <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} audio={audio} className="order-5 lg:order-none" />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <QuestionsCard view={view} className="order-2 lg:order-none" />
@@ -44,7 +98,7 @@ const ZERO_TEXT: Partial<Record<NonNullable<ResultView["zeroReason"]>, string>> 
   no_question_on_topic: "Band 0 because no question was answered.",
 };
 
-function ResultCard({ view, className }: { view: ResultView; className?: string }) {
+function ResultCard({ view, onCompare, className }: { view: ResultView; onCompare: ActionTarget | null; className?: string }) {
   const retry = view.retry;
   const change = retry ? retry.band - retry.previousBand : 0;
   return (
@@ -90,6 +144,17 @@ function ResultCard({ view, className }: { view: ResultView; className?: string 
       {retry?.goalText && (
         <p className="mt-4 border-t border-line pt-3 text-label text-fg-muted">
           Your goal: <span className="text-fg">{retry.goalText}</span>
+        </p>
+      )}
+      {retry && onCompare && (
+        <Action target={onCompare} variant="quiet" size="sm" icon="layers" className="mt-3">
+          Compare with your last attempt
+        </Action>
+      )}
+      {view.developmentEvaluator && (
+        <p data-testid="development-evaluator" className="mt-4 rounded-tile bg-well p-3 text-label text-fg">
+          <span className="font-semibold">Development evaluator.</span> This result comes from the local test evaluator, not a real
+          assessment.
         </p>
       )}
     </Card>
@@ -148,7 +213,7 @@ function QuestionsCard({ view, className }: { view: ResultView; className?: stri
 }
 
 /** "Retry with this goal" opens the practice page as a retry of this attempt (`retryHref`), which carries the goal. */
-function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultView; retryHref: string; flags: FeatureFlags; className?: string }) {
+function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultView; retryHref: ActionTarget; flags: FeatureFlags; className?: string }) {
   const { fix } = view;
   return (
     <Card aria-labelledby="fix-title" className={className}>
@@ -174,9 +239,9 @@ function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultVie
         </div>
       )}
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <PillButton href={retryHref} icon="retry" className="w-full sm:w-auto">
+        <Action target={retryHref} icon="retry" className="w-full sm:w-auto">
           Retry with this goal
-        </PillButton>
+        </Action>
         {flags.fixLesson && (
           <ComingSoonButton label="Lesson for this fix" className={cx(styles.PILL_QUIET, "w-full sm:w-auto")}>
             <Icon name="book" size={16} />
@@ -245,6 +310,7 @@ function AnswerCard({
   durationMs,
   flags,
   empty,
+  audio,
   className,
 }: {
   transcript: string | null;
@@ -252,6 +318,8 @@ function AnswerCard({
   flags: FeatureFlags;
   /** Shown instead of the transcript when there is none. */
   empty?: string;
+  /** The stored recording: a real player. Without it, the flagged "Play recording" (prototype). */
+  audio?: AnswerAudio | null;
   className?: string;
 }) {
   return (
@@ -266,7 +334,11 @@ function AnswerCard({
           </span>
         }
       />
-      {flags.recordingPlayback && (
+      {audio ? (
+        <div className="mb-4">
+          <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />
+        </div>
+      ) : flags.recordingPlayback && (
         <ComingSoonButton label="Play recording" className={cx(styles.PILL_QUIET, "mb-4")}>
           <Icon name="play" size={16} />
           Play recording
@@ -346,10 +418,12 @@ export function NotScoredResult({
   state,
   flags,
   recordHref,
+  audio,
 }: {
   state: Extract<ResultPageState, { kind: "not_scored" }>;
   flags: FeatureFlags;
-  recordHref?: string;
+  recordHref?: ActionTarget;
+  audio?: AnswerAudio | null;
 }) {
   const tooShort = state.reason === "too_short";
   return (
@@ -374,24 +448,42 @@ export function NotScoredResult({
           ))}
         </ol>
         <div className="mt-6">
-          <PillButton href={recordHref ?? practiceHref(state.task)} icon="mic" className="w-full sm:w-auto">
+          <Action target={recordHref ?? practiceHref(state.task)} icon="mic" className="w-full sm:w-auto">
             Record again
-          </PillButton>
+          </Action>
         </div>
       </Card>
       <AnswerCard
         transcript={state.transcript}
         durationMs={state.durationMs}
         flags={flags}
+        audio={audio}
         empty={tooShort ? "No transcript." : "No speech was found in the recording."}
       />
     </div>
   );
 }
 
-/** Any other failure: the app's existing student-facing copy. */
-export function FailedResult({ state, recordHref }: { state: Extract<ResultPageState, { kind: "failed" }>; recordHref?: string }) {
+/**
+ * Any other failure: the app's existing student-facing copy. When processing can run again on the saved recording,
+ * "Try again" (`onTryAgain`) is the black button unless the copy says to record again; the other action is quiet.
+ */
+export function FailedResult({
+  state,
+  recordHref,
+  onTryAgain,
+  isRetrying = false,
+  retryError = null,
+}: {
+  state: Extract<ResultPageState, { kind: "failed" }>;
+  recordHref?: ActionTarget;
+  onTryAgain?: (() => void) | null;
+  isRetrying?: boolean;
+  retryError?: string | null;
+}) {
   const copy = describeFailure(state.failure);
+  const canTryAgain = Boolean(onTryAgain) && copy.canRetryProcessing;
+  const tryAgainFirst = canTryAgain && !copy.suggestReRecord;
   return (
     <div className="mx-auto max-w-2xl">
       <Card aria-labelledby="result-title">
@@ -400,11 +492,28 @@ export function FailedResult({ state, recordHref }: { state: Extract<ResultPageS
           {copy.title}
         </h1>
         <p className="mt-2 text-body text-fg">{copy.message}</p>
-        <div className="mt-6">
-          <PillButton href={recordHref ?? practiceHref(state.task)} icon="mic">
+        {retryError && (
+          <p role="alert" className="mt-3 rounded-tile bg-well p-3 text-body text-fg">
+            <span className="font-semibold">That didn&rsquo;t work.</span> {retryError}
+          </p>
+        )}
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          {canTryAgain && (
+            <PillAction
+              onClick={onTryAgain!}
+              variant={tryAgainFirst ? "primary" : "quiet"}
+              icon="retry"
+              disabled={isRetrying}
+              className="w-full sm:w-auto"
+            >
+              {isRetrying ? "Trying again…" : "Try again"}
+            </PillAction>
+          )}
+          <Action target={recordHref ?? practiceHref(state.task)} variant={tryAgainFirst ? "quiet" : "primary"} icon="mic" className="w-full sm:w-auto">
             Record again
-          </PillButton>
+          </Action>
         </div>
+        {canTryAgain && <p className="mt-3 text-label text-fg-muted">Your recording is saved, so &ldquo;Try again&rdquo; doesn&rsquo;t need a new answer.</p>}
       </Card>
     </div>
   );

@@ -4,9 +4,9 @@ Every new page (dashboard, feedback screen, lessons, tests) is built only from t
 Tokens live in one file: `src/app/design-system.css` (a Tailwind v4 `@theme`, so each token is also a utility class,
 e.g. `--color-card` → `bg-card`). Components live in `src/components/ds/`. The first page built on it is `/dashboard`.
 
-The older pages (home, login, register) still use the earlier tokens in `globals.css` until they are redone. The
-practice page's own steps (brief, preparation, recording, scoring) are on the design system; the screens after
-scoring on that page (feedback report, comparison, upload and processing errors) still use the earlier tokens.
+The older pages (home, login, register) still use the earlier tokens in `globals.css` until they are redone (their
+header already uses the design-system Account menu). The practice page is fully on the design system: every step, the
+result page for real attempts, the retry comparison and the error screens.
 
 ## Merge order (read before merging)
 
@@ -61,8 +61,9 @@ since it leads there.)
   "Start your first practice" button (goes to Part 2) and a small "When is your exam? · Add date" prompt*, then the four exam part tiles
   (four in a row on desktop). Part 2 is recommended: a small "Recommended" label and "Start with Part 2 · shows your
   level fastest"; all four tiles use the same white tile "Start" pill.
-- **Account** (with Log out) is always in the nav, whatever the flags. It opens a small menu: mocked name and email,
-  then Log out (the app's real sign-out endpoint, then the sign-in page).
+- **Account** (with Log out) is always in the nav, whatever the flags. It opens a small menu: name and email, then Log
+  out (the app's real sign-out endpoint, then the sign-in page). On the dashboard and result prototypes the account is
+  mocked; on real pages it is the signed-in student's (see "Account menu" below).
 - **Practise next** opens its task directly. The task is mocked, so it opens a mock route,
   `/dashboard/task/a-skill-you-learned`, which stands in for the real task screen.
 - Toggle: `DASHBOARD_STATE` in `src/features/dashboard/mock-data.ts`, or `/dashboard?state=first-visit`.
@@ -256,9 +257,14 @@ itself (it used to come from the `(site)` layout), except in mock mode.
   countdown and bar, "You've spoken for 0:23", the black **"Finish"**. Finishing under 1 minute (`EARLY_FINISH_MS`
   in `lib/practice-flow.ts`) opens "Finish already?" in the card instead: black "Keep speaking" (focused), quiet
   "Finish anyway"; the recording keeps running. At 0:00 it finishes by itself, without the warning.
+- **Start of speaking:** when the minute of preparation runs out, recording starts by itself (it always did). It now
+  also plays one short beep (`lib/chime.ts`, Web Audio, no sound file; allowed because "Start preparation" was
+  clicked), shows "Speak now" beside "Recording" for 4 s and announces "Recording started. Speak now." to screen
+  readers. Same when the student skips with "Start speaking now". Sound failures are ignored: the screen says it too.
 - **4. After Finish:** the answer is sent at once (there is no listen-back step any more) and the result page's
-  **"Scoring…"** state is shown (the same `ScoringResult` component, with a quiet line if checking is slow). Real
-  results then show the existing feedback report (not redone yet).
+  **"Scoring…"** state is shown (the same `ScoringResult` component, with the transcript as soon as it exists and a
+  quiet line if checking is slow). When the attempt settles, the **new result page** is shown in place, built from
+  the stored attempt (see "Real attempts" below). The old feedback report is gone.
 - **Retry:** opened from "Retry with this goal" (`?retry=<attempt id>`) or the old report's "Retry this task". A small
   well card **"Your goal: …"** (the evaluator's first retry focus) is on the brief (with "You'll know it worked: …"),
   preparation, recording and Scoring…. The answer is sent with the previous attempt's id, as before, so the evaluator's
@@ -280,3 +286,50 @@ itself (it used to come from the `(site)` layout), except in mock mode.
   (real flow, microphone states, early finish, mock loop). Screenshots audited in the browser at 1440 px and 390 px:
   no horizontal scroll, smallest text 11 px, one black button where expected.
 - Screenshots: `docs/design-system/practice-{brief,brief-retry,mic-asking,mic-denied,mic-none,preparation,preparation-retry,recording-retry,recording-early-warning,scoring-retry,result-goal-met,result-not-yet}-{desktop,phone}.png`.
+
+
+## Real attempts on the result page
+
+The practice page shows the result page's own components for a stored attempt, so a real attempt looks exactly like
+the prototype.
+
+- **How:** `features/result/from-attempt.ts` turns the attempt the API returns (`AttemptView`) into the view model's
+  `ResultSource` (status, failure, transcript, the stored `MultilevelResult`, the previous attempt for a retry, the
+  band table from the rubric, passed in by the page). `resultPageState` then picks the screen: Scoring…, the scored
+  result, "We couldn't score this answer" (too short / no speech) or the failure screen. A stalled attempt goes to the
+  failure screen. An attempt scored with the old method (no Part band) gets a short notice instead.
+- **Actions** take a link or a callback (`ActionTarget`): on the practice page "Retry with this goal", "Record again",
+  "Compare" and "Try again" act in place; on the prototype they are links.
+- **Real-only parts:** a real audio player for the stored recording (instead of the flagged "Play recording"); a
+  quiet "Development evaluator." note when the mock evaluator scored it; "Compare with your last attempt" (quiet, small)
+  on a retry whose previous attempt is loaded (it is fetched when missing).
+- **Retry comparison** (`features/result/comparison.tsx`): attempt N-1 vs N as two band tiles, the honest verdict
+  (from `domain/speaking/comparison.ts`: one band is "slight"), "+1 band" in lime only when the band went up, the goal
+  review ("Goal met" / "Not yet" / "Not yet · partly there" with the evaluator's evidence), "What changed" per skill in
+  words (lime "Up" only for an improvement), speaking time / words / hesitations, both transcripts folded. Black
+  "Retry with this goal" (the newer attempt's first focus), quiet "Back to attempt N result".
+- **Error screens:** upload failed (the recording stays in the tab: black "Try sending again", quiet "Download a copy"
+  and "Record again"; resent by itself when back online); scoring failed (`FailedResult`: black "Try again" when the
+  saved recording can be scored again, else black "Record again"; the other is quiet; "That didn't work" if the
+  retry fails); answer not found and "can't compare" (`NoticeCard`, one black action); a problem above a screen
+  (`InlineNotice`, no button).
+- **Server not configured** (`src/app/error.tsx`): in production the practice page and the `(site)` pages still
+  answer 500 when a provider or sign-in setting is missing (`/api/health` 503); the page now shows "CEFRO isn't
+  available right now" with a reference number, black "Try again" and quiet "Go to the dashboard", instead of Next's
+  default error page. It never says why (production hides error details). Mock mode needs no configuration.
+
+## Account menu (real pages)
+
+`AccountMenu source="real"` asks `/api/account/me` (now `{ state, email, name }`, still no ids) and asks again after
+every navigation. Signed in: name (the account's display name, else the part of the email before "@") and email, then
+Log out. Not signed in: "Practising without an account", "Your answers are kept in this browser.", then Sign in and
+Create account. Used in the practice page's rail / bottom bar and in the `(site)` header (`placement="header"`); the old
+text header control (`AccountStatus`) is removed. Prototypes use `source="mock"`.
+
+- **Checks:** `features/result/from-attempt.test.ts` (stored attempt → result page, retry "Goal met", development
+  evaluator note, real player, every status, old method; comparison and error screens: one black button, no text under
+  11 px). `e2e/practice-flow.spec.ts`: record → upload → evaluate (mock providers) → new result page → retry with goal →
+  comparison → reopen from history; auto-start after preparation with the beep and "Speak now" (Playwright clock);
+  upload failure, scoring failure, answer lost. `e2e/auth.spec.ts` uses the Account menu.
+- Screenshots (1440 px and 390 px): `docs/design-system/practice-{real-result,real-retry-result,comparison,upload-failed,scoring-failed,answer-lost,server-unavailable,recording-speak-now,account-anonymous,account-signed-in}-{desktop,phone}.png`.
+  Audited in the browser: no horizontal scroll, smallest text 11 px, one black button per screen.

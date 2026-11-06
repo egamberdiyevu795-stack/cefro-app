@@ -196,9 +196,9 @@ describe("signing out ends access", () => {
     expect((await getAttempt(get("/x"), ctxFor({ attemptId: attemptOfA }))).status).toBe(404);
   });
 
-  it("/api/account/me never returns ids", async () => {
+  it("/api/account/me never returns ids (only state, email and display name, for the Account menu)", async () => {
     actAs(actors.alice);
     const body = await json(await getMe());
-    expect(body).toEqual({ state: "authenticated", email: "alice@example.com" });
+    expect(body).toEqual({ state: "authenticated", email: "alice@example.com", name: "alice" });
   });
 });

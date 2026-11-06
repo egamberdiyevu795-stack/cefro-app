@@ -41,7 +41,7 @@ export default async function ResultPage(props: PageProps<"/result">) {
   const recordHref = practiceHref(task.id, { mock: true, ...(selection.from ? { retry: selection.from.anchor, run: selection.from.run } : {}) });
 
   return (
-    <AppShell flags={flags}>
+    <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
         <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} />
       ) : state.kind === "scoring" ? (

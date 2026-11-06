@@ -233,9 +233,18 @@ export function RecordingCard({
             <span className="relative size-2.5 rounded-full bg-fg" />
           </span>
           Recording
+          {elapsedMs < SPEAK_NOW_MS && (
+            <span data-testid="speak-now" className="rounded-full bg-well px-2 py-0.5 text-caption font-semibold text-fg">
+              Speak now
+            </span>
+          )}
         </h1>
         <LevelMeter level={level} />
       </div>
+      {/* Announced once when recording starts (with the beep), whether preparation ran out or was skipped. */}
+      <p role="status" className="sr-only">
+        Recording started. Speak now.
+      </p>
       <Countdown remainingMs={remainingMs} label="left" />
       <ProgressBar value={elapsedMs / totalMs} label="Speaking time used" className="mt-3" />
       <p className="mt-3 text-label text-fg-muted">
@@ -269,6 +278,9 @@ export function RecordingCard({
     </Card>
   );
 }
+
+/** How long "Speak now" stays beside "Recording" after it starts. */
+export const SPEAK_NOW_MS = 4000;
 
 /** Five bars that follow the microphone input, so the student sees it hears them. */
 function LevelMeter({ level }: { level: number }) {
@@ -449,5 +461,90 @@ export function AttemptsCard({
         ))}
       </ul>
     </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------------------------------------------- errors */
+
+/**
+ * The upload failed: the recording is still in this tab. Black "Try sending again"; quiet "Download a copy" and
+ * "Record again". (Sent again by itself when the device comes back online.)
+ */
+export function UploadFailedCard({
+  message,
+  recording,
+  onRetry,
+  onReRecord,
+}: {
+  message: string;
+  recording: { url: string; mimeType: string } | null;
+  onRetry: () => void;
+  onReRecord: () => void;
+}) {
+  const extension = recording?.mimeType.includes("mp4") ? "m4a" : recording?.mimeType.includes("ogg") ? "ogg" : "webm";
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Card aria-labelledby="step-title">
+        <h1 id="step-title" className="text-title font-medium tracking-[-0.01em] text-fg">
+          Your recording wasn&apos;t sent
+        </h1>
+        <p role="alert" className="mt-2 text-body text-fg">
+          {message}
+        </p>
+        <p className="mt-2 text-body text-fg-muted">
+          Your answer is still saved in this browser tab. Don&rsquo;t close it until it&rsquo;s sent; we&rsquo;ll also send it as soon as
+          you&rsquo;re back online.
+        </p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <PillAction size="lg" icon="retry" onClick={onRetry} disabled={!recording} className="w-full sm:w-auto">
+            Try sending again
+          </PillAction>
+          {recording && (
+            <a href={recording.url} download={`cefro-answer.${extension}`} className={cx(styles.PILL_QUIET, "h-11 w-full sm:w-auto")}>
+              Download a copy
+            </a>
+          )}
+          <PillAction size="lg" variant="quiet" icon="mic" onClick={onReRecord} className="w-full sm:w-auto">
+            Record again
+          </PillAction>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** A one-card message with at most one action (black when given): answer not found, can't compare, older result. */
+export function NoticeCard({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children?: React.ReactNode;
+  action?: { label: string; onClick: () => void; icon?: "mic" | "retry" } | null;
+}) {
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Card aria-labelledby="notice-title">
+        <h1 id="notice-title" className="text-title font-medium tracking-[-0.01em] text-fg">
+          {title}
+        </h1>
+        <div className="mt-2 text-body text-fg">{children}</div>
+        {action && (
+          <PillAction size="lg" icon={action.icon ?? "mic"} onClick={action.onClick} className="mt-6 w-full sm:w-auto">
+            {action.label}
+          </PillAction>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/** A problem above the current screen (e.g. an attempt that couldn't be opened). No button: the screen below still works. */
+export function InlineNotice({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <p role="alert" className="rounded-tile bg-card p-4 text-body text-fg shadow-card">
+      <span className="font-semibold">{title}</span> {children}
+    </p>
   );
 }

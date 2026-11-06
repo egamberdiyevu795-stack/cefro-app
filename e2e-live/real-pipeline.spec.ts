@@ -38,9 +38,9 @@ test("browser → real recording path → real transcription → real evaluation
   if (await finishAnyway.isVisible()) await finishAnyway.click();
 
   // Real transcription + real evaluation. Generous: observed ~15-45 s, regeneration possible.
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 4 * 60_000 });
+  await expect(page.getByRole("heading", { name: /^Part 2 · Band [0-5] · / })).toBeVisible({ timeout: 4 * 60_000 }); // the new result page
   const endToEndMs = Date.now() - startedAt;
-  await expect(page.getByText("Development evaluator")).toHaveCount(0); // not the mock
+  await expect(page.getByTestId("development-evaluator")).toHaveCount(0); // not the mock
 
   // Read the stored attempt back through the API, the way the page does.
   const list = await (await page.request.get("/api/speaking/tasks/b2-part2-advice-from-someone/attempts")).json();

@@ -10,12 +10,9 @@ result page for real attempts, the retry comparison and the error screens.
 
 ## Merge order (read before merging)
 
-- This branch (`claude/design-system-dashboard`) was cut from PR #5's branch (`claude/friendly-darwin-l73xx9`), because
-  `claude/advice-task-scoring` did not exist on GitHub. **Merge it only after PR #5.**
-- **`claude/part1-player` must be rebased after this branch merges.** It adds `src/app/dev/part1-player/`. Because
-  the old header moved out of the root layout into `src/app/(site)/layout.tsx`, that page would otherwise render
-  without the header: move it to `src/app/(site)/dev/part1-player/` while rebasing (its URL stays `/dev/part1-player`).
-  Any other branch that adds or edits files under `src/app/` needs the same check.
+See **[docs/merge-order.md](merge-order.md)**: the safe order for every open branch, what each contains, and the one
+rebase needed (`part1-player`). (An earlier note here called `claude/friendly-darwin-l73xx9` PR #5's branch: PR #5 is
+`claude/compassionate-johnson-odu08r`. And `part1-player`'s dev page no longer needs to move into `(site)`.)
 
 ### Files the route-group move touched
 
@@ -207,6 +204,9 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   evaluator's own `SpeakingEvaluation` (`result: MultilevelResult`), plus the rubric's band table. Real attempts plug in
   by building that `ResultSource` from the database instead of `features/result/mock-data.ts`.
 - **Quality report optional.** `evaluation.quality` is optional and never read; the page shows no warning for it.
+- **Patterns in this answer** (under Biggest fix): at most 3 of the evaluator's `error_patterns`, in its order, each
+  with how many listed errors belong to it ("once", "2 times") and the first one's quote. Hidden when there are none
+  (most saved runs; `?anchor=A0-below-b1` shows it). Screenshot: `docs/design-system/result-patterns-phone.png`.
 - **Phone, top to bottom:** Result ("Part 2 · Band 2 · Higher B1", a 0–5 band meter (band 0 exists) with the target named, the distance
   to the target, "Pronunciation wasn't checked in this attempt." when it was not assessed) → Questions (one row each: Answered / Partly
   answered / Not counted, with a check, half circle or cross glyph and the evaluator's one-line note) → Biggest fix
@@ -260,12 +260,13 @@ itself (it used to come from the `(site)` layout), except in mock mode.
 - **Start of speaking:** when the minute of preparation runs out, recording starts by itself (it always did). It now
   also plays one short beep (`lib/chime.ts`, Web Audio, no sound file; allowed because "Start preparation" was
   clicked), shows "Speak now" beside "Recording" for 4 s and announces "Recording started. Speak now." to screen
-  readers. Same when the student skips with "Start speaking now". Sound failures are ignored: the screen says it too.
-- **4. After Finish:** the answer is sent at once (there is no listen-back step any more) and the result page's
-  **"Scoring…"** state is shown (the same `ScoringResult` component, with the transcript as soon as it exists and a
-  quiet line if checking is slow). When the attempt settles, the **new result page** is shown in place, built from
-  the stored attempt (see "Real attempts" below). The old feedback report is gone.
-- **Retry:** opened from "Retry with this goal" (`?retry=<attempt id>`) or the old report's "Retry this task". A small
+  readers. Same when the student skips with "Start speaking now". The beep plays first and recording starts when it
+  ends (0.4 s), so the beep is never recorded (as the Part 1 plan requires for its chime). Sound failures are ignored.
+- **4. After Finish:** the answer is sent at once (there is no listen-back step any more), then the attempt's own
+  result page opens (`/result/[attemptId]`, see "Result address" below): **"Scoring…"** (the same `ScoringResult`
+  component, with the transcript as soon as it exists and a quiet line if checking is slow), then the **new result
+  page**, built from the stored attempt (see "Real attempts" below). The old feedback report is gone.
+- **Retry:** opened from "Retry with this goal" (`?retry=<attempt id>`). A small
   well card **"Your goal: …"** (the evaluator's first retry focus) is on the brief (with "You'll know it worked: …"),
   preparation, recording and Scoring…. The answer is sent with the previous attempt's id, as before, so the evaluator's
   retry review judges it.
@@ -298,8 +299,8 @@ the prototype.
   band table from the rubric, passed in by the page). `resultPageState` then picks the screen: Scoring…, the scored
   result, "We couldn't score this answer" (too short / no speech) or the failure screen. A stalled attempt goes to the
   failure screen. An attempt scored with the old method (no Part band) gets a short notice instead.
-- **Actions** take a link or a callback (`ActionTarget`): on the practice page "Retry with this goal", "Record again",
-  "Compare" and "Try again" act in place; on the prototype they are links.
+- **Actions** take a link or a callback (`ActionTarget`): on `/result/[attemptId]` "Compare" and "Try again" act on the
+  page, "Retry with this goal" and "Record again" open the practice page; on the prototype they are all links.
 - **Real-only parts:** a real audio player for the stored recording (instead of the flagged "Play recording"); a
   quiet "Development evaluator." note when the mock evaluator scored it; "Compare with your last attempt" (quiet, small)
   on a retry whose previous attempt is loaded (it is fetched when missing).
@@ -317,6 +318,37 @@ the prototype.
   answer 500 when a provider or sign-in setting is missing (`/api/health` 503); the page now shows "CEFRO isn't
   available right now" with a reference number, black "Try again" and quiet "Go to the dashboard", instead of Next's
   default error page. It never says why (production hides error details). Mock mode needs no configuration.
+
+## Result address (`/result/[attemptId]`)
+
+Each attempt's result has its own page, so a reload or a link reopens it. After Finish the practice page uploads, then
+opens it: Scoring… (polled), the result, the retry comparison, and the failure screens all live there; "Your attempts"
+on the brief link to it. The `/result` prototype (no id, query switches) is unchanged.
+
+- **Owner only.** The page uses the API's own check (`getAttemptViewForUser`) with `findCurrentUserId` (a read-only
+  owner lookup for pages: a page cannot set cookies). Another account or browser, a missing id and a malformed id all
+  get the same **not-found screen** (`app/not-found.tsx`, status 404), so an id reveals nothing.
+- On opening, the page reads the attempt once through the API (the server's copy can be a moment old) and polls while
+  it is processed. A temporary failure is restarted by itself only if the attempt was still processing when the page
+  opened: viewing an old failed attempt never re-runs scoring.
+- Retry and "Record again" go back to the practice page (`?retry=<id>` keeps the goal).
+
+## Page failures
+
+Every page failure shows the design-system screen, never Next's plain error page: `app/error.tsx` (inside the root
+layout) and `app/global-error.tsx` (the root layout itself) share `features/shell/ErrorScreen.tsx`. Status codes are
+unchanged. Checked on production builds:
+
+| Case | Pages | Status | Screen |
+| --- | --- | --- | --- |
+| Server not configured | home, login, register, practice, `/result/[id]` | 500 (`/api/health` 503) | "CEFRO isn't available right now" |
+| Database unreadable (corrupt file) | `/result/[id]` | 500 (`/api/health` 503) | same |
+| Unknown page, unknown task, someone else's result | — | 404 | "We can't find this page" |
+
+Pages that read nothing from the database on the server (home, login, practice) still open with a broken database;
+their API calls fail into the in-page screens (upload failed, scoring failed). Mock mode and the prototypes need no
+configuration. Without JavaScript a failed page is blank (Next sends an empty error shell and draws the screen in the
+browser); it never shows the raw "Internal Server Error". Screenshot: `docs/design-system/not-found-phone.png`.
 
 ## Account menu (real pages)
 

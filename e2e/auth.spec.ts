@@ -218,6 +218,8 @@ for (const mode of ["login", "register"] as const) {
     await page.goto(`/${mode}`, { waitUntil: "commit" });
 
     // Before the scripts run: the fields can be filled, but the form can't be sent (no plain GET with the password).
+    // And if it ever were, it is a POST: the email and password would travel in the body, not the address.
+    await expect(page.locator("form")).toHaveAttribute("method", "post");
     const button = page.getByRole("button", { name: submit });
     await expect(button).toBeDisabled();
     expect(slow.held()).toBeGreaterThan(0);

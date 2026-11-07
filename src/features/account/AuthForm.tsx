@@ -13,6 +13,10 @@ import { Alert } from "@/components/ui/Alert";
  * submitted the form the browser's way: a GET to the same page with the email and password in the address (and so in
  * the browser history and server logs), the page reloaded and nothing was signed in. With the only submit button
  * disabled, Enter submits nothing either. The fields stay usable: they are read when the form is sent.
+ *
+ * Second layer: `method="post"`. Should the form ever be submitted without the app (scripts blocked or failed), the
+ * browser sends the email and password in the request body, never in the address. The app always handles the submit
+ * itself (`preventDefault`), so the method changes nothing when it runs.
  */
 export function AuthForm({ mode, next }: { mode: "login" | "register"; next: string }) {
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +52,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "register"; next: str
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
+    <form method="post" onSubmit={submit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
         <label htmlFor="email" className="text-sm font-medium text-ink">
           Email

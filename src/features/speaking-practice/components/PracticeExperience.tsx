@@ -16,7 +16,7 @@ import { ApiError, fetchAttempt, fetchTaskAttempts, startSession, submitRecordin
 import { initialPracticeState, practiceReducer, type PracticeState } from "../lib/practice-machine";
 import { playChime, primeChime } from "../lib/chime";
 import { initialRetryGoalLoad, pendingRequest, RETRY_GOAL_TIMEOUT_MS, retryGoalLoadReducer } from "../lib/retry-goal-load";
-import { isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
+import { demoScoringHref, isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
 import {
   AttemptsCard,
   BriefCard,
@@ -62,8 +62,8 @@ export function PracticeExperience({
 }: {
   task: PublicSpeakingTask;
   flags: FeatureFlags;
-  /** Mock mode; `retry` is the saved run a mock retry comes from. */
-  mock?: { retry: MockAttemptKey | null } | null;
+  /** Mock mode; `retry` is the saved run a mock retry comes from, `demoRetry` the demo result (features/demo). */
+  mock?: { retry: MockAttemptKey | null; demoRetry?: string | null } | null;
   /** Open as a retry of this attempt (mock mode builds it from a saved run). */
   initialRetryOf?: AttemptView | null;
   /** Open as a retry of this attempt, loaded from the API (?retry=<id>, from "Retry with this goal"). */
@@ -215,7 +215,12 @@ export function PracticeExperience({
         // Mock mode: nothing is uploaded. The microphone goes off and the mock "Scoring…" takes over.
         recorder.discard();
         recorder.releaseStream();
-        router.push(mockScoringHref(state.retryOf ? mock.retry : null));
+        // A retry of a saved run (the /result prototype) gets the saved runs' retry result; everything else this task's
+        // own demo result (a retry of a demo result is judged against its goal).
+        const retryOf = state.retryOf;
+        router.push(
+          retryOf && mock.retry ? mockScoringHref(mock.retry) : demoScoringHref(taskId, retryOf && mock.demoRetry ? mock.demoRetry : null),
+        );
         return;
       }
       void submitRef.current(recording);

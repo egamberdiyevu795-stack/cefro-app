@@ -105,9 +105,11 @@ fail with HTTP 500, except in mock mode (`?mock=1`, below). It fails in either d
 
 **Mock mode: the whole app on a Preview with no variables (`?mock=1`).** Add `?mock=1` to an address and the page
 shows demo data instead of the student's own: a demo student with six attempts on five Part 2 tasks (one failed with
-no speech, one retry with its goal), a level, a biggest fix and an exam date 23 days away. The scored results are
-saved live evaluator outputs (`test/fixtures/live-3.6-flash/`, gemini-3.6-flash, **not** the production model) in the
-real evaluator types; the dashboard and History run their real code on them (`src/features/demo/demo-data.ts`).
+no speech, one retry with its goal), a level, a biggest fix and an exam date 23 days away. Every demo result is for
+its own task: a hand-written demo answer to that task (`src/features/demo/demo-answers.ts`) goes through the real
+evaluation with the existing **mock evaluator** (no model call), in the real types; the dashboard, History and the
+result page run their real code on them (`src/server/demo/demo-data.ts`). The mock evaluator is a crude keyword
+heuristic, so the bands are demo values, not assessments.
 Mock mode never reads or writes the database, reads no cookie or identity, calls no API and no AI provider, and skips
 the configuration check, so it works on a Preview where every real page is refused. Every link inside it keeps
 `?mock=1` (navigation, back links, task tiles, rows, filters, retries), so a tester cannot fall into a real page by
@@ -127,8 +129,10 @@ cannot be created): `npm run test:e2e:preview` (`playwright.preview.config.ts`, 
 | --- | --- |
 | Task list | `/?mock=1` (every task opens its brief in mock mode) |
 | Part 2 brief, then preparation, recording, Scoring… and the demo result | `/practice/speaking/<task id>?mock=1`, for all 7 tasks: `b2-part2-advice-from-someone`, `b2-part2-important-decision`, `b2-part2-goal-you-set`, `b2-part2-working-in-a-team`, `b2-part2-trying-and-failing`, `b2-part2-a-tradition`, `b2-part2-happy-day` |
-| A retry with its goal | `/practice/speaking/<task id>?mock=1&retry=<saved run>&run=1..3` (e.g. `retry=A2-b1-all-three&run=1`; opened by "Retry with this goal" and "Start retry") |
-| Demo result | `/result?mock=1`, `/result?mock=1&anchor=<saved run>&run=1..3`, `/result?mock=1&state=scoring\|too-short\|no-speech\|retry` (`/result` without `mock=1` is the same prototype; its links add it) |
+| A retry with its goal | `/practice/speaking/<task id>?mock=1&retry=<demo key>` (a demo result of that task, e.g. `b2-part2-a-tradition?mock=1&retry=demo-5`; opened by "Retry with this goal" and "Start retry"), or `&retry=<saved run>&run=1..3` (the saved-runs prototype) |
+| A demo attempt's result, for its own task | `/result?demo=demo-1..6&mock=1` (opened from the dashboard and History rows) |
+| The result of a mock practice of a task, and of its retry | `/result?demo=answer.<task id>&mock=1`, `/result?demo=retry.<task id>.<demo key>&mock=1` (opened by Finish, with `&state=scoring&next=1` first) |
+| The saved-runs prototype ("Advice from someone" only) | `/result?mock=1`, `/result?mock=1&anchor=<saved run>&run=1..3`, `/result?mock=1&state=scoring\|too-short\|no-speech\|retry` (`/result` without `mock=1` is the same prototype; its links add it) |
 | Dashboard | `/dashboard?mock=1` (`&flags=off` also works) |
 | History | `/history?mock=1`, `/history?mock=1&part=2` |
 | Static files | e.g. the task pictures `/tasks/*.svg` |

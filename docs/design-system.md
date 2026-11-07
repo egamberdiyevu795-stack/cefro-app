@@ -482,11 +482,19 @@ Every page a tester walks through has a mock mode: the task list (`/?mock=1`), t
 prototype, the dashboard and History. Built so a branch's Vercel Preview (no variables, no database) can be clicked
 through end to end.
 
-- **Demo student** (`features/demo/demo-data.ts`): six attempts on five Part 2 tasks, newest first: a retry of "Advice
-  from someone" with its goal ("Goal met", the result prototype's retry pair), its original, three answers on other
-  tasks, one attempt with no speech ("Not scored"); exam in 23 days. Scored results are saved live evaluator outputs in
-  the real `MultilevelResult` type; the dashboard and History run their real functions on them. The attempts on other
-  tasks borrow a saved run's levels: opening one shows the demo result of "Advice from someone".
+- **Demo student** (`server/demo/demo-data.ts`): six attempts on five Part 2 tasks, newest first: a retry of "A
+  tradition" with its goal (answer question 3: "Goal met"), its original, three answers on other tasks, one attempt
+  with no speech ("Not scored"); exam in 23 days.
+- **Demo results are for their own task.** Each task has a hand-written demo answer (`features/demo/demo-answers.ts`):
+  the "first" answer leaves out question 3, the "full" one (a retry) answers it. It goes through the real
+  `evaluateSpeaking` with the existing mock evaluator (no delay, no model call), so each result is a real
+  `SpeakingEvaluation` for that task's questions; computed once per server process. A demo attempt opens
+  `/result?demo=<id>&mock=1`; Finish in a mock practice opens `answer.<task id>` (or `retry.<task id>.<key>` for a
+  retry, judged against its goal). The saved-runs prototype (`?anchor=`) stays as it was, for "Advice from someone".
+  Known limit of the mock evaluator: it matches question keywords longer than 4 letters, so "Working in a team" (whose
+  questions 1 and 2 have none) always scores those as missing.
+- **Mock evaluator wording:** its tips and model answers no longer borrow the advice task's topic (examples on a topic
+  of their own; a missed question's "model answer" says how to answer that question).
 - **Links:** `features/demo/demo-mode.ts` (`withMock`, `mockLink`, `isMockQuery`) and `demoHref`, which turns links built
   from demo attempts into mock ones (`/result/<demo id>` → the prototype with that saved run; `?retry=<demo id>` → that
   saved run). Components with fixed links take a `mock` prop (`AppShell`, `Wordmark`, `BackLink`, `navItemsFor`,
@@ -498,7 +506,7 @@ through end to end.
 - **Account menu** in mock mode: the demo account and "Demo account. Sign-in is off in demo mode."; no items.
 - **Checks:** `features/demo/mock-pages.test.ts` (each mock page on a Preview-like configuration with the database,
   cookies and identity throwing: label, only `mock=1` links, one black button where there is one, no text under 11 px;
-  real pages still refuse), `features/demo/demo-data.test.ts`, `e2e/mock-mode.spec.ts` (also on a production build:
+  real pages still refuse), `server/demo/demo-data.test.ts` (every demo attempt's result has the attempt's task id and questions), `e2e/mock-mode.spec.ts` (also on a production build:
   `npm run test:e2e:preview`).
 
 ## Controls wait for the page (`useHydrated`)
@@ -506,7 +514,8 @@ through end to end.
 `components/ds/useHydrated.ts`: false in the server HTML and during hydration, true once the scripts run. A control that
 needs React renders disabled until then, so it is never used "before the page is ready": the exam-date picker, Save,
 Skip, Edit, Cancel, Remove date; the sign-in and Create account buttons (before: a tap or Enter submitted the form as a
-GET, with the email and password in the address, and reloaded the page); the brief's Start preparation and Practise
+GET, with the email and password in the address, and reloaded the page; as a second layer the form is now
+`method="post"`, so even a form sent without the app keeps them out of the address); the brief's Start preparation and Practise
 without the goal (before: a tap did nothing). Browser tests delay the scripts by 4 s and check each.
 
 ## Page failures

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { DemoLabel } from "@/components/ds";
 import { FEATURE_FLAGS } from "@/config/features";
-import { demoAttempts, demoHref } from "@/features/demo/demo-data";
+import { demoAttempts, demoHref } from "@/server/demo/demo-data";
 import { isMockQuery, withMock } from "@/features/demo/demo-mode";
 import { buildHistoryView, parseHistoryQuery, type HistoryView } from "@/features/history/view-model";
 import { HistoryContent } from "@/features/history/sections";
@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "History" };
  * the browser's anonymous identity), and only rows recorded under that id are read. A caller with no identity yet has
  * no attempts and sees the empty state. With the `history` flag off the page does not exist (404).
  *
- * `?mock=1` (mock mode): the demo student's attempts (features/demo/demo-data.ts) through the same view model. No
+ * `?mock=1` (mock mode): the demo student's attempts (server/demo/demo-data.ts) through the same view model. No
  * configuration check, no cookie, no database; every link keeps ?mock=1 and the demo label is shown.
  */
 export default async function HistoryPage(props: PageProps<"/history">) {
@@ -29,7 +29,7 @@ export default async function HistoryPage(props: PageProps<"/history">) {
   await connection();
 
   if (isMockQuery(query)) {
-    const view = buildHistoryView(demoAttempts(new Date()), parseHistoryQuery(query));
+    const view = buildHistoryView(await demoAttempts(new Date()), parseHistoryQuery(query));
     return (
       <AppShell flags={FEATURE_FLAGS} account="mock" activeHref="/history">
         <DemoLabel variant="data" className="mb-4 bg-card" />

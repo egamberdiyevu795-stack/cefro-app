@@ -18,17 +18,23 @@ export class MockEvaluationModel implements EvaluationModel {
   readonly isDevelopmentProvider = true;
   readonly config = {};
 
+  /** `delayMs`: how long a "model call" takes (default 1.2 s, so the loop shows Scoring…; mock mode's demo uses 0). */
+  constructor(private readonly options: { delayMs?: number } = {}) {}
+
   async evaluate(_prompt: unknown, input: EvaluationInput): Promise<ModelEvaluationOutput> {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const delayMs = this.options.delayMs ?? 1200;
+    if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
     return { output: buildHeuristicResult(input), provider: this.provider, model: this.model, inputTokens: null, outputTokens: null };
   }
 }
 
-const MOCK_MODEL_ANSWERS = [
-  "My English teacher gave me advice last year, when I was stressed before an important exam.",
-  "She told me to practise speaking for ten minutes every day, and I followed her advice.",
-  "I think young people should listen to older people, but they should make their own decisions in the end.",
-];
+/**
+ * The "model answer" for a question the answer missed. A mock can't write a real answer on every task's topic, so it
+ * says how to answer that very question; it never borrows another task's topic.
+ */
+function mockModelAnswer(questionId: number, prompt: string): string {
+  return `Start with a direct answer to question ${questionId} ("${prompt}"), then give one reason and one example.`;
+}
 
 const LINKERS_B2 = ["however", "although", "on the other hand", "as a result", "whereas", "overall", "since"];
 
@@ -65,7 +71,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
       status,
       evidence: status === "missing" ? "" : (hit ?? ""),
       note: `Development estimate: ${shared} key word(s) from question ${index + 1} appear in your answer.`,
-      model_answer: status === "on_topic" ? "" : MOCK_MODEL_ANSWERS[index] ?? "",
+      model_answer: status === "on_topic" ? "" : mockModelAnswer(index + 1, prompt),
     };
   });
 
@@ -76,15 +82,16 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
         base,
         first,
         "Development estimate from the length of your answer.",
-        "Use one sentence with 'if' (e.g. 'If I hadn't followed her advice, I would have failed').",
+        // Examples on a topic of their own, never the task's (docs/feedback-review.md, issue 3).
+        "Use one sentence with 'if' to say how things could have gone differently (e.g. 'If it had rained, we would have stayed at home').",
         "Your next answer has at least one sentence with 'if'.",
       ),
       vocabulary: feature(
         base,
         first,
         "Development estimate from how many different words you used.",
-        "Use two topic phrases such as 'take someone's advice' and 'looking back'.",
-        "You hear 'take someone's advice' or 'looking back' when you listen back.",
+        "Use two phrases that fit your story, such as 'looking back' and 'as far as I remember'.",
+        "You hear 'looking back' or 'as far as I remember' when you listen back.",
       ),
       fluency: feature(
         fluency,

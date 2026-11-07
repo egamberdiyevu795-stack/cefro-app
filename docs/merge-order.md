@@ -154,13 +154,13 @@ Cut from `cefro-part-2-tasks-yfr6x5`, so it comes after it, merge commit. Fixes 
 Cut from `review-dashboard-real-data-4jikaa`, so it comes after it, merge commit. Contains:
 
 - **Mock mode on every page (`?mock=1`):** the task list, dashboard and History join the practice and result pages.
-  The dashboard and History show a demo student (`src/features/demo/demo-data.ts`: six attempts on five Part 2 tasks,
-  one with no speech, a retry with its goal, an exam date) built from the saved evaluator outputs in the real types,
-  through the pages' real code. Mock mode never reads or writes the database (or cookies, the caller's identity, any
+  The dashboard and History show a demo student (`src/server/demo/demo-data.ts`: six attempts on five Part 2 tasks,
+  one with no speech, a retry with its goal, an exam date), each result produced for its own task by the mock
+  evaluator, in the real types, through the pages' real code. Mock mode never reads or writes the database (or cookies, the caller's identity, any
   API) and skips the configuration check, so it works on a Vercel Preview with no variables. Real pages keep refusing.
 - **`?mock=1` stays on every link** inside mock mode (nav, back link, wordmark, task tiles, rows, filters, "Show more",
   Practise next, Start retry, Retry with this goal, Scoring… → result). Demo attempt ids are rewritten to their demo
-  result (`/result?…&mock=1`) and their saved run (`?retry=<saved run>&run=n`). `src/proxy.ts` passes `?mock=1` to the
+  result (`/result?demo=<id>&mock=1`) and kept as the retry (`?mock=1&retry=<id>`). `src/proxy.ts` passes `?mock=1` to the
   `(site)` layout as the header `x-cefro-mock` (a layout gets no query).
 - **Demo labels:** practice and task list "Demo mode. Your answer won't be scored."; results "Demo result. Your answer
   was not scored."; dashboard and History "Demo mode. These are example attempts, not yours." Never on real pages.
@@ -177,6 +177,11 @@ Cut from `review-dashboard-real-data-4jikaa`, so it comes after it, merge commit
   Preview with no variables (`playwright.preview.config.ts`); slow-connection tests in `auth.spec.ts` and
   `practice-flow.spec.ts`.
 - `docs/DEPLOY_VERCEL.md`: the mock URLs that work on a Preview.
+- **Follow-up commits:** demo results match their task (each task's demo answer through the real evaluation with the
+  mock evaluator; the mock evaluator's tips and model answers made task-neutral; the demo data moved to
+  `src/server/demo/`); the sign-in and register forms are `method="post"` as a second layer. Tests:
+  `src/server/demo/demo-data.test.ts`, `src/features/account/AuthForm.test.ts`, and the browser tests check the task
+  shown on each demo result and the form method.
 
 ## Corrections to earlier notes
 

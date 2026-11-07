@@ -69,3 +69,16 @@ export function mockScoringHref(from: MockAttemptKey | null): string {
   params.set("mock", "1"); // every link in mock mode keeps it
   return `/result?${params}`;
 }
+
+/**
+ * Mock mode, demo results (see server/demo/demo-data.ts): the key of the result of a mock practice of a task, as a
+ * first answer or as a retry of the demo result `retryOf`.
+ */
+export function demoPracticeKey(taskId: string, retryOf: string | null): string {
+  return retryOf ? `retry.${taskId}.${retryOf}` : `answer.${taskId}`;
+}
+
+/** Mock mode, after Finish: "Scoring…" of the practised task's demo result, which then opens that result. */
+export function demoScoringHref(taskId: string, retryOf: string | null): string {
+  return `/result?${new URLSearchParams({ demo: demoPracticeKey(taskId, retryOf), state: "scoring", next: "1", mock: "1" })}`;
+}

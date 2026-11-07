@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { toPublicTask } from "@/domain/speaking/task";
+import { demoAttemptView, demoResultSpec } from "@/server/demo/demo-data";
 import { mockAttemptKey, mockRetryAttempt } from "@/features/result/mock-data";
 import { AppShell } from "@/features/shell/AppShell";
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
@@ -23,6 +24,8 @@ export async function generateMetadata(props: PageProps<"/practice/speaking/[tas
  *   ?mock=1               mock mode: no session, history, analytics or upload; Finish opens the result page's mock
  *                         "Scoring…", then the mock result. Needs no API key or database.
  *   ?mock=1&retry=<fixture id>&run=1..3   a mock retry of a saved live run (its first retry focus is the goal)
+ *   ?mock=1&retry=<demo key>              a mock retry of a demo result of this task (server/demo/demo-data.ts)
+ *   In mock mode, Finish opens this task's demo result (a retry of a fixture: the saved runs' retry result).
  *   ?flags=off            every feature flag off
  */
 export default async function SpeakingPracticePage(props: PageProps<"/practice/speaking/[taskId]">) {
@@ -45,6 +48,8 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
 
   const retry = one(query.retry);
   const mockRetry = mock ? mockAttemptKey(retry, one(query.run)) : null;
+  // A demo result of this task (a retry of another task's result is ignored).
+  const demoRetry = mock && !mockRetry && retry && demoResultSpec(retry)?.task.id === task.id ? await demoAttemptView(retry) : null;
 
   return (
     // The real flow shows the signed-in student's account; mock mode the mocked one.
@@ -52,8 +57,8 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
       <PracticeExperience
         task={task}
         flags={flags}
-        mock={mock ? { retry: mockRetry } : null}
-        initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : null}
+        mock={mock ? { retry: mockRetry, demoRetry: demoRetry?.id ?? null } : null}
+        initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : demoRetry}
         retryAttemptId={!mock && retry ? retry : null}
       />
     </AppShell>

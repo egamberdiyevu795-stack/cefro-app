@@ -50,7 +50,7 @@ const BLACK = /<(a|button)\b[^>]*class="[^"]*\bbg-primary text-on-primary\b/g;
 /** Only what is inside <main> (the nav's active square is outside it). */
 const mainOf = (markup: string) => markup.slice(markup.indexOf('<main id="main"'), markup.indexOf("</main>"));
 /** As the markup has it (React escapes the apostrophe). */
-const escaped = (text: string) => text.replaceAll("'", "&#x27;");
+const escaped = (text: string) => text.replaceAll("'", "&#x27;").replaceAll('"', "&quot;");
 const SMALL = /text-\[(\d|10)(\.\d+)?px\]|text-xs\b/;
 
 function expectMockLinksOnly(markup: string) {
@@ -106,9 +106,28 @@ describe("mock pages on a Preview with no configuration", () => {
     }
   });
 
+  it("a demo result shows its own task", async () => {
+    const tradition = await html(ResultPage(props({ mock: "1", demo: "demo-6" })));
+    expect(tradition).toContain("A tradition");
+    expect(tradition).toContain("Goal met");
+    expect(tradition).not.toContain("Advice from someone");
+    const team = await html(ResultPage(props({ mock: "1", demo: "demo-3" })));
+    expect(team).toContain("Working in a team");
+    await expect(ResultPage(props({ mock: "1", demo: "nope" }))).rejects.toThrow(); // not found
+  });
+
   it("practice brief (first try and retry): demo label, one black button, mock links", async () => {
-    for (const query of [{ mock: "1" }, { mock: "1", retry: "A2-b1-all-three", run: "1" }]) {
-      const markup = await html(PracticePage(props(query, { taskId: "b2-part2-happy-day" })));
+    for (const [taskId, query] of [
+      ["b2-part2-happy-day", { mock: "1" }],
+      ["b2-part2-happy-day", { mock: "1", retry: "A2-b1-all-three", run: "1" }],
+      ["b2-part2-a-tradition", { mock: "1", retry: "demo-5" }],
+    ] as const) {
+      const markup = await html(PracticePage(props(query, { taskId })));
+      if (query.retry === "demo-5") {
+        // The demo result's goal, for this task's own question 3.
+        expect(markup).toContain('data-testid="goal-card"');
+        expect(markup).toContain(escaped('Answer question 3: "Should young people keep old traditions in the modern world? Why?"'));
+      }
       expect(markup).toContain(escaped(DEMO_MODE_TEXT));
       expect(mainOf(markup).match(BLACK)).toHaveLength(1);
       expectMockLinksOnly(markup);
@@ -116,7 +135,16 @@ describe("mock pages on a Preview with no configuration", () => {
   });
 
   it("result (scored, retry, scoring): demo result label, mock links", async () => {
-    for (const query of [{ mock: "1" }, { mock: "1", state: "retry" }, { mock: "1", state: "scoring", next: "1" }, {}]) {
+    for (const query of [
+      { mock: "1" },
+      { mock: "1", state: "retry" },
+      { mock: "1", state: "scoring", next: "1" },
+      {},
+      { mock: "1", demo: "demo-1" },
+      { mock: "1", demo: "demo-6" },
+      { mock: "1", demo: "demo-3" },
+      { mock: "1", demo: "answer.b2-part2-happy-day", state: "scoring", next: "1" },
+    ]) {
       const markup = await html(ResultPage(props(query)));
       expect(markup).toContain(DEMO_RESULT_TEXT);
       expectMockLinksOnly(markup);

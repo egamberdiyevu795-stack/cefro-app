@@ -8,7 +8,7 @@ import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { AccountMenu } from "@/features/dashboard/AccountMenu";
 import { ExamDate } from "@/features/dashboard/ExamDate";
-import { demoAttempts, demoExamDate, demoHref, demoTranscript } from "@/features/demo/demo-data";
+import { demoAttempts, demoExamDate, demoHref, demoTranscript } from "@/server/demo/demo-data";
 import { isMockQuery, mockLink } from "@/features/demo/demo-mode";
 import { navItemsFor } from "@/features/dashboard/mock-data";
 import {
@@ -61,7 +61,7 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  * Exam part tiles: all four, always. A live part (`PART_LIVE`) says Start / Practise; the others "Coming soon".
  * `?flags=off` previews the page with every flag off.
  *
- * `?mock=1` (mock mode): the demo student (features/demo/demo-data.ts) instead of the caller's own data, through the
+ * `?mock=1` (mock mode): the demo student (server/demo/demo-data.ts) instead of the caller's own data, through the
  * same code. No database, no cookie read, no API call (the exam date changes only on the page); works with no
  * configuration at all (a Vercel Preview with no variables). Every link keeps ?mock=1, and the demo label is shown.
  */
@@ -74,7 +74,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const mock = isMockQuery(query);
   // Mock mode reads nothing: no cookie, no database.
   const userId = mock ? null : await findCurrentUserId();
-  const attempts: HistoryAttempt[] = mock ? demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
+  const attempts: HistoryAttempt[] = mock ? await demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
   const stored = mock ? demoExamDate(now) : userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
   // Links built from the attempts: in mock mode they open the demo's own pages, with ?mock=1.
   const link = mock ? demoHref : (href: string) => href;

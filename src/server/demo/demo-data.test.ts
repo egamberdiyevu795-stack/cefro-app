@@ -1,16 +1,37 @@
-import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { examDateState } from "@/domain/exam-date";
 import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import { dashboardFix, dashboardView, partTiles, practiseNext, progress, scoredAttempts } from "@/features/dashboard/progress";
 import { buildHistoryView, toHistoryRows } from "@/features/history/view-model";
-import { RETRY_CURRENT, RETRY_PREVIOUS, evaluationOf } from "@/features/result/mock-data";
-import { demoAttempts, demoExamDate, demoHref, demoResultHref, demoTranscript, DEMO_EXAM_IN_DAYS } from "./demo-data";
-import { isMockQuery, mockLink, withMock } from "./demo-mode";
+import { compareWithPrevious, resultPageState } from "@/features/result/view-model";
+import { demoPracticeKey, demoScoringHref } from "@/features/speaking-practice/lib/practice-flow";
+import {
+  DEMO_ATTEMPT_IDS,
+  DEMO_EXAM_IN_DAYS,
+  demoAttemptView,
+  demoAttempts,
+  demoEvaluation,
+  demoExamDate,
+  demoHref,
+  demoResultHref,
+  demoResultSource,
+  demoResultSpec,
+  demoTranscript,
+} from "./demo-data";
+import { DEMO_ANSWERS } from "@/features/demo/demo-answers";
+import { isMockQuery, mockLink, withMock } from "@/features/demo/demo-mode";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }) }));
 
 const NOW = new Date("2026-11-07T09:00:00Z");
-const attempts = demoAttempts(NOW);
+const attempts = await demoAttempts(NOW);
 const tasks = listSpeakingTasks();
+const B2 = "B2" as FeatureLevel;
+const fixOf = () =>
+  dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript: demoTranscript(scoredAttempts(attempts)[0].id), target: B2 });
 
 describe("withMock / isMockQuery", () => {
   it("adds mock=1 to internal links, keeps the rest of the link, and leaves external links alone", () => {
@@ -33,7 +54,7 @@ describe("withMock / isMockQuery", () => {
 
 describe("the demo student", () => {
   it("has a few attempts across several Part 2 tasks, newest first, all of real tasks", () => {
-    expect(attempts.length).toBeGreaterThanOrEqual(5);
+    expect(attempts.map((a) => a.id)).toEqual(DEMO_ATTEMPT_IDS);
     expect(new Set(attempts.map((a) => a.taskId)).size).toBeGreaterThanOrEqual(4);
     for (const a of attempts) {
       expect(getSpeakingTask(a.taskId)?.title).toBe(a.title);
@@ -48,31 +69,86 @@ describe("the demo student", () => {
     expect(dashboardView(attempts)).toBe("returning");
     expect(scoredAttempts(attempts).length).toBeGreaterThanOrEqual(3);
     expect(attempts.some((a) => a.status === "failed")).toBe(true);
-    const summary = progress(attempts, { target: "B2" as FeatureLevel, now: NOW });
-    expect(summary?.level).toBeTruthy();
-    const latest = scoredAttempts(attempts)[0];
-    const fix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript: demoTranscript(latest.id), target: "B2" as FeatureLevel });
-    expect(fix?.fix.quote).toBeTruthy();
+    expect(progress(attempts, { target: B2, now: NOW })?.level).toBeTruthy();
+    expect(fixOf()?.fix.quote).toBeTruthy();
     expect(practiseNext(attempts, tasks)).not.toBeNull();
   });
 
-  it("has a retry with a goal, shown as the result prototype's retry screen shows it", () => {
-    const retry = attempts.find((a) => a.previousAttemptId);
-    expect(retry).toBeDefined();
-    const original = attempts.find((a) => a.id === retry!.previousAttemptId)!;
-    expect(original.result?.retry_focus[0]?.objective).toBeTruthy(); // the goal it was given
-    // Its row and its demo result agree: the prototype's retry screen always shows RETRY_CURRENT, so the demo retry
-    // is scored with it, and its result link names the original's saved run as `from`.
-    expect(retry!.result).toEqual(evaluationOf(RETRY_CURRENT.anchor, RETRY_CURRENT.run).result);
-    expect(original.result).toEqual(evaluationOf(RETRY_PREVIOUS.anchor, RETRY_PREVIOUS.run).result);
-    expect(demoResultHref(retry!.id)).toBe(`/result?state=retry&from=${RETRY_PREVIOUS.anchor}&fromRun=${RETRY_PREVIOUS.run}&mock=1`);
-    const row = toHistoryRows([retry!], attempts)[0];
-    expect(row.retry?.goal).toMatch(/^(Goal met|Not yet)$/);
+  it("has a retry with a goal (answer question 3), and the retry met it", () => {
+    const retry = attempts.find((a) => a.previousAttemptId)!;
+    const original = attempts.find((a) => a.id === retry.previousAttemptId)!;
+    expect(retry.taskId).toBe(original.taskId);
+    expect(original.result!.retry_focus[0].objective).toMatch(/^Answer question 3/);
+    expect(compareWithPrevious(original.result!, retry.result!).goal).toBe("met");
+    expect(toHistoryRows([retry], attempts)[0].retry?.goal).toBe("Goal met");
   });
 
   it("has an exam date ahead", () => {
-    const state = examDateState(demoExamDate(NOW), NOW);
-    expect(state).toMatchObject({ kind: "countdown", days: DEMO_EXAM_IN_DAYS });
+    expect(examDateState(demoExamDate(NOW), NOW)).toMatchObject({ kind: "countdown", days: DEMO_EXAM_IN_DAYS });
+  });
+});
+
+describe("demo results match their task", () => {
+  it("every demo attempt's result has the same task id and questions as the attempt", async () => {
+    for (const attempt of attempts) {
+      const task = getSpeakingTask(attempt.taskId)!;
+      const source = (await demoResultSource(attempt.id))!;
+      expect(source.task.id, attempt.id).toBe(attempt.taskId);
+      expect(source.task.title).toBe(attempt.title);
+      expect(source.task.prompts).toEqual(task.prompts);
+      if (attempt.status === "failed") {
+        expect(resultPageState(source)).toMatchObject({ kind: "not_scored", reason: "no_speech", task: { id: attempt.taskId } });
+        continue;
+      }
+      // The result is the one the attempt row shows, judged on the attempt's own three questions.
+      expect(source.evaluation?.result).toEqual(attempt.result);
+      expect(attempt.result!.assessment.questions.map((q) => q.id)).toEqual(task.prompts.map((_, i) => i + 1));
+      for (const focus of attempt.result!.retry_focus) {
+        const quoted = /^Answer question (\d) [^"]*"(.*)"$/.exec(focus.objective);
+        if (quoted) expect(quoted[2]).toBe(task.prompts[Number(quoted[1]) - 1]);
+      }
+      expect(source.transcript).toBe(demoTranscript(attempt.id));
+      // Its page: the attempt's own task and questions, no other task's.
+      const state = resultPageState(source);
+      expect(state.kind).toBe("scored");
+      if (state.kind !== "scored") continue;
+      const { ScoredResult } = await import("@/features/result/sections");
+      const { FEATURE_FLAGS } = await import("@/config/features");
+      const html = renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task: source.task, flags: FEATURE_FLAGS, retryHref: "/", demo: true }));
+      expect(html).toContain(escape(task.title));
+      for (const other of tasks.filter((t) => t.id !== task.id)) expect(html, `${attempt.id} shows ${other.title}`).not.toContain(escape(other.prompts[0]));
+    }
+  });
+
+  it("the result of a mock practice of any task, and of its retry, is for that task", async () => {
+    for (const task of tasks) {
+      const first = demoPracticeKey(task.id, null);
+      const retry = demoPracticeKey(task.id, first);
+      for (const key of [first, retry]) {
+        const source = (await demoResultSource(key))!;
+        expect(source.task.id, key).toBe(task.id);
+        expect(source.evaluation!.result.assessment.questions).toHaveLength(task.prompts.length);
+        expect(demoTranscript(key)).toContain(DEMO_ANSWERS[task.id].story[0]);
+      }
+      expect((await demoResultSource(retry))!.previous?.evaluation.result).toEqual((await demoEvaluation(first))!.result);
+      expect((await demoAttemptView(first))!.taskId).toBe(task.id);
+      expect(demoScoringHref(task.id, null)).toBe(`/result?demo=answer.${task.id}&state=scoring&next=1&mock=1`);
+    }
+  });
+
+  it("no result borrows the advice task's topic (the mock evaluator's tips and model answers are task-neutral)", async () => {
+    for (const task of tasks.filter((t) => t.id !== "b2-part2-advice-from-someone")) {
+      for (const key of [demoPracticeKey(task.id, null), demoPracticeKey(task.id, demoPracticeKey(task.id, null))]) {
+        expect(JSON.stringify((await demoEvaluation(key))!.result), key).not.toMatch(/advice|older people/i);
+      }
+    }
+  });
+
+  it("unknown keys, and a retry of another task's result, are not demo results", async () => {
+    for (const key of ["demo-99", "answer.unknown", "retry.b2-part2-happy-day.demo-6", "retry.b2-part2-happy-day.nope", "../etc"]) {
+      expect(demoResultSpec(key), key).toBeNull();
+      expect(await demoResultSource(key)).toBeNull();
+    }
   });
 });
 
@@ -80,11 +156,9 @@ describe("demo links keep mock mode", () => {
   const isMockLink = (href: string) => href.startsWith("/") && new URL(href, "http://x").searchParams.get("mock") === "1";
 
   it("every link the dashboard and History build from the demo attempts opens a mock page", () => {
-    const latest = scoredAttempts(attempts)[0];
-    const fix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript: demoTranscript(latest.id), target: "B2" as FeatureLevel })!;
     const view = buildHistoryView(attempts, { filter: "all", show: 20 });
     const hrefs = [
-      fix.retryHref,
+      fixOf()!.retryHref,
       practiseNext(attempts, tasks)!.href,
       ...partTiles(attempts).flatMap((t) => (t.href ? [t.href] : [])),
       ...view.rows.map((r) => r.href),
@@ -93,17 +167,21 @@ describe("demo links keep mock mode", () => {
     for (const href of hrefs) {
       expect(isMockLink(href), href).toBe(true);
       expect(href, "no real result page").not.toMatch(/^\/result\//);
-      expect(href, "no demo id reaches the practice page").not.toMatch(/retry=demo-/);
     }
   });
 
-  it("a retry of a demo attempt retries its saved run (same goal); a demo result opens the prototype", () => {
-    expect(demoHref("/practice/speaking/b2-part2-advice-from-someone?retry=demo-6")).toBe(
-      `/practice/speaking/b2-part2-advice-from-someone?mock=1&retry=${RETRY_CURRENT.anchor}&run=${RETRY_CURRENT.run}`,
-    );
-    expect(demoHref("/result/demo-5")).toBe("/result?anchor=A2-b1-all-three&run=1&mock=1");
-    expect(demoHref("/result/demo-3")).toBe("/result?state=no-speech&mock=1");
+  it("a demo attempt's result and its retry keep the attempt and its task", () => {
+    expect(demoHref("/result/demo-1")).toBe("/result?demo=demo-1&mock=1");
+    expect(demoResultHref("demo-3")).toBe("/result?demo=demo-3&mock=1");
     expect(demoHref("/result/unknown")).toBe("/result?mock=1");
+    expect(demoHref("/practice/speaking/b2-part2-a-tradition?retry=demo-6")).toBe("/practice/speaking/b2-part2-a-tradition?mock=1&retry=demo-6");
+    // A retry of another task's attempt is dropped.
+    expect(demoHref("/practice/speaking/b2-part2-happy-day?retry=demo-6")).toBe("/practice/speaking/b2-part2-happy-day?mock=1");
     expect(demoHref("/#part-2")).toBe("/?mock=1#part-2");
   });
 });
+
+/** As the markup has it. */
+function escape(text: string): string {
+  return text.replaceAll("&", "&amp;").replaceAll("'", "&#x27;").replaceAll('"', "&quot;");
+}

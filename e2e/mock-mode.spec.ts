@@ -87,7 +87,9 @@ test("mock mode: task list → brief → practice → result → retry → dashb
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
   await expect(demo).toHaveText(DEMO_RESULT);
   await expect(page.getByRole("heading", { name: /^Part 2 · Band / })).toBeVisible({ timeout: 15_000 });
-  await expect(page).toHaveURL(/[?&]mock=1/);
+  await expect(page).toHaveURL(/\/result\?demo=answer\.b2-part2-happy-day&mock=1$/);
+  await expect(page.getByText("A happy day").first()).toBeVisible(); // the task practised, not the saved runs' task
+  await expect(page.getByText(/Advice from someone/)).toHaveCount(0);
   await expect(demo).toHaveText(DEMO_RESULT);
   await expectMockLinks(page);
 
@@ -132,9 +134,19 @@ test("mock mode: task list → brief → practice → result → retry → dashb
   await auditPhone(page);
   await page.getByRole("navigation", { name: "Filter by part" }).getByRole("link", { name: "Part 2" }).click();
   await expect(page).toHaveURL(/\/history\?part=2&mock=1$/);
-  await page.getByRole("link", { name: /A tradition/ }).click();
-  await expect(page).toHaveURL(/\/result\?anchor=A0-below-b1&run=1&mock=1$/);
+  // A demo attempt opens its own result: the retry of "A tradition" (goal met), and "Advice from someone".
+  await page.getByRole("link", { name: /A tradition/ }).first().click();
+  await expect(page).toHaveURL(/\/result\?demo=demo-6&mock=1$/);
   await expect(demo).toHaveText(DEMO_RESULT);
+  await expect(page.getByText("A tradition").first()).toBeVisible();
+  await expect(page.getByText("Goal met")).toBeVisible();
+  await expect(page.getByText(/Advice from someone/)).toHaveCount(0);
+  await expectMockLinks(page);
+  await page.goBack();
+  await page.getByRole("link", { name: /Advice from someone/ }).click();
+  await expect(page).toHaveURL(/\/result\?demo=demo-1&mock=1$/);
+  await expect(page.getByText("Who gave you the advice, and what situation were you in?").first()).toBeVisible();
+  await expect(page.getByText(/A tradition/)).toHaveCount(0);
 
   // The navigation stays in mock mode too.
   await page.getByRole("link", { name: "Practice" }).first().click();
@@ -175,7 +187,7 @@ test("Preview with no variables: the real pages and the API keep refusing", asyn
   await expect(page.getByRole("heading", { name: "CEFRO isn’t available right now" })).toBeVisible();
   await expect(page.getByTestId("demo-label")).toHaveCount(0);
   // The mock pages answer 200.
-  for (const url of ["/?mock=1", "/dashboard?mock=1", "/history?mock=1", "/history?part=2&mock=1", "/practice/speaking/b2-part2-a-tradition?mock=1", "/result?mock=1", "/result?state=retry&mock=1"]) {
+  for (const url of ["/?mock=1", "/dashboard?mock=1", "/history?mock=1", "/history?part=2&mock=1", "/practice/speaking/b2-part2-a-tradition?mock=1", "/result?mock=1", "/result?state=retry&mock=1", "/result?demo=demo-1&mock=1", "/result?demo=demo-6&mock=1", "/result?demo=answer.b2-part2-happy-day&mock=1"]) {
     expect((await request.get(url)).status(), url).toBe(200);
   }
 });

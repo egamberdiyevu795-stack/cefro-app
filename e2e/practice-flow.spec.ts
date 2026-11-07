@@ -275,19 +275,24 @@ test("finishing very early asks first; Keep speaking goes on recording", async (
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
 });
 
-test("mock mode: the whole loop without API calls, and a retry's goal on every screen to 'Goal met'", async ({ page }) => {
+test("mock mode: the whole loop without API calls, the practised task's own demo result, and a retry's goal on every screen to 'Goal met'", async ({ page }) => {
   const apiCalls: string[] = [];
   page.on("request", (r) => {
     if (new URL(r.url()).pathname.startsWith("/api/")) apiCalls.push(r.url());
   });
   const demo = page.getByTestId("demo-label");
-  await page.goto(`${TASK_URL}?mock=1`);
+  // "A tradition": its demo answer leaves out question 3, so the goal is question 3 and the retry answers it.
+  await page.goto("/practice/speaking/b2-part2-a-tradition?mock=1");
   await expect(demo).toHaveText(DEMO_MODE_TEXT); // the mock brief
   await recordAndSubmit(page, 1000);
-  await expect(page).toHaveURL(/\/result\?state=scoring/);
+  await expect(page).toHaveURL(/\/result\?demo=answer\.b2-part2-a-tradition&state=scoring&next=1&mock=1$/);
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
   await expect(demo).toHaveText(DEMO_TEXT); // mock Scoring…
-  await expect(page.getByRole("heading", { name: /Band 2/ })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /^Part 2 · Band 3 · / })).toBeVisible({ timeout: 15_000 });
+  // The result is for the task practised: its title and its own question 3, missed.
+  await expect(page.getByText("A tradition").first()).toBeVisible();
+  await expect(page.getByText("Should young people keep old traditions in the modern world? Why?").first()).toBeVisible();
+  await expect(page.getByText(/Advice from someone/)).toHaveCount(0);
   // The mock result: the label is at the top of the result card, and is not a button.
   const resultCard = page.locator('[aria-labelledby="result-title"]');
   await expect(resultCard.getByTestId("demo-label")).toHaveText(DEMO_TEXT);
@@ -298,7 +303,7 @@ test("mock mode: the whole loop without API calls, and a retry's goal on every s
   // "Retry with this goal" carries the goal through brief, preparation, recording and Scoring… to the result.
   await page.getByRole("link", { name: "Retry with this goal" }).click();
   const goal = page.getByTestId("goal-card");
-  await expect(goal).toContainText("Your goal:");
+  await expect(goal).toContainText('Your goal: Answer question 3: "Should young people keep old traditions');
   await expect(demo).toHaveText(DEMO_MODE_TEXT); // the mock retry brief
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(goal).toBeVisible();

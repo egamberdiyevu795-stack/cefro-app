@@ -5,6 +5,7 @@ import { cx, styles } from "@/components/ds";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { toPublicTask } from "@/domain/speaking/task";
+import { demoResultHref, demoResultSource, demoResultSpec } from "@/server/demo/demo-data";
 import { withMock } from "@/features/demo/demo-mode";
 import { AutoAdvance } from "@/features/result/AutoAdvance";
 import { DEFAULT_ANCHOR, FIXTURE_ANCHORS, RESULT_STATES, describeMock, mockResultHref, mockResultSource, selectMock, shownAttempt, type MockSelection } from "@/features/result/mock-data";
@@ -23,6 +24,10 @@ export const metadata: Metadata = { title: "Your result" };
  *
  * Switches: ?anchor=<fixture id> (&run=1..3), ?state=scored|scoring|too-short|no-speech|retry, ?flags=off,
  * &from=<fixture id>&fromRun=1..3 (the attempt a retry comes from), &next=1 ("Scoring…" opens the result by itself).
+ * These show "Advice from someone", the task of the saved runs.
+ *
+ * ?demo=<demo key> (mock mode's demo results, server/demo/demo-data.ts): a demo attempt's result, or the result of
+ * a mock practice, for ITS OWN task, produced by the mock evaluator. &state=scoring&next=1: its "Scoring…" first.
  *
  * This page is always mock data, with or without ?mock=1, and every link on it keeps ?mock=1 (mock mode), so the loop
  * can be clicked through without API keys or a database: "Retry with this goal" opens the practice page's mock mode
@@ -30,8 +35,10 @@ export const metadata: Metadata = { title: "Your result" };
  */
 export default async function ResultPage(props: PageProps<"/result">) {
   const query = await props.searchParams;
-  const selection = selectMock(query);
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
+  const demoKey = typeof query.demo === "string" ? query.demo : null;
+  if (demoKey) return demoResult({ demoKey, scoring: query.state === "scoring", next: query.next === "1", flags });
+  const selection = selectMock(query);
 
   const speakingTask = getSpeakingTask("b2-part2-advice-from-someone");
   if (!speakingTask) notFound();
@@ -55,6 +62,32 @@ export default async function ResultPage(props: PageProps<"/result">) {
       )}
       {state.kind === "scoring" && selection.next && <AutoAdvance href={mockResultHref(selection)} />}
       <PrototypeSwitches selection={selection} />
+    </AppShell>
+  );
+}
+
+/** A demo result of mock mode, for its own task: a demo attempt, or the result of a mock practice. */
+async function demoResult({ demoKey, scoring, next, flags }: { demoKey: string; scoring: boolean; next: boolean; flags: FeatureFlags }) {
+  const spec = demoResultSpec(demoKey);
+  const source = await demoResultSource(demoKey, { scoring });
+  if (!spec || !source) notFound();
+  const state = resultPageState(source);
+  const task = toPublicTask(spec.task);
+  // "Retry with this goal": a retry of this result. "Record again": the same practice again (a retry stays a retry).
+  const retryHref = practiceHref(task.id, { mock: true, retry: demoKey });
+  const recordHref = practiceHref(task.id, { mock: true, ...(spec.previous ? { retry: spec.previous } : {}) });
+  return (
+    <AppShell flags={flags} account="mock">
+      {state.kind === "scored" ? (
+        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} demo />
+      ) : state.kind === "scoring" ? (
+        <ScoringResult state={state} flags={flags} demo />
+      ) : state.kind === "not_scored" ? (
+        <NotScoredResult state={state} flags={flags} recordHref={recordHref} demo />
+      ) : (
+        <FailedResult state={state} recordHref={recordHref} demo />
+      )}
+      {state.kind === "scoring" && next && <AutoAdvance href={demoResultHref(demoKey)} />}
     </AppShell>
   );
 }

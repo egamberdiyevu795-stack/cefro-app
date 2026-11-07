@@ -4,7 +4,7 @@
 | --- | --- |
 | Id | `L-T4` |
 | Variant | B2 (Part 2) |
-| Version | 1 |
+| Version | 2 |
 | Status | **approved** |
 | Target level | B2 |
 | Parts | 2 |
@@ -63,13 +63,17 @@ The examples never use the advice topic, so lesson sentences can't be copied int
 
 Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.
 
+Drill set version 2: the neutral drill from `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07. The same drill is shown for every retry task.
+
+Drill topic (made up): *"Describe a book or film you enjoyed."*
+Q1 What was it, and when did you read or watch it? · Q2 What was it about, and why did you enjoy it? ·
+Q3 Is reading books still important for young people today? Why or why not?
+
 | # | Prompt | Time |
 | --- | --- | --- |
-| 1 | Who gave you advice, and what situation were you in? Answer in one sentence, then add one detail. | 20 s |
-| 2 | What was the advice, and did you follow it? Answer, then add "because…". | 20 s |
-| 3 | Should young people always follow advice from older people? Answer, give a reason, then start "For example, …". | 30 s |
-| 4 | Make this bare answer full: "Yes, I followed it." Add a reason and what happened next. | 20 s |
-| 5 | Make this answer direct: "Older people have a lot of experience." Start with your yes / no / it depends. | 20 s |
+| 1 | What was the book or film, and when did you read or watch it? Answer in one sentence, then add one detail. | 20 s |
+| 2 | Is reading books still important for young people today? Answer, give a reason, then start "For example, …". | 30 s |
+| 3 | Make this bare answer full: "Yes, I enjoyed it." Add a reason and one detail from the story. | 20 s |
 
 **Checklist**
 

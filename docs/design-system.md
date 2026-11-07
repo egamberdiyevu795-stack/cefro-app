@@ -531,8 +531,11 @@ Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks t
   listen-back, kept in the browser, never uploaded or scored; then the checklist) → Retry the same task (the goal the
   retry carries, the lesson's reminder, and the one black button **"Retry with this goal"**, the same retry link as the
   result page's, so the goal is carried over).
-- **Drill topic:** the wave 1 drills were written for "Advice from someone". When the retry is another task, a line says
-  so ("These prompts are about …"). Neutral drill sets are proposed in `docs/lessons/drill-drafts.md` (draft, not shown).
+- **Drill topic:** each lesson's drill has its own made-up topic (a place you like to visit, a skill learned outside
+  school, a book or film), none of the 7 Part 2 tasks, so the **same drill is shown for every retry task**. From
+  `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07 (lesson version 2); the first drills, written for
+  "Advice from someone", are retired. L-T8's drill picture is a one-line description in the drill-topic box; there is
+  no image.
 - **Addresses:** `?demo=<demo key>` and `?anchor=<fixture>&run=n` (mock data, every link keeps `?mock=1`), or
   `?attempt=<id>` (a real attempt, its owner only, like `/result/[attemptId]`). Anything else, or a lesson the result
   does not lead to, is the not-found screen (v1 has no lesson library).

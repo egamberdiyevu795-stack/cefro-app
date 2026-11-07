@@ -17,8 +17,6 @@ export interface LessonViewProps {
   why: string;
   /** The task being retried. */
   task: { title: string };
-  /** The task the drill prompts were written for, when it is not the task being retried. */
-  drillTask: { title: string } | null;
   /** The goal the retry carries (the result's first retry focus). */
   goal: { objective: string; check: string | null } | null;
   /** "Retry with this goal": the practice page as a retry of the result's attempt. */
@@ -29,7 +27,7 @@ export interface LessonViewProps {
   demo: boolean;
 }
 
-export function LessonView({ lesson, why, task, drillTask, goal, retryHref, resultHref, demo }: LessonViewProps) {
+export function LessonView({ lesson, why, task, goal, retryHref, resultHref, demo }: LessonViewProps) {
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="lesson">
       <Link href={resultHref} className={cx("inline-flex min-h-11 items-center gap-1 justify-self-start text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
@@ -114,11 +112,20 @@ export function LessonView({ lesson, why, task, drillTask, goal, retryHref, resu
       <Card aria-labelledby="drill-title">
         <CardHeader id="drill-title" title="Self-check drill" />
         <p className="text-body text-fg">{lesson.drill.intro}</p>
-        {drillTask && (
-          <p className="mt-2 text-label text-fg-muted">
-            These prompts are about &ldquo;{drillTask.title}&rdquo;. Practise the skill on them, then use it in your retry of &ldquo;{task.title}&rdquo;.
+        {/* The drill's own made-up topic: the same for every retry task. L-T8's picture is a description; there is no image. */}
+        <div className="mt-3 rounded-tile bg-well p-3" data-testid="drill-topic">
+          <p className="text-body text-fg">
+            <Rich text={lesson.drill.topic.intro} />
           </p>
-        )}
+          <ol className="mt-2 space-y-1 text-label text-fg-muted">
+            {lesson.drill.topic.questions.map((q, i) => (
+              <li key={q}>
+                Q{i + 1} {q}
+              </li>
+            ))}
+          </ol>
+          {lesson.drill.topic.picture && <p className="mt-2 text-label text-fg-muted">{lesson.drill.topic.picture}</p>}
+        </div>
         <ol className="mt-3 divide-y divide-line border-t border-line">
           {lesson.drill.items.map((item, i) => (
             <li key={item.prompt} className="flex gap-3 py-4">

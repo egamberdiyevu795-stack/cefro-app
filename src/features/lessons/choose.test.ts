@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ALL_LESSONS, type Lesson } from "@/content/lessons";
@@ -102,12 +102,19 @@ const TOPIC_WORDS: Record<string, string[]> = {
 
 const part2Tasks = listSpeakingTasks().filter((t) => t.part === 2);
 const hasPhrase = (text: string, phrase: string) => ` ${evidenceTokens(text).join(" ")} `.includes(` ${evidenceTokens(phrase).join(" ")} `);
+/**
+ * Words of the shared Part 2 question frame ("Do you think young people…? Why or why not?", "Is it better to…"). A run of
+ * four words made only of these says nothing about the topic, so the repeated-words check skips it.
+ */
+const FRAME = new Set(
+  "a an the and or not why how what when where who whom did do does you your i me my is it was were be better to think young people in of for with about feel felt".split(" "),
+);
 const ngrams = (text: string, n: number) => {
   const words = evidenceTokens(text);
   return words.length < n ? [] : words.slice(0, words.length - n + 1).map((_, i) => words.slice(i, i + n).join(" "));
 };
 
-describe("lesson examples never use the retry task's topic", () => {
+describe("lesson examples and drills never use any Part 2 task's topic", () => {
   it("there are 7 Part 2 tasks, and each has its topic words listed", () => {
     expect(part2Tasks).toHaveLength(7);
     expect(Object.keys(TOPIC_WORDS).sort()).toEqual(part2Tasks.map((t) => t.id).sort());
@@ -117,7 +124,9 @@ describe("lesson examples never use the retry task's topic", () => {
   it.each(cases)("%s × %s", (_slug, _taskId, lesson, task) => {
     const topic = lesson.exampleTopic;
     const sentences = lesson.examples.flatMap((e) => [e.weaker, e.better]);
-    const exampleText = [topic.title, ...topic.questions, ...(topic.picture ? [topic.picture] : []), ...sentences];
+    const drill = lesson.drill.topic;
+    const drillText = [drill.title, ...drill.questions, ...(drill.picture ? [drill.picture] : []), ...lesson.drill.items.map((d) => d.prompt)];
+    const exampleText = [topic.title, ...topic.questions, ...(topic.picture ? [topic.picture] : []), ...sentences, ...drillText];
 
     // A different topic: not the task's title, introduction or questions.
     expect(hasPhrase(topic.title, task.title)).toBe(false);
@@ -127,23 +136,24 @@ describe("lesson examples never use the retry task's topic", () => {
     // No topic word of the task, in the example topic or in any example sentence.
     for (const text of exampleText) for (const word of TOPIC_WORDS[task.id]) expect(hasPhrase(text, word), `"${word}" in "${text}"`).toBe(false);
 
-    // No example sentence repeats four words in a row of the task's title, introduction or questions.
-    const taskGrams = new Set([task.title, task.question, ...task.prompts].flatMap((t) => ngrams(t, 4)));
-    for (const sentence of sentences) for (const gram of ngrams(sentence, 4)) expect(taskGrams.has(gram), `"${gram}" in "${sentence}"`).toBe(false);
+    // No example sentence or drill text repeats four words in a row of the task's title, introduction or questions
+    // (question-frame words alone don't count).
+    const taskGrams = new Set([task.title, task.question, ...task.prompts].flatMap((t) => ngrams(t, 4)).filter((g) => g.split(" ").some((w) => !FRAME.has(w))));
+    expect(hasPhrase(drill.title, task.title)).toBe(false);
+    for (const q of drill.questions) expect(task.prompts).not.toContain(q);
+    for (const sentence of [...sentences, ...drillText]) for (const gram of ngrams(sentence, 4)) expect(taskGrams.has(gram), `"${gram}" in "${sentence}"`).toBe(false);
   });
 });
 
-describe("drill drafts (docs/lessons/drill-drafts.md): proposals only", () => {
+describe("drill sets (docs/lessons/drill-drafts.md)", () => {
   const file = readFileSync(join(process.cwd(), "docs/lessons/drill-drafts.md"), "utf8");
   const prompts = [...file.matchAll(/^\| \d \| (.+?) \| \d+ s \|$/gm)].map((m) => m[1]);
   const topics = [...file.matchAll(/^Drill (?:topic|picture) \(made up\): (.+)$/gm)].map((m) => m[1]);
 
-  it("stay marked draft, and nothing in the app reads them", () => {
-    expect(file).toContain("| Status | **draft** |");
-    expect(file).toContain("| Reviewed by | |");
-    const sources = (dir: string): string[] =>
-      readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? sources(join(dir, e.name)) : /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [join(dir, e.name)] : []));
-    for (const f of sources(join(process.cwd(), "src"))) expect(readFileSync(f, "utf8"), f).not.toMatch(/drill-drafts/);
+  it("are approved, and are exactly the drills the app shows", () => {
+    expect(file).toContain("| Status | **approved** |");
+    expect(file).toContain("| Reviewed by | Asadbek |");
+    expect(prompts).toEqual(ALL_LESSONS.flatMap((l) => l.drill.items.map((d) => d.prompt)));
   });
 
   it("3 prompts per lesson, none using any of the 7 Part 2 tasks' topics", () => {

@@ -4,7 +4,7 @@
 | --- | --- |
 | Id | `L-T8` |
 | Variant | Part 2 (B2) |
-| Version | 1 |
+| Version | 2 |
 | Status | **approved** |
 | Target level | B2 (Part 2 target) |
 | Parts | 2 |
@@ -56,12 +56,18 @@ The examples never use the advice topic, so lesson sentences can't be copied int
 
 Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.
 
+Drill set version 2: the neutral drill from `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07. The same drill is shown for every retry task.
+
+Drill topic (made up): *"Describe a skill you learned outside school."*
+Q1 What was the skill, and who taught you? · Q2 How long did it take, and how did you feel when you could do it? ·
+Q3 Is it better to learn new skills from a person or from videos online? Why?
+Drill picture (made up): a boy learning to ride a bicycle in a park while his older sister holds the seat.
+
 | # | Prompt | Time |
 | --- | --- | --- |
-| 1 | Without looking at the picture, say who gave you advice and what situation you were in. | 20 s |
-| 2 | Say what the advice was and whether you followed it. | 20 s |
-| 3 | Give your opinion: should young people always follow advice from older people? Give one reason. | 30 s |
-| 4 | Start with "This picture reminds me of…" and move into your own story within one sentence. | 20 s |
+| 1 | Without looking at the picture, say what skill you learned and who taught you. | 20 s |
+| 2 | Give your opinion: is it better to learn new skills from a person or from videos online? Give one reason. | 30 s |
+| 3 | Start with "This picture reminds me of…" and move into your own story within one sentence. | 20 s |
 
 **Checklist**
 

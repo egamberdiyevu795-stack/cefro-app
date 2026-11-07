@@ -194,11 +194,18 @@ describe("lessons in mock mode", () => {
     expectMockLinksOnly(markup);
   });
 
-  it("the drill prompts name their task when the retry is another task", async () => {
-    const tradition = await html(LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" })));
-    expect(tradition).toContain("These prompts are about “Advice from someone”");
-    const advice = await html(LessonPage(props({ mock: "1", demo: "demo-1" }, { lessonId: "l-t1" })));
-    expect(advice).not.toContain("These prompts are about");
+  it("the same neutral drill whatever task is retried; no advice prompts, no note about another task", async () => {
+    const drillOf = (markup: string) => markup.slice(markup.indexOf('id="drill-title"'), markup.indexOf('id="retry-title"'));
+    const tradition = drillOf(await html(LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))));
+    const advice = drillOf(await html(LessonPage(props({ mock: "1", demo: "demo-1" }, { lessonId: "l-t1" }))));
+    expect(tradition).toBe(advice);
+    expect(tradition).toContain('data-testid="drill-topic"');
+    expect(tradition).toContain("Describe a place you like to visit.");
+    expect(tradition).not.toContain("These prompts are about");
+    for (const [lessonId, demo] of [["l-t1", "demo-5"], ["l-t8", `picture.${ADVICE}`], ["l-t4-b2", `bare.${ADVICE}`]] as const) {
+      const prompts = [...drillOf(await html(LessonPage(props({ mock: "1", demo }, { lessonId })))).matchAll(/<p class="text-body text-fg">(.*?)<\/p>/g)].map((m) => m[1]);
+      expect(prompts.join(" "), lessonId).not.toMatch(/advice/i);
+    }
   });
 
   it("not found: an unknown lesson, a lesson the result does not lead to, a result with no lesson, no result at all", async () => {

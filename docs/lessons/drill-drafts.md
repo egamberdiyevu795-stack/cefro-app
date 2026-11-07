@@ -1,24 +1,23 @@
-# Drill drafts: neutral drill sets for the wave 1 lessons
+# Drill sets: neutral drills for the wave 1 lessons
 
 | Field | Value |
 | --- | --- |
-| Status | **draft** |
+| Status | **approved** |
 | Drafted by | AI |
 | Written at | 2026-11-07 |
-| Reviewed by | |
-| Reviewed at | |
+| Reviewed by | Asadbek |
+| Reviewed at | 2026-11-07 |
 
-**Not shown in the app.** These are proposals only. The approved lessons keep their own drills (written for
-"Advice from someone") unchanged. Nothing in the app reads this file; a test checks that no source file refers to it,
-that it stays marked draft until the owner approves it, and that no prompt uses a word from any of the 7 Part 2 tasks'
-topics.
+**Approved by Asadbek on 2026-11-07 and in use.** These drills replace the lessons' first drills (written for
+"Advice from someone", now retired) in all three lesson files and in the app, word for word (tested), and the same drill
+is shown for every retry task. A test checks that no prompt uses a word from any of the 7 Part 2 tasks' topics.
 
-Why: the approved drills are on "Advice from someone". When the retry is another task, a neutral drill topic avoids
-practising on a different task's topic. Each set below uses its own made-up topic, which is **not** one of the 7 Part 2
+Why: the first drills were on "Advice from someone". A neutral drill topic avoids practising on one task's topic
+before retrying another. Each set below uses its own made-up topic, which is **not** one of the 7 Part 2
 tasks (advice, an important decision, a goal, working in a team, trying and failing, a tradition, a happy day) and
 **not** the lessons' example topic ("someone helped you"). All topics are everyday and safe for teenagers.
 
-The drill instruction and the checklist stay as in each lesson. The prompts follow the same shape as the approved ones.
+The drill instruction and the checklist stay as in each lesson.
 
 ---
 

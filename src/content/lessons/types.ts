@@ -79,8 +79,18 @@ export interface Lesson {
   drill: {
     /** "Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring." */
     intro: string;
-    /** The task the drill prompts were written for (the lesson file's "Task used"). */
-    taskId: string;
+    /**
+     * The drill's own made-up topic (docs/lessons/drill-drafts.md, approved): never one of the Part 2 tasks, so the same
+     * drill is shown whatever task is retried.
+     */
+    topic: {
+      /** "Drill topic (made up): *"…"*" */
+      intro: string;
+      title: string;
+      questions: [string, string, string];
+      /** "Drill picture (made up): …": a description only, there is no image. */
+      picture?: string;
+    };
     items: LessonDrillItem[];
     checklist: string[];
   };

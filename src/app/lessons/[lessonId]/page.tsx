@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { FEATURE_FLAGS } from "@/config/features";
-import { getShownLesson, type Lesson } from "@/content/lessons";
+import { getShownLesson } from "@/content/lessons";
 import { getSpeakingTask } from "@/content/speaking";
 import { isMultilevel } from "@/domain/evaluation/stored";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
@@ -65,7 +65,6 @@ export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">
         lesson={lesson}
         why={lessonWhy(lesson, result, task.prompts)}
         task={{ title: task.title }}
-        drillTask={drillTaskOf(lesson, task)}
         goal={focus ? { objective: focus.objective, check: focus.success_check || null } : null}
         retryHref={context.retryHref}
         resultHref={context.resultHref}
@@ -73,12 +72,6 @@ export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">
       />
     </AppShell>
   );
-}
-
-function drillTaskOf(lesson: Lesson, task: SpeakingTask): { title: string } | null {
-  if (lesson.drill.taskId === task.id) return null;
-  const drillTask = getSpeakingTask(lesson.drill.taskId);
-  return drillTask ? { title: drillTask.title } : null;
 }
 
 async function lessonContext(query: Query): Promise<LessonContext | null> {

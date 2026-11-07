@@ -27,6 +27,10 @@ function texts(lesson: Lesson): string[] {
     lesson.exampleTopic.note,
     ...lesson.examples.flatMap((e) => [e.problem, e.weaker, e.better, e.note]),
     lesson.drill.intro,
+    lesson.drill.topic.intro,
+    lesson.drill.topic.title,
+    ...lesson.drill.topic.questions,
+    ...(lesson.drill.topic.picture ? [lesson.drill.topic.picture] : []),
     ...lesson.drill.items.map((d) => d.prompt),
     ...lesson.drill.checklist,
     lesson.retry.intro,
@@ -44,7 +48,6 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
     expect(file).toContain(`# ${lesson.id}${lesson.variant ? ` (${lesson.variant})` : ""} — ${lesson.title}`);
     expect(file).toContain(`| Variant | ${lesson.variantLabel} |`);
     expect(file).toContain(`| Version | ${lesson.version} |`);
-    expect(file).toContain(`| Task used | \`${lesson.drill.taskId}\``);
     for (const code of lesson.problems) expect(file).toContain(`\`${code}\``);
   });
 
@@ -55,6 +58,22 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
     expect(field("Reviewed at") || undefined).toBe(lesson.reviewedAt);
     expect(field("Drafted by")?.toLowerCase()).toBe(lesson.draftedBy);
     expect(field("Written at")).toBe(lesson.writtenAt);
+  });
+
+  it("the drill is the approved neutral drill (docs/lessons/drill-drafts.md), word for word; the advice drill is retired", () => {
+    const sets = readFileSync(join(ROOT, "docs/lessons/drill-drafts.md"), "utf8").replace(/\s+/g, " ");
+    expect(sets).toContain("| Status | **approved** |");
+    expect(sets).toContain("| Reviewed by | Asadbek |");
+    expect(sets).toContain("| Reviewed at | 2026-11-07 |");
+    const set = sets.slice(sets.indexOf(`## ${lesson.id}`), sets.indexOf(" ## ", sets.indexOf(`## ${lesson.id}`) + 3) >>> 0 || undefined);
+    const rows = [...set.matchAll(/\| (\d) \| ([^|]+) \| (\d+) s \|/g)].map((m) => [m[2].trim(), Number(m[3])]);
+    expect(rows).toEqual(lesson.drill.items.map((d) => [d.prompt, d.seconds]));
+    for (const text of [lesson.drill.topic.intro, ...lesson.drill.topic.questions, ...(lesson.drill.topic.picture ? [lesson.drill.topic.picture] : [])]) {
+      expect(set, text).toContain(text);
+    }
+    expect(lesson.drill.items).toHaveLength(3);
+    expect(lesson.version).toBe(2);
+    for (const item of lesson.drill.items) expect(item.prompt).not.toMatch(/advice|advise/i);
   });
 
   it("has every example and drill row of the file, in order, with its time; nothing added", () => {

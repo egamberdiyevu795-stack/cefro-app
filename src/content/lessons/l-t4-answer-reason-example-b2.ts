@@ -1,12 +1,13 @@
 import type { Lesson } from "./types";
 
-/** docs/lessons/drafts/L-T4-answer-reason-example-B2.md, word for word. Approved by Asadbek on 2026-11-07. */
+/** docs/lessons/drafts/L-T4-answer-reason-example-B2.md, word for word. Approved by Asadbek on 2026-11-07;
+ * drill set version 2 (docs/lessons/drill-drafts.md) approved by Asadbek on 2026-11-07. */
 export const lessonT4B2: Lesson = {
   id: "L-T4",
   slug: "l-t4-b2",
   variant: "B2",
   variantLabel: "B2 (Part 2)",
-  version: 1,
+  version: 2,
   title: "Answer, reason, example",
   targetLevel: "B2",
   problems: ["P-Q-MINIMAL", "P-Q-PARTIAL"],
@@ -85,13 +86,19 @@ export const lessonT4B2: Lesson = {
   ],
   drill: {
     intro: "Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.",
-    taskId: "b2-part2-advice-from-someone",
+    topic: {
+      intro: "Drill topic (made up): *\"Describe a book or film you enjoyed.\"*",
+      title: "Describe a book or film you enjoyed.",
+      questions: [
+        "What was it, and when did you read or watch it?",
+        "What was it about, and why did you enjoy it?",
+        "Is reading books still important for young people today? Why or why not?",
+      ],
+    },
     items: [
-      { prompt: "Who gave you advice, and what situation were you in? Answer in one sentence, then add one detail.", seconds: 20 },
-      { prompt: 'What was the advice, and did you follow it? Answer, then add "because…".', seconds: 20 },
-      { prompt: 'Should young people always follow advice from older people? Answer, give a reason, then start "For example, …".', seconds: 30 },
-      { prompt: 'Make this bare answer full: "Yes, I followed it." Add a reason and what happened next.', seconds: 20 },
-      { prompt: 'Make this answer direct: "Older people have a lot of experience." Start with your yes / no / it depends.', seconds: 20 },
+      { prompt: "What was the book or film, and when did you read or watch it? Answer in one sentence, then add one detail.", seconds: 20 },
+      { prompt: "Is reading books still important for young people today? Answer, give a reason, then start \"For example, …\".", seconds: 30 },
+      { prompt: "Make this bare answer full: \"Yes, I enjoyed it.\" Add a reason and one detail from the story.", seconds: 20 },
     ],
     checklist: [
       "My first sentence answered the question directly.",

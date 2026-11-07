@@ -208,7 +208,8 @@ too, unchanged. Contains:
 - **Tests:** `src/content/lessons/lessons.test.ts`, `src/features/lessons/choose.test.ts` (including: lesson examples
   never use the retry task's topic, all 3 lessons × all 7 Part 2 tasks), more in `mock-pages.test.ts`,
   `view-model.test.ts` and `e2e/mock-mode.spec.ts`; `mock-answer-rules.test.ts`.
-- `docs/lessons/drill-drafts.md`: neutral drill sets for the three lessons, **draft, not shown**.
+- **Drills:** the neutral drill sets in `docs/lessons/drill-drafts.md` (approved by Asadbek, 2026-11-07) replace the
+  advice-based drills in all three lesson files and in the app (lesson version 2); the same drill for every retry task.
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

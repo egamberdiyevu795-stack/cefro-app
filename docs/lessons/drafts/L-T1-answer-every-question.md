@@ -4,7 +4,7 @@
 | --- | --- |
 | Id | `L-T1` |
 | Variant | Part 2 (B2) |
-| Version | 1 |
+| Version | 2 |
 | Status | **approved** |
 | Target level | B2 (Part 2 target) |
 | Parts | 2 |
@@ -57,12 +57,17 @@ The examples never use the advice topic, so lesson sentences can't be copied int
 
 Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.
 
+Drill set version 2: the neutral drill from `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07. The same drill is shown for every retry task.
+
+Drill topic (made up): *"Describe a place you like to visit."*
+Q1 Where is the place, and how often do you go there? · Q2 What do you do there, and why do you like it? ·
+Q3 Do you think young people spend enough time outdoors? Why or why not?
+
 | # | Prompt | Time |
 | --- | --- | --- |
-| 1 | Who gave you advice, and what situation were you in? Answer, then add one detail (when, where or why). | 20 s |
-| 2 | What was the advice, and did you follow it? Answer, then add one reason or what happened next. | 20 s |
-| 3 | Move from your story to your opinion ("As for young people in general…"), give your opinion, then add one reason. | 20 s |
-| 4 | **Planning drill.** You have 60 seconds, as in the preparation minute. Say your three notes aloud, one for each question (who + situation / advice + followed or not / opinion + reason). | 60 s |
+| 1 | Where is the place, and how often do you go there? Answer, then add one detail (when, who with or why). | 20 s |
+| 2 | What do you do there, and why do you like it? Answer, then add one reason or what happened last time you went. | 20 s |
+| 3 | **Planning drill.** You have 60 seconds, as in the preparation minute. Say your three notes aloud, one for each question (place + how often / what you do + why / opinion + reason). | 60 s |
 
 **Checklist**
 

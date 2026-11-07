@@ -1,11 +1,12 @@
 import type { Lesson } from "./types";
 
-/** docs/lessons/drafts/L-T8-picture-is-not-the-question.md, word for word. Approved by Asadbek on 2026-11-07. */
+/** docs/lessons/drafts/L-T8-picture-is-not-the-question.md, word for word. Approved by Asadbek on 2026-11-07;
+ * drill set version 2 (docs/lessons/drill-drafts.md) approved by Asadbek on 2026-11-07. */
 export const lessonT8: Lesson = {
   id: "L-T8",
   slug: "l-t8",
   variantLabel: "Part 2 (B2)",
-  version: 1,
+  version: 2,
   title: "The picture is not the question",
   targetLevel: "B2",
   problems: ["P-Q-PICTURE"],
@@ -73,12 +74,20 @@ export const lessonT8: Lesson = {
   ],
   drill: {
     intro: "Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.",
-    taskId: "b2-part2-advice-from-someone",
+    topic: {
+      intro: "Drill topic (made up): *\"Describe a skill you learned outside school.\"*",
+      title: "Describe a skill you learned outside school.",
+      questions: [
+        "What was the skill, and who taught you?",
+        "How long did it take, and how did you feel when you could do it?",
+        "Is it better to learn new skills from a person or from videos online? Why?",
+      ],
+      picture: "Drill picture (made up): a boy learning to ride a bicycle in a park while his older sister holds the seat.",
+    },
     items: [
-      { prompt: "Without looking at the picture, say who gave you advice and what situation you were in.", seconds: 20 },
-      { prompt: "Say what the advice was and whether you followed it.", seconds: 20 },
-      { prompt: "Give your opinion: should young people always follow advice from older people? Give one reason.", seconds: 30 },
-      { prompt: 'Start with "This picture reminds me of…" and move into your own story within one sentence.', seconds: 20 },
+      { prompt: "Without looking at the picture, say what skill you learned and who taught you.", seconds: 20 },
+      { prompt: "Give your opinion: is it better to learn new skills from a person or from videos online? Give one reason.", seconds: 30 },
+      { prompt: "Start with \"This picture reminds me of…\" and move into your own story within one sentence.", seconds: 20 },
     ],
     checklist: [
       "I talked about my own experience, not the people in the picture.",

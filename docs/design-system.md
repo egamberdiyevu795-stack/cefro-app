@@ -491,8 +491,10 @@ through end to end.
   `SpeakingEvaluation` for that task's questions; computed once per server process. A demo attempt opens
   `/result?demo=<id>&mock=1`; Finish in a mock practice opens `answer.<task id>` (or `retry.<task id>.<key>` for a
   retry, judged against its goal). The saved-runs prototype (`?anchor=`) stays as it was, for "Advice from someone".
-  Known limit of the mock evaluator: it matches question keywords longer than 4 letters, so "Working in a team" (whose
-  questions 1 and 2 have none) always scores those as missing.
+- **Mock evaluator key words:** the mock evaluator counts key words per question to decide whether it was answered.
+  Each task has its own mock-only list per question (`server/evaluation/mock-question-keywords.ts`; only the mock
+  evaluator imports it, real scoring never reads it), so a full demo answer counts 3 of 3 answered on every task and an
+  answer that only tells the story leaves question 3 missing (`server/evaluation/mock-evaluation-model.test.ts`).
 - **Mock evaluator wording:** its tips and model answers no longer borrow the advice task's topic (examples on a topic
   of their own; a missed question's "model answer" says how to answer that question).
 - **Links:** `features/demo/demo-mode.ts` (`withMock`, `mockLink`, `isMockQuery`) and `demoHref`, which turns links built

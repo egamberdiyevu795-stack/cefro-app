@@ -182,6 +182,10 @@ Cut from `review-dashboard-real-data-4jikaa`, so it comes after it, merge commit
   `src/server/demo/`); the sign-in and register forms are `method="post"` as a second layer. Tests:
   `src/server/demo/demo-data.test.ts`, `src/features/account/AuthForm.test.ts`, and the browser tests check the task
   shown on each demo result and the form method.
+- **Mock evaluator key words:** a mock-only list of key words per question for every task
+  (`src/server/evaluation/mock-question-keywords.ts`, imported only by the mock evaluator), so a full demo answer
+  counts 3 of 3 answered on every task ("Working in a team" used to score questions 1 and 2 as missing). Test:
+  `src/server/evaluation/mock-evaluation-model.test.ts`.
 
 ## Corrections to earlier notes
 

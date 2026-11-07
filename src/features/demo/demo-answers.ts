@@ -25,14 +25,14 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   "b2-part2-important-decision": {
     story: [
       "The most important decision I made was to move to Tashkent for university. I made the decision two years ago, when I finished school in Samarkand.",
-      "Why did I decide this? The courses were much stronger there. It did change my life: I live on my own now, I cook for myself and I have friends from every region.",
+      "I decided to go because the courses were much stronger there. It completely changed my life: I live on my own now, I cook for myself and I have friends from every region.",
     ],
     opinion:
       "In my view it is better to ask others for help with big decisions. Although you decide alone in the end, other people see problems that you can't see yourself.",
   },
   "b2-part2-goal-you-set": {
     story: [
-      "Last year I set a goal to run five kilometres without stopping. Why did I choose it? I felt tired all the time and I wanted to be healthier.",
+      "Last year I set a goal to run five kilometres without stopping. I chose it because I felt tired all the time and I wanted to be healthier.",
       "To reach it I ran three times a week and added a little more distance every week. After four months I did succeed, and I was really proud of myself.",
     ],
     opinion:
@@ -64,8 +64,8 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   },
   "b2-part2-happy-day": {
     story: [
-      "It was last summer. Where was it? At the lake near our village, and I was with my parents and my two sisters.",
-      "What happened was that my sister came home from abroad after two years, and we spent the whole day together. I was so happy that I couldn't stop smiling.",
+      "It was last summer, at the lake near our village, and I was with my parents and my two sisters.",
+      "What happened was that my older sister came home from abroad after two years away, and we spent the whole day together: we swam, cooked plov by the water and talked until it got dark. I was so happy that I couldn't stop smiling.",
     ],
     opinion:
       "Money doesn't really make people happier, in my opinion. On the other hand, people need enough money to live, but after that, family and friends matter much more.",

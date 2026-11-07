@@ -2,6 +2,7 @@ import "server-only";
 import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { MOCK_QUESTION_KEYWORDS } from "./mock-question-keywords";
 import type { EvaluationInput, EvaluationModel, ModelEvaluationOutput } from "./types";
 
 /**
@@ -62,7 +63,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
   });
 
   const questions = task.prompts.map((prompt, index) => {
-    const keywords = evidenceTokens(prompt).filter((w) => w.length > 4);
+    const keywords = questionKeywords(task, index);
     const hit = sentences.find((s) => keywords.some((k) => evidenceTokens(s).includes(k)));
     const shared = new Set(keywords.filter((k) => evidenceTokens(transcript).includes(k))).size;
     const status: QuestionStatus = shared >= 2 ? "on_topic" : shared === 1 ? "partial" : "missing";
@@ -122,12 +123,20 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
   };
 }
 
+/**
+ * The key words of question `index` (0-based): the task's mock-only list when it has one (mock-question-keywords.ts),
+ * else the question's own words longer than 4 letters.
+ */
+function questionKeywords(task: EvaluationInput["task"], index: number): string[] {
+  const listed = MOCK_QUESTION_KEYWORDS[task.id]?.[index];
+  return listed ? [...listed] : evidenceTokens(task.prompts[index] ?? "").filter((w) => w.length > 4);
+}
+
 function reviewObjective(objective: string, input: EvaluationInput) {
   const question = /^Answer question (\d+)/.exec(objective);
   if (question) {
-    const prompt = input.task.prompts[Number(question[1]) - 1] ?? "";
     const words = new Set(evidenceTokens(input.transcript));
-    const shared = new Set(evidenceTokens(prompt).filter((w) => w.length > 4 && words.has(w))).size;
+    const shared = new Set(questionKeywords(input.task, Number(question[1]) - 1).filter((w) => words.has(w))).size;
     return {
       objective,
       outcome: shared >= 2 ? ("achieved" as const) : shared === 1 ? ("partly_achieved" as const) : ("not_achieved" as const),

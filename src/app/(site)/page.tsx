@@ -5,14 +5,19 @@ import { listSpeakingTasks } from "@/content/speaking";
 import { EXAM_PART_IDS, examPartAnchor, examPartLabel, examPartOf } from "@/domain/speaking/exam-part";
 import { PART_NAMES } from "@/features/dashboard/progress";
 import { isMockQuery } from "@/features/demo/demo-mode";
+import { ACCOUNT_DELETED, isAccountDeletedQuery } from "@/features/settings/deleted";
 import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
 
 /**
- * The task list. `?mock=1` (mock mode): the same list, with the demo label, and every task opens its brief in mock
+ * The task list. `?deleted=1` (after "Delete my account"): "Your account and all your data were deleted." on top.
+ * `?mock=1` (mock mode): the same list, with the demo label, and every task opens its brief in mock
  * mode (no configuration, no database, nothing is scored). The (site) layout skips its configuration check then.
  */
 export default async function HomePage(props: PageProps<"/">) {
-  const mock = isMockQuery(await props.searchParams);
+  const query = await props.searchParams;
+  const mock = isMockQuery(query);
+  // After "Delete my account" (never in mock mode, where nothing is deleted).
+  const deleted = !mock && isAccountDeletedQuery(query);
   const tasks = listSpeakingTasks();
   // One section per exam part that has tasks; the dashboard's part tiles link to them (`/#part-2`).
   const parts = EXAM_PART_IDS.map((part) => ({ part, tasks: tasks.filter((t) => examPartOf(t) === part) })).filter((p) => p.tasks.length > 0);
@@ -20,6 +25,11 @@ export default async function HomePage(props: PageProps<"/">) {
     <div className="space-y-10">
       <section className="max-w-2xl space-y-3">
         {mock && <DemoLabel variant="mode" className="font-ui" />}
+        {deleted && (
+          <p role="status" data-testid="account-deleted" className="rounded-xl border border-border bg-surface px-4 py-3 text-base font-medium">
+            {ACCOUNT_DELETED}
+          </p>
+        )}
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Speak. Get specific feedback. Try again.</h1>
         <p className="text-lg text-muted">
           Practise CEFR speaking tasks under exam timing. CEFRO shows you exactly what to fix in your own answer — then lets you retry and see whether it worked.

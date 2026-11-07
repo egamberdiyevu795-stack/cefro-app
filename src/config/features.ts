@@ -20,7 +20,6 @@ export const FEATURE_FLAGS = {
   lessons: true,
   /** History: the real page (`/history`) and its links (sidebar, "See all"). Off: no link, and the page is a 404. */
   history: true,
-  settings: true,
   /** Row menu on attempts (Delete, Report a wrong score). */
   attemptMenu: true,
   /** "Your exam: in N days" card. */

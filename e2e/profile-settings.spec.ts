@@ -4,11 +4,11 @@ import { expect, test, type Page } from "@playwright/test";
 import { E2E_DATA_DIR, querySql } from "./db";
 
 /*
- * Profile (/profile) and Settings (/settings): mock mode with the demo student (nothing sent, every link keeps
- * ?mock=1), the real pages for an account (name, exam date, level, Change password, Sign out, Delete my account with
- * the audio files checked on disk), the microphone test (Chromium's fake microphone; a blocked microphone), a slow
- * connection, and at 390 px: one black control, the current tab grey, no horizontal scroll, no text under 11 px,
- * text contrast AA.
+ * The Account page (/profile; /settings redirects to it): mock mode with the demo student (nothing sent, every link
+ * keeps ?mock=1), the real page for an account (name, level, exam date, Change password, Sign out, Delete my account
+ * with the audio files checked on disk), the practice brief's "Check microphone" (Chromium's fake microphone; a blocked
+ * microphone), a slow connection, and at 390 px: exactly one black control, the grey current tab, no horizontal
+ * scroll, no text under 11 px, text contrast AA.
  */
 
 const PREVIEW = process.env.E2E_PREVIEW === "1";
@@ -16,6 +16,7 @@ const BLACK = ":is(a, button).bg-primary.text-on-primary";
 const DEMO = "Demo mode. Changes are not saved.";
 const PASSWORD = "correct horse battery staple";
 const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
+const MOCK_TASK_URL = "/practice/speaking/b2-part2-a-tradition?mock=1";
 const run = Date.now();
 let counter = 0;
 const uniqueEmail = (label: string) => `${label}-${run}-${++counter}@example.com`;
@@ -30,7 +31,7 @@ function watchApi(page: Page) {
 }
 
 /** At 390 px: one black control, the grey current tab, no horizontal scroll, no text under 11 px, text contrast AA. */
-async function auditPhone(page: Page, current: "Account" | "Settings") {
+async function auditPhone(page: Page, current: "Account" | "Practice") {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("main").first()).toBeVisible();
   const black = await page.locator(BLACK).evaluateAll((els) => els.filter((el) => (el as HTMLElement).offsetParent !== null).length);
@@ -103,17 +104,25 @@ async function practise(page: Page) {
 }
 
 test.describe("mock mode (?mock=1)", () => {
-  test("Profile: the demo student; name and exam date change on the page only; nothing is sent; links keep ?mock=1", async ({ page }) => {
+  test("the Account page: the demo student in order; name and exam date change on the page only; nothing is sent", async ({ page }) => {
     const api = watchApi(page);
     await page.goto("/profile?mock=1");
     await expect(page.getByText(DEMO)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Account", level: 1 })).toBeVisible();
     await expect(page.getByTestId("profile-name")).toHaveText("Student");
     await expect(page.getByTestId("profile-email")).toHaveText("student@example.com");
+    await expect(page.getByTestId("profile-level")).toHaveText(/^(Below B1|B1|B2|Above B2)$/);
     await expect(page.getByTestId("profile-member-since")).toHaveText(/^Member since \d\d\.\d\d\.\d\d$/);
     await expect(page.getByTestId("profile-attempts")).toHaveText("6 practice attempts");
-    await expect(page.getByTestId("profile-level")).toHaveText(/^(Below B1|B1|B2|Above B2)$/);
     await expect(page.getByTestId("exam-countdown")).toHaveText("in 23 days");
-    await expect(page.getByText(/Coming soon|Target level|Change email|Notifications/)).toHaveCount(0);
+    // Section order: account, exam date, password and sign-out, delete last.
+    const tops = await Promise.all(
+      [page.getByTestId("profile-name"), page.getByTestId("exam-countdown"), page.getByRole("heading", { name: "Change password" }), page.getByRole("heading", { name: "Sign out" }), page.getByRole("heading", { name: "Delete my account" })].map(
+        async (l) => (await l.boundingBox())!.y,
+      ),
+    );
+    expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+    await expect(page.getByText(/Coming soon|Target level|Change email|Notifications|Test your microphone/)).toHaveCount(0);
     await expectMockLinks(page);
     await auditPhone(page, "Account");
 
@@ -136,22 +145,19 @@ test.describe("mock mode (?mock=1)", () => {
     await expect(page.getByTestId("exam-countdown")).toHaveText("in 23 days");
   });
 
-  test("Settings: Change password and Delete my account show their screens but change nothing; nothing is sent", async ({ page }) => {
+  test("Change password, Sign out and Delete my account show their screens but change nothing; nothing is sent", async ({ page }) => {
     const api = watchApi(page);
-    await page.goto("/settings?mock=1");
-    await expect(page.getByText(DEMO)).toBeVisible();
-    await expect(page.getByText(/Coming soon|Target level|Change email|Language|Notifications/)).toHaveCount(0);
-    await expectMockLinks(page);
-    await auditPhone(page, "Settings");
-
+    await page.goto("/profile?mock=1");
     await page.getByLabel("Current password").fill("anything at all");
     await page.getByLabel("New password").fill("a new password");
     await page.getByRole("button", { name: "Change password" }).click();
     await expect(page.getByTestId("password-done")).toHaveText("Demo mode. Your password was not changed.");
 
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page.getByText("Demo mode. Sign-in is off, so there is nothing to sign out of.")).toBeVisible();
+
     await page.getByRole("button", { name: "Delete my account" }).click();
-    const list = page.getByTestId("delete-list").getByRole("listitem");
-    await expect(list).toHaveText([
+    await expect(page.getByTestId("delete-list").getByRole("listitem")).toHaveText([
       "Your practice attempts and their results",
       "Your recordings and transcripts",
       "Your exam date",
@@ -159,56 +165,66 @@ test.describe("mock mode (?mock=1)", () => {
     ]);
     const confirm = page.getByRole("button", { name: "Delete everything" });
     await expect(confirm).toBeDisabled();
+    await page.getByLabel("Type DELETE to confirm").fill("DELETE");
+    await expect(confirm).toBeDisabled(); // the password is needed too
+    await page.getByLabel("Your password").fill("anything");
     await page.getByLabel("Type DELETE to confirm").fill("delete");
     await expect(confirm).toBeDisabled();
     await page.getByLabel("Type DELETE to confirm").fill("DELETE");
     await expect(confirm).toBeEnabled();
-    await auditPhone(page, "Settings"); // the confirmation screen too
+    await auditPhone(page, "Account"); // the confirmation screen too
     await confirm.click();
     await expect(page.getByTestId("delete-done")).toHaveText("Demo mode. Nothing was deleted.");
-
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page.getByText("Demo mode. Sign-in is off, so there is nothing to sign out of.")).toBeVisible();
     expect(api).toEqual([]);
   });
 
-  test("navigation: the gear opens Settings, the person tab's Profile opens Profile, both keep ?mock=1", async ({ page }) => {
+  test("navigation: five tabs; the Account tab opens the page directly; /settings redirects, keeping ?mock=1", async ({ page }) => {
     await page.goto("/dashboard?mock=1");
-    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(/\/settings\?mock=1$/);
-    await page.getByTestId("account-status").getByRole("button", { name: "Account" }).click();
-    await page.getByRole("menuitem", { name: "Profile" }).click();
+    const nav = page.getByRole("navigation", { name: "Main" });
+    await expect(nav.locator("a, button, [role=img]")).toHaveCount(5);
+    for (const name of ["Home", "Practice", "Lessons", "History", "Account"]) await expect(nav.getByRole(name === "Lessons" ? "button" : "link", { name })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await nav.getByRole("link", { name: "Account" }).click();
     await expect(page).toHaveURL(/\/profile\?mock=1$/);
-    await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
+    await page.goto("/settings?mock=1");
+    await expect(page).toHaveURL(/\/profile\?mock=1$/);
   });
 });
 
-test.describe("microphone test", () => {
-  test("records up to 3 s and plays it back; nothing is uploaded", async ({ page }) => {
-    const api = watchApi(page);
-    const uploads: string[] = [];
+test.describe("Check microphone on the practice brief", () => {
+  test("grey, before Start preparation (the only black button); records up to 3 s and plays it back; nothing is uploaded", async ({ page }) => {
+    const sent: string[] = [];
     page.on("request", (r) => {
-      if (r.method() !== "GET") uploads.push(r.url());
+      if (r.method() !== "GET" || new URL(r.url()).pathname.startsWith("/api/")) sent.push(`${r.method()} ${r.url()}`);
     });
-    await page.goto("/settings?mock=1");
-    await page.getByRole("button", { name: "Test microphone" }).click();
+    await page.goto(MOCK_TASK_URL);
+    const check = page.getByRole("button", { name: "Check microphone" });
+    const start = page.getByRole("button", { name: "Start preparation" });
+    await expect(check).toBeEnabled();
+    await expect(check).not.toHaveClass(/bg-primary/);
+    expect((await check.boundingBox())!.y).toBeLessThan((await start.boundingBox())!.y);
+    await auditPhone(page, "Practice");
+
+    await check.click();
     await expect(page.getByRole("timer")).toBeVisible();
-    // Stops by itself after 3 s.
-    await expect(page.getByRole("button", { name: "Test again" })).toBeVisible({ timeout: 8_000 });
-    const audio = page.getByTestId("mic-test").locator("audio");
+    await expect(page.getByRole("button", { name: "Check again" })).toBeVisible({ timeout: 8_000 }); // stopped by itself
+    const audio = page.getByTestId("mic-check").locator("audio");
     await expect(audio).toHaveCount(1);
     expect(await audio.getAttribute("src")).toMatch(/^blob:/);
-    await auditPhone(page, "Settings");
-    expect(api).toEqual([]);
-    expect(uploads).toEqual([]);
+    await auditPhone(page, "Practice"); // still one black button with the player shown
+    expect(sent).toEqual([]);
+
+    // The practice itself still starts normally afterwards.
+    await start.click();
+    await expect(page.getByText("to prepare")).toBeVisible();
   });
 
   test("a blocked microphone says so clearly", async ({ page }) => {
     await page.addInitScript(() => {
       navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("Permission denied", "NotAllowedError"));
     });
-    await page.goto("/settings?mock=1");
-    await page.getByRole("button", { name: "Test microphone" }).click();
+    await page.goto(MOCK_TASK_URL);
+    await page.getByRole("button", { name: "Check microphone" }).click();
     await expect(page.getByTestId("mic-error")).toHaveText(/Your microphone is blocked for CEFRO\. Allow the microphone for this site/);
   });
 });
@@ -216,12 +232,14 @@ test.describe("microphone test", () => {
 test.describe("real account", () => {
   test.skip(PREVIEW, "a Preview has no database: the real pages refuse (mock-mode.spec.ts)");
 
-  test("Profile and Settings for a new account, then Change password, Sign out, and Delete my account (audio files gone)", async ({ page }) => {
-    const email = uniqueEmail("profile");
+  test("the Account page for a new account, then Change password, and Delete my account (password + DELETE; audio files gone)", async ({ page }) => {
+    const email = uniqueEmail("account");
     await register(page, email);
 
     // No answer yet: "No level yet" with a link to Part 2; no exam date: "Not set · Add exam date".
-    await page.goto("/profile");
+    await page.goto("/dashboard");
+    await page.getByTestId("account-status").getByRole("link", { name: "Account" }).click();
+    await expect(page).toHaveURL(/\/profile$/);
     await expect(page.getByTestId("profile-email")).toHaveText(email);
     await expect(page.getByTestId("profile-level")).toHaveText("No level yet");
     await expect(page.getByRole("link", { name: "Go to Part 2" })).toHaveAttribute("href", "/#part-2");
@@ -246,8 +264,6 @@ test.describe("real account", () => {
     await auditPhone(page, "Account");
 
     // Change password: the current one is needed.
-    await page.goto("/settings");
-    await auditPhone(page, "Settings");
     await page.getByLabel("Current password").fill("not my password");
     await page.getByLabel("New password").fill("another good password");
     await page.getByRole("button", { name: "Change password" }).click();
@@ -267,10 +283,20 @@ test.describe("real account", () => {
     const file = path.join(E2E_DATA_DIR, `${process.env.E2E_RUN_ID}-audio`, String(rows[0].key));
     expect(fs.existsSync(file)).toBe(true);
 
+    // A wrong password deletes nothing; the right one deletes everything.
     await page.getByRole("button", { name: "Delete my account" }).click();
+    await page.getByLabel("Your password").fill("another wrong one");
     await page.getByLabel("Type DELETE to confirm").fill("DELETE");
     await page.getByRole("button", { name: "Delete everything" }).click();
-    await expect(page.getByTestId("delete-done")).toHaveText("Your account and everything in it were deleted.");
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText("Your password is not right.");
+    expect(fs.existsSync(file)).toBe(true);
+    await page.getByLabel("Your password").fill("another good password");
+    await page.getByRole("button", { name: "Delete everything" }).click();
+    // Signed out, on the home page, with the message.
+    await expect(page).toHaveURL(/\/\?deleted=1$/);
+    await expect(page.getByTestId("account-deleted")).toHaveText("Your account and all your data were deleted.");
+    await expect(page.getByTestId("account-status")).toHaveAttribute("data-state", "anonymous");
+    expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
 
     expect(fs.existsSync(file)).toBe(false);
     expect(await querySql("SELECT id FROM users WHERE email = ?", [email])).toEqual([]);
@@ -286,18 +312,21 @@ test.describe("real account", () => {
     }
   });
 
-  test("Sign out ends the session", async ({ page }) => {
+  test("Sign out ends the session; /settings opens the Account page", async ({ page }) => {
     await register(page, uniqueEmail("signout"));
     await page.goto("/settings");
+    await expect(page).toHaveURL(/\/profile$/);
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await page.goto("/settings");
-    await expect(page.getByText("Sign in to change your password")).toBeVisible();
+    await page.goto("/profile");
+    await expect(page.getByText("Practising without an account")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
   });
 
-  test("slow connection: Change password and Delete my account wait until the page is ready", async ({ page }) => {
+  test("slow connection: Change password, Delete my account and Check microphone wait until the page is ready", async ({ page }) => {
     await register(page, uniqueEmail("slow"));
-    await page.goto("/settings"); // compiled once, so only the delay below is slow
+    await page.goto("/profile"); // compiled once, so only the delay below is slow
+    await page.goto(TASK_URL);
     await page.route("**/_next/static/chunks/**", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 4_000));
       await route.continue();
@@ -306,16 +335,19 @@ test.describe("real account", () => {
     page.on("request", (r) => {
       if (r.isNavigationRequest()) navigations.push(r.url());
     });
-    await page.goto("/settings", { waitUntil: "domcontentloaded" });
+    await page.goto("/profile", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("button", { name: "Change password" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Delete my account" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Test microphone" })).toBeDisabled();
     // Enter in a password field before the scripts run sends nothing (the only submit button is disabled).
     await page.getByLabel("Current password").fill("typed early");
     await page.getByLabel("Current password").press("Enter");
     await expect(page.getByRole("button", { name: "Change password" })).toBeEnabled({ timeout: 30_000 });
     expect(navigations).toHaveLength(1);
     expect(page.url()).not.toContain("typed");
+
+    await page.goto(TASK_URL, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("button", { name: "Check microphone" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Check microphone" })).toBeEnabled({ timeout: 30_000 });
     await page.unroute("**/_next/static/chunks/**");
   });
 });

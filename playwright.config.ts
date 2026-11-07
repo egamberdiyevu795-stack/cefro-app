@@ -42,6 +42,9 @@ export default defineConfig({
       EVALUATION_PROVIDER: "mock",
       DATABASE_PATH: `./data/e2e/${runId}.db`,
       AUDIO_STORAGE_DIR: `./data/e2e/${runId}-audio`,
+      // Test runs only: lets a test choose its client address (x-forwarded-for) for the per-IP sign-up limit. Ignored
+      // by production builds and on Vercel (src/server/auth/auth-limits.ts, clientIp).
+      CEFRO_TEST_CLIENT_IP: "1",
     },
   },
 });

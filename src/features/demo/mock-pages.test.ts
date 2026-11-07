@@ -164,7 +164,6 @@ describe("one black control per screen, the navigation included (grey active tab
     ["history", () => HistoryPage(props({ mock: "1" }))],
     ["lesson", () => LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))],
     ["profile", () => ProfilePage(props({ mock: "1" }))],
-    ["settings", () => SettingsPage(props({ mock: "1" }))],
   ] as const)("%s: at most one black control on the whole page; the current tab is grey", async (_name, page) => {
     const markup = await html(page());
     expect((markup.match(BLACK) ?? []).length).toBeLessThanOrEqual(1);
@@ -172,8 +171,8 @@ describe("one black control per screen, the navigation included (grey active tab
   });
 });
 
-describe("Profile and Settings in mock mode", () => {
-  it("Profile: the demo student's name, email, exam date, level, member since and attempts; demo label; one black button; mock links", async () => {
+describe("Account page (/profile) in mock mode", () => {
+  it("the demo student, sections in order: account (name, email, level, member since, attempts), exam date, password then sign out, delete last", async () => {
     const markup = await html(ProfilePage(props({ mock: "1" })));
     expect(markup).toContain(DEMO_CHANGES_TEXT);
     expect(markup).toMatch(/data-testid="profile-name"[^>]*>Student</);
@@ -184,26 +183,18 @@ describe("Profile and Settings in mock mode", () => {
     // The demo student's latest scored Part 2 answer is the "A tradition" retry: a real level, not "No level yet".
     expect(markup).toMatch(/data-testid="profile-level"[^>]*>(Below B1|B1|B2|Above B2)</);
     expect(markup).toContain('href="/?mock=1#part-2"');
+    const order = ['data-testid="profile-name"', 'data-testid="profile-email"', 'data-testid="profile-level"', 'data-testid="profile-member-since"',
+      'data-testid="profile-attempts"', 'data-testid="exam-countdown"', ">Change password<", ">Sign out<", ">Delete my account<"].map((needle) => mainOf(markup).indexOf(needle));
+    expect(order.every((at) => at >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(mainOf(markup).match(BLACK)).toHaveLength(1);
     expect(markup).not.toMatch(SMALL);
-    expect(markup).not.toMatch(/Coming soon|Target level|Change email|Language|Notifications/i);
+    expect(markup).not.toMatch(/Coming soon|Target level|Change email|Language|Notifications|Test your microphone/i);
     expectMockLinksOnly(markup);
   });
 
-  it("Profile: the Account item is the current tab (grey, aria-current), the gear is not", async () => {
+  it("forms post to the page itself and every submit starts disabled (until the page is ready)", async () => {
     const markup = await html(ProfilePage(props({ mock: "1" })));
-    const current = [...markup.matchAll(/<(a|button|span)\b[^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
-    expect(current).toHaveLength(1);
-    expect(current[0]).toContain('aria-label="Account"');
-    expect(current[0]).toContain("bg-well");
-    expect(current[0]).not.toContain("bg-primary");
-  });
-
-  it("Settings: microphone test, change password (POST, disabled until ready), sign out, delete; demo label; one black button; the gear is current", async () => {
-    const markup = await html(SettingsPage(props({ mock: "1" })));
-    expect(markup).toContain(DEMO_CHANGES_TEXT);
-    for (const title of ["Test your microphone", "Change password", "Sign out", "Delete my account"]) expect(markup).toContain(title);
-    expect(markup).toContain("Nothing is saved or uploaded.");
     const forms = [...markup.matchAll(/<form\b[^>]*>/g)].map((m) => m[0]);
     expect(forms.length).toBeGreaterThan(0);
     for (const form of forms) {
@@ -213,16 +204,51 @@ describe("Profile and Settings in mock mode", () => {
     const submits = [...markup.matchAll(/<button\b[^>]*type="submit"[^>]*>/g)].map((m) => m[0]);
     expect(submits.length).toBeGreaterThan(0);
     for (const submit of submits) expect(submit).toContain('disabled=""');
-    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
-    expect(mainOf(markup).match(BLACK)![0]).toContain("disabled"); // the microphone test waits for the page too
-    const gear = markup.match(/<a\b[^>]*aria-label="Settings"[^>]*>/)![0];
-    expect(gear).toContain('href="/settings?mock=1"');
-    expect(gear).toContain('aria-current="page"');
-    expect(gear).toMatch(/class="[^"]*\bbg-well\b/);
-    expect(gear).not.toContain("bg-primary");
-    expect(markup).not.toMatch(SMALL);
-    expect(markup).not.toMatch(/Coming soon|Target level|Change email|Language|Notifications/i);
-    expectMockLinksOnly(markup);
+  });
+
+  it("five tabs: Home, Practice, Lessons, History, Account; the Account tab is a direct link (no menu), the grey current tab", async () => {
+    const markup = await html(ProfilePage(props({ mock: "1" })));
+    const nav = markup.slice(markup.indexOf('<nav aria-label="Main"'), markup.indexOf("</nav>"));
+    const labels = [...nav.matchAll(/aria-label="([^"]+)"/g)].map((m) => m[1]).filter((l) => l !== "Main");
+    expect(labels).toEqual(["Home", "Practice", "Lessons", "History", "Account"]);
+    expect(nav).not.toContain("aria-haspopup");
+    expect(nav).not.toContain("Settings");
+    const current = [...markup.matchAll(/<(a|button|span)\b[^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
+    expect(current).toHaveLength(1);
+    expect(current[0]).toMatch(/^<a\b/);
+    expect(current[0]).toContain('aria-label="Account"');
+    expect(current[0]).toContain('href="/profile?mock=1"');
+    expect(current[0]).toContain("bg-well");
+    expect(current[0]).not.toContain("bg-primary");
+  });
+
+  it("/settings redirects to the Account page, keeping mock mode", async () => {
+    const digest = async (query: Query) => {
+      try {
+        await SettingsPage(props(query));
+      } catch (error) {
+        return String((error as { digest?: string }).digest);
+      }
+      return "no redirect";
+    };
+    expect(await digest({ mock: "1" })).toContain(";/profile?mock=1;");
+  });
+});
+
+describe("Check microphone on the practice brief", () => {
+  it("a grey 'Check microphone' before Start preparation, which stays the only black button", async () => {
+    const markup = await html(PracticePage(props({ mock: "1" }, { taskId: "b2-part2-a-tradition" })));
+    const main = mainOf(markup);
+    expect(main).toContain("Check microphone");
+    expect(main).toContain("Nothing is saved or uploaded.");
+    expect(main.indexOf("Check microphone")).toBeLessThan(main.indexOf("Start preparation"));
+    const check = main.match(/<button\b[^>]*>(?:(?!<\/button>).)*Check microphone/s)![0];
+    expect(check).toContain("bg-well");
+    expect(check).not.toContain("bg-primary");
+    expect(check).toContain('disabled=""'); // waits for the page, like Start preparation
+    const black = main.match(BLACK)!;
+    expect(black).toHaveLength(1);
+    expect(main.slice(main.indexOf(black[0])).replace(/<[^>]+>/g, "").trimStart()).toMatch(/^Start preparation/);
   });
 });
 

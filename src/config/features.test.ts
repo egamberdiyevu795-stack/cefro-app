@@ -8,17 +8,16 @@ describe("feature flags", () => {
     expect(Object.keys(allFlags(true)).sort()).toEqual(Object.keys(FEATURE_FLAGS).sort());
   });
 
-  it("flagged nav items are 'coming soon' when on and gone when off; History and Settings are real links when on", () => {
+  it("the navigation: Home, Practice, Lessons (coming soon), History; flagged items gone when off; no Settings tab", () => {
     const on = navItemsFor(allFlags(true));
-    expect(on.map((i) => i.label)).toEqual(["Dashboard", "Practice", "Lessons", "History", "Settings"]);
+    expect(on.map((i) => i.label)).toEqual(["Home", "Practice", "Lessons", "History"]);
     expect(on.filter((i) => i.soon).map((i) => i.label)).toEqual(["Lessons"]);
     expect(on.find((i) => i.label === "History")).toMatchObject({ href: "/history" });
-    expect(on.find((i) => i.label === "Settings")).toEqual({ href: "/settings", label: "Settings", icon: "settings" });
-    // Mock mode: the gear keeps ?mock=1.
-    expect(navItemsFor(allFlags(true), true).find((i) => i.label === "Settings")?.href).toBe("/settings?mock=1");
+    expect(on.some((i) => i.href.startsWith("/settings"))).toBe(false);
+    // The fifth tab, Account, is the AccountTab component (checked in mock-pages.test.ts).
 
     const off = navItemsFor(allFlags(false));
-    expect(off.map((i) => i.label)).toEqual(["Dashboard", "Practice"]);
+    expect(off.map((i) => i.label)).toEqual(["Home", "Practice"]);
     expect(off.some((i) => i.soon)).toBe(false);
   });
 });

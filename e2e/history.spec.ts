@@ -81,7 +81,7 @@ test("History: empty state, then the student's attempts newest first, retries, t
   await expect(recent.getByRole("link", { name: /Advice from someone/ }).first()).toHaveAttribute("href", `/result/${third}`);
   await recent.getByRole("link", { name: "See all attempts" }).click();
   await expect(page).toHaveURL(/\/history$/);
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Dashboard" }).click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Home" }).click();
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "History" }).click();
   await expect(page).toHaveURL(/\/history$/);
 

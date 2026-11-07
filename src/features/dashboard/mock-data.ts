@@ -12,12 +12,12 @@ import { mockLink } from "@/features/demo/demo-mode";
  * as a real link once it is (`built: true`, e.g. History).
  */
 export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag; built?: boolean }> = [
-  { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/dashboard", label: "Home", icon: "dashboard" },
   { href: "/", label: "Practice", icon: "mic" },
   { href: "/lessons", label: "Lessons", icon: "book", flag: "lessons" },
   { href: "/history", label: "History", icon: "clock", flag: "history", built: true },
-  { href: "/settings", label: "Settings", icon: "settings", flag: "settings", built: true },
 ];
+// The fifth tab, Account, is `AccountTab` (always shown, whatever the flags): it also says whether the browser is signed in.
 
 export function navItemsFor(flags: FeatureFlags, mock = false): NavItem[] {
   return NAV_ITEMS.flatMap(({ flag, built, ...item }) => {
@@ -27,7 +27,7 @@ export function navItemsFor(flags: FeatureFlags, mock = false): NavItem[] {
   });
 }
 
-/** The demo account of the Account menu, Profile and Settings in mock mode (no Log out: mock mode calls no API). */
+/** The demo account of the Account page and the (site) header's Account menu in mock mode (mock mode calls no API). */
 export const ACCOUNT = { name: "Student", email: "student@example.com" };
 
 /** First visit: what the welcome card says. "Start your first practice" goes to the recommended part (Part 2). */

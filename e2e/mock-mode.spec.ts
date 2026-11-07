@@ -103,7 +103,7 @@ test("mock mode: task list → brief → practice → result → retry → dashb
   await expect(demo).toHaveText(DEMO_RESULT);
 
   // Dashboard: the demo student.
-  await page.getByRole("link", { name: "Dashboard" }).first().click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/dashboard\?mock=1$/);
   await expect(demo).toHaveText(DEMO_DATA);
   await expect(page.getByTestId("exam-countdown")).toHaveText("in 23 days");
@@ -152,7 +152,7 @@ test("mock mode: task list → brief → practice → result → retry → dashb
   await page.getByRole("link", { name: "Practice" }).first().click();
   await expect(page).toHaveURL(/\/\?mock=1$/);
   await page.goto("/history?mock=1");
-  await page.getByRole("link", { name: "Dashboard" }).first().click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/dashboard\?mock=1$/);
 
   expect(seen.apiCalls).toEqual([]);
@@ -246,7 +246,6 @@ test("mock mode at 390 px: every main page has at most one black control, naviga
     "/history?mock=1",
     "/lessons/l-t1?demo=demo-5&mock=1",
     "/profile?mock=1",
-    "/settings?mock=1",
   ]) {
     await page.goto(url);
     await expect(page.locator("main").first()).toBeVisible();
@@ -259,13 +258,17 @@ test("mock mode at 390 px: every main page has at most one black control, naviga
   }
 });
 
-test("mock mode: the demo account has no sign-in or Log out, only Profile (no API, no real page)", async ({ page }) => {
+test("mock mode: the Account tab opens the demo Account page directly (no menu, no API, no real page)", async ({ page }) => {
   const seen = watch(page);
   await page.goto("/dashboard?mock=1");
-  await page.getByTestId("account-status").getByRole("button", { name: "Account" }).click();
-  await expect(page.getByText("Demo account. Sign-in is off in demo mode.")).toBeVisible();
-  await expect(page.getByRole("menuitem")).toHaveText(["Profile"]);
+  const tab = page.getByTestId("account-status").getByRole("link", { name: "Account" });
+  await expect(tab).toHaveAttribute("href", "/profile?mock=1");
+  await tab.click();
+  await expect(page).toHaveURL(/\/profile\?mock=1$/);
+  await expect(page.getByRole("heading", { name: "Account", level: 1 })).toBeVisible();
+  await expect(page.getByRole("menuitem")).toHaveCount(0);
   expect(seen.apiCalls).toEqual([]);
+  expect(seen.realPages).toEqual([]);
 });
 
 test("real pages show no demo label", async ({ page }) => {

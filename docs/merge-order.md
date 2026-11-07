@@ -313,6 +313,8 @@ Contains (docs/teacher-plan.md, built as written; see "Not followed" below):
 Cut from `claude/teacher-view-kd6wdk` (`ee7b793`), so it comes **after it**, merge commit, no squash. Branch name:
 `claude/entry-pages` (11 characters after `claude/`). `claude/entry-pages-jgh558` is the same commits (the session's
 working branch): merge only `claude/entry-pages`, then delete both. No database migration, no new environment variable.
+Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-entry-pages-crm-b915.vercel.app/?mock=1`.
+Vercel builds a commit once: push a new commit to `claude/entry-pages` first, or its Preview address does not exist.
 
 Contains (docs/design-system.md, "Signed-out pages"):
 

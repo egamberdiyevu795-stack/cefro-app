@@ -74,7 +74,7 @@ Q3 Do you think young people spend enough time outdoors? Why or why not?
 | 2 | What do you do there, and why do you like it? Answer, then add one reason or what happened last time you went. | 20 s |
 | 3 | **Planning drill.** You have 60 seconds, as in the preparation minute. Say your three notes aloud, one for each question (place + how often / what you do + why / opinion + reason). | 60 s |
 
-**Checklist**
+**Checklist** — not shown (covered by drill self-checks)
 
 - [ ] My plan had a note for every question.
 - [ ] Each answer started with a sentence that answers that question, then added a reason or a detail.

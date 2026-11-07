@@ -91,6 +91,8 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
     expect(exampleRows.map((m) => [m[2], m[3]])).toEqual(lesson.examples.map((e) => [e.weaker, e.better]));
     const drillRows = [...file.matchAll(/\| (\d) \| ([^|]+) \| (\d+) s \|/g)];
     expect(drillRows.map((m) => [m[2].trim(), Number(m[3])])).toEqual(lesson.drill.items.map((d) => [d.prompt, d.seconds]));
+    // The checklist stays in the file, marked as not shown on the page.
+    expect(file).toContain("**Checklist** — not shown (covered by drill self-checks)");
     const checklist = [...file.matchAll(/- \[ \] (.+?)(?= - \[ \]| ## |$)/g)].map((m) => m[1].trim());
     expect(checklist).toEqual(lesson.drill.checklist);
   });
@@ -126,7 +128,6 @@ function shownTexts(lesson: Lesson): { text: string; weakerExample: boolean }[] 
     ...lesson.drill.topic.questions,
     ...(lesson.drill.topic.picture ? [lesson.drill.topic.picture] : []),
     ...lesson.drill.items.map((d) => d.prompt),
-    ...lesson.drill.checklist,
     lesson.retry.intro,
     lesson.retry.reminder,
   ].map((text) => ({ text, weakerExample: false }));

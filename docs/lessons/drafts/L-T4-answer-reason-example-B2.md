@@ -77,7 +77,7 @@ Q3 Is reading books still important for young people today? Why or why not?
 | 2 | Is reading books still important for young people today? Answer, give a reason, then start "For example, …". | 30 s |
 | 3 | Make this bare answer full: "Yes, I enjoyed it." Add a reason and one detail from the story. | 20 s |
 
-**Checklist**
+**Checklist** — not shown (covered by drill self-checks)
 
 - [ ] My first sentence answered the question directly.
 - [ ] I added a reason (*because*, *since*, *so*).

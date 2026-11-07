@@ -33,7 +33,9 @@ API routes (`src/app/api/**`) did not move.
 
 ## One primary action per screen
 
-Only one near-black (`primary`) action per screen. Every other action uses the grey `quiet` pill (or `light` on a
+Only one near-black (`primary`) control per screen, the navigation included: the current nav item is a **grey** square
+(`NAV_ITEM_ACTIVE`, approved by Asadbek on 2026-11-07), never black, on every page; a browser test checks every main page
+in mock mode at 390 px. Every other action uses the grey `quiet` pill (or `light` on a
 `well` tile). Dashboard: returning = "Practise next · Start" (Biggest fix "Start retry" is grey); first visit = the
 welcome card's "Start your first practice" (it goes to the recommended part, Part 2); attempts but none scored = the
 same card's "Start practice". All part tiles use the white tile pill. The exam date's Save is grey; Edit, Add exam
@@ -254,7 +256,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
   rail with the wordmark on top. Right: the top bar (search left; quiet text actions, a thin divider and a bell right),
   then a two-column grid (`1fr` | `~0.44fr`, 16 px gaps). Cards use 24 px padding.
 - **Phone (< 1024 px):** one column, 16 px side gutters, 20 px card padding. The rail becomes a fixed bottom bar with the
-  same items and the same black active square; the page gets bottom padding so nothing hides under it.
+  same items and the same grey active square; the page gets bottom padding so nothing hides under it.
 - A card may be split into separate cards on phones (the dashboard's progress card) by making it `display: contents`
   below `lg`; its halves then take their own `order`.
 
@@ -275,7 +277,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `RadarChart` | Radar on ordinal rings (Below B1, B1, B2, Above B2), thin grey grid, accent outline and dots, the soft gradient fill. A skill that was not assessed (`value: null`, e.g. pronunciation when the audio check did not run) gets a dashed axis, a hollow dashed point at the axis end, no polygon vertex, and the label "Not assessed". **No text under 11 px:** two fixed-size versions are picked by the chart's own width (container query). At 23rem (368 px) and wider: full names and ring names at their natural size. Narrower: short names (Gram, Vocab, Flu, Coh, Pron), no ring names, and the level of each skill listed under the chart. The list is always there for screen readers. |
 | Part tile (pattern, dashboard) | `well` tile with `rounded-tile`: part (caption, semibold) and its name, the band as the largest text (`text-title`, "Band 2"), its label below (`text-label`, muted, "Higher B1"), and a small `light` pill ("Practise"; "Start" for an untried part, same tile). |
 | `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), optional trailing `menu`. `Thumb` is the neutral avatar/photo placeholder. |
-| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` black square with a white glyph. An item with `soon: true` looks the same and says "Coming soon". |
+| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` grey (`well`) square with a dark glyph (never black: see "One primary action per screen"). An item with `soon: true` looks the same and says "Coming soon". |
 | `TopBar`, `TopBarLink`, `SearchSoon` | Optional search on the left, quiet text actions with small grey glyphs on the right. `TopBarLink soon` and `SearchSoon` are future entry points that say "Coming soon". |
 | `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Used by the row menu and the Account menu. |
 | `ComingSoonButton`, `ComingSoonMenu`, `ComingSoonToast` | Future controls behind a feature flag. The button takes the real control's classes (from `styles.ts`), so it looks identical; tapping it shows the toast. The menu is a ⋮ button with a small card menu whose items all say "Coming soon" (closes on Escape or outside tap). The toast is one small near-black pill ("Coming soon") near the bottom, a polite live region; mount it once per page. |
@@ -536,9 +538,10 @@ Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks t
   new teaching wording; a test checks every piece is in the prompt). Yes marks the prompt done (small tick); Not yet
   shows "Try once more" and keeps "Record again"; a new recording asks again. When every prompt is Yes, "Ready for your
   retry" shows just above "Retry with this goal". Nothing is saved or uploaded; it resets when the page closes.
-- **Navigation on a lesson:** the Lessons (book) tab is the current section, shown as a **grey** square
-  (`NAV_ITEM_ACTIVE_QUIET`, `AppShell quietNav`), not a link (there is no lesson library yet), so "Retry with this goal"
-  is the only black control on screen, the bottom bar included.
+- **Navigation on a lesson:** the Lessons (book) tab is the current section (the grey active square, as on every page),
+  not a link (there is no lesson library yet), so "Retry with this goal" is the only black control on screen.
+- **No checklist on the page:** the per-prompt self-checks cover it. The checklist lines stay in the lesson files,
+  marked "not shown (covered by drill self-checks)", and in the lesson data (`drill.checklist`, not rendered).
 - **Drill topic:** each lesson's drill has its own made-up topic (a place you like to visit, a skill learned outside
   school, a book or film), none of the 7 Part 2 tasks, so the **same drill is shown for every retry task**. From
   `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07 (lesson version 2); the first drills, written for

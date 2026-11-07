@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardHeader, PillButton, cx, styles } from "@/components/ds";
+import { Card, CardHeader, PillButton } from "@/components/ds";
 import type { Lesson } from "@/content/lessons";
 import { DrillRecorder, type SelfCheck } from "./DrillRecorder";
 import { Rich } from "./Rich";
@@ -14,7 +14,7 @@ export function practisesLabel(questions: readonly number[]): string {
 
 /**
  * The lesson's drill and its retry, together because the retry card shows "Ready for your retry" once every drill
- * prompt is marked Yes. The answers live only in this page: nothing is saved or uploaded, and they reset when it closes.
+ * prompt is marked Yes. The lesson's checklist is not shown: the per-prompt self-checks cover it. The answers live only in this page: nothing is saved or uploaded, and they reset when it closes.
  */
 export function LessonPractice({
   drill,
@@ -69,21 +69,6 @@ export function LessonPractice({
             </li>
           ))}
         </ul>
-        <fieldset className="mt-2 rounded-tile bg-well p-3">
-          <legend className="float-left text-caption font-semibold text-fg">Checklist</legend>
-          <ul className="clear-left pt-1">
-            {drill.checklist.map((item) => (
-              <li key={item}>
-                <label className="flex min-h-11 cursor-pointer items-center gap-3 text-body text-fg">
-                  <input type="checkbox" className={cx("size-5 shrink-0 accent-primary", styles.FOCUS_RING)} />
-                  <span>
-                    <Rich text={item} />
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </fieldset>
       </Card>
 
       <Card aria-labelledby="retry-title">

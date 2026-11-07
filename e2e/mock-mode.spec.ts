@@ -210,7 +210,7 @@ test("mock mode lessons: Biggest fix → Learn how → lesson (why, explanation,
   await expect(page.getByTestId("ready-for-retry")).toHaveText("Ready for your retry");
   await expect(page.locator(BLACK)).toHaveCount(1);
   await auditPhone(page);
-  await page.getByRole("checkbox", { name: "My plan had a note for every question." }).check();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
 
   // Retry with this goal: the retry of the same attempt, with its goal on the brief.
   await page.getByRole("link", { name: "Retry with this goal" }).click();
@@ -235,6 +235,26 @@ test("mock mode lessons: Biggest fix → Learn how → lesson (why, explanation,
 
   expect(seen.apiCalls).toEqual([]);
   expect(seen.realPages).toEqual([]);
+});
+
+test("mock mode at 390 px: every main page has at most one black control, navigation included", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const url of [
+    "/dashboard?mock=1",
+    "/practice/speaking/b2-part2-a-tradition?mock=1",
+    "/result?demo=demo-5&mock=1",
+    "/history?mock=1",
+    "/lessons/l-t1?demo=demo-5&mock=1",
+  ]) {
+    await page.goto(url);
+    await expect(page.locator("main").first()).toBeVisible();
+    const black = await page.locator(BLACK).evaluateAll((els) => els.filter((el) => (el as HTMLElement).offsetParent !== null || getComputedStyle(el).position === "fixed").length);
+    expect(black, url).toBeLessThanOrEqual(1);
+    // The current tab is the grey square, never black.
+    const current = page.getByRole("navigation", { name: "Main" }).locator('[aria-current="page"]');
+    await expect(current, url).toHaveCount(1);
+    await expect(current, url).not.toHaveClass(/bg-primary/);
+  }
 });
 
 test("mock mode: the demo account has no sign-in or Log out (no API, no real page)", async ({ page }) => {

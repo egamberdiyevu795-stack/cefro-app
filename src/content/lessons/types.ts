@@ -99,6 +99,7 @@ export interface Lesson {
       picture?: string;
     };
     items: LessonDrillItem[];
+    /** The lesson file's checklist: kept, but not shown (covered by the per-prompt self-checks). */
     checklist: string[];
   };
   retry: {

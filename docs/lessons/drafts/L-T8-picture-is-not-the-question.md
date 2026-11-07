@@ -69,7 +69,7 @@ Drill picture (made up): a boy learning to ride a bicycle in a park while his ol
 | 2 | Give your opinion: is it better to learn new skills from a person or from videos online? Give one reason. | 30 s |
 | 3 | Start with "This picture reminds me of…" and move into your own story within one sentence. | 20 s |
 
-**Checklist**
+**Checklist** — not shown (covered by drill self-checks)
 
 - [ ] I talked about my own experience, not the people in the picture.
 - [ ] I did not describe what the people in the picture are doing or wearing.

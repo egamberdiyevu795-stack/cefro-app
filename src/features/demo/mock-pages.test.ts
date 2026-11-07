@@ -48,7 +48,7 @@ const html = async (element: Promise<unknown> | unknown) => renderToStaticMarkup
 const internalLinks = (markup: string) => [...markup.matchAll(/href="(\/[^"]*)"/g)].map((m) => m[1].replaceAll("&amp;", "&"));
 /** Black buttons and links (not the goal bar's black check square, a glyph). */
 const BLACK = /<(a|button)\b[^>]*class="[^"]*\bbg-primary text-on-primary\b/g;
-/** Only what is inside <main> (the nav's active square is outside it). */
+/** Only what is inside <main>. */
 const mainOf = (markup: string) => markup.slice(markup.indexOf('<main id="main"'), markup.indexOf("</main>"));
 /** As the markup has it (React escapes the apostrophe). */
 const escaped = (text: string) => text.replaceAll("'", "&#x27;").replaceAll('"', "&quot;");
@@ -153,6 +153,20 @@ describe("mock pages on a Preview with no configuration", () => {
   });
 });
 
+describe("one black control per screen, the navigation included (grey active tab)", () => {
+  it.each([
+    ["dashboard", () => DashboardPage(props({ mock: "1" }))],
+    ["practice", () => PracticePage(props({ mock: "1" }, { taskId: "b2-part2-a-tradition" }))],
+    ["result", () => ResultPage(props({ mock: "1", demo: "demo-5" }))],
+    ["history", () => HistoryPage(props({ mock: "1" }))],
+    ["lesson", () => LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))],
+  ] as const)("%s: at most one black control on the whole page; the current tab is grey", async (_name, page) => {
+    const markup = await html(page());
+    expect((markup.match(BLACK) ?? []).length).toBeLessThanOrEqual(1);
+    expect(markup).not.toMatch(/aria-current="page"[^>]*bg-primary|bg-primary[^"]*"[^>]*aria-current="page"/);
+  });
+});
+
 describe("lessons in mock mode", () => {
   const ADVICE = "b2-part2-advice-from-someone";
 
@@ -182,7 +196,10 @@ describe("lessons in mock mode", () => {
     expect(markup).toContain(escaped(DEMO_MODE_TEXT));
     expect(markup).toContain(escaped(taskTitle));
     expect(markup).toContain(escaped(why));
-    for (const section of ["Why this lesson", "How it works", "Examples", "Self-check drill", "Checklist", "Goal for your retry"]) expect(markup).toContain(section);
+    for (const section of ["Why this lesson", "How it works", "Examples", "Self-check drill", "Goal for your retry"]) expect(markup).toContain(section);
+    // No checklist on the page: the per-prompt self-checks cover it.
+    expect(markup).not.toContain("Checklist");
+    expect(markup).not.toContain('type="checkbox"');
     expect((markup.match(/data-testid="lesson-example"/g) ?? []).length).toBeGreaterThanOrEqual(3);
     // Exactly one black button: "Retry with this goal", to the same retry as the result page's.
     const black = main.match(BLACK) ?? [];

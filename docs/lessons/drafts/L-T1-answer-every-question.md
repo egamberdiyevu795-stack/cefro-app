@@ -58,6 +58,8 @@ The examples never use the advice topic, so lesson sentences can't be copied int
 Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.
 
 Drill set version 2: the neutral drill from `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07. The same drill is shown for every retry task.
+Checklist line 3 ("When a question had two parts, I answered both.") replaces the advice line; approved by Asadbek on
+2026-11-07.
 
 Drill topic (made up): *"Describe a place you like to visit."*
 Q1 Where is the place, and how often do you go there? · Q2 What do you do there, and why do you like it? ·
@@ -73,7 +75,7 @@ Q3 Do you think young people spend enough time outdoors? Why or why not?
 
 - [ ] My plan had a note for every question.
 - [ ] Each answer started with a sentence that answers that question, then added a reason or a detail.
-- [ ] I said whether I followed the advice.
+- [ ] When a question had two parts, I answered both.
 
 ## 5. Retry the same task
 

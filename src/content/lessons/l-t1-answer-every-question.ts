@@ -91,7 +91,7 @@ export const lessonT1: Lesson = {
     checklist: [
       "My plan had a note for every question.",
       "Each answer started with a sentence that answers that question, then added a reason or a detail.",
-      "I said whether I followed the advice.",
+      "When a question had two parts, I answered both.",
     ],
   },
   retry: {

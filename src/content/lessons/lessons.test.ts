@@ -74,6 +74,9 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
     expect(lesson.drill.items).toHaveLength(3);
     expect(lesson.version).toBe(2);
     for (const item of lesson.drill.items) expect(item.prompt).not.toMatch(/advice|advise/i);
+    // The checklist goes with the neutral drill too: no line about advice.
+    for (const line of lesson.drill.checklist) expect(line).not.toMatch(/advice|advise/i);
+    if (lesson.id === "L-T1") expect(lesson.drill.checklist[2]).toBe("When a question had two parts, I answered both.");
   });
 
   it("has every example and drill row of the file, in order, with its time; nothing added", () => {

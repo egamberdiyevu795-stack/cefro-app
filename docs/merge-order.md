@@ -311,8 +311,8 @@ Contains (docs/teacher-plan.md, built as written; see "Not followed" below):
 ## Right after `claude/teacher-view-kd6wdk`: `claude/entry-pages` (signed-out pages, no migration)
 
 Cut from `claude/teacher-view-kd6wdk` (`ee7b793`), so it comes **after it**, merge commit, no squash. Branch name:
-`claude/entry-pages` (11 characters after `claude/`). `claude/entry-pages-jgh558` is the same commits (the session's
-working branch): merge only `claude/entry-pages`, then delete both. No database migration, no new environment variable.
+`claude/entry-pages` (11 characters after `claude/`): **this is the real branch**; all its work is committed here.
+No database migration, no new environment variable.
 Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-entry-pages-crm-b915.vercel.app/?mock=1`.
 Vercel builds a commit once: push a new commit to `claude/entry-pages` first, or its Preview address does not exist.
 
@@ -339,6 +339,11 @@ Contains (docs/design-system.md, "Signed-out pages"):
   `auth.spec.ts` (Journey A starts at `/practice`; on the sign-in pages, which have no Account menu, the signed-in
   state is read from `/api/account/me`; after Create account the browser lands on `/dashboard`), `practice-flow`,
   `dashboard`, `profile-settings` and `mock-mode` specs, and the dashboard unit tests.
+
+## Duplicate: `claude/entry-pages-jgh558` (never merge)
+
+claude/entry-pages-jgh558: duplicate, never merge. (It holds the first two commits of `claude/entry-pages` and is
+not updated any more.)
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

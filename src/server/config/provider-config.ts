@@ -25,8 +25,31 @@ export function describeProviderMode(env: ServerEnv): ProviderMode {
   return { transcription: env.TRANSCRIPTION_PROVIDER, evaluation: env.EVALUATION_PROVIDER, mode: mock ? "development_mock" : "real" };
 }
 
+/** The provider choices that must be explicit on Vercel, with what they can be set to. */
+export const EXPLICIT_ON_VERCEL = {
+  TRANSCRIPTION_PROVIDER: "openai or gemini",
+  EVALUATION_PROVIDER: "gemini or anthropic",
+} as const;
+
+/**
+ * On Vercel (Production, Preview, Development) the speech-to-text and scoring providers must be chosen explicitly. The
+ * code's defaults (openai, anthropic) are for local development; on a hosted environment a variable that was not ticked
+ * for that environment would otherwise switch the provider silently. Reads the raw environment, because the parsed one
+ * already has the defaults filled in. An empty value counts as missing (as everywhere in getEnv). Locally (no VERCEL)
+ * nothing changes.
+ */
+export function validateExplicitProviders(raw: Record<string, string | undefined> = process.env): ConfigProblem[] {
+  if (!raw.VERCEL) return [];
+  return (Object.keys(EXPLICIT_ON_VERCEL) as Array<keyof typeof EXPLICIT_ON_VERCEL>)
+    .filter((variable) => !raw[variable])
+    .map((variable) => ({
+      variable,
+      message: `must be set explicitly on Vercel (${EXPLICIT_ON_VERCEL[variable]}); the local default is not used there. Set it for this environment in the Vercel project settings.`,
+    }));
+}
+
 export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
-  const problems: ConfigProblem[] = [];
+  const problems: ConfigProblem[] = [...validateExplicitProviders()];
   const production = env.NODE_ENV === "production";
 
   switch (env.TRANSCRIPTION_PROVIDER) {

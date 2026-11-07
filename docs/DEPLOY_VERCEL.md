@@ -120,9 +120,9 @@ a Preview runs (`NODE_ENV=production`, `VERCEL=1`, `VERCEL_ENV=preview`, no othe
 So to look at a branch on its Preview without a database, open the briefs with `?mock=1`. (Until November 2026 a failed
 check made the start-up hook throw, which made Next.js answer 500 on every route.)
 
-**Which variables the check reports on a Preview with none set:** the keys of the default AI providers (see "AI
-providers" below: `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`, or only `GEMINI_API_KEY` if Preview has the Gemini settings),
-`TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` and `AUTH_SECRET`. `APP_URL` is not needed on Vercel: it is taken from
+**Which variables the check reports on a Preview with none set:** `TRANSCRIPTION_PROVIDER` and `EVALUATION_PROVIDER`
+(they must be explicit on Vercel, see "AI providers" below), the key of each chosen provider (`GEMINI_API_KEY` with the
+Gemini settings), `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` and `AUTH_SECRET`. `APP_URL` is not needed on Vercel: it is taken from
 `VERCEL_PROJECT_PRODUCTION_URL` or `VERCEL_URL` (`applyHostingDefaults` in `src/server/config/env.ts`).
 
 So a Preview of this application is **not usable as a running app** unless it has its own database. That is deliberate:
@@ -144,9 +144,23 @@ The code's defaults (`src/server/config/env.ts`, also in `.env.example`) are **n
 
 **Scoring switches to Gemini with `EVALUATION_PROVIDER=gemini`** (and `GEMINI_API_KEY`). Speech-to-text switches with
 `TRANSCRIPTION_PROVIDER=gemini`. Only the selected providers' keys are needed. The production setup below sets both to
-`gemini`, so production needs only `GEMINI_API_KEY`; an environment without those two variables (e.g. a Preview where
-they are not ticked) falls back to the defaults and then needs `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`. The defaults
-are unchanged on purpose; changing them is a separate decision.
+`gemini`, so production needs only `GEMINI_API_KEY`.
+
+**On Vercel both must be set explicitly.** The defaults above apply only off Vercel (local development, tests, a
+self-hosted server). On Vercel (Production, Preview and Development: whenever `VERCEL` is set) a missing or empty
+`TRANSCRIPTION_PROVIDER` or `EVALUATION_PROVIDER` is a configuration problem (`validateExplicitProviders` in
+`src/server/config/provider-config.ts`), so a variable that was not ticked for an environment can never switch it to
+another provider silently. At start-up the server logs, for each one:
+
+```
+{"level":"error","message":"must be set explicitly on Vercel (gemini or anthropic); the local default is not used there. Set it for this environment in the Vercel project settings.","variable":"EVALUATION_PROVIDER",…}
+{"level":"error","message":"Server not configured: API routes, the app's pages and /api/health refuse until this is fixed","variables":["EVALUATION_PROVIDER",…]}
+```
+
+and then refuses like any other configuration problem: every API route 503, the app's pages 500, `/api/health` 503, so
+the production pipeline's post-deploy health check fails. It does **not** crash the server at start-up: a throwing
+start-up hook makes Next.js answer 500 on every route, which would also take down the pages that need no
+configuration (the `?mock=1` briefs, the `/result` prototype). The defaults themselves are unchanged.
 
 ### One-time setup
 
@@ -175,7 +189,9 @@ Required:
 4. **Vercel → project → Settings**:
    - *Environments → Production → Branch Tracking*: `main`.
    - *Environment Variables*: `GEMINI_API_KEY`, `TRANSCRIPTION_PROVIDER=gemini`, `EVALUATION_PROVIDER=gemini`, `AUTH_SECRET`
-     (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Mark the secrets
+     (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Tick
+     `TRANSCRIPTION_PROVIDER` and `EVALUATION_PROVIDER` for every environment you deploy (Production and Preview): on
+     Vercel they have no default (see "AI providers"). Mark the secrets
      *Sensitive*; never prefix any with `NEXT_PUBLIC_`. **Tick only *Production* for the two `TURSO_*` variables** (untick
      Preview and Development; edit them if they were set for all environments).
    - *Git → Deploy Hooks*: none.

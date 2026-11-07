@@ -13,6 +13,7 @@ import {
   StatRow,
   cx,
   styles,
+  WordmarkLink,
 } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
 import { mockLink } from "@/features/demo/demo-mode";
@@ -316,8 +317,6 @@ export function BiggestFixCard({ fix, className }: { fix: DashboardFix; classNam
 
 export function Wordmark({ className = "flex", mock = false, href }: { className?: string; mock?: boolean; href?: string }) {
   return (
-    <Link href={href ?? mockLink("/dashboard", mock)} className={cx("items-center text-body font-semibold tracking-[0.08em] text-fg", className)}>
-      CEFRO
-    </Link>
+    <WordmarkLink href={href ?? mockLink("/dashboard", mock)} className={className} />
   );
 }

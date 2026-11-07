@@ -23,12 +23,12 @@ export function examPartLabel(part: ExamPartId): string {
   return `Part ${part}`;
 }
 
-/** The id of a part's section on the task list ("/"): "part-2", "part-1-1". */
+/** The id of a part's section on the task list ("/practice"): "part-2", "part-1-1". */
 export function examPartAnchor(part: ExamPartId): string {
   return `part-${part.replace(".", "-")}`;
 }
 
 /** A part's tasks on the task list. */
 export function examPartListHref(part: ExamPartId): string {
-  return `/#${examPartAnchor(part)}`;
+  return `/practice#${examPartAnchor(part)}`;
 }

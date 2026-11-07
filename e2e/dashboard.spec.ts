@@ -37,7 +37,7 @@ async function expectComingSoonTiles(page: Page) {
     await expect(tiles.nth(i).getByRole("link")).toHaveCount(0);
     await expect(tiles.nth(i)).not.toContainText("Start");
   }
-  await expect(tiles.nth(2).getByRole("link")).toHaveAttribute("href", "/#part-2");
+  await expect(tiles.nth(2).getByRole("link")).toHaveAttribute("href", "/practice#part-2");
 }
 
 /** A tap area at least 36 px high (like Save). */
@@ -98,7 +98,7 @@ test("new student: the first visit, with the exam date question; saving a date s
 
   // The Part 2 tile opens the Part 2 task list with all its tasks.
   await page.getByTestId("part-tile").nth(2).getByRole("link").click();
-  await expect(page).toHaveURL(/\/#part-2$/);
+  await expect(page).toHaveURL(/\/practice#part-2$/);
   const part2 = page.getByRole("region", { name: "Part 2 · Long turn" });
   await expect(part2).toBeVisible();
   await expect(part2.getByRole("link", { name: /Start practice/ })).toHaveCount(7);
@@ -258,7 +258,7 @@ test("after answers: real level, skills, Practise next, exam parts, biggest fix 
   await expect(tiles.nth(2)).toContainText(/Band [0-5]/);
   await expect(tiles.nth(2).getByRole("link")).toHaveText("Practise");
   // The Part 2 tile opens the Part 2 task list, where the student picks a task.
-  await expect(tiles.nth(2).getByRole("link")).toHaveAttribute("href", "/#part-2");
+  await expect(tiles.nth(2).getByRole("link")).toHaveAttribute("href", "/practice#part-2");
   await expectComingSoonTiles(page);
 
   // Biggest fix from that answer; with one answer there is nothing to compare ("Still in" hidden).

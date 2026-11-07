@@ -127,7 +127,8 @@ cannot be created): `npm run test:e2e:preview` (`playwright.preview.config.ts`, 
 
 | Page | Address |
 | --- | --- |
-| Task list | `/?mock=1` (every task opens its brief in mock mode) |
+| Signed-out home, sign in, Create account | `/?mock=1`, `/login?mock=1`, `/register?mock=1` (nobody is looked up; the forms send nothing; "Try the demo" opens `/dashboard?mock=1`) |
+| Task list | `/practice?mock=1` (every task opens its brief in mock mode; it was `/?mock=1` before `claude/entry-pages`) |
 | Part 2 brief, then preparation, recording, Scoring… and the demo result | `/practice/speaking/<task id>?mock=1`, for all 7 tasks: `b2-part2-advice-from-someone`, `b2-part2-important-decision`, `b2-part2-goal-you-set`, `b2-part2-working-in-a-team`, `b2-part2-trying-and-failing`, `b2-part2-a-tradition`, `b2-part2-happy-day` |
 | A retry with its goal | `/practice/speaking/<task id>?mock=1&retry=<demo key>` (a demo result of that task, e.g. `b2-part2-a-tradition?mock=1&retry=demo-5`; opened by "Retry with this goal" and "Start retry"), or `&retry=<saved run>&run=1..3` (the saved-runs prototype) |
 | A demo attempt's result, for its own task | `/result?demo=demo-1..6&mock=1` (opened from the dashboard and History rows) |
@@ -137,20 +138,20 @@ cannot be created): `npm run test:e2e:preview` (`playwright.preview.config.ts`, 
 | History | `/history?mock=1`, `/history?mock=1&part=2` |
 | Static files | e.g. the task pictures `/tasks/*.svg` |
 
-Start a tester at `/?mock=1` (or `/dashboard?mock=1`): the loop task list → brief → practice → result → retry →
+Start a tester at `/?mock=1` and "Try the demo" (or `/dashboard?mock=1`): the loop task list → brief → practice → result → retry →
 dashboard → History clicks through without leaving mock mode. Only exactly `mock=1` counts (`mock=0`, `mock=true`
 are real pages).
 
 **Still refused on a Preview with no variables** (unchanged): every page without `?mock=1`: `/`, `/login`,
-`/register`, the practice pages (HTTP 500, "CEFRO isn't available right now", the configuration check), `/dashboard`,
+`/register`, `/practice`, the practice pages (HTTP 500, "CEFRO isn't available right now", the configuration check), `/dashboard`,
 `/history`, `/result/<attempt id>` (500: the configuration check or the database); every API route (503
 `service_not_configured`) and `/api/health` (503 "unavailable").
 
-How mock mode reaches the task list: `/` sits in the `(site)` layout, which runs the configuration check, and a layout
-gets no query. `src/proxy.ts` therefore passes `?mock=1` on as the request header `x-cefro-mock: 1` (and removes one
+How mock mode reaches the task list and the signed-out pages: `/practice` sits in the `(site)` layout and `/`, `/login`,
+`/register` in the `(entry)` layout; both run the configuration check, and a layout gets no query. `src/proxy.ts` therefore passes `?mock=1` on as the request header `x-cefro-mock: 1` (and removes one
 sent by a browser); the layout skips the check only then. The pages themselves read `?mock=1`.
 
-So to look at a branch on its Preview without a database, open `/?mock=1`. (Until November 2026 a failed check made
+So to look at a branch on its Preview without a database, open `/?mock=1` (the signed-out home), then "Try the demo". (Until November 2026 a failed check made
 the start-up hook throw, which made Next.js answer 500 on every route.)
 
 **Which variables the check reports on a Preview with none set:** `TRANSCRIPTION_PROVIDER` and `EVALUATION_PROVIDER`

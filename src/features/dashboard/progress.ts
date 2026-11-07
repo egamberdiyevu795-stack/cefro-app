@@ -292,7 +292,7 @@ export interface PartTile {
 
 /**
  * One tile per exam part, always all four: its latest scored band, and, when the part is live (`PART_LIVE`), a link
- * to its tasks on the task list (`/#part-2`), where the student picks one. Not live: no link (`href: null`).
+ * to its tasks on the task list (`/practice#part-2`), where the student picks one. Not live: no link (`href: null`).
  */
 export function partTiles(
   attempts: readonly HistoryAttempt[],

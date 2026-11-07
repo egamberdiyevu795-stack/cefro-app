@@ -151,7 +151,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 search={flags.search ? <SearchSoon placeholder="Search tasks and lessons…" /> : undefined}
                 actions={
                   <>
-                    <TopBarLink href={mockLink("/", mock)} icon="layers">
+                    <TopBarLink href={mockLink("/practice", mock)} icon="layers">
                       All tasks
                     </TopBarLink>
                     {flags.mockExam && (

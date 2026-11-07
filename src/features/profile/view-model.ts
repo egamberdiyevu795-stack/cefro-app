@@ -6,7 +6,7 @@ import { scoredAttempts } from "@/features/dashboard/progress";
 import { formatDate, levelOfBand } from "@/features/history/view-model";
 
 /** Where "No level yet" and the level card's button go: the Part 2 tasks on the task list. */
-export const PART2_HREF = "/#part-2";
+export const PART2_HREF = "/practice#part-2";
 
 export type ProfileLevel =
   | { kind: "none" }

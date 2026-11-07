@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-import HomePage from "@/app/(site)/page";
+import { describe, expect, it, vi } from "vitest";
+
+// After deletion the browser is signed out, so the home page shows itself (a signed-in visitor goes to the dashboard).
+vi.mock("@/server/identity/current-user", () => ({ isSignedIn: async () => false }));
+
+import HomePage from "@/app/(entry)/page";
 import { ACCOUNT_DELETED, ACCOUNT_DELETED_HREF, isAccountDeletedQuery } from "./deleted";
 
 const home = async (query: Record<string, string>) =>

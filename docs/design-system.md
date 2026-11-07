@@ -4,8 +4,9 @@ Every new page (dashboard, feedback screen, lessons, tests) is built only from t
 Tokens live in one file: `src/app/design-system.css` (a Tailwind v4 `@theme`, so each token is also a utility class,
 e.g. `--color-card` → `bg-card`). Components live in `src/components/ds/`. The first page built on it is `/dashboard`.
 
-The older pages (home, login, register) still use the earlier tokens in `globals.css` until they are redone (their
-header already uses the design-system Account menu). The practice page is fully on the design system: every step, the
+The signed-out pages (home, sign in, Create account) are on the design system: see [Signed-out pages](#signed-out-pages-home-sign-in-create-account).
+Only the task list (`/practice`) still uses the earlier tokens in `globals.css` (its header already uses the
+design-system Account menu). The practice page is fully on the design system: every step, the
 result page for real attempts, the retry comparison and the error screens.
 
 ## Merge order (read before merging)
@@ -40,12 +41,46 @@ in mock mode at 390 px. Every other action uses the grey `quiet` pill (or `light
 welcome card's "Start your first practice" (it goes to the recommended part, Part 2); attempts but none scored = the
 same card's "Start practice". All part tiles use the white tile pill. The exam date's Save is grey; Edit, Add exam
 date, Skip, Cancel and Remove date are small text actions with a 36 px tap area. Practice brief: "Start
-preparation"; "Check microphone" above it is grey. Account page: "Go to Part 2" / "Practise Part 2"; Change password,
+preparation"; "Check microphone" above it is grey. Signed-out home: "Create account" ("Try the demo" is grey); sign in: "Sign in"; Create account: "Create account".
+Account page: "Go to Part 2" / "Practise Part 2"; Change password,
 Sign out and Delete my account are grey (a destructive action is never black).
+
+## Signed-out pages (home, sign in, Create account)
+
+Home (`/`), sign in (`/login`) and Create account (`/register`) are built only from `components/ds` and the tokens
+above (`src/app/(entry)/`, `src/features/entry/`), so a theme change restyles them. They have **no header menu and no
+navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `bg-page`, the CEFRO wordmark on top
+(`EntryFrame`). The `(entry)` layout runs the configuration check (as the `(site)` one did), except in mock mode.
+
+- **Home:** the heading "Practise the multilevel speaking exam" (`text-heading`), the line "Speak, see your own words
+  quoted, fix one thing, and try again." (`text-lead`, muted), a card "Example feedback" (a fixed example in the shape
+  of the result page's Biggest fix, with the accent quote rule: "Biggest fix: answer every question" / "You answered 2
+  of 3 questions. Question 3 asked for your opinion."), then a card with the black **"Create account"**, the grey "Try
+  the demo" (`/dashboard?mock=1`) and "Have an account? Sign in". The actions sit on a card because the grey pill
+  would vanish on the grey page. `?deleted=1` (after Delete my account): "Your account and all your data were
+  deleted." on top. A **signed-in** visitor is sent to `/dashboard` (`isSignedIn`: no session cookie = signed out,
+  without touching the database).
+- **Sign in:** "Sign in", email, password, the black **"Sign in"**, "New here? Create account".
+- **Create account:** "Create account", name, email, password with "At least 8 characters.", the black **"Create
+  account"**, "Have an account? Sign in". The name is optional: left empty, the account is named after the email (as
+  before the field existed); a typed name follows the Account page's rules (`nameProblem`, at most 50 characters).
+- **Unchanged behaviour:** the forms are `method="post"`, the submit stays disabled until the page is ready, the
+  sign-in / sign-up limits and the trusted-IP rule are the API's (untouched), `?next=` (a path on this site only) is
+  where the student goes after signing in, and the switch links keep it.
+- **Text links** ("Sign in", "Create account") are dark and underlined (never colour alone), with a 44 px tap height.
+- **Mock mode** (`/?mock=1`, `/login?mock=1`, `/register?mock=1`): nobody is looked up, the links keep `?mock=1`, the
+  forms show `DemoLabel variant="entry"` ("Demo mode. Nothing you enter here is sent.") and submitting sends nothing.
+  These are the addresses to look at on a Preview with no variables.
+- **Checks:** `src/features/entry/entry-pages.test.ts` (wording, one black button, no text under 11 px, no old tokens,
+  no menu or tabs, the signed-in redirect, `?next=`), `mock-pages.test.ts` (the three in mock mode touch no cookie,
+  identity or database), `e2e/entry-pages.spec.ts` (at 390 px, real and mock: one black control, no text under 11 px,
+  AA contrast of every visible text, no horizontal scroll; "Try the demo" keeps `?mock=1`; the name typed at sign-up;
+  signed in → dashboard), `e2e/auth.spec.ts` (unchanged journeys; the sign-in pages have no Account menu now, so their
+  state is read from `/api/account/me`).
 
 ## Navigation: five tabs
 
-Rail on desktop, bottom bar on phones, the same five tabs in this order: **Home** (`/dashboard`), **Practice** (`/`),
+Rail on desktop, bottom bar on phones, the same five tabs in this order: **Home** (`/dashboard`), **Practice** (`/practice`, the task list; it was `/` until the signed-out home page),
 **Lessons** (flag `lessons`: "Coming soon"), **History** (`/history`, flag `history`), **Account** (`/profile`). The
 Account tab is a plain link (`AccountTab`), no menu, always shown; it carries `data-testid="account-status"` and
 `data-state` (signed in or not). There is no Settings (gear) tab: Profile and Settings were merged into the Account
@@ -109,7 +144,7 @@ scored, not failed.
   04.11.26"). The mocked "A skill you learned" task and its `/dashboard/task/…` route are gone. A retry's goal is shown
   in full on every screen size (no line clamp).
 - **Exam parts:** the latest scored band per part with its label, "Practise"; a part with nothing scored: "No band",
-  "Not tried yet", "Start". A part with tasks opens its section of the task list (Part 2: `/#part-2`, where the
+  "Not tried yet", "Start". A part with tasks opens its section of the task list (Part 2: `/practice#part-2`, where the
   student picks one of the 7 tasks), when the part is live (`PART_LIVE`). A part not live yet (1.1, 1.2, 3) has **no
   link**: its tile says "Coming soon". All four tiles are always shown.
 - **Recent attempts:** the History rows (latest 4); the flagged row menu is hidden on phones, where it squeezed the
@@ -246,6 +281,7 @@ One family: Inter (`font-ui`, loaded with `next/font/google` in `src/app/layout.
 | `--text-body` | 13 / 20 px | `text-body` | List names (semibold), buttons (medium), search, quotes. |
 | `--text-lead` | 15 / 20 px | `text-lead` | The words beside the big number ("· target B2"), medium. |
 | `--text-title` | 17 / 24 px | `text-title` | Card titles, medium weight, slight negative tracking. Quiet: never bold. |
+| `--text-heading` | 28 / 36 px | `text-heading` | The one page heading of the signed-out pages ("Practise the multilevel speaking exam", "Sign in"), medium weight, tight tracking. |
 | `--text-stat` | 36 px / 1 | `text-stat` | The one big figure per card (the level, "B1"), **light** (300), tight tracking. |
 
 Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for values and list names.
@@ -276,7 +312,10 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | Component | What it is |
 | --- | --- |
 | `Card`, `CardHeader` | Rounded `bg-card` surface with the soft shadow. Header: quiet title, optional action on the right, thin divider under it. |
-| `PillAction` | The same pill as a `<button>` (actions that stay on the page: start, finish, try again). Same variants and sizes as `PillButton`. |
+| `PillAction` | The same pill as a `<button>` (actions that stay on the page: start, finish, try again). Same variants and sizes as `PillButton`. `type="submit"` makes it a form's submit button (sign in, Create account); `onClick` is then optional. |
+| `TextField` | Label (`text-label`, muted) above a 44 px pill input (border `fg-subtle`, 3.64:1 on the card), an optional muted hint tied by `aria-describedby` ("At least 8 characters."). Other props go to the `<input>`. |
+| `Notice` | A short message in a `well` box (`rounded-tile`, `text-body`, `fg`): `tone="alert"` for a problem to fix, `status` (default) for news ("Your account and all your data were deleted."). Off a card pass `bg-card`. Words only, never colour. |
+| `WordmarkLink` | The CEFRO wordmark as a link (`text-body`, semibold, wide tracking). The dashboard's `Wordmark` is this with its own link. |
 | `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"); `light` = card-white, for pills that sit on a `well` surface. Sizes `lg` (44 px, 13 px text: the one main action of a practice step, easy to hit on a phone), `md` (36 px, 13 px text) and `sm` (28 px, 12 px text). Optional leading icon and `label` (accessible name when the visible text repeats, e.g. "Practise Part 2"). |
 | `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
 | `ScoringLabel` | The only attempt status: grey hourglass + "Scoring…", shown in place of the level while an answer is processed. No Passed/Failed, no colour. |
@@ -404,7 +443,7 @@ Seven Part 2 tasks (`src/content/speaking/b2/`), all the same shape: 1 min prepa
 (1 and 2 about the student's own story, 3 a general opinion), one picture. "Advice from someone" stays first in the
 list (the recommended first practice); then An important decision, A goal you set, Working in a team, Trying and
 failing, A tradition, A happy day. Pictures are original flat SVGs (480 × 360, no text, no brands, no real people,
-© 2026 CEFRO, all rights reserved), listed with source and licence in `public/tasks/README.md`. The task list (`/`)
+© 2026 CEFRO, all rights reserved), listed with source and licence in `public/tasks/README.md`. The task list (`/practice`)
 has one section per exam part (`id="part-2"`). The picture shows the topic, never an answer.
 Practise next rotates through them (never practised first, then the one practised longest ago). Checked at 390 px:
 no horizontal scroll, smallest text 11 px, one black button ("Start preparation") on each brief.
@@ -492,7 +531,7 @@ without JavaScript and a filtered view has its own address.
 
 ## Mock mode everywhere (`?mock=1`)
 
-Every page a tester walks through has a mock mode: the task list (`/?mock=1`), the practice page, the result
+Every page a tester walks through has a mock mode: the task list (`/practice?mock=1`), the practice page, the result
 prototype, the dashboard and History. Built so a branch's Vercel Preview (no variables, no database) can be clicked
 through end to end.
 

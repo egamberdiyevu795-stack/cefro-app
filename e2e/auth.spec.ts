@@ -21,8 +21,13 @@ async function recordAndSubmit(page: Page, speakMs = 2500) {
 /** The new result page's headline, e.g. "Part 2 · Band 2 · Higher B1". */
 const resultHeading = (page: Page) => page.getByRole("heading", { name: /^Part 2 · Band [0-5] · / });
 
-/** The design-system Account menu (data-state: anonymous / authenticated). */
+/** The design-system Account menu or tab (data-state: anonymous / authenticated). */
 const header = (page: Page) => page.getByTestId("account-status");
+
+/** Who this browser is, from the server (the sign-in and Create account pages have no Account menu). */
+async function accountState(page: Page): Promise<string> {
+  return (await (await page.request.get("/api/account/me")).json()).state;
+}
 
 async function openAccount(page: Page) {
   await header(page).getByRole("button", { name: "Account" }).click();
@@ -48,7 +53,7 @@ async function newUserContext(browser: Browser) {
 }
 
 test("Journey A: an anonymous visitor practises and gets feedback without any account", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/practice");
   await expect(header(page)).toHaveAttribute("data-state", "anonymous");
   await openAccount(page);
   await expect(header(page).getByText("Practising without an account")).toBeVisible();
@@ -105,9 +110,8 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
     await expect(page.getByRole("link", { name: /Attempt 2/ })).toBeVisible(); // the account's history, on a "new device"
     const attempts = (await (await page.request.get(`/api/speaking/tasks/${TASK}/attempts`)).json()).attempts as { id: string }[];
 
-    await logOut(page);
-    await expect(header(page)).toHaveAttribute("data-state", "anonymous");
-    expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
+    await logOut(page); // lands on /login, which has no Account menu
+    expect(await accountState(page)).toBe("anonymous");
     await page.goto(TASK_URL);
     await expect(page.getByRole("link", { name: /Attempt \d/ })).toHaveCount(0); // the history was the account's
     for (const attempt of attempts) {
@@ -123,7 +127,7 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page.locator("form").getByRole("alert")).toContainText("The email or password is not right.");
     await expect(page).toHaveURL(/\/login$/);
-    await expect(header(page)).toHaveAttribute("data-state", "anonymous");
+    expect(await accountState(page)).toBe("anonymous");
 
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
@@ -136,19 +140,20 @@ test("registration rejects a too-short password and a duplicate email without si
   await register(page, email);
   await expect(header(page)).toHaveAttribute("data-state", "authenticated");
   await logOut(page);
-  await expect(header(page)).toHaveAttribute("data-state", "anonymous");
+  expect(await accountState(page)).toBe("anonymous");
 
   await page.goto("/register");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.locator("form").getByRole("alert")).toBeVisible();
-  await expect(header(page)).toHaveAttribute("data-state", "anonymous");
+  expect(await accountState(page)).toBe("anonymous");
 
   await page.getByLabel("Email").fill(uniqueEmail("short"));
   await page.getByLabel("Password").fill("short");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(header(page)).toHaveAttribute("data-state", "anonymous");
+  await expect(page.locator("form").getByRole("alert")).toBeVisible();
+  expect(await accountState(page)).toBe("anonymous");
 });
 
 test("the after-sign-in redirect never leaves the site", async ({ page }) => {
@@ -243,7 +248,7 @@ for (const mode of ["login", "register"] as const) {
     if (mode === "login") {
       await expect(page.getByText("The email or password is not right.")).toBeVisible(); // no such account: the app's own answer
     } else {
-      await expect(page).toHaveURL(/\/$/);
+      await expect(page).toHaveURL(/\/dashboard$/); // the home page sends a signed-in visitor to the dashboard
       await expect(header(page)).toHaveAttribute("data-state", "authenticated");
     }
     expect(slow.navigations.every((url) => !url.includes("password"))).toBe(true);

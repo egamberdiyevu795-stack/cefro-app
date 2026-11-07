@@ -114,3 +114,12 @@ export async function findCurrentUserId(): Promise<string | null> {
   const row = await db.select({ kind: users.kind, mergedInto: users.mergedIntoUserId }).from(users).where(eq(users.id, presented)).get();
   return row && row.kind === "anonymous" && !row.mergedInto ? presented : null;
 }
+
+/**
+ * Is the caller signed in to a live account? Read-only, for pages (the signed-out home sends signed-in users to the
+ * dashboard). No login-session cookie: false at once, without touching the database.
+ */
+export async function isSignedIn(): Promise<boolean> {
+  if (!hasSessionCookie(await cookies())) return false;
+  return (await readAuthenticatedUser()) !== null;
+}

@@ -308,6 +308,36 @@ Contains (docs/teacher-plan.md, built as written; see "Not followed" below):
   can't hold once the rows are gone). (2) The Leave confirm card's "Leave class" is grey, not black: a destructive
   action is never black, and the Account page keeps its own black button.
 
+## Right after `claude/teacher-view-kd6wdk`: `claude/entry-pages` (signed-out pages, no migration)
+
+Cut from `claude/teacher-view-kd6wdk` (`ee7b793`), so it comes **after it**, merge commit, no squash. Branch name:
+`claude/entry-pages` (11 characters after `claude/`). `claude/entry-pages-jgh558` is the same commits (the session's
+working branch): merge only `claude/entry-pages`, then delete both. No database migration, no new environment variable.
+
+Contains (docs/design-system.md, "Signed-out pages"):
+
+- **Home, sign in, Create account on the design system only** (`components/ds` and tokens; new route group
+  `src/app/(entry)/`, `src/features/entry/`). No header menu, no navigation tabs. Home: "Practise the multilevel
+  speaking exam", the example feedback card, the black "Create account", the grey "Try the demo"
+  (`/dashboard?mock=1`), "Have an account? Sign in". Sign in and Create account as specified; Create account now asks
+  for a name (optional: empty = named after the email, as before).
+- **`/` is now the signed-out home; the task list moved to `/practice`** (decided with the owner, 2026-11-07). A
+  signed-in visitor on `/` goes to `/dashboard`. The Practice tab, the dashboard's top-bar link and Part 2 tile
+  (`/practice#part-2`), the Account page's "Go to Part 2" and the task pages' current tab follow. `/?mock=1` is the
+  signed-out home in mock mode (it used to be the task list: now `/practice?mock=1`). `?deleted=1` stays on `/`.
+- **Unchanged:** POST forms disabled until the page is ready, the API's rate limits and trusted-IP rule (not
+  touched), `?next=` after sign-in, the configuration check on these pages (now in the `(entry)` layout).
+- **Design system:** token `--text-heading` (28/36 px); components `TextField`, `Notice`, `WordmarkLink`;
+  `PillAction` takes `type="submit"`; `DemoLabel variant="entry"`.
+- **Shared code touched:** `AuthForm`, `current-user.ts` (`isSignedIn`), `NAV_ITEMS`, `examPartListHref`,
+  `PART2_HREF`, `AppShell` (default current tab), the dashboard's `Wordmark` and top-bar link, the `(site)` layout's
+  logo, `playwright.preview.config.ts` (also runs the new spec).
+- **Tests:** `src/features/entry/entry-pages.test.ts`, more in `mock-pages.test.ts` and `deleted.test.ts`;
+  `e2e/entry-pages.spec.ts` (390 px audits with AA contrast, real and mock). Updated for the new addresses:
+  `auth.spec.ts` (Journey A starts at `/practice`; on the sign-in pages, which have no Account menu, the signed-in
+  state is read from `/api/account/me`; after Create account the browser lands on `/dashboard`), `practice-flow`,
+  `dashboard`, `profile-settings` and `mock-mode` specs, and the dashboard unit tests.
+
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 
 claude/lessons-adi79w: duplicate of claude/lessons, never merge.

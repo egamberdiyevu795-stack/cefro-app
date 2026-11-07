@@ -34,7 +34,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(String(error)));
 
-  await page.goto("/");
+  await page.goto("/practice");
   await page.getByRole("link", { name: /Advice from someone/ }).click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
   await expect(page.getByTestId("demo-label")).toHaveCount(0); // the real brief: no demo label

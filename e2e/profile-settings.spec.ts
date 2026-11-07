@@ -242,7 +242,7 @@ test.describe("real account", () => {
     await expect(page).toHaveURL(/\/profile$/);
     await expect(page.getByTestId("profile-email")).toHaveText(email);
     await expect(page.getByTestId("profile-level")).toHaveText("No level yet");
-    await expect(page.getByRole("link", { name: "Go to Part 2" })).toHaveAttribute("href", "/#part-2");
+    await expect(page.getByRole("link", { name: "Go to Part 2" })).toHaveAttribute("href", "/practice#part-2");
     await expect(page.getByText("Not set")).toBeVisible();
     await expect(page.getByTestId("profile-attempts")).toHaveText("No practice attempts yet");
     await expect(page.getByTestId("demo-label")).toHaveCount(0);
@@ -292,10 +292,9 @@ test.describe("real account", () => {
     expect(fs.existsSync(file)).toBe(true);
     await page.getByLabel("Your password").fill("another good password");
     await page.getByRole("button", { name: "Delete everything" }).click();
-    // Signed out, on the home page, with the message.
+    // Signed out, on the home page (which has no Account menu), with the message.
     await expect(page).toHaveURL(/\/\?deleted=1$/);
     await expect(page.getByTestId("account-deleted")).toHaveText("Your account and all your data were deleted.");
-    await expect(page.getByTestId("account-status")).toHaveAttribute("data-state", "anonymous");
     expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
 
     expect(fs.existsSync(file)).toBe(false);

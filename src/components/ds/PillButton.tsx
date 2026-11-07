@@ -57,9 +57,13 @@ export function PillButton({
   );
 }
 
-/** The same pill as a `<button>`, for actions that stay on the page (start, finish, try again). */
+/**
+ * The same pill as a `<button>`, for actions that stay on the page (start, finish, try again). `type="submit"` makes it
+ * a form's submit button (sign in, create account); the form's own `onSubmit` handles it then, so `onClick` is optional.
+ */
 export function PillAction({
   onClick,
+  type = "button",
   variant = "primary",
   size = "md",
   icon,
@@ -68,7 +72,8 @@ export function PillAction({
   className,
   children,
 }: {
-  onClick: () => void;
+  onClick?: () => void;
+  type?: "button" | "submit";
   variant?: Variant;
   size?: Size;
   icon?: IconName;
@@ -79,7 +84,7 @@ export function PillAction({
 }) {
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={disabled}
       autoFocus={autoFocus}

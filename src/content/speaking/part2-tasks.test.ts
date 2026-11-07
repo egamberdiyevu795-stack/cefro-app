@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
-import HomePage from "@/app/(site)/page";
+import HomePage from "@/app/(site)/practice/page";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import { toPublicTask } from "@/domain/speaking/task";
 import { ensureTaskSnapshot } from "@/server/attempts/attempt-repository";
@@ -190,7 +190,7 @@ describe("task list page (/)", () => {
     expect(html.match(/1 min preparation · 2 min speaking/g)).toHaveLength(7);
   });
 
-  it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/#part-2)", async () => {
+  it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/practice#part-2)", async () => {
     const html = await homePage();
     const section = html.split('<section id="part-2"')[1]?.split("</section>")[0];
     expect(section, "Part 2 section").toBeDefined();

@@ -1,6 +1,7 @@
 export { Card, CardHeader } from "./Card";
+export { TextField, Notice, WordmarkLink } from "./Field";
 export { PillButton, PillAction, IconButton } from "./PillButton";
-export { ScoringLabel, DeltaLabel, DemoLabel, DEMO_RESULT_TEXT, DEMO_MODE_TEXT, DEMO_DATA_TEXT, DEMO_CHANGES_TEXT, DEMO_CLASS_TEXT } from "./Labels";
+export { ScoringLabel, DeltaLabel, DemoLabel, DEMO_RESULT_TEXT, DEMO_MODE_TEXT, DEMO_DATA_TEXT, DEMO_CHANGES_TEXT, DEMO_CLASS_TEXT, DEMO_ENTRY_TEXT } from "./Labels";
 export { StatRow, ProgressBar, GoalBar } from "./Stats";
 export { RadarChart, type RadarAxis } from "./RadarChart";
 export { ListRow, Thumb } from "./ListRow";

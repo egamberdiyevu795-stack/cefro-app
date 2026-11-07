@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEMO_CHANGES_TEXT, DEMO_DATA_TEXT, DEMO_MODE_TEXT, DEMO_RESULT_TEXT } from "@/components/ds";
+import { DEMO_CHANGES_TEXT, DEMO_DATA_TEXT, DEMO_ENTRY_TEXT, DEMO_MODE_TEXT, DEMO_RESULT_TEXT } from "@/components/ds";
 
 /*
  * Mock mode (`?mock=1`) on a server configured like a Vercel Preview with no variables: every mock page renders, with
@@ -19,7 +19,7 @@ const { touched, forbidden } = vi.hoisted(() => {
 
 vi.mock("next/headers", () => ({
   cookies: forbidden("cookies"),
-  // Only the (site) layout reads a header: whether the proxy marked the request as mock mode.
+  // Only the (site) and (entry) layouts read a header: whether the proxy marked the request as mock mode.
   headers: async () => new Headers(touched.mockHeader ? { "x-cefro-mock": "1" } : {}),
 }));
 vi.mock("next/server", async (importOriginal) => ({ ...(await importOriginal<object>()), connection: async () => undefined }));
@@ -29,11 +29,15 @@ vi.mock("next/navigation", async (importOriginal) => ({
   usePathname: () => "/",
 }));
 vi.mock("@/server/db/client", () => ({ getDb: forbidden("db"), openDatabase: forbidden("db"), createDatabase: forbidden("db") }));
-vi.mock("@/server/identity/current-user", () => ({ findCurrentUserId: forbidden("identity"), getCurrentUserId: forbidden("identity") }));
+vi.mock("@/server/identity/current-user", () => ({ findCurrentUserId: forbidden("identity"), getCurrentUserId: forbidden("identity"), isSignedIn: forbidden("identity") }));
 vi.mock("@/server/account/account-store", () => ({ readAccount: forbidden("db"), saveName: forbidden("db") }));
 
+import EntryLayout from "@/app/(entry)/layout";
+import LoginPage from "@/app/(entry)/login/page";
+import HomePage from "@/app/(entry)/page";
+import RegisterPage from "@/app/(entry)/register/page";
 import SiteLayout from "@/app/(site)/layout";
-import HomePage from "@/app/(site)/page";
+import TaskListPage from "@/app/(site)/practice/page";
 import DashboardPage from "@/app/dashboard/page";
 import HistoryPage from "@/app/history/page";
 import LessonPage from "@/app/lessons/[lessonId]/page";
@@ -79,11 +83,36 @@ afterEach(() => {
 });
 
 describe("mock pages on a Preview with no configuration", () => {
-  it("task list (/) in its layout: demo label, every task opens its brief in mock mode, the demo account", async () => {
+  it("task list (/practice) in its layout: demo label, every task opens its brief in mock mode, the demo account", async () => {
     touched.mockHeader = true; // set by src/proxy.ts for ?mock=1
-    const markup = await html(SiteLayout({ children: await HomePage(props({ mock: "1" })) }));
+    const markup = await html(SiteLayout({ children: await TaskListPage(props({ mock: "1" })) }));
     expect(markup).toContain(escaped(DEMO_MODE_TEXT));
     expect(markup).toContain('href="/practice/speaking/b2-part2-advice-from-someone?mock=1"');
+    expectMockLinksOnly(markup);
+  });
+
+  it("signed-out home (/?mock=1): nobody is looked up, one black button, Try the demo opens the demo dashboard", async () => {
+    touched.mockHeader = true;
+    const markup = await html(EntryLayout({ children: await HomePage(props({ mock: "1" })) }));
+    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
+    expect(markup).toContain('href="/dashboard?mock=1"');
+    expect(markup).toContain('href="/register?mock=1"');
+    expect(markup).toContain('href="/login?mock=1"');
+    expect(markup).not.toMatch(SMALL);
+    expect(markup).not.toContain('aria-label="Main"'); // no navigation tabs signed out
+    expectMockLinksOnly(markup);
+  });
+
+  it.each([
+    ["sign in", LoginPage, "Sign in"],
+    ["Create account", RegisterPage, "Create account"],
+  ] as const)("%s (?mock=1): the form, the demo label, one black button, mock links only", async (_name, Page, submit) => {
+    touched.mockHeader = true;
+    const markup = await html(EntryLayout({ children: await Page(props({ mock: "1" })) }));
+    expect(markup).toContain(DEMO_ENTRY_TEXT);
+    expect(markup).toMatch(new RegExp(`<button[^>]*type="submit"[^>]*>${submit}</button>`));
+    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
+    expect(markup).not.toMatch(SMALL);
     expectMockLinksOnly(markup);
   });
 
@@ -182,7 +211,7 @@ describe("Account page (/profile) in mock mode", () => {
     expect(markup).toMatch(/data-testid="profile-attempts"[^>]*>6 practice attempts</);
     // The demo student's latest scored Part 2 answer is the "A tradition" retry: a real level, not "No level yet".
     expect(markup).toMatch(/data-testid="profile-level"[^>]*>(Below B1|B1|B2|Above B2)</);
-    expect(markup).toContain('href="/?mock=1#part-2"');
+    expect(markup).toContain('href="/practice?mock=1#part-2"');
     const order = ['data-testid="profile-name"', 'data-testid="profile-email"', 'data-testid="profile-level"', 'data-testid="profile-member-since"',
       'data-testid="profile-attempts"', 'data-testid="exam-countdown"', ">Change password<", ">Sign out<", ">Delete my account<"].map((needle) => mainOf(markup).indexOf(needle));
     expect(order.every((at) => at >= 0)).toBe(true);

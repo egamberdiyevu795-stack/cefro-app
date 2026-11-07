@@ -96,7 +96,7 @@ describe("exam part tiles", () => {
       createElement(ExamPartsCard, {
         parts: [
           { part: "Part 1.1", name: "Personal questions", band: null, bandLabel: null, href: null },
-          { part: "Part 2", name: "Long turn", band: null, bandLabel: null, href: "/#part-2" },
+          { part: "Part 2", name: "Long turn", band: null, bandLabel: null, href: "/practice#part-2" },
           { part: "Part 3", name: "Argument", band: null, bandLabel: null, href: null },
         ],
       }),
@@ -108,7 +108,7 @@ describe("exam part tiles", () => {
       expect(tiles[i]).not.toContain("<a ");
       expect(tiles[i]).not.toContain("Start");
     }
-    expect(tiles[1]).toContain('href="/#part-2"');
+    expect(tiles[1]).toContain('href="/practice#part-2"');
     expect(tiles[1]).toContain(">Start<");
     expect(markup).not.toMatch(TOO_SMALL);
     expect(blacks(markup)).toBe(0);

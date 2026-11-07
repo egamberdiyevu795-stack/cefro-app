@@ -13,7 +13,7 @@ import { mockLink } from "@/features/demo/demo-mode";
  */
 export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag; built?: boolean }> = [
   { href: "/dashboard", label: "Home", icon: "dashboard" },
-  { href: "/", label: "Practice", icon: "mic" },
+  { href: "/practice", label: "Practice", icon: "mic" },
   { href: "/lessons", label: "Lessons", icon: "book", flag: "lessons" },
   { href: "/history", label: "History", icon: "clock", flag: "history", built: true },
 ];

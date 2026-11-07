@@ -19,6 +19,8 @@
   --text-lead--line-height: 1.25rem;
   --text-title: 1.0625rem; /* 17px: card titles */
   --text-title--line-height: 1.5rem;
+  --text-heading: 1.75rem; /* 28px: the one page heading of the signed-out pages ("Practise the multilevel speaking exam") */
+  --text-heading--line-height: 2.25rem;
   --text-stat: 2.25rem; /* 36px: the big number ("Band 3") */
   --text-stat--line-height: 1;
 

@@ -14,7 +14,7 @@ import { asDemoTeacher } from "@/features/teacher/links";
 export function AppShell({
   flags,
   account,
-  activeHref = "/",
+  activeHref = "/practice",
   mock = account === "mock",
   demoTeacher = false,
   back,

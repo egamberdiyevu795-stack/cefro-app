@@ -32,16 +32,18 @@ export const DEMO_DATA_TEXT = "Demo mode. These are example attempts, not yours.
 export const DEMO_CHANGES_TEXT = "Demo mode. Changes are not saved.";
 /** On the demo teacher's pages: a made-up class and students. */
 export const DEMO_CLASS_TEXT = "Demo mode. Made-up class and students; changes are not saved.";
+/** On the sign-in and Create account pages in mock mode: the form is shown, but nothing is sent. */
+export const DEMO_ENTRY_TEXT = "Demo mode. Nothing you enter here is sent.";
 
 /**
  * Marks a screen that shows mock data, so a tester never mistakes a saved demo score for their own. `result` (default)
  * on the result prototype's screens; `mode` on the practice page and the task list in mock mode, where nothing has been
  * scored yet; `data` on the dashboard and History in mock mode, which show the demo student's attempts; `changes` on
- * Profile and Settings in mock mode, where nothing the tester does is saved; `class` on the demo teacher's pages.
+ * Profile and Settings in mock mode, where nothing the tester does is saved; `class` on the demo teacher's pages; `entry` on sign-in and Create account in mock mode.
  * A grey `well` pill with an info glyph and dark words: not a button, no colour. Off a card (on the page background)
  * pass `className="bg-card"` so the pill still shows. Never shown on a real result.
  */
-export function DemoLabel({ variant = "result", className }: { variant?: "result" | "mode" | "data" | "changes" | "class"; className?: string }) {
+export function DemoLabel({ variant = "result", className }: { variant?: "result" | "mode" | "data" | "changes" | "class" | "entry"; className?: string }) {
   return (
     <p
       role="note"
@@ -57,7 +59,9 @@ export function DemoLabel({ variant = "result", className }: { variant?: "result
             ? DEMO_CHANGES_TEXT
             : variant === "class"
               ? DEMO_CLASS_TEXT
-              : DEMO_RESULT_TEXT}
+              : variant === "entry"
+                ? DEMO_ENTRY_TEXT
+                : DEMO_RESULT_TEXT}
     </p>
   );
 }

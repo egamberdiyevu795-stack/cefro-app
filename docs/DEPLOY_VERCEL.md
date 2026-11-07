@@ -103,16 +103,50 @@ fail with HTTP 500. It fails in either direction:
 - *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the
   same check fails ("required on Vercel…") and the same routes are refused.
 
-The one exception is the **`/dashboard` design prototype** (`/dashboard`, `/dashboard/task/…`): it renders mocked data
-only, reads no secret and never opens the database, so it works in a Preview with no environment variables at all. (Until
-November 2026 a failed check made the start-up hook throw, which made Next.js answer 500 on every route, the prototype
-included.)
+**The dashboard and History no longer work on a Preview without environment variables.** `/dashboard` used to be a
+mocked prototype that worked with no variables at all. Since `history-page` and `dashboard-real-data` it shows the
+student's real attempts and exam date, so it opens the database like `/history` does. A Preview with no database
+answers 500 on both and shows "CEFRO isn't available right now" (`app/error.tsx`); `?flags=off` changes nothing.
+
+What a Preview **with no environment variables** serves, checked on 2026-11-07 with a production build started the way
+a Preview runs (`NODE_ENV=production`, `VERCEL=1`, `VERCEL_ENV=preview`, no other variables, no writable disk):
+
+| Works (200) | Fails (500 page, 503 API) |
+|---|---|
+| The Part 2 briefs in mock mode: `/practice/speaking/<task id>?mock=1`, for all 7 tasks (`b2-part2-advice-from-someone`, `b2-part2-important-decision`, `b2-part2-goal-you-set`, `b2-part2-working-in-a-team`, `b2-part2-trying-and-failing`, `b2-part2-a-tradition`, `b2-part2-happy-day`), and the whole mock loop from there (preparation, recording, Finish → `/result?state=scoring&next=1` → mock result) | `/` (the task list: it has no mock mode), `/login`, `/register` (the configuration check) |
+| The `/result` prototype (`?anchor=…`, `?state=…`) | `/dashboard`, `/history`, `/result/<attempt id>` (the database) |
+| Static files, e.g. the task pictures `/tasks/*.svg` | The practice pages without `?mock=1`, every API route, `/api/health` (503) |
+
+So to look at a branch on its Preview without a database, open the briefs with `?mock=1`. (Until November 2026 a failed
+check made the start-up hook throw, which made Next.js answer 500 on every route.)
+
+**Which variables the check reports on a Preview with none set:** the keys of the default AI providers (see "AI
+providers" below: `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`, or only `GEMINI_API_KEY` if Preview has the Gemini settings),
+`TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` and `AUTH_SECRET`. `APP_URL` is not needed on Vercel: it is taken from
+`VERCEL_PROJECT_PRODUCTION_URL` or `VERCEL_URL` (`applyHostingDefaults` in `src/server/config/env.ts`).
 
 So a Preview of this application is **not usable as a running app** unless it has its own database. That is deliberate:
 the Preview is kept away from real data rather than half-working. If you want working Previews, create a **second** Turso
 database for them, migrate it yourself (the pipeline does not touch it), give Preview its own `TURSO_*` values in Vercel,
 and set `CEFRO_ALLOW_PREVIEW_TURSO=true` for Preview in Vercel and the repository variable `CEFRO_ALLOW_PREVIEW_TURSO=true`
 in GitHub, to say that the Preview credentials are a different database. The same flag covers a Development environment.
+
+### AI providers: the defaults, and how to switch to Gemini
+
+The code's defaults (`src/server/config/env.ts`, also in `.env.example`) are **not** Gemini:
+
+| Step | Variable | Default | Its key | Other choices |
+|---|---|---|---|---|
+| Speech-to-text | `TRANSCRIPTION_PROVIDER` | `openai` (model `OPENAI_TRANSCRIPTION_MODEL`, default `gpt-4o-transcribe`) | `OPENAI_API_KEY` | `gemini` (model `GEMINI_TRANSCRIPTION_MODEL`, default `gemini-3.8-flash`); `mock` (development only, refused in production) |
+| Speech-to-text fallback | `TRANSCRIPTION_FALLBACK_PROVIDER` | `none` | the fallback's key | `openai`, `gemini` (must differ from the primary) |
+| Scoring (the evaluator) | `EVALUATION_PROVIDER` | `anthropic` (model `ANTHROPIC_EVALUATION_MODEL`, default `claude-opus-5-5`) | `ANTHROPIC_API_KEY` | `gemini` (model `GEMINI_EVALUATION_MODEL`, default `gemini-3.8-flash`); `mock` (development only, refused in production) |
+| Audio step (pronunciation, pausing) | `AUDIO_ASSESSMENT` | `auto`: Gemini when `GEMINI_API_KEY` is set and the evaluator is not the mock, else off | `GEMINI_API_KEY` | `gemini` (always), `off` (pronunciation "not assessed") |
+
+**Scoring switches to Gemini with `EVALUATION_PROVIDER=gemini`** (and `GEMINI_API_KEY`). Speech-to-text switches with
+`TRANSCRIPTION_PROVIDER=gemini`. Only the selected providers' keys are needed. The production setup below sets both to
+`gemini`, so production needs only `GEMINI_API_KEY`; an environment without those two variables (e.g. a Preview where
+they are not ticked) falls back to the defaults and then needs `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`. The defaults
+are unchanged on purpose; changing them is a separate decision.
 
 ### One-time setup
 

@@ -14,10 +14,11 @@ import { logger } from "@/server/logging/logger";
  * - The app's pages (home, login, register, practice) via `src/app/(site)/layout.tsx`: the page fails (500).
  * - `/api/health`: reports "unavailable" (503), so a deploy with a bad configuration fails its health check.
  *
- * Not enforced on the `/dashboard` design prototype, which renders mocked data only and needs no secret. That is why
- * the check no longer runs as a startup gate: a throwing instrumentation hook makes Next.js answer 500 for EVERY
- * route ("Failed to prepare server"), which took down pages that need nothing (e.g. a Vercel Preview with no
- * environment variables).
+ * Not enforced on pages that need no secret: the practice briefs in mock mode (`?mock=1`) and the `/result` prototype.
+ * (`/dashboard` and `/history` are not checked here either, but they read the database, so without one they fail
+ * anyway.) That is why the check no longer runs as a startup gate: a throwing instrumentation hook makes Next.js answer
+ * 500 for EVERY route ("Failed to prepare server"), which took down pages that need nothing (e.g. a Vercel Preview
+ * with no environment variables). See docs/DEPLOY_VERCEL.md, "What a Preview does".
  *
  * Development and tests: problems are logged, nothing is refused (mock providers and test overrides are legitimate).
  */

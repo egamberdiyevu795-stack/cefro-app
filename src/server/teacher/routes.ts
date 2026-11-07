@@ -20,8 +20,7 @@ type Handler<Ctx> = (request: Request, ctx: Ctx, userId: string) => Promise<Resp
  * result (an anonymous caller included). `student`: any signed-in account (401 otherwise).
  */
 export function teacherRoute<Ctx>(who: "teacher" | "student", handler: Handler<Ctx>) {
-  return withErrorHandling(async (request: Request, ctx: Ctx) => {
-    if (!teacherLive()) return errorResponse(404, "not_found", "Not found.");
+  const handle = withErrorHandling(async (request: Request, ctx: Ctx) => {
     if (request.method !== "GET" && isCrossSite(request)) return errorResponse(403, "cross_site_request", "This request was not made from CEFRO.");
     let userId: string;
     try {
@@ -33,6 +32,8 @@ export function teacherRoute<Ctx>(who: "teacher" | "student", handler: Handler<C
     if (who === "teacher") await requireTeacher(userId);
     return handler(request, ctx, userId);
   });
+  // The switch answers first, before the server-configuration check: off means "no such endpoint", everywhere.
+  return (request: Request, ctx: Ctx) => (teacherLive() ? handle(request, ctx) : Promise.resolve(errorResponse(404, "not_found", "Not found.")));
 }
 
 export async function readJson(request: Request): Promise<Record<string, unknown>> {

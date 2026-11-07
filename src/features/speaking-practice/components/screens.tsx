@@ -6,6 +6,7 @@ import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import type { RecorderErrorKind } from "../hooks/useAudioRecorder";
 import { formatClock, formatDateTime, formatDuration } from "../lib/format";
 import type { RetryGoal } from "../lib/practice-flow";
+import { MicCheck } from "./MicCheck";
 
 /*
  * The Part 2 practice screens on the design system: brief, preparation, recording, and the microphone states.
@@ -88,7 +89,10 @@ export function GoalCard({ goal, withCheck = false, className }: { goal: RetryGo
 
 /* ------------------------------------------------------------------------------------------------------------ brief */
 
-/** Brief: the task, its timings, the goal of a retry, and the black "Start preparation" (or a microphone state). */
+/**
+ * Brief: the task, its timings, the goal of a retry, the grey "Check microphone" (3 s, played back, never uploaded), and
+ * the black "Start preparation" (or a microphone state).
+ */
 export function BriefCard({
   task,
   goal,
@@ -129,6 +133,9 @@ export function BriefCard({
       <div className="mt-6 border-t border-line pt-5">
         {microphone ?? (
           <>
+            <div className="mb-5">
+              <MicCheck ready={ready} />
+            </div>
             <PillAction size="lg" icon="mic" onClick={onStart} disabled={!ready} className="w-full sm:w-auto disabled:cursor-wait">
               Start preparation
             </PillAction>

@@ -1,6 +1,9 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { APIError } from "better-auth/api";
 import { isDeleteConfirmed } from "@/domain/account";
 import { deleteAccount } from "@/server/account/delete-account";
+import { getAuth } from "@/server/auth/auth";
+import { authLimiters } from "@/server/auth/auth-limits";
 import { HttpError } from "@/server/errors";
 import { errorResponse, isCrossSite, withErrorHandling } from "@/server/http";
 import { requireAuthenticated } from "@/server/identity/current-user";
@@ -8,15 +11,33 @@ import { SESSION_COOKIE_NAMES, USER_COOKIE_NAME } from "@/server/identity/user-c
 import { logger } from "@/server/logging/logger";
 
 /**
- * "Delete my account" (Settings). `POST { "confirm": "DELETE" }`, signed in only, the caller's own account. Deletes
- * everything (server/account/delete-account.ts), audio included, then clears this browser's cookies. Cross-site
- * requests are refused; anything but "DELETE" is a 400 and deletes nothing.
+ * "Delete my account" (Account page). `POST { "password": "…", "confirm": "DELETE" }`, signed in only, the caller's own
+ * account. The password is checked by the auth library (wrong ones count like failed sign-ins, per email), then
+ * everything is deleted (server/account/delete-account.ts), audio included, and this browser's cookies are cleared.
+ * Cross-site requests are refused; anything but "DELETE", or a wrong password, is a 400 and deletes nothing.
  */
 export const POST = withErrorHandling(async (request: Request) => {
   if (isCrossSite(request)) return errorResponse(403, "cross_site_request", "This request was not made from CEFRO.");
   const user = await requireAuthenticated();
-  const body = (await request.json().catch(() => null)) as { confirm?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { confirm?: unknown; password?: unknown } | null;
   if (!isDeleteConfirmed(body?.confirm)) throw new HttpError(400, "not_confirmed", "Type DELETE to confirm.");
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!password) throw new HttpError(400, "password_required", "Enter your password.");
+
+  const limiter = authLimiters().loginByEmail;
+  const blocked = limiter.isBlocked(user.email);
+  if (blocked.blocked) {
+    return errorResponse(429, "password_rate_limited", "Too many wrong passwords. Please wait a few minutes and try again.", blocked.retryAfterSeconds);
+  }
+  try {
+    await (await getAuth()).api.verifyPassword({ body: { password }, headers: await headers() });
+  } catch (error) {
+    if (error instanceof APIError) {
+      limiter.hit(user.email);
+      throw new HttpError(400, "wrong_password", "Your password is not right.");
+    }
+    throw error;
+  }
 
   const summary = await deleteAccount(user.userId);
   logger.info("Account deleted", { ...summary });

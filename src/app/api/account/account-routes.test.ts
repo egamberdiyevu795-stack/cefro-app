@@ -24,7 +24,6 @@ vi.setConfig({ testTimeout: 30_000 });
 import { eq, inArray, or } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import ProfilePage from "@/app/profile/page";
-import SettingsPage from "@/app/settings/page";
 import { DELETED_ITEMS } from "@/domain/account";
 import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
@@ -256,15 +255,19 @@ describe.each([
     for (const key of keys) expect(await audioExists(key), key).toBe(true);
     const bobKey = (await db.select().from(recordings).where(eq(recordings.attemptId, bobAttempt)).get())!.storageKey;
 
-    // Anything but DELETE deletes nothing.
+    // Anything but DELETE, a missing or wrong password, or a cross-site request deletes nothing.
     for (const confirm of [undefined, "", "delete", "Delete", "DELET"]) {
-      expect((await postDelete(req("/x", json({ confirm })))).status, String(confirm)).toBe(400);
+      expect((await postDelete(req("/x", json({ password: PASSWORD, confirm })))).status, String(confirm)).toBe(400);
     }
-    expect((await postDelete(req("/x", json({ confirm: "DELETE" }, { headers: { origin: "https://evil.example" } })))).status).toBe(403);
+    expect((await postDelete(req("/x", json({ confirm: "DELETE" })))).status).toBe(400);
+    const wrong = await postDelete(req("/x", json({ password: "not my password", confirm: "DELETE" })));
+    expect(wrong.status).toBe(400);
+    expect(((await wrong.json()) as { error: { message: string } }).error.message).toBe("Your password is not right.");
+    expect((await postDelete(req("/x", json({ password: PASSWORD, confirm: "DELETE" }, { headers: { origin: "https://evil.example" } })))).status).toBe(403);
     expect((await rowsOf([aliceId], attemptIds)).attempts).toHaveLength(2);
 
     use(alice);
-    expect((await postDelete(req("/api/account/delete", json({ confirm: "DELETE" })))).status).toBe(204);
+    expect((await postDelete(req("/api/account/delete", json({ password: PASSWORD, confirm: "DELETE" })))).status).toBe(204);
 
     // Every table: nothing left of Alice, her merged identity or her attempts.
     const after = await rowsOf([aliceId, anonymousId], attemptIds);
@@ -298,12 +301,12 @@ describe.each([
   it("a browser without an account cannot delete anything (401)", async () => {
     jar.clear();
     await practise();
-    expect((await postDelete(req("/x", json({ confirm: "DELETE" })))).status).toBe(401);
+    expect((await postDelete(req("/x", json({ password: PASSWORD, confirm: "DELETE" })))).status).toBe(401);
     expect(await db.select().from(speakingAttempts).all()).toHaveLength(1);
   });
 });
 
-describe("Profile and Settings pages (real data, the caller's own only)", () => {
+describe("Account page (real data, the caller's own only)", () => {
   setUp(() => new LocalAudioStorage(dir));
 
   const page = async (element: Promise<unknown>) => renderToStaticMarkup((await element) as React.ReactElement);
@@ -330,22 +333,21 @@ describe("Profile and Settings pages (real data, the caller's own only)", () => 
     expect(ofBob).toContain('data-testid="exam-add"');
   });
 
-  it("a browser without an account: no name or email, Sign in / Create account; Settings asks to sign in", async () => {
+  it("a browser without an account: no name or email; Sign in / Create account; no password, sign-out or delete sections", async () => {
     jar.clear();
-    const profile = await page(ProfilePage(props));
-    expect(profile).toContain("Practising without an account");
-    expect(profile).not.toContain('data-testid="profile-email"');
-    const settings = await page(SettingsPage(props));
-    expect(settings).toContain("Test your microphone");
-    expect(settings).toContain("Sign in to change your password");
-    expect(settings).not.toContain("Delete everything");
-    expect(settings).not.toContain("Current password");
+    const markup = await page(ProfilePage(props));
+    expect(markup).toContain("Practising without an account");
+    expect(markup).not.toContain('data-testid="profile-email"');
+    expect(markup).toContain('href="/login?next=/profile"');
+    for (const absent of ["Current password", ">Sign out<", "Delete my account"]) expect(markup).not.toContain(absent);
   });
 
-  it("Settings for an account: the four sections, no demo label", async () => {
+  it("for an account: password and sign-out, then Delete my account last; no demo label", async () => {
     use(await register("alice"));
-    const markup = await page(SettingsPage(props));
-    for (const title of ["Test your microphone", "Change password", "Sign out", "Delete my account"]) expect(markup).toContain(title);
+    const markup = await page(ProfilePage(props));
+    const at = [">Change password<", ">Sign out<", ">Delete my account<"].map((t) => markup.indexOf(t));
+    expect(at.every((i) => i > 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
     expect(markup).not.toContain("Demo mode");
   });
 });

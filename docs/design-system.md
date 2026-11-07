@@ -39,14 +39,24 @@ in mock mode at 390 px. Every other action uses the grey `quiet` pill (or `light
 `well` tile). Dashboard: returning = "Practise next · Start" (Biggest fix "Start retry" is grey); first visit = the
 welcome card's "Start your first practice" (it goes to the recommended part, Part 2); attempts but none scored = the
 same card's "Start practice". All part tiles use the white tile pill. The exam date's Save is grey; Edit, Add exam
-date, Skip, Cancel and Remove date are small text actions with a 36 px tap area.
+date, Skip, Cancel and Remove date are small text actions with a 36 px tap area. Practice brief: "Start
+preparation"; "Check microphone" above it is grey. Account page: "Go to Part 2" / "Practise Part 2"; Change password,
+Sign out and Delete my account are grey (a destructive action is never black).
+
+## Navigation: five tabs
+
+Rail on desktop, bottom bar on phones, the same five tabs in this order: **Home** (`/dashboard`), **Practice** (`/`),
+**Lessons** (flag `lessons`: "Coming soon"), **History** (`/history`, flag `history`), **Account** (`/profile`). The
+Account tab is a plain link (`AccountTab`), no menu, always shown; it carries `data-testid="account-status"` and
+`data-state` (signed in or not). There is no Settings (gear) tab: Profile and Settings were merged into the Account
+page (approved by Asadbek, 2026-11-07), and `/settings` redirects to `/profile`, keeping `?mock=1`. The current tab is
+the grey square. In mock mode every tab keeps `?mock=1`.
 
 ## Feature flags
 
 Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
 notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons, the attempt
-row menu (Delete, Report a wrong score). Three flags now cover built features (all on): `settings` (the gear is a real
-link to `/settings`; off: not rendered and `/settings` is a 404), `history` (the sidebar item and
+row menu (Delete, Report a wrong score). Two flags now cover built features (both on): `history` (the sidebar item and
 "See all" are real links to `/history`; off: not rendered and `/history` is a 404) and `examCountdown` (the real exam
 date: question, countdown, Edit, Add exam date; off: not rendered and Practise next takes the full row).
 
@@ -590,44 +600,47 @@ their API calls fail into the in-page screens (upload failed, scoring failed). M
 configuration. Without JavaScript a failed page is blank (Next sends an empty error shell and draws the screen in the
 browser); it never shows the raw "Internal Server Error". Screenshot: `docs/design-system/not-found-phone.png`.
 
-## Account menu (real pages)
+## Account menu (the `(site)` header)
 
 `AccountMenu source="real"` asks `/api/account/me` (now `{ state, email, name }`, still no ids) and asks again after
 every navigation. Signed in: name (the account's display name, else the part of the email before "@") and email, then
 Log out. Not signed in: "Practising without an account", "Your answers are kept in this browser.", then Sign in and
-Create account. Every state starts with **Profile** (mock mode: `/profile?mock=1`, and it is the only item); on
-Profile the person icon is the current tab (grey square, `aria-current="page"`). Used in the practice page's rail / bottom bar and in the `(site)` header (`placement="header"`); the old
-text header control (`AccountStatus`) is removed. Prototypes use `source="mock"`.
+Create account. Every state starts with **Your account** (`/profile`; mock mode: `/profile?mock=1`, and it is the only
+item). Used only in the `(site)` header (home, sign-in, register; `placement="header"`): the app's navigation has the
+Account tab instead (see "Navigation: five tabs"). Prototypes use `source="mock"`.
 
 - **Checks:** `features/result/from-attempt.test.ts` (stored attempt → result page, retry "Goal met", development
   evaluator note, real player, every status, old method; comparison and error screens: one black button, no text under
   11 px). `e2e/practice-flow.spec.ts`: record → upload → evaluate (mock providers) → new result page → retry with goal →
   comparison → reopen from history; auto-start after preparation with the beep and "Speak now" (Playwright clock);
-  upload failure, scoring failure, answer lost. `e2e/auth.spec.ts` uses the Account menu.
+  upload failure, scoring failure, answer lost. `e2e/auth.spec.ts` uses the Account menu, the Account tab and the
+  Account page's Sign out.
 - Screenshots (1440 px and 390 px): `docs/design-system/practice-{real-result,real-retry-result,comparison,upload-failed,scoring-failed,answer-lost,server-unavailable,recording-speak-now,account-anonymous,account-signed-in}-{desktop,phone}.png`.
   Audited in the browser: no horizontal scroll, smallest text 11 px, one black button per screen.
 
-## Profile (`/profile`) and Settings (`/settings`)
+## Account page (`/profile`)
 
-Linked from the navigation: the person tab's menu has **Profile** (on Profile the person tab is the grey current tab),
-the gear is **Settings** (a real link now). Both use `AppShell`, one column on phones, two on desktop. No target
-level, change email, language, notifications or "Coming soon" items on either page.
+Opened directly by the Account tab (no menu). Profile and Settings were merged into it (approved by Asadbek,
+2026-11-07); `/settings` redirects here, keeping `?mock=1`. One column. No target level, change email, language,
+notifications or "Coming soon" items. Top to bottom:
 
-- **Profile:** Your account (name with a small Edit → field, grey Save, Cancel; email shown, never editable; "Member
-  since dd.mm.yy"; "N practice attempts"), Your exam (the dashboard's `ExamDate`, same rules and Uzbekistan days; with
-  no date it reads "Not set · Add exam date" instead of asking; Edit has "Remove date"), Current level (the latest
-  scored Part 2 answer's level as History reads it, with "Part 2 · Band n · label" and its date; none: "No level yet"
-  with the black **"Go to Part 2"**; with a level the black is **"Practise Part 2"**). Never a level from anything
-  else (`features/profile/view-model.ts`). A visitor without an account sees "Practising without an account" with grey
-  Sign in / Create account instead of name and email.
-- **Settings:** Test your microphone (the black **Test microphone** / Stop / Test again: up to 3 s, then a player;
-  kept in the tab only, never uploaded; blocked microphone: "Your microphone is blocked for CEFRO. Allow the microphone
-  for this site in your browser's settings…"), Change password (current + new, grey submit, POST form), Sign out
-  (grey), Delete my account (grey; opens the list of exactly what is deleted and "Type DELETE to confirm"; "Delete
-  everything" stays disabled until it says DELETE). Destructive actions are never black. Without an account: the
-  microphone test and "Sign in to change your password, sign out or delete your account."
-- **Controls wait for the page** (`useHydrated`): Edit, Save, Change password, Delete my account, Delete everything,
-  Sign out and Test microphone are disabled in the server HTML. The forms are `method="post"`.
+1. **Your account:** name (small Edit → field, grey Save, Cancel), email (shown, never editable), current level (the
+   latest scored Part 2 answer's level as History reads it, with "Part 2 · Band n · label" and its date, and the black
+   **"Practise Part 2"**; none: "No level yet" and the black **"Go to Part 2"**; never a level from anything else,
+   `features/profile/view-model.ts`), "Member since dd.mm.yy", "N practice attempts".
+2. **Your exam:** the dashboard's `ExamDate`, same rules and Uzbekistan days; with no date it reads "Not set · Add exam
+   date" instead of asking; Edit has "Remove date".
+3. **Password and sign-in:** Change password (current + new, grey submit, POST form; other devices are signed out),
+   then Sign out (grey).
+4. **Delete my account**, last, in its own card: grey; opens the list of exactly what is deleted, "Your password" and
+   "Type DELETE to confirm"; "Delete everything" stays disabled until both are filled and the field says DELETE. The
+   server checks the password (wrong ones count like failed sign-ins) before deleting anything.
+
+Without an account: "Practising without an account" (no name or email), the level, attempts and exam date, then grey
+Sign in / Create account; no password, sign-out or delete sections.
+
+- **Controls wait for the page** (`useHydrated`): Edit, Save, Change password, Sign out, Delete my account and Delete
+  everything are disabled in the server HTML. The forms are `method="post"`.
 - **Mock mode:** "Demo mode. Changes are not saved." (`DemoLabel variant="changes"`), the demo student
   (`demoAccount`: Student, student@example.com, member for 30 days, the six demo attempts, exam in 23 days). Name and
   exam date change on the page only; Change password says "Demo mode. Your password was not changed."; Delete my account
@@ -636,8 +649,19 @@ level, change email, language, notifications or "Coming soon" items on either pa
 - **Deletion** (`server/account/delete-account.ts`): audio files first, then one transaction for every row: attempts,
   results, transcripts, recordings and `recording_blobs`, practice sessions, analytics events, login sessions,
   password, the user and the anonymous identities merged into it. See `docs/privacy-todo.md` for what it does not cover.
-- **Checks:** `src/app/api/account/account-routes.test.ts`, `src/features/profile/view-model.test.ts`,
-  `src/domain/account.test.ts`, `src/features/demo/mock-pages.test.ts` (both pages: one black control, grey current
-  tab, POST forms with submit disabled, no text under 11 px, only `?mock=1` links, none of the excluded items),
-  `e2e/profile-settings.spec.ts` (at 390 px: exactly one black control, the grey current tab, no horizontal scroll, no
-  text under 11 px, every text at WCAG AA contrast; the real flows; the audio file gone from disk after deletion).
+
+## Check microphone (practice brief)
+
+On the practice task screen (brief), above the black "Start preparation": the grey **Check microphone**
+(`speaking-practice/components/MicCheck.tsx`). Records up to 3 s (grey Stop while recording), then a player and "Check
+again". Kept in the tab only (a blob URL), never saved or uploaded; the microphone is released when it stops and when
+the brief closes. Blocked microphone: "Your microphone is blocked for CEFRO. Allow the microphone for this site in your
+browser's settings (the icon next to the address), then try again." Disabled until the page is ready.
+
+- **Checks** (Account page and Check microphone): `src/app/api/account/account-routes.test.ts`,
+  `src/features/profile/view-model.test.ts`, `src/domain/account.test.ts`, `src/features/demo/mock-pages.test.ts`
+  (section order, five tabs with the Account tab a direct link and the grey current tab, one black control, POST forms
+  with submit disabled, no text under 11 px, only `?mock=1` links, `/settings` redirect, Check microphone grey before
+  Start preparation), `e2e/profile-settings.spec.ts` (at 390 px: exactly one black control, the grey current tab, no
+  horizontal scroll, no text under 11 px, every text at WCAG AA contrast; the real flows; the audio file gone from disk
+  after deletion; the microphone check and a blocked microphone).

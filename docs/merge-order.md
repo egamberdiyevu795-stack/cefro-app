@@ -239,6 +239,12 @@ email, sign-up date and exam date columns already exist, and deletion only remov
   `src/features/profile/view-model.test.ts`, `src/domain/account.test.ts`, more in `mock-pages.test.ts` and
   `features.test.ts`; `e2e/profile-settings.spec.ts`; `e2e/mock-mode.spec.ts` (390 px audit and Preview lists).
 - `docs/privacy-todo.md`: what the under-18 consent work will need from these pages.
+- **Follow-up (design change approved by Asadbek, 2026-11-07):** Profile and Settings merged into one **Account page**
+  at `/profile`, opened directly by the Account tab (no menu); the gear tab is gone, so the navigation has 5 tabs
+  (Home, Practice, Lessons, History, Account); `/settings` redirects to `/profile` (keeps `?mock=1`); Delete my account
+  also needs the account's password; "Test your microphone" moved to the practice brief as the grey "Check
+  microphone" above Start preparation. The `settings` feature flag is removed; the (site) header keeps its Account menu.
+  Still no migration.
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

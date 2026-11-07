@@ -28,9 +28,10 @@ async function openAccount(page: Page) {
   await header(page).getByRole("button", { name: "Account" }).click();
 }
 
+/** Sign out from the Account page (the Account tab opens it directly). */
 async function logOut(page: Page) {
-  await openAccount(page);
-  await header(page).getByRole("menuitem", { name: "Log out" }).click();
+  await page.goto("/profile");
+  await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);
 }
 
@@ -74,10 +75,11 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
     await register(page, email, TASK_URL);
     await expect(page).toHaveURL(new RegExp(`${TASK_URL}$`));
     await expect(header(page)).toHaveAttribute("data-state", "authenticated");
-    await openAccount(page);
-    await expect(header(page)).toContainText(email); // the real account's email, under its name
-    await expect(header(page)).toContainText(email.split("@")[0]);
-    await page.keyboard.press("Escape");
+    // The Account tab opens the Account page: the real account's email and its name.
+    await header(page).getByRole("link", { name: "Account" }).click();
+    await expect(page.getByTestId("profile-email")).toHaveText(email);
+    await expect(page.getByTestId("profile-name")).toHaveText(email.split("@")[0]);
+    await page.goto(TASK_URL);
 
     // The same attempt, now owned by the account.
     const after = await (await page.request.get(`/api/speaking/tasks/${TASK}/attempts`)).json();

@@ -6,7 +6,7 @@ import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
 import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt } from "@/domain/speaking/history";
-import { AccountMenu } from "@/features/dashboard/AccountMenu";
+import { AccountTab } from "@/features/dashboard/AccountTab";
 import { ExamDate } from "@/features/dashboard/ExamDate";
 import { demoAttempts, demoExamDate, demoHref, demoTranscript } from "@/server/demo/demo-data";
 import { isMockQuery, mockLink } from "@/features/demo/demo-mode";
@@ -54,7 +54,7 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  * Attempts, none scored yet (still scoring, failed, too short): [ Find your level ("Start practice"), exam date* ],
  *   [ Recent attempts ], [ Exam parts ]. No level, skills or biggest fix until an answer is scored.
  * First visit (no attempts): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
- * The Account item (with Log out) is always in the nav, whatever the flags.
+ * The Account tab (a link to the Account page) is always in the nav, whatever the flags.
  *
  * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
  *   small "Add exam date".
@@ -113,7 +113,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
       <div className="mx-auto flex max-w-[1280px] px-4 pt-4 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
           <Wordmark className="hidden lg:flex lg:h-12" mock={mock} />
-          <Sidebar items={navItemsFor(flags, mock)} activeHref="/dashboard" last={<AccountMenu source={mock ? "mock" : "real"} />} />
+          <Sidebar items={navItemsFor(flags, mock)} activeHref="/dashboard" last={<AccountTab source={mock ? "mock" : "real"} />} />
         </aside>
 
         <div className="min-w-0 flex-1">

@@ -11,8 +11,8 @@ export const DEMO_NOT_DELETED = "Demo mode. Nothing was deleted.";
 
 /**
  * Delete my account, in two steps on the page. First a grey "Delete my account"; it opens the list of exactly what
- * will be deleted (`DELETED_ITEMS`) and a field where the student types DELETE. "Delete everything" stays disabled
- * until the field says DELETE (and until the page is ready). Then `POST /api/account/delete`, which deletes it all,
+ * will be deleted (`DELETED_ITEMS`), the account's password and a field where the student types DELETE. "Delete
+ * everything" stays disabled until both are filled and the field says DELETE (and until the page is ready). Then `POST /api/account/delete`, which deletes it all,
  * recordings included, and signs this browser out. Grey, never black: a destructive action is never the page's main
  * one. `demo`: both steps are shown, nothing is sent, and the page says nothing was deleted.
  */
@@ -21,6 +21,7 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
   const ready = useHydrated();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -58,10 +59,12 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
 
   async function confirm() {
     setError(null);
+    if (!password) return setError("Enter your password.");
     if (!isDeleteConfirmed(typed)) return setError(`Type ${DELETE_CONFIRMATION} to confirm.`);
     if (demo) {
       setOpen(false);
       setTyped("");
+      setPassword("");
       return setDone(DEMO_NOT_DELETED);
     }
     setBusy(true);
@@ -70,7 +73,7 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ confirm: typed }),
+        body: JSON.stringify({ password, confirm: typed }),
       });
       if (!response.ok) return setError(await errorMessage(response));
       setDone(ACCOUNT_DELETED);
@@ -102,6 +105,21 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
         <p className="mt-1.5 text-label text-fg-muted">It can&apos;t be undone. You will be signed out on every device.</p>
       </div>
       <div>
+        <label htmlFor={`${id}-password`} className={FIELD_LABEL}>
+          Your password
+        </label>
+        <input
+          id={`${id}-password`}
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          disabled={!ready}
+          onChange={(event) => setPassword(event.target.value)}
+          className={`${FIELD} mt-1.5`}
+        />
+      </div>
+      <div>
         <label htmlFor={id} className={FIELD_LABEL}>
           Type {DELETE_CONFIRMATION} to confirm
         </label>
@@ -119,10 +137,10 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
         />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" disabled={!ready || busy || !isDeleteConfirmed(typed)} className={QUIET_BUTTON}>
+        <button type="submit" disabled={!ready || busy || !password || !isDeleteConfirmed(typed)} className={QUIET_BUTTON}>
           {busy ? "Deleting…" : "Delete everything"}
         </button>
-        <button type="button" disabled={busy} onClick={() => (setOpen(false), setTyped(""), setError(null))} className={TEXT_BUTTON}>
+        <button type="button" disabled={busy} onClick={() => (setOpen(false), setTyped(""), setPassword(""), setError(null))} className={TEXT_BUTTON}>
           Cancel
         </button>
       </div>

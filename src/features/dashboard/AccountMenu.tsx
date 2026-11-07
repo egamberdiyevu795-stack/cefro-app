@@ -22,22 +22,19 @@ const PANEL = {
  *   and email, then Log out (the real sign-out endpoint, then the sign-in page). Not signed in: "Practising without an
  *   account", then Sign in and Create account.
  * - `source="mock"` (mock mode `?mock=1`, and the design prototypes): the demo account's name and email, and that
- *   sign-in is off. Only "Profile" (with ?mock=1): mock mode calls no API, sign-out included, and never leads to a real page.
+ *   sign-in is off. Only "Your account" (with ?mock=1): mock mode calls no API, sign-out included, and never leads to a real page.
  *
- * Every state has "Profile" first (`/profile`; `/profile?mock=1` in mock mode). On Profile the icon is the current
- * section: the grey active square (`NAV_ITEM_ACTIVE`, never black) and `aria-current="page"` (`active`).
+ * Used only in the `(site)` header (home, sign-in, register); the app's navigation has the Account tab instead
+ * (`AccountTab`). Every state has "Your account" first (`/profile`; `/profile?mock=1` in mock mode).
  *
  * `data-testid="account-status"` and `data-state` say which state it is in (anonymous / authenticated), for tests.
  */
 export function AccountMenu({
   source = "mock",
   placement = "rail",
-  active = false,
 }: {
   source?: "mock" | "real";
   placement?: "rail" | "header";
-  /** On the Profile page: the Account item is the current section. */
-  active?: boolean;
 }) {
   const router = useRouter();
   // A layout keeps this menu mounted across pages (e.g. login → home): ask again after every navigation, so signing
@@ -75,7 +72,7 @@ export function AccountMenu({
     router.refresh();
   }
 
-  const profile: MenuItem = { label: "Profile", onSelect: () => router.push(mockLink("/profile", source === "mock")) };
+  const profile: MenuItem = { label: "Your account", onSelect: () => router.push(mockLink("/profile", source === "mock")) };
   const items: MenuItem[] =
     account.state === "loading"
       ? []
@@ -110,8 +107,7 @@ export function AccountMenu({
       <Menu
         label="Account"
         trigger={<Icon name="user" size={20} />}
-        triggerClassName={cx(styles.NAV_ITEM, active ? styles.NAV_ITEM_ACTIVE : styles.NAV_ITEM_IDLE)}
-        current={active}
+        triggerClassName={cx(styles.NAV_ITEM, styles.NAV_ITEM_IDLE)}
         panelClassName={PANEL[placement]}
         header={header}
         items={items}

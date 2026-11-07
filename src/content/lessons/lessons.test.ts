@@ -101,6 +101,53 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
   });
 });
 
+/** Every piece of lesson text the lesson page shows (not the retry objective and check: the goal comes from the result). */
+function shownTexts(lesson: Lesson): { text: string; weakerExample: boolean }[] {
+  const plain = [
+    lesson.title,
+    lesson.madeUpNote,
+    lesson.why.default,
+    ...(lesson.why.partial ? [lesson.why.partial] : []),
+    ...lesson.explanation.flatMap((b) => (b.kind === "p" ? [b.text] : b.items)),
+    lesson.exampleTopic.intro,
+    ...lesson.exampleTopic.questions,
+    ...(lesson.exampleTopic.picture ? [lesson.exampleTopic.picture] : []),
+    lesson.exampleTopic.note,
+    ...lesson.examples.flatMap((e) => [e.problem, e.better, e.note]),
+    lesson.drill.intro,
+    lesson.drill.topic.intro,
+    ...lesson.drill.topic.questions,
+    ...(lesson.drill.topic.picture ? [lesson.drill.topic.picture] : []),
+    ...lesson.drill.items.map((d) => d.prompt),
+    ...lesson.drill.checklist,
+    lesson.retry.intro,
+    lesson.retry.reminder,
+  ].map((text) => ({ text, weakerExample: false }));
+  return [...plain, ...lesson.examples.map((e) => ({ text: e.weaker, weakerExample: true }))];
+}
+
+describe("the lessons work for every Part 2 task (approved rewrites, 2026-11-07)", () => {
+  it.each(shownLessons().map((l) => [l.slug, l] as const))("%s: no shown text mentions advice, except inside a weaker example", (_slug, lesson) => {
+    for (const { text, weakerExample } of shownTexts(lesson)) {
+      if (!weakerExample) expect(text).not.toMatch(/advice|advis/i);
+    }
+  });
+
+  it("the rewritten lines are in the app, the old ones are gone", () => {
+    const all = ALL_LESSONS.flatMap((l) => texts(l)).join("\n");
+    for (const line of [
+      '"In the picture, two people are standing in a park" answers no question, even if it uses a word from the question.',
+      "The first questions usually ask about **your own** experience: your story, not the people in the picture.",
+      "If no story comes quickly, use a simple true one from your own life, even a small one.",
+      'A bare answer like "Yes, I did." or "No, they shouldn\'t." is marked as not answered.',
+    ]) expect(all).toContain(line);
+    for (const lesson of ALL_LESSONS) expect(lesson.exampleTopic.note).toBe("These examples use a different topic from your task, so you practise the skill, not the words.");
+    for (const old of ["The man is giving advice to the girl", "received advice", "who told you what to do", "My father gave me advice", "never use the advice topic"]) {
+      expect(all).not.toContain(old);
+    }
+  });
+});
+
 describe("only approved lessons are shown", () => {
   const draft: Lesson = { ...ALL_LESSONS[0], slug: "draft-lesson", status: "draft", reviewedBy: undefined, reviewedAt: undefined };
   const unreviewed: Lesson = { ...ALL_LESSONS[0], slug: "unreviewed-lesson", status: "approved", reviewedBy: undefined };

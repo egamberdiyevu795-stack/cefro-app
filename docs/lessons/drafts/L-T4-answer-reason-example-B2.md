@@ -17,6 +17,9 @@
 
 All examples in this lesson are **made up** for teaching. None comes from a real student.
 
+Rewritten 2026-11-07 (approved by Asadbek) so no shown line assumes "Advice from someone": the lessons show on all 7
+Part 2 tasks.
+
 The B1 variant (Part 1.2, `P-Q-PARTIAL`) and the C1 variant (Part 3, `P-3-RESTATED`) are not part of this draft.
 
 ---
@@ -31,8 +34,7 @@ Shown at the top, filled in from the result:
 
 ## 2. Explanation
 
-In Part 2, one bare sentence does not count as an answer. "My father gave me advice." or "No, they shouldn't." is
-marked as not answered. An answer that only touches the question counts, but it shows very little.
+In Part 2, one bare sentence does not count as an answer. A bare answer like "Yes, I did." or "No, they shouldn't." is marked as not answered. An answer that only touches the question counts, but it shows very little.
 
 Build every answer in three steps:
 
@@ -50,7 +52,7 @@ precise vocabulary and longer sentences. Short on time? Keep the answer and the 
 Example topic (made up, **not** the retry task): *"Describe a time when someone helped you."*
 Q1 Who helped you, and what situation were you in? · Q2 How did they help you, and how did you feel? ·
 Q3 Do you think people help each other less today than in the past? Why or why not?
-The examples never use the advice topic, so lesson sentences can't be copied into the retry.
+These examples use a different topic from your task, so you practise the skill, not the words.
 
 | # | Problem | Weaker | Better | Note | Made up |
 | --- | --- | --- | --- | --- | --- |

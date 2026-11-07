@@ -26,7 +26,7 @@ export const lessonT4B2: Lesson = {
   explanation: [
     {
       kind: "p",
-      text: 'In Part 2, one bare sentence does not count as an answer. "My father gave me advice." or "No, they shouldn\'t." is marked as not answered. An answer that only touches the question counts, but it shows very little.',
+      text: 'In Part 2, one bare sentence does not count as an answer. A bare answer like "Yes, I did." or "No, they shouldn\'t." is marked as not answered. An answer that only touches the question counts, but it shows very little.',
     },
     { kind: "p", text: "Build every answer in three steps:" },
     {
@@ -50,7 +50,7 @@ export const lessonT4B2: Lesson = {
       "How did they help you, and how did you feel?",
       "Do you think people help each other less today than in the past? Why or why not?",
     ],
-    note: "The examples never use the advice topic, so lesson sentences can't be copied into the retry.",
+    note: "These examples use a different topic from your task, so you practise the skill, not the words.",
   },
   examples: [
     {

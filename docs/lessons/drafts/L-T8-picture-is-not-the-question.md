@@ -17,6 +17,9 @@
 
 All examples in this lesson are **made up** for teaching. None comes from a real student.
 
+Rewritten 2026-11-07 (approved by Asadbek) so no shown line assumes "Advice from someone": the lessons show on all 7
+Part 2 tasks.
+
 ---
 
 ## 1. Why this lesson
@@ -27,13 +30,10 @@ Shown at the top, filled in from the result:
 
 ## 2. Explanation
 
-The picture in Part 2 only shows the topic. It is not a question, and describing it scores nothing. "The man is
-giving advice to the girl" answers no question, even though it uses the word "advice". An answer that only describes
+The picture in Part 2 only shows the topic. It is not a question, and describing it scores nothing. "In the picture, two people are standing in a park" answers no question, even if it uses a word from the question. An answer that only describes
 the picture gets band 0.
 
-Read the three questions, not the picture. Questions 1 and 2 ask about a time when **you** received advice: your own
-story. Question 3 asks for **your** opinion. If no story comes quickly, use a simple true one: a teacher, a parent or
-a friend who told you what to do. You can look at the picture for an idea, but then talk about yourself.
+Read the three questions, not the picture. The first questions usually ask about **your own** experience: your story, not the people in the picture. Question 3 asks for **your** opinion. If no story comes quickly, use a simple true one from your own life, even a small one. You can look at the picture for an idea, but then talk about yourself.
 
 *(112 words)*
 
@@ -43,7 +43,7 @@ Example topic (made up, **not** the retry task): *"Describe a time when someone 
 Q1 Who helped you, and what situation were you in? · Q2 How did they help you, and how did you feel? ·
 Q3 Do you think people help each other less today than in the past? Why or why not?
 Example picture (made up): a young man helping an older woman carry shopping bags in the street.
-The examples never use the advice topic, so lesson sentences can't be copied into the retry.
+These examples use a different topic from your task, so you practise the skill, not the words.
 
 | # | Problem | Weaker | Better | Note | Made up |
 | --- | --- | --- | --- | --- | --- |

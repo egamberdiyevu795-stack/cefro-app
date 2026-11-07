@@ -39,7 +39,7 @@ export const lessonT1: Lesson = {
       "How did they help you, and how did you feel?",
       "Do you think people help each other less today than in the past? Why or why not?",
     ],
-    note: "The examples never use the advice topic, so lesson sentences can't be copied into the retry.",
+    note: "These examples use a different topic from your task, so you practise the skill, not the words.",
   },
   examples: [
     {

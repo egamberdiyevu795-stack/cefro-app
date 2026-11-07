@@ -17,6 +17,9 @@
 
 All examples in this lesson are **made up** for teaching. None comes from a real student.
 
+Rewritten 2026-11-07 (approved by Asadbek) so no shown line assumes "Advice from someone": the lessons show on all 7
+Part 2 tasks.
+
 The Part 3 variant (`P-3-NOPOINT`) is not part of this draft.
 
 ---
@@ -44,7 +47,7 @@ every question is better than a long answer to one.
 Example topic (made up, **not** the retry task): *"Describe a time when someone helped you."*
 Q1 Who helped you, and what situation were you in? · Q2 How did they help you, and how did you feel? ·
 Q3 Do you think people help each other less today than in the past? Why or why not?
-The examples never use the advice topic, so lesson sentences can't be copied into the retry.
+These examples use a different topic from your task, so you practise the skill, not the words.
 
 | # | Problem | Weaker | Better | Note | Made up |
 | --- | --- | --- | --- | --- | --- |

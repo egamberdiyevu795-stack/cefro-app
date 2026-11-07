@@ -211,6 +211,12 @@ too, unchanged. Contains:
 - **Drills:** the neutral drill sets in `docs/lessons/drill-drafts.md` (approved by Asadbek, 2026-11-07) replace the
   advice-based drills in all three lesson files and in the app (lesson version 2); the same drill for every retry task.
 
+## Docs branch: `claude/teacher-plan-v7fp7j` (one new doc, no code)
+
+Cut from `claude/lessons`, so it comes after it; any merge method. Contains `docs/teacher-plan.md` (the Teacher
+view v1 plan: flows, screens, data model, access rules, leave and deletion, mock mode, under-18 risks, tests, open
+questions) and this entry. Plan only: no app code, no migration (the plan proposes `0006_teachers` for later).
+
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 
 claude/lessons-adi79w: duplicate of claude/lessons, never merge.

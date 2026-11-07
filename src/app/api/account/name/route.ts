@@ -4,7 +4,7 @@ import { withErrorHandling } from "@/server/http";
 import { requireAuthenticated } from "@/server/identity/current-user";
 
 /**
- * The signed-in account's display name (Profile). `PUT { "name": "…" }`: 1–50 characters after trimming. Always the
+ * The signed-in account's display name (Profile). `PUT { "name": "…" }`: 1–50 characters after trimming, not an email address. Always the
  * caller's own account (never an id from the request); 401 when not signed in. The email cannot be changed here.
  */
 export const PUT = withErrorHandling(async (request: Request) => {

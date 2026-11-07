@@ -10,10 +10,12 @@ import {
   isJoinCode,
   normaliseJoinCode,
   ratingPair,
+  SHOWN_NAME_FROM_EMAIL,
   shownNameProblem,
+  shownNameUsesEmail,
   type EndedBy,
 } from "@/domain/teacher/rules";
-import { normaliseName } from "@/domain/account";
+import { accountDisplayName, normaliseName } from "@/domain/account";
 import { getDb, type Db } from "@/server/db/client";
 import { classMembers, classes, ratingPairs, speakingAttempts, speakingTasks, teacherRatings, users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
@@ -250,7 +252,7 @@ async function classByCode(code: unknown) {
   if (!isJoinCode(normalised)) return null;
   return (
     (await (await getDb())
-      .select({ id: classes.id, name: classes.name, teacherUserId: classes.teacherUserId, teacherName: users.name })
+      .select({ id: classes.id, name: classes.name, teacherUserId: classes.teacherUserId, teacherName: users.name, teacherEmail: users.email })
       .from(classes)
       .innerJoin(users, eq(users.id, classes.teacherUserId))
       .where(and(eq(classes.joinCode, normalised), isNull(classes.closedAt), eq(users.role, "teacher")))
@@ -261,12 +263,17 @@ async function classByCode(code: unknown) {
 /** S1 → S2: who the code belongs to. Nothing is stored. Null for a code that matches no open class. */
 export async function lookUpCode(code: unknown): Promise<ClassInvite | null> {
   const found = await classByCode(code);
-  return found ? { className: found.name, teacherName: teacherDisplayName(found.teacherName) } : null;
+  return found ? { className: found.name, teacherName: teacherDisplayName(found.teacherName, found.teacherEmail) } : null;
 }
 
-/** A teacher's name as students see it: the account's display name (never the email). */
-export function teacherDisplayName(name: string | null): string {
-  return name?.trim() || "Your teacher";
+/** A teacher's name as students see it: the account's display name (never the email, nor a name made from it). */
+export function teacherDisplayName(name: string | null, email: string | null = null): string {
+  return accountDisplayName(name, email) ?? "Your teacher";
+}
+
+/** The account's email, to keep it out of what a teacher sees (`teacherSafeShownName`). Never sent anywhere. */
+export async function accountEmail(userId: string): Promise<string | null> {
+  return (await (await getDb()).select({ email: users.email }).from(users).where(eq(users.id, userId)).get())?.email ?? null;
 }
 
 /**
@@ -279,6 +286,7 @@ export async function shareWithClass(studentId: string, code: unknown, shownName
   const found = await classByCode(code);
   if (!found) return null;
   if (found.teacherUserId === studentId) throw new HttpError(400, "own_class", "This is your own class.");
+  if (shownNameUsesEmail(shownName as string, await accountEmail(studentId))) throw new HttpError(400, "invalid_shown_name", SHOWN_NAME_FROM_EMAIL);
   const db = await getDb();
   const open = await db.select({ id: classMembers.id }).from(classMembers).where(and(eq(classMembers.classId, found.id), eq(classMembers.studentUserId, studentId), isNull(classMembers.endedAt))).get();
   if (open) throw new HttpError(409, "already_member", "You're already sharing with this class.");
@@ -306,7 +314,7 @@ export interface Membership {
  */
 export async function listMemberships(studentId: string): Promise<Membership[]> {
   const rows = await (await getDb())
-    .select({ member: classMembers, className: classes.name, teacherName: users.name })
+    .select({ member: classMembers, className: classes.name, teacherName: users.name, teacherEmail: users.email })
     .from(classMembers)
     .innerJoin(classes, eq(classes.id, classMembers.classId))
     .innerJoin(users, eq(users.id, classes.teacherUserId))
@@ -315,10 +323,10 @@ export async function listMemberships(studentId: string): Promise<Membership[]> 
     .all();
   return rows
     .filter(({ member }) => member.endedBy !== "student")
-    .map(({ member, className, teacherName }) => ({
+    .map(({ member, className, teacherName, teacherEmail }) => ({
       id: member.id,
       className,
-      teacherName: teacherDisplayName(teacherName),
+      teacherName: teacherDisplayName(teacherName, teacherEmail),
       shownName: member.shownName,
       sharedAt: member.sharedAt,
       endedBy: member.endedBy ?? null,

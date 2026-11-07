@@ -89,9 +89,11 @@ const json = (body: unknown, init: RequestInit = {}) => ({
 });
 const req = (url: string, init: RequestInit) => new Request(`http://localhost${url}`, init);
 
+/** A new account `<name>@example.com`, named "<Name> Test" (a name typed at sign-up, never made from the email). */
 async function register(name: string): Promise<Browser> {
   jar.clear();
-  expect((await signUp(`${name}@example.com`, PASSWORD, { ip: `10.9.0.${++ip}` })).status).toBe(200);
+  const typed = `${name[0].toUpperCase()}${name.slice(1)} Test`;
+  expect((await signUp(`${name}@example.com`, PASSWORD, { ip: `10.9.0.${++ip}`, name: typed })).status).toBe(200);
   return snapshot();
 }
 
@@ -160,7 +162,7 @@ describe("name (Profile)", () => {
     expect(await response.json()).toEqual({ name: "Alice Karimova" });
     expect(await (await getMe()).json()).toMatchObject({ name: "Alice Karimova", email: "alice@example.com" });
     use(bob);
-    expect(await (await getMe()).json()).toMatchObject({ name: "bob" });
+    expect(await (await getMe()).json()).toMatchObject({ name: "Bob Test" });
   });
 
   it("refuses an empty or too long name (400) and a browser without an account (401)", async () => {
@@ -329,7 +331,7 @@ describe("Account page (real data, the caller's own only)", () => {
     use(await register("alice"));
     await practise();
     const markup = await page(ProfilePage(props));
-    expect(markup).toMatch(/data-testid="profile-name"[^>]*>alice</);
+    expect(markup).toMatch(/data-testid="profile-name"[^>]*>Alice Test</);
     expect(markup).toMatch(/data-testid="profile-email"[^>]*>alice@example.com</);
     expect(markup).toMatch(/data-testid="profile-member-since"[^>]*>Member since \d\d\.\d\d\.\d\d</);
     expect(markup).toMatch(/data-testid="profile-attempts"[^>]*>1 practice attempt</);
@@ -377,7 +379,7 @@ describe("Delete my account: the Teacher view's rows (class links and ratings), 
     const { class: cls } = (await (await postClass(req("/x", json({ name: "Group B" })), ctx({}))).json()) as { class: { id: string; joinCode: string } };
     const shareAndPractise = async (name: string) => {
       await register(name);
-      expect((await postShare(req("/x", json({ code: cls.joinCode, shownName: name })), ctx({}))).status).toBe(201);
+      expect((await postShare(req("/x", json({ code: cls.joinCode, shownName: name === "alice" ? "Ali" : "Caro" })), ctx({}))).status).toBe(201);
       const attempt = await practise();
       return { browser: snapshot(), attempt };
     };

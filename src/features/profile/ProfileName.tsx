@@ -8,7 +8,7 @@ import { FIELD, FIELD_LABEL, QUIET_BUTTON, TEXT_BUTTON, errorMessage } from "@/f
 
 /**
  * The account's name on Profile: shown with a small "Edit"; editing shows a field, the grey Save and Cancel. Saved with
- * `PUT /api/account/name` (the same rule on both sides: 1–50 characters). A POST form, every control disabled until
+ * `PUT /api/account/name` (the same rule on both sides: 1–50 characters, not an email address). A POST form, every control disabled until
  * the page is ready (`useHydrated`). `demo`: nothing is sent; the new name is kept on this page only.
  */
 export function ProfileName({ name: initial, demo = false }: { name: string | null; demo?: boolean }) {

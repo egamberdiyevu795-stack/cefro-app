@@ -200,6 +200,30 @@ describe("one black control per screen, the navigation included (grey active tab
   });
 });
 
+describe("links that used to open the task list at / now open /practice, keeping ?mock=1", () => {
+  it.each([
+    ["dashboard", () => DashboardPage(props({ mock: "1" }))],
+    ["history", () => HistoryPage(props({ mock: "1" }))],
+    ["practice brief", () => PracticePage(props({ mock: "1" }, { taskId: "b2-part2-a-tradition" }))],
+    ["demo result (Retry with this goal)", () => ResultPage(props({ mock: "1", demo: "demo-5" }))],
+    ["saved-runs result", () => ResultPage(props({ mock: "1" }))],
+    ["lesson", () => LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))],
+    ["Account page (Go to Part 2)", () => ProfilePage(props({ mock: "1" }))],
+  ] as const)("%s: no link to /, the task list is /practice with ?mock=1", async (_name, page) => {
+    const markup = await html(page());
+    const links = internalLinks(markup).map((href) => new URL(href, "http://x"));
+    expect(links.filter((url) => url.pathname === "/").map((url) => url.href)).toEqual([]);
+    const taskList = links.filter((url) => url.pathname === "/practice");
+    expect(taskList.length).toBeGreaterThan(0); // at least the Practice tab
+    for (const url of taskList) expect(url.searchParams.get("mock"), url.href).toBe("1");
+    expectMockLinksOnly(markup);
+  });
+
+  it("the Account page's Go to Part 2 opens the Part 2 section of /practice", async () => {
+    expect(await html(ProfilePage(props({ mock: "1" })))).toContain('href="/practice?mock=1#part-2"');
+  });
+});
+
 describe("Account page (/profile) in mock mode", () => {
   it("the demo student, sections in order: account (name, email, level, member since, attempts), exam date, password then sign out, delete last", async () => {
     const markup = await html(ProfilePage(props({ mock: "1" })));

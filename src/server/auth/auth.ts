@@ -72,6 +72,14 @@ function createAuth(db: Db) {
       storage: "memory",
       customRules: { "/sign-in/email": { window: 60, max: 120 }, "/sign-up/email": { window: 60, max: 60 } },
     },
+    // No name typed at sign-up = no name stored (null), never one made from the email (the route checks the rest).
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user) => ({ data: { ...user, name: (typeof user.name === "string" && user.name.trim()) || null } as typeof user }),
+        },
+      },
+    },
     hooks: {
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== "/sign-up/email" && ctx.path !== "/sign-in/email") return;

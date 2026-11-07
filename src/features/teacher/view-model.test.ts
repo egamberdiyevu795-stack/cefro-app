@@ -9,6 +9,8 @@ import {
   ratingPair,
   shownNameProblem,
   suggestedShownName,
+  shownNameUsesEmail,
+  teacherSafeShownName,
 } from "@/domain/teacher/rules";
 import { appVerdictText, bandOptionLabel, commonProblems, countText, ratingText, retryGoalOf, studentRow, type SharedStudent } from "./view-model";
 
@@ -85,7 +87,7 @@ describe("the name a teacher sees", () => {
   it("required, at most 30 characters, no email address", () => {
     expect(shownNameProblem("Ali")).toBeNull();
     expect(shownNameProblem("")).toBe("Enter the name your teacher sees.");
-    expect(shownNameProblem("a@b.c")).toBe("Use a name, not an email address.");
+    expect(shownNameProblem("a@b.c")).toBe("Use your name, not an email address.");
     expect(shownNameProblem("x".repeat(31))).toMatch(/30/);
   });
 });
@@ -150,5 +152,17 @@ describe("band labels", () => {
     expect(appVerdictText(2, 3, "Lower B2")).toBe("CEFRO: Part 2 · Band 3 · Lower B2");
     expect(ratingText({ agrees: true }, bands)).toBe("You: Agree");
     expect(ratingText({ agrees: false, band: 4 }, bands)).toBe("You: Higher B2 (Band 4)");
+  });
+});
+
+describe("the shown name never carries the student's email", () => {
+  it("the local part (any case), a long handle inside it, or the domain is refused; a real name that shares a short part is not", () => {
+    const email = "ali.karimov99@mail.example.com";
+    for (const name of ["ali.karimov99", "ALI.KARIMOV99", "Ali.karimov99 A", "mail.example.com"]) expect(shownNameUsesEmail(name, email), name).toBe(true);
+    for (const name of ["Ali", "Ali Karimov"]) expect(shownNameUsesEmail(name, email), name).toBe(false);
+    expect(shownNameUsesEmail("Bobby", "bob@example.com")).toBe(false);
+    expect(teacherSafeShownName("bob", "bob@example.com")).toBe("Student");
+    expect(teacherSafeShownName("Bobby", "bob@example.com")).toBe("Bobby");
+    expect(suggestedShownName(null)).toBe("");
   });
 });

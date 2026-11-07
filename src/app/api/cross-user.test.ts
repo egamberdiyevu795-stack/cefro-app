@@ -298,6 +298,6 @@ describe("signing out ends access", () => {
   it("/api/account/me never returns ids (only state, email and display name, for the Account menu)", async () => {
     actAs(actors.alice);
     const body = await json(await getMe());
-    expect(body).toEqual({ state: "authenticated", email: "alice@example.com", name: "alice" });
+    expect(body).toEqual({ state: "authenticated", email: "alice@example.com", name: null }); // no name typed: none
   });
 });

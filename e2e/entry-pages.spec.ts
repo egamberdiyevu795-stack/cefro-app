@@ -152,3 +152,22 @@ test("a signed-in visitor who opens home goes to the dashboard; the name typed a
   await page.goto("/profile");
   await expect(page.getByTestId("profile-name")).toHaveText("Dilnoza Karimova");
 });
+
+test("Create account refuses an email address as the name, and stores no name when Name is left empty", async ({ page }) => {
+  test.skip(PREVIEW, "no accounts on a Preview with no variables");
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.89.${run % 250}.9` });
+  await page.goto("/register");
+  await page.getByLabel("Name").fill("someone@example.com");
+  await page.getByLabel("Email").fill(`noname-${run}@example.com`);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.locator("form").getByRole("alert")).toHaveText("Use your name, not an email address.");
+  expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
+
+  await page.getByLabel("Name").fill("   ");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  expect((await (await page.request.get("/api/account/me")).json()).name).toBeNull();
+  await page.goto("/profile");
+  await expect(page.getByTestId("profile-name")).toHaveText("Not set");
+});

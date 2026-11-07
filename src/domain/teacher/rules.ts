@@ -1,7 +1,7 @@
 /**
  * Teacher view rules (docs/teacher-plan.md), shared by the server, the pages and their tests. Pure and browser-safe.
  */
-import { NAME_MAX_LENGTH, nameProblem, normaliseName } from "@/domain/account";
+import { EMAIL_AS_NAME, NAME_MAX_LENGTH, emailLocalPart, nameProblem, normaliseName } from "@/domain/account";
 
 /** Join codes: 6 characters from this alphabet (no 0/O, 1/I/L: easy to read aloud and to type). */
 export const JOIN_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -48,8 +48,31 @@ export function shownNameProblem(value: unknown): string | null {
   if (problem) return problem === "Enter your name." ? "Enter the name your teacher sees." : problem;
   const name = normaliseName(value as string);
   if (name.length > SHOWN_NAME_MAX_LENGTH) return `Use at most ${SHOWN_NAME_MAX_LENGTH} characters.`;
-  if (name.includes("@")) return "Use a name, not an email address.";
+  if (name.includes("@")) return EMAIL_AS_NAME;
   return null;
+}
+
+/**
+ * Does this shown name carry part of the student's own email: its local part (the name the old sign-up form made),
+ * or its domain? Then it is refused at Share and never shown to a teacher.
+ */
+export function shownNameUsesEmail(shownName: string, email: string | null | undefined): boolean {
+  const name = normaliseName(shownName).toLowerCase();
+  const local = emailLocalPart(email);
+  const domain = (email ?? "").slice((email ?? "").indexOf("@") + 1).trim().toLowerCase();
+  if (!name) return false;
+  // The exact local part (what the old form prefilled), or a long handle inside a longer name ("ali.karimov99 A").
+  // A short one inside a real name is left alone ("Bobby" for bob@…).
+  if (local && (name === local || (local.length >= 6 && name.includes(local)))) return true;
+  return Boolean(email?.includes("@") && domain && name.includes(domain));
+}
+
+/** The message when the shown name is (part of) the student's email. */
+export const SHOWN_NAME_FROM_EMAIL = "Use a name, not part of your email address.";
+
+/** What a teacher sees as the student's name: the shown name, or "Student" if it carries part of the student's email. */
+export function teacherSafeShownName(shownName: string, email: string | null | undefined): string {
+  return shownNameUsesEmail(shownName, email) ? "Student" : shownName;
 }
 
 /** The Share screen's prefilled name: the first word of the account name (never the email). Empty when there is none. */

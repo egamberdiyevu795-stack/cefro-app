@@ -322,7 +322,7 @@ Contains (docs/design-system.md, "Signed-out pages"):
   `src/app/(entry)/`, `src/features/entry/`). No header menu, no navigation tabs. Home: "Practise the multilevel
   speaking exam", the example feedback card, the black "Create account", the grey "Try the demo"
   (`/dashboard?mock=1`), "Have an account? Sign in". Sign in and Create account as specified; Create account now asks
-  for a name (optional: empty = named after the email, as before).
+  for a name (optional: empty = no name; see the follow-up below).
 - **`/` is now the signed-out home; the task list moved to `/practice`** (decided with the owner, 2026-11-07). A
   signed-in visitor on `/` goes to `/dashboard`. The Practice tab, the dashboard's top-bar link and Part 2 tile
   (`/practice#part-2`), the Account page's "Go to Part 2" and the task pages' current tab follow. `/?mock=1` is the
@@ -339,6 +339,27 @@ Contains (docs/design-system.md, "Signed-out pages"):
   `auth.spec.ts` (Journey A starts at `/practice`; on the sign-in pages, which have no Account menu, the signed-in
   state is read from `/api/account/me`; after Create account the browser lands on `/dashboard`), `practice-flow`,
   `dashboard`, `profile-settings` and `mock-mode` specs, and the dashboard unit tests.
+
+**Follow-up on `claude/entry-pages` (privacy and names, no migration):**
+
+- **A name is never built from the email.** Sign-up with Name empty stores no name (`users.name` null); the Account
+  menu says "Your account", the Account page "Not set". Accounts the old form named after their email (the name equals
+  the email's local part, any case) count as having no name everywhere (`accountDisplayName` in `domain/account.ts`;
+  no row is changed). A teacher's name shown to students follows the same rule.
+- **"Name your teacher sees"** is prefilled only from a typed account name, so for these accounts it starts empty and
+  must be typed. Share refuses a shown name that is the student's email, its local part (or a long handle inside it)
+  or its domain; a share stored before this rule with such a name is shown to the teacher as "Student".
+- **Server-side name check** (sign-up in `api/auth/[...all]`, `PUT /api/account/name`, Share): trimmed, 1–50
+  characters (Share: 1–30, as in the teacher plan), not an email address ("Use your name, not an email address.",
+  400 `invalid_name` / `invalid_shown_name`).
+- **Links:** no page links to `/` for the task list any more; it is `/practice` (keeping `?mock=1`) on the dashboard,
+  History, practice, result, lesson, Account and teacher pages. Result, Retry with this goal and lessons open a task's
+  brief (`/practice/speaking/<task>`), unchanged.
+- **Tests:** `src/app/api/teacher/email-privacy.test.ts` (no part of a student's email in any teacher API response or
+  teacher page, or on the Share screen; legacy names; sign-up and Account name rules), more in `domain/account.test.ts`,
+  `features/teacher/view-model.test.ts`, `mock-pages.test.ts` and `teacher-pages.test.ts` (no link to `/`, `/practice`
+  keeps `?mock=1`); `e2e/entry-pages.spec.ts` (email as name refused, empty name stored as none). `test/auth-helpers.ts`
+  `signUp` now sends the name as the form does (empty unless given).
 
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 

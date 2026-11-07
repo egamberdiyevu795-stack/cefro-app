@@ -8,7 +8,8 @@ import * as repo from "@/server/attempts/attempt-repository";
 import { listAttemptHistory } from "@/server/attempts/attempt-service";
 import { toAttemptView } from "@/server/attempts/attempt-views";
 import { HttpError } from "@/server/errors";
-import { findRating, notFound, openMembers, ownOpenClass, ownOpenMember, saveRating, teacherCanSee, type ClassRow, type MemberRow } from "./teacher-store";
+import { teacherSafeShownName } from "@/domain/teacher/rules";
+import { accountEmail, findRating, notFound, openMembers, ownOpenClass, ownOpenMember, saveRating, teacherCanSee, type ClassRow, type MemberRow } from "./teacher-store";
 
 /*
  * What a teacher may read, shaped for the pages and the API (plan section 4): the shown name and the SHARED attempts
@@ -25,7 +26,8 @@ export function sharedOnly(attempts: readonly HistoryAttempt[], sharedAt: string
 
 async function sharedStudent(member: MemberRow): Promise<SharedStudent> {
   const attempts = sharedOnly(await listAttemptHistory(member.studentUserId), member.sharedAt);
-  return { memberId: member.id, shownName: member.shownName, sharedAt: member.sharedAt, attempts };
+  const shownName = teacherSafeShownName(member.shownName, await accountEmail(member.studentUserId));
+  return { memberId: member.id, shownName, sharedAt: member.sharedAt, attempts };
 }
 
 /** A class with its open members, for its own teacher only (404 otherwise). */
@@ -82,7 +84,7 @@ export async function teacherAttempt(teacherId: string, classId: string, attempt
     id: view.id,
     classId,
     memberId: visible.memberId,
-    studentName: visible.shownName,
+    studentName: teacherSafeShownName(visible.shownName, await accountEmail(visible.studentUserId)),
     taskId: view.taskId,
     status: view.status,
     failure: view.failure,

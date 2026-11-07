@@ -80,10 +80,10 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
     await register(page, email, TASK_URL);
     await expect(page).toHaveURL(new RegExp(`${TASK_URL}$`));
     await expect(header(page)).toHaveAttribute("data-state", "authenticated");
-    // The Account tab opens the Account page: the real account's email and its name.
+    // The Account tab opens the Account page: the real account's email, and no name (none was typed).
     await header(page).getByRole("link", { name: "Account" }).click();
     await expect(page.getByTestId("profile-email")).toHaveText(email);
-    await expect(page.getByTestId("profile-name")).toHaveText(email.split("@")[0]);
+    await expect(page.getByTestId("profile-name")).toHaveText("Not set"); // no name typed: none, never one made from the email
     await page.goto(TASK_URL);
 
     // The same attempt, now owned by the account.

@@ -1,6 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { nameProblem, normaliseName } from "@/domain/account";
+import { accountDisplayName, nameProblem, normaliseName } from "@/domain/account";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
@@ -19,10 +19,10 @@ export async function readAccount(userId: string | null): Promise<AccountInfo> {
     .where(eq(users.id, userId))
     .get();
   if (!row || row.kind !== "registered" || !row.email || row.mergedInto) return { kind: "anonymous", memberSince: row?.createdAt.toISOString() ?? null };
-  return { kind: "registered", name: row.name?.trim() || null, email: row.email, memberSince: row.createdAt.toISOString() };
+  return { kind: "registered", name: accountDisplayName(row.name, row.email), email: row.email, memberSince: row.createdAt.toISOString() };
 }
 
-/** Save the account's display name (the name the Account menu shows). */
+/** Save the account's display name (the name the Account menu shows): 1–50 characters, not an email address. */
 export async function saveName(userId: string, value: unknown): Promise<string> {
   const problem = nameProblem(value);
   if (problem) throw new HttpError(400, "invalid_name", problem);

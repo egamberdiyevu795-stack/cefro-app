@@ -77,6 +77,25 @@ afterEach(() => {
   expect(touched).toEqual({ db: 0, cookies: 0, identity: 0 });
 });
 
+describe("teacher pages: no link to /, the task list is /practice with ?mock=1", () => {
+  const links = (markup: string) => [...markup.matchAll(/href="(\/[^"]*)"/g)].map((m) => new URL(m[1].replaceAll("&amp;", "&"), "http://x"));
+  it.each([
+    ["Home (T1)", () => DashboardPage(props(T))],
+    ["Create class", () => NewClassPage(props(T))],
+    ["Class (T3)", () => ClassPage(props(T, { classId: "demo-class" }))],
+    ["Student (T4)", () => StudentPage(props(T, { classId: "demo-class", memberId: DEMO_MEMBER_IDS[0] }))],
+    ["Attempt (T5)", () => AttemptPage(props(T, { classId: "demo-class", attemptId: "aziza-2" }))],
+    ["Lesson", () => TeacherLessonPage(props({ ...T, class: "demo-class" }, { lessonId: "l-t1" }))],
+    ["Join (S1)", () => JoinPage(props({ mock: "1" }))],
+  ] as const)("%s", async (_name, page) => {
+    const all = links(await html(page())).filter((url) => !url.pathname.startsWith("/_next/") && !url.pathname.startsWith("/tasks/"));
+    expect(all.filter((url) => url.pathname === "/").map((url) => url.href)).toEqual([]);
+    const taskList = all.filter((url) => url.pathname === "/practice");
+    expect(taskList.length).toBeGreaterThan(0); // the Practice tab
+    for (const url of all) expect(url.searchParams.get("mock"), url.href).toBe("1");
+  });
+});
+
 describe("the demo teacher", () => {
   it("Home (T1): Your classes at the top with Demo class, 6 students; Create class is the one black button", async () => {
     const markup = await html(DashboardPage(props(T)));

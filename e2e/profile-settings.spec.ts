@@ -243,7 +243,8 @@ test.describe("real account", () => {
     await expect(page.getByTestId("profile-email")).toHaveText(email);
     await expect(page.getByTestId("profile-level")).toHaveText("No level yet");
     await expect(page.getByRole("link", { name: "Go to Part 2" })).toHaveAttribute("href", "/practice#part-2");
-    await expect(page.getByText("Not set")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Your exam date" }).getByText("Not set")).toBeVisible();
+    await expect(page.getByTestId("profile-name")).toHaveText("Not set"); // no name typed at sign-up: none
     await expect(page.getByTestId("profile-attempts")).toHaveText("No practice attempts yet");
     await expect(page.getByTestId("demo-label")).toHaveCount(0);
     await auditPhone(page, "Account");

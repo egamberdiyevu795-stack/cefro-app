@@ -62,8 +62,9 @@ navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `b
   without touching the database).
 - **Sign in:** "Sign in", email, password, the black **"Sign in"**, "New here? Create account".
 - **Create account:** "Create account", name, email, password with "At least 8 characters.", the black **"Create
-  account"**, "Have an account? Sign in". The name is optional: left empty, the account is named after the email (as
-  before the field existed); a typed name follows the Account page's rules (`nameProblem`, at most 50 characters).
+  account"**, "Have an account? Sign in". The name is optional: left empty, the account has **no name** (never one
+  made from the email); a typed name follows the Account page's rules, checked on the server too (1–50 characters
+  after trimming, not an email address).
 - **Unchanged behaviour:** the forms are `method="post"`, the submit stays disabled until the page is ready, the
   sign-in / sign-up limits and the trusted-IP rule are the API's (untouched), `?next=` (a path on this site only) is
   where the student goes after signing in, and the switch links keep it.

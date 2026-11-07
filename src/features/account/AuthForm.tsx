@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Notice, PillAction, TextField } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
-import { NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, nameProblem, normaliseName } from "@/domain/account";
+import { NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, normaliseName, signUpNameProblem } from "@/domain/account";
 
 /**
  * Sign-in / registration form. It only talks to the auth endpoints; the server decides everything (the browser never
@@ -19,7 +19,8 @@ import { NAME_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, nameProblem,
  * itself (`preventDefault`), so the method changes nothing when it runs.
  *
  * Built only from design-system components (`components/ds`), so a theme change restyles it. Registration asks for a
- * name; left empty, the account is named after the email, as before the field existed.
+ * name, optional: left empty, the account has no name (a name is never made from the email). The server checks it
+ * again (1–50 characters, not an email address).
  *
  * Mock mode (`mock`, the pages' `?mock=1`): the same form, but nothing is ever sent; submitting says so.
  */
@@ -40,17 +41,14 @@ export function AuthForm({ mode, next, mock = false }: { mode: "login" | "regist
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
-    const typedName = normaliseName(String(form.get("name") ?? ""));
-    if (isRegister && typedName) {
-      const problem = nameProblem(typedName);
-      if (problem) {
-        setError(problem);
-        return;
-      }
+    const name = normaliseName(String(form.get("name") ?? ""));
+    const problem = isRegister ? signUpNameProblem(name) : null;
+    if (problem) {
+      setError(problem);
+      return;
     }
     setBusy(true);
     try {
-      const name = typedName || email.split("@")[0].slice(0, NAME_MAX_LENGTH) || "Student";
       const response = await fetch(isRegister ? "/api/auth/sign-up/email" : "/api/auth/sign-in/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,8 +56,10 @@ export function AuthForm({ mode, next, mock = false }: { mode: "login" | "regist
         body: JSON.stringify(isRegister ? { email, password, name } : { email, password }),
       });
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { message?: string; error?: { message?: string } } | null;
-        setError(friendlyMessage(response.status, body?.error?.message ?? body?.message, isRegister));
+        const body = (await response.json().catch(() => null)) as { message?: string; error?: { code?: string; message?: string } } | null;
+        // The server's own name check (sign-up): its message says what to change.
+        if (body?.error?.code === "invalid_name" && body.error.message) setError(body.error.message);
+        else setError(friendlyMessage(response.status, body?.error?.message ?? body?.message, isRegister));
         return;
       }
       window.location.href = next; // full reload: every part of the page now reflects the signed-in account

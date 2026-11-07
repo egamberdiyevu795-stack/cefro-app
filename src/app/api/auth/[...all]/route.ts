@@ -1,3 +1,4 @@
+import { normaliseName, signUpNameProblem } from "@/domain/account";
 import { getAuth } from "@/server/auth/auth";
 import { authLimiters, clientIp, countPasswordFailure, passwordFailureBlocked } from "@/server/auth/auth-limits";
 import { HttpError } from "@/server/errors";
@@ -48,6 +49,9 @@ async function handlePost(original: Request) {
   const ip = clientIp(request);
 
   if (path === "/sign-up/email") {
+    const named = await withCheckedName(request);
+    if (named instanceof Response) return named;
+    request = named;
     const perIp = limits.registerByIp.hit(ip);
     if (!perIp.allowed) return limited("registration_rate_limited", "Too many accounts were created from this connection. Please try again later.", perIp.retryAfterSeconds);
     const total = limits.registerGlobal.hit("all");
@@ -75,6 +79,27 @@ async function handlePost(original: Request) {
 
 /** Wrapped so an unreachable database answers 503 (with the standard error body) instead of an unhandled 500. */
 export const POST = withErrorHandling(handlePost);
+
+/**
+ * Sign-up's name: optional. Empty = no name (stored as none: never made from the email, see server/auth/auth.ts).
+ * Otherwise 1–50 characters after trimming and not an email address, or a 400 `invalid_name` with the reason. The
+ * name is passed on trimmed. A body that is not JSON is passed on unchanged (the library rejects it itself).
+ */
+async function withCheckedName(request: Request): Promise<Request | Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.clone().json()) as Record<string, unknown>;
+  } catch {
+    return request;
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return request;
+  const problem = signUpNameProblem(body.name);
+  if (problem) return errorResponse(400, "invalid_name", problem);
+  const name = typeof body.name === "string" ? normaliseName(body.name) : "";
+  const headers = new Headers(request.headers);
+  headers.delete("content-length"); // the body changed length
+  return new Request(request.url, { method: request.method, headers, body: JSON.stringify({ ...body, name }) });
+}
 
 /** The email from a JSON sign-in body, or a constant when it cannot be read (the library rejects such requests itself). */
 async function emailOf(request: Request): Promise<string> {

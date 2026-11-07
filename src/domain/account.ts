@@ -38,7 +38,45 @@ export function nameProblem(value: unknown): string | null {
   if (name.length > NAME_MAX_LENGTH) return `Use at most ${NAME_MAX_LENGTH} characters.`;
   // Control characters (and the invisible direction marks that can disguise a name) are refused.
   if (/[\u0000-\u001f\u007f‎‏‪-‮⁦-⁩]/.test(name)) return "Use letters, numbers and spaces.";
+  if (looksLikeEmail(name)) return EMAIL_AS_NAME;
   return null;
+}
+
+/** The message for a name that looks like an email address (sign-up, Account page, Share). */
+export const EMAIL_AS_NAME = "Use your name, not an email address.";
+
+/** Does this look like an email address or a mail domain ("ali@mail.uz", "gmail.com")? Then it is never a name. */
+export function looksLikeEmail(value: string): boolean {
+  const text = value.trim();
+  return text.includes("@") || /^\S+\.(com|net|org|edu|gov|uz|ru|io|me|info|co)$/i.test(text);
+}
+
+/**
+ * The name typed at sign-up: optional. Empty (or only spaces) = no name, stored as none (never made from the email).
+ * Otherwise the same rules as the Account page: 1–50 characters after trimming, not an email address.
+ */
+export function signUpNameProblem(value: unknown): string | null {
+  if (value === undefined || value === null || (typeof value === "string" && normaliseName(value) === "")) return null;
+  return nameProblem(value);
+}
+
+/** The part of an email before "@", lower case ("" when there is none). */
+export function emailLocalPart(email: string | null | undefined): string {
+  const at = (email ?? "").indexOf("@");
+  return at > 0 ? (email as string).slice(0, at).trim().toLowerCase() : "";
+}
+
+/**
+ * An account's name as the app shows it, or null for "no name". Never built from the email. Accounts created before
+ * the name field were named after the email by the old sign-up form (`email.split("@")[0]`, or "Student" when that
+ * was empty): such a name, and anything that would not pass `nameProblem`, counts as no name.
+ */
+export function accountDisplayName(name: string | null | undefined, email: string | null | undefined): string | null {
+  const shown = normaliseName(name ?? "");
+  if (!shown || nameProblem(shown)) return null;
+  const local = emailLocalPart(email);
+  if (local && shown.toLowerCase() === local) return null; // the old sign-up's name: the email's local part
+  return shown;
 }
 
 /** Why a new password can't be used, or null. The same limits as sign-up. */

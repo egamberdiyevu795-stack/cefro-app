@@ -89,7 +89,7 @@ export function AccountMenu({
   const header =
     account.state === "authenticated" ? (
       <>
-        <p className="text-label font-semibold text-fg">{account.name ?? account.email.split("@")[0]}</p>
+        <p className="text-label font-semibold text-fg">{account.name ?? "Your account"}</p>
         <p className="text-caption text-fg-muted">{account.email}</p>
         {source === "mock" && <p className="mt-1 text-caption text-fg-muted">Demo account. Sign-in is off in demo mode.</p>}
       </>

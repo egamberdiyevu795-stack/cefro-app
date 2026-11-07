@@ -15,8 +15,7 @@ export function ErrorScreen({ digest, onRetry }: { digest?: string; onRetry: () 
             CEFRO isn&rsquo;t available right now
           </h1>
           <p className="mt-2 text-body text-fg">
-            Something on our side isn&rsquo;t working, so this page can&rsquo;t open. Your earlier answers are safe. Please try again in a few
-            minutes.
+            Something on our side isn&rsquo;t working, so this page can&rsquo;t open. Please try again in a few minutes.
           </p>
           {digest && <p className="mt-3 text-caption text-fg-muted">Reference: {digest}</p>}
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">

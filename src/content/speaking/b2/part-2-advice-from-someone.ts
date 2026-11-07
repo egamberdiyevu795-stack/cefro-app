@@ -8,8 +8,9 @@ import type { SpeakingTask } from "@/domain/speaking/task";
  */
 export const b2Part2AdviceFromSomeone: SpeakingTask = {
   id: "b2-part2-advice-from-someone",
-  // v2: the picture was added (v1 had none). The questions and guidance are unchanged.
-  version: 2,
+  // v2: the picture was added (v1 had none). v3: the picture's licence changed from CC0 1.0 to all rights reserved.
+  // The questions, guidance and picture are unchanged.
+  version: 3,
   level: "B2",
   part: 2,
   taskType: "long_turn",
@@ -28,8 +29,7 @@ export const b2Part2AdviceFromSomeone: SpeakingTask = {
     width: 480,
     height: 360,
     source: "Original illustration made for CEFRO (2026). Not based on any existing image.",
-    licence: "CC0 1.0",
-    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    licence: "© 2026 CEFRO. All rights reserved.",
   },
   instructions: [
     "You will have 1 minute to prepare. You may make notes on paper.",

@@ -182,12 +182,9 @@ describe("Part 2 picture (evaluator 3.5.0)", () => {
 
   it("the picture's source and licence are on the task, sent to the browser and listed in public/tasks/README.md", () => {
     const picture = task.picture!;
-    expect(task.version).toBe(2);
-    expect(picture).toMatchObject({
-      src: "/tasks/advice-from-someone.svg",
-      licence: "CC0 1.0",
-      licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
-    });
+    expect(task.version).toBe(3);
+    expect(picture).toMatchObject({ src: "/tasks/advice-from-someone.svg", licence: "© 2026 CEFRO. All rights reserved." });
+    expect(picture.licenceUrl).toBeUndefined();
     expect(picture.source).toMatch(/Original illustration made for CEFRO/);
     expect(picture.alt).toMatch(/older man/);
     expect(picture.alt).toMatch(/girl/);
@@ -198,14 +195,14 @@ describe("Part 2 picture (evaluator 3.5.0)", () => {
     const svg = fs.readFileSync(file, "utf8");
     expect(svg).toContain(`viewBox="0 0 ${picture.width} ${picture.height}"`);
     expect(svg).not.toMatch(/<script|href=|xlink:|<image|url\(/i); // self-contained, no external or active content
-    expect(svg).toContain("CC0 1.0");
+    expect(svg).toContain("© 2026 CEFRO. All rights reserved.");
 
     const readme = fs.readFileSync(path.join(process.cwd(), "public", "tasks", "README.md"), "utf8");
     const row = readme.split("\n").find((line) => line.startsWith(`| \`${path.basename(picture.src)}\``));
     expect(row, "README row for the picture").toBeDefined();
     expect(row).toContain(task.id);
     expect(row).toContain(picture.source);
-    expect(row).toContain(`[${picture.licence}](${picture.licenceUrl})`);
+    expect(row).toContain(`| ${picture.licence} |`);
   });
 
   it("the stored task snapshot keeps the picture with its source and licence", async () => {
@@ -214,7 +211,7 @@ describe("Part 2 picture (evaluator 3.5.0)", () => {
     await ensureTaskSnapshot(task);
     const rows = await db.select().from(speakingTasks).all();
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ id: task.id, version: 2 });
+    expect(rows[0]).toMatchObject({ id: task.id, version: 3 });
     expect((rows[0].content as typeof task).picture).toEqual(task.picture);
   });
 });

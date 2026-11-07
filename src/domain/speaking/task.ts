@@ -9,8 +9,8 @@ export type SpeakingTaskType = "long_turn";
 
 /**
  * A picture shown with the questions (official Part 2 shows one). It only sets the scene: the student answers the
- * questions, not the picture. Every picture must be original or freely licensed; its source and licence are stored
- * here (and so in every task snapshot) and listed in public/tasks/README.md.
+ * questions, not the picture. Every picture must be original CEFRO artwork or freely licensed; its source and licence
+ * are stored here (and so in every task snapshot) and listed in public/tasks/README.md.
  */
 export interface TaskPicture {
   /** Path under /public, e.g. "/tasks/advice-from-someone.svg". */
@@ -24,9 +24,10 @@ export interface TaskPicture {
   height: number;
   /** Who made it / where it comes from. */
   source: string;
-  /** Licence name, e.g. "CC0 1.0". */
+  /** The licence or copyright line, e.g. "© 2026 CEFRO. All rights reserved." or "CC0 1.0". */
   licence: string;
-  licenceUrl: string;
+  /** Link to the licence text, for an open licence (e.g. CC0). None for CEFRO's own all-rights-reserved pictures. */
+  licenceUrl?: string;
 }
 
 /** Identifies a rubric in the server's rubric registry (`server/evaluation/rubrics`). */

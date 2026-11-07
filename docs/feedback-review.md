@@ -191,3 +191,16 @@ The answer reads as B1 on the result page ("Higher B1") although its grammar not
 **How to check on 3.8-flash:** run `A0-below-b1` at least 5 times with the current prompt. Record the four levels and
 the band for each run. If it is band 0 every time, close the issue. If it splits like 3.6-flash, try option a first
 (prompt only); consider option b only if a doesn't settle it.
+
+## Known flaky tests
+
+Browser tests that have failed once and then passed on rerun with no code change. Not fixed yet; listed so a single
+red run is not mistaken for a regression. Rerun the one test before investigating; if it fails twice in a row, treat
+it as a real failure.
+
+| Test | Seen | What happened | Reruns |
+| --- | --- | --- | --- |
+| `e2e/history.spec.ts` › "History: empty state, then the student's attempts newest first, retries, the part filter, the chart from 3 scored attempts, and the dashboard's Recent attempts" | 2026-11-06, branch `claude/cefro-part-2-tasks-yfr6x5`, in a full run of the four specs | Timed out (90 s) on the retry's `recordAnswer`: clicking "Start speaking now" kept retrying with "element is not stable" / "element was detached from the DOM". The preparation screen seems to re-render under the click (likely the retry page still loading its goal or earlier attempts). | Passed 2 of 2 alone on the same branch, passed on the base branch, and passed in the next full run (27 of 27). |
+
+Likely fix, for later: in `recordAnswer`, wait for the preparation countdown to be visible (or for the retry goal card)
+before clicking "Start speaking now", instead of clicking as soon as the button exists.

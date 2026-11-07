@@ -27,8 +27,7 @@ export const b2Part2GoalYouSet: SpeakingTask = {
     width: 480,
     height: 360,
     source: "Original illustration made for CEFRO (2026). Not based on any existing image.",
-    licence: "CC0 1.0",
-    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    licence: "© 2026 CEFRO. All rights reserved.",
   },
   instructions: [
     "You will have 1 minute to prepare. You may make notes on paper.",

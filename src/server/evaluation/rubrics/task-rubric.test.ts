@@ -31,7 +31,7 @@ describe("task type and rubric boundary", () => {
   });
 
   it("is the Q7 task: three numbered questions", () => {
-    expect(task).toMatchObject({ id: "b2-part2-advice-from-someone", version: 2, level: "B2", part: 2, rubricId: "multilevel-q7", preparationSeconds: 60, speakingSeconds: 120 });
+    expect(task).toMatchObject({ id: "b2-part2-advice-from-someone", version: 3, level: "B2", part: 2, rubricId: "multilevel-q7", preparationSeconds: 60, speakingSeconds: 120 });
     expect(task.prompts).toHaveLength(3);
   });
 });

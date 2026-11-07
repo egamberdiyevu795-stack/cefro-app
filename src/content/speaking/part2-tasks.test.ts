@@ -15,7 +15,7 @@ import { getSpeakingTask, listSpeakingTasks } from "./index";
 
 /**
  * Every Part 2 task has the same shape as "Advice from someone": 1 min preparation, 2 min speaking, 3 questions, one
- * original CC0 picture with alt text, source and licence (also in public/tasks/README.md), and examiner guidance that
+ * original CEFRO picture (© 2026 CEFRO, all rights reserved) with alt text, source and licence (also in public/tasks/README.md), and examiner guidance that
  * says question 3 needs a general opinion and that describing the picture answers nothing.
  */
 const tasks = listSpeakingTasks();
@@ -63,6 +63,10 @@ describe("Part 2 task list", () => {
     expect(new Set(tasks.map((t) => t.title)).size).toBe(7);
   });
 
+  it("Advice from someone is version 3 (its picture's licence changed)", () => {
+    expect(getSpeakingTask("b2-part2-advice-from-someone")!.version).toBe(3);
+  });
+
   it.each(NEW_TASKS)("%s: title and the three questions exactly as written, version 1", (id, title, prompts) => {
     const task = getSpeakingTask(id)!;
     expect(task).toMatchObject({ title, prompts, version: 1 });
@@ -88,9 +92,9 @@ describe.each(tasks.map((t) => [t.id, t] as const))("%s", (_id, task) => {
       src: expect.stringMatching(/^\/tasks\/[a-z0-9-]+\.svg$/),
       width: 480,
       height: 360,
-      licence: "CC0 1.0",
-      licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+      licence: "© 2026 CEFRO. All rights reserved.",
     });
+    expect(picture).not.toHaveProperty("licenceUrl"); // not an open licence: nothing to link to
     expect(picture.source).toBe("Original illustration made for CEFRO (2026). Not based on any existing image.");
     expect(picture.alt.length).toBeGreaterThan(60);
     expect(picture.alt).toMatch(/\.$/);
@@ -98,7 +102,7 @@ describe.each(tasks.map((t) => [t.id, t] as const))("%s", (_id, task) => {
     expect(toPublicTask(task)).not.toHaveProperty("evaluatorGuidance");
   });
 
-  it("the picture file is an original, self-contained SVG: no text, no links, no images, CC0 in its description", () => {
+  it("the picture file is an original, self-contained SVG: no text, no links, no images, the copyright line in its description", () => {
     const file = path.join(process.cwd(), "public", picture.src);
     expect(fs.existsSync(file)).toBe(true);
     const svg = fs.readFileSync(file, "utf8");
@@ -106,7 +110,8 @@ describe.each(tasks.map((t) => [t.id, t] as const))("%s", (_id, task) => {
     expect(svg).not.toMatch(/<script|href=|xlink:|<image|url\(|<foreignObject|@import/i);
     expect(svg).not.toMatch(/<text|<tspan|<textPath/i); // no words in the picture
     const desc = svg.match(/<desc id="d">([^<]*)<\/desc>/)?.[1];
-    expect(desc).toBe(`Original illustration made for CEFRO, released under CC0 1.0. ${picture.alt}`);
+    expect(desc).toBe(`Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. ${picture.alt}`);
+    expect(svg).not.toContain("CC0");
   });
 
   it("the picture is listed in public/tasks/README.md with the same source and licence", () => {
@@ -114,7 +119,7 @@ describe.each(tasks.map((t) => [t.id, t] as const))("%s", (_id, task) => {
     expect(row, "README row for the picture").toBeDefined();
     expect(row).toContain(`\`${task.id}\` (v${task.version})`);
     expect(row).toContain(picture.source);
-    expect(row).toContain(`[${picture.licence}](${picture.licenceUrl})`);
+    expect(row!.split("|").map((c) => c.trim())[5]).toBe(picture.licence);
   });
 
   it("examiner guidance: Q1 and Q2 about one story, Q3 a general opinion (not more story), the picture answers nothing", () => {
@@ -170,5 +175,14 @@ describe("task list page (/)", () => {
     expect(hrefs).toEqual(tasks.map((t) => t.id));
     for (const task of tasks) expect(html).toContain(`>${task.title.replace(/'/g, "&#x27;")}<`);
     expect(html.match(/1 min preparation · 2 min speaking/g)).toHaveLength(7);
+  });
+
+  it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/#part-2)", () => {
+    const html = renderToStaticMarkup(createElement(HomePage));
+    const section = html.split('<section id="part-2"')[1]?.split("</section>")[0];
+    expect(section, "Part 2 section").toBeDefined();
+    expect(section).toContain("Part 2 · Long turn");
+    expect(section!.match(/href="\/practice\/speaking\//g)).toHaveLength(7);
+    expect(html).not.toContain('id="part-1-1"'); // no section for a part without tasks
   });
 });

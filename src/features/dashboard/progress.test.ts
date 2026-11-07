@@ -244,7 +244,7 @@ describe("exam part tiles", () => {
       ["Part 2", 2, "Higher B1"],
       ["Part 3", null, null],
     ]);
-    expect(tiles[2].href).toBe(`/practice/speaking/${TASK}`);
+    expect(tiles[2].href).toBe("/#part-2"); // the Part 2 tasks on the task list, not one task
     expect(tiles[0].href).toBe("/"); // no Part 1.1 task yet: the task list
   });
 });
@@ -276,8 +276,9 @@ describe("with the 7 real Part 2 tasks", () => {
     expect(practiseNext(sorted([original, retry]), ALL)).toMatchObject({ title: "Working in a team", reason: "Finish your goal", href: `/practice/speaking/${ALL[3].id}?retry=${original.id}` });
   });
 
-  it("the Part 2 tile shows the latest Part 2 band whichever task it came from", () => {
+  it("the Part 2 tile shows the latest Part 2 band whichever task it came from, and opens the Part 2 task list", () => {
     const tiles = partTiles(sorted([on(ALL[0].id, 3), { ...on(ALL[6].id, 1), result: result("A4-b2-all-three") }]), ALL);
-    expect(tiles[2]).toMatchObject({ partLabel: "Part 2", band: 4, href: `/practice/speaking/${ALL[0].id}` });
+    expect(tiles[2]).toMatchObject({ partLabel: "Part 2", band: 4, href: "/#part-2" });
+    expect(partTiles([], ALL).map((t) => t.href)).toEqual(["/", "/", "/#part-2", "/"]);
   });
 });

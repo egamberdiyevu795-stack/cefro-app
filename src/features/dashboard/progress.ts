@@ -8,7 +8,7 @@
 import { bestFitLevel } from "@/domain/evaluation/multilevel/band-scoring";
 import { FEATURES, FEATURE_LABELS, FEATURE_LEVELS, LEVEL_LABELS, levelValue, type Feature, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
-import { EXAM_PART_IDS, examPartLabel, examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
+import { EXAM_PART_IDS, examPartLabel, examPartListHref, examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import type { RadarAxis } from "@/components/ds/RadarChart";
 import { formatDate } from "@/features/history/view-model";
@@ -288,7 +288,10 @@ export interface PartTile {
   href: string;
 }
 
-/** One tile per exam part: its latest scored band, and the part's task (else the task list, until the part has one). */
+/**
+ * One tile per exam part: its latest scored band, and a link to that part's tasks on the task list (`/#part-2`), so
+ * the student picks the task. A part with no task yet links to the top of the task list.
+ */
 export function partTiles(attempts: readonly HistoryAttempt[], tasks: readonly TaskInfo[]): PartTile[] {
   const scored = scoredAttempts(attempts);
   return EXAM_PART_IDS.map((part) => {
@@ -300,7 +303,7 @@ export function partTiles(attempts: readonly HistoryAttempt[], tasks: readonly T
       name: PART_NAMES[part],
       band: latest ? latest.result.scoring.band : null,
       bandLabel: latest ? latest.result.scoring.label : null,
-      href: task ? `/practice/speaking/${task.id}` : "/",
+      href: task ? examPartListHref(part) : "/",
     };
   });
 }

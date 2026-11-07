@@ -21,7 +21,7 @@
 > level, gives concrete below_B1 signals per feature and caps transcript-only fluency at the higher of grammar and
 > vocabulary.
 >
-> **Evaluator 3.5.0 (Part 2 picture).** The advice task (v2) shows an original CC0 illustration beside the three
+> **Evaluator 3.5.0 (Part 2 picture).** The advice task (v2; v3 since its licence changed to © 2026 CEFRO, all rights reserved) shows an original illustration beside the three
 > questions (`public/tasks/`). The evaluator is told what it shows (its alt text) and that describing the picture
 > answers no question, even with the topic's words. New anchor `A0-picture-only` (describes only the picture,
 > including "the man is giving advice to the girl") must get band 0 with all three questions off topic.

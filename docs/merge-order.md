@@ -117,9 +117,12 @@ renumbered `0006`.
 ## After that: `claude/cefro-part-2-tasks-yfr6x5` (content only, no migration)
 
 Cut from `dashboard-real-data`, so it comes after it, merge commit. Contains: six new Part 2 tasks (An important
-decision, A goal you set, Working in a team, Trying and failing, A tradition, A happy day), each with an original CC0
+decision, A goal you set, Working in a team, Trying and failing, A tradition, A happy day), each with an original
 picture in `public/tasks/`, alt text, source and licence, and examiner guidance in the same shape as "Advice from
-someone". New tasks start at version 1, so no stored attempt changes. Tests: `src/content/speaking/part2-tasks.test.ts`;
+someone". New tasks start at version 1. All 7 pictures (advice included) are now "© 2026 CEFRO. All rights reserved."
+instead of CC0 1.0, so "Advice from someone" is version 3 (new attempts get a new snapshot; old attempts keep v2). The
+dashboard's Part 2 tile now opens the Part 2 task list (`/#part-2`) instead of one task. Two anchor answers per new
+task (band 4 and band 1, `test/evaluation-samples/part2-new-task-anchors.ts`), **not yet live-tested**. Tests: `src/content/speaking/part2-tasks.test.ts`;
 the dashboard and History tests now also run on all 7 tasks. Two browser tests now open "Advice from someone" by name
 (the task list has 7 "Start practice" links), and the dashboard browser test expects Practise next to move on to
 "An important decision" after the first answer.

@@ -86,7 +86,8 @@ scored, not failed.
   shown on the card; (3) otherwise the task practised least recently ("Not practised yet" first, else "Last practised
   04.11.26"). The mocked "A skill you learned" task and its `/dashboard/task/…` route are gone.
 - **Exam parts:** the latest scored band per part with its label, "Practise"; a part with nothing scored: "No band",
-  "Not tried yet", "Start". Parts without a task yet (1.1, 1.2, 3) link to the task list.
+  "Not tried yet", "Start". A part with tasks opens its section of the task list (Part 2: `/#part-2`, where the
+  student picks one of the 7 tasks); parts without a task yet (1.1, 1.2, 3) link to the top of the task list.
 - **Recent attempts:** the History rows (latest 4); the flagged row menu is hidden on phones, where it squeezed the
   task name onto two lines.
 - **Phone order:** Practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
@@ -354,7 +355,8 @@ Seven Part 2 tasks (`src/content/speaking/b2/`), all the same shape: 1 min prepa
 (1 and 2 about the student's own story, 3 a general opinion), one picture. "Advice from someone" stays first in the
 list (the recommended first practice); then An important decision, A goal you set, Working in a team, Trying and
 failing, A tradition, A happy day. Pictures are original flat SVGs (480 × 360, no text, no brands, no real people,
-CC0), listed with source and licence in `public/tasks/README.md`. The picture shows the topic, never an answer.
+© 2026 CEFRO, all rights reserved), listed with source and licence in `public/tasks/README.md`. The task list (`/`)
+has one section per exam part (`id="part-2"`). The picture shows the topic, never an answer.
 Practise next rotates through them (never practised first, then the one practised longest ago). Checked at 390 px:
 no horizontal scroll, smallest text 11 px, one black button ("Start preparation") on each brief.
 

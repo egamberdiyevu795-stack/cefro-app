@@ -35,6 +35,14 @@ test("new student: the first visit, with the exam date question; saving a date s
   for (const tile of await page.getByTestId("part-tile").all()) await expect(tile.getByRole("link")).toHaveText("Start");
   await expect(page.getByRole("heading", { name: "Speaking progress" })).toHaveCount(0);
 
+  // The Part 2 tile opens the Part 2 task list with all its tasks.
+  await page.getByTestId("part-tile").nth(2).getByRole("link").click();
+  await expect(page).toHaveURL(/\/#part-2$/);
+  const part2 = page.getByRole("region", { name: "Part 2 · Long turn" });
+  await expect(part2).toBeVisible();
+  await expect(part2.getByRole("link", { name: /Start practice/ })).toHaveCount(7);
+  await page.goto("/dashboard");
+
   // A date in the past can't be saved.
   const picker = page.getByLabel("When is your exam?");
   await picker.fill(dayFromToday(-3));
@@ -78,6 +86,8 @@ test("after answers: real level, skills, Practise next, exam parts, biggest fix 
   const tiles = page.getByTestId("part-tile");
   await expect(tiles.nth(2)).toContainText(/Band [0-5]/);
   await expect(tiles.nth(2).getByRole("link")).toHaveText("Practise");
+  // The Part 2 tile opens the Part 2 task list, where the student picks a task.
+  await expect(tiles.nth(2).getByRole("link")).toHaveAttribute("href", "/#part-2");
   for (const i of [0, 1, 3]) await expect(tiles.nth(i).getByRole("link")).toHaveText("Start");
 
   // Biggest fix from that answer; with one answer there is nothing to compare ("Still in" hidden).

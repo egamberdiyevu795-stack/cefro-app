@@ -135,9 +135,12 @@ const envSchema = z.object({
    * Login/registration abuse limits (in-memory, per process; see docs/ARCHITECTURE_DECISIONS.md and
    * server/auth/auth-limits.ts). A classroom shares one address (school Wi-Fi, a mobile network), so the per-IP limits
    * let a whole class sign up and sign in together, while the per-account limit keeps guessing one person's password
-   * slow wherever the guesses come from.
+   * slow wherever the guesses come from without letting a classmate lock someone out everywhere.
    */
-  LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN: z.coerce.number().int().positive().default(5),
+  /** Wrong passwords per account and client IP (sign-in, Change password, Delete my account share it). */
+  LIMIT_LOGIN_FAILURES_PER_EMAIL_IP_15MIN: z.coerce.number().int().positive().default(5),
+  /** Wrong passwords per account in total, from any IP. */
+  LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN: z.coerce.number().int().positive().default(20),
   LIMIT_LOGIN_FAILURES_PER_IP_15MIN: z.coerce.number().int().positive().default(100),
   LIMIT_REGISTRATIONS_PER_IP_HOUR: z.coerce.number().int().positive().default(30),
   LIMIT_REGISTRATIONS_GLOBAL_HOUR: z.coerce.number().int().positive().default(300),

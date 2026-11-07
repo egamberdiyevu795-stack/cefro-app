@@ -17,6 +17,14 @@ export const DELETED_ITEMS = [
   "Your account: name, email and password",
 ] as const;
 
+/** Added to the list once the Teacher view is on (`TEACHER_LIVE`): class links and teachers' ratings are deleted too. */
+export const DELETED_TEACHER_ITEM = "Your classes and teacher ratings";
+
+/** The list "Delete my account" shows: with the Teacher view on, also the classes and teacher ratings. */
+export function deletedItems(teacherViewLive: boolean): readonly string[] {
+  return teacherViewLive ? [...DELETED_ITEMS.slice(0, 3), DELETED_TEACHER_ITEM, DELETED_ITEMS[3]] : DELETED_ITEMS;
+}
+
 /** The name as it is saved: trimmed, inner runs of spaces made one. */
 export function normaliseName(value: string): string {
   return value.trim().replace(/\s+/g, " ");

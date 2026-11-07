@@ -6,13 +6,15 @@ import { FixedWindowLimiter } from "@/server/limits/fixed-window";
  * Abuse limits for the sign-in and sign-up endpoints. In-memory and per process (like the other cheap limiters),
  * which matches the single-host deployment; they reset on restart and are NOT shared between instances.
  *
- *  - Sign-in counts FAILURES, per account (email) and per client IP, so a user who types the right password is never
- *    blocked by their own earlier successes. The per-account limit (5 per 15 minutes) is what keeps guessing one
- *    person's password slow, from any number of addresses; wrong passwords on Change password and Delete my account
- *    count against the same account (`accountKey`). The per-IP limit (100 per 15 minutes) only stops one address
- *    trying many accounts, and is high because a classroom shares one address (school Wi-Fi, a mobile network): one
- *    student's typos never lock out the class. (An attacker can still lock out a victim's email for the window by
- *    failing on purpose; the window is short for that reason.)
+ *  - Wrong passwords (sign-in, Change password, Delete my account) count FAILURES only, so a user who types the right
+ *    password is never blocked by their own earlier successes. One shared counter per account for all three
+ *    (`passwordFailureBlocked` / `countPasswordFailure`), in two parts:
+ *      - per account AND client IP: 5 per 15 minutes. Guessing from one place stops quickly, and a classmate who
+ *        fails on purpose from their own phone or home locks the account only for that address: the owner still signs
+ *        in from anywhere else. (On the same school Wi-Fi they share an address, so it is locked there for the window.)
+ *      - per account in total, from any IP: 20 per 15 minutes, so spreading guesses over many addresses stays slow.
+ *  - Sign-in also counts failures per client IP (100 per 15 minutes): it only stops one address trying many accounts,
+ *    and is high because a classroom shares one address, so one student's typos never lock out the class.
  *  - Sign-up counts every attempt per IP (30 per hour, so a class of 30 can sign up together) and in total (300).
  * The client IP comes only from a header a trusted proxy sets (`clientIp`: Vercel's `x-real-ip`); a visitor's own
  * `X-Forwarded-For` is ignored outside test runs. The per-email limit and the global registration ceiling do not rely
@@ -22,6 +24,9 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
 interface Limiters {
+  /** Wrong passwords per account and client IP. */
+  loginByEmailAndIp: FixedWindowLimiter;
+  /** Wrong passwords per account, from any IP. */
   loginByEmail: FixedWindowLimiter;
   loginByIp: FixedWindowLimiter;
   registerByIp: FixedWindowLimiter;
@@ -33,6 +38,7 @@ export function authLimiters(): Limiters {
   if (!limiters) {
     const env = getEnv();
     limiters = {
+      loginByEmailAndIp: new FixedWindowLimiter(env.LIMIT_LOGIN_FAILURES_PER_EMAIL_IP_15MIN, FIFTEEN_MIN),
       loginByEmail: new FixedWindowLimiter(env.LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN, FIFTEEN_MIN),
       loginByIp: new FixedWindowLimiter(env.LIMIT_LOGIN_FAILURES_PER_IP_15MIN, FIFTEEN_MIN),
       registerByIp: new FixedWindowLimiter(env.LIMIT_REGISTRATIONS_PER_IP_HOUR, HOUR),
@@ -45,6 +51,28 @@ export function authLimiters(): Limiters {
 /** The per-account key of the failed-password limit: the same for sign-in, Change password and Delete my account. */
 export function accountKey(email: string): string {
   return `email:${email.trim().toLowerCase().slice(0, 254)}`;
+}
+
+/**
+ * Is this account blocked for wrong passwords from this address (its account + IP part, or its total)? Checked before
+ * the password is, by sign-in, Change password and Delete my account. `email` is the account's email (or the one
+ * typed at sign-in).
+ */
+export function passwordFailureBlocked(email: string, ip: string): { blocked: false } | { blocked: true; retryAfterSeconds: number } {
+  const limits = authLimiters();
+  const key = accountKey(email);
+  for (const state of [limits.loginByEmailAndIp.isBlocked(`${key}|ip:${ip}`), limits.loginByEmail.isBlocked(key)]) {
+    if (state.blocked) return state;
+  }
+  return { blocked: false };
+}
+
+/** Count one wrong password for this account from this address (both parts of the shared counter). */
+export function countPasswordFailure(email: string, ip: string): void {
+  const limits = authLimiters();
+  const key = accountKey(email);
+  limits.loginByEmailAndIp.hit(`${key}|ip:${ip}`);
+  limits.loginByEmail.hit(key);
 }
 
 /** Test seam: forget all counters. */

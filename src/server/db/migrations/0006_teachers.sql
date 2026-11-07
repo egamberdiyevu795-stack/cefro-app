@@ -1,4 +1,4 @@
--- cefro:reviewed: the three unique indexes are on tables this migration creates (empty, unknown to the previous release); users.role is NOT NULL with a DEFAULT. Additive only.
+-- cefro:reviewed: approved by Asadbek, 2026-11-07. The three unique indexes are on tables this migration creates (empty, unknown to the previous release); users.role is NOT NULL with a DEFAULT. Additive only.
 CREATE TABLE `class_members` (
 	`id` text PRIMARY KEY NOT NULL,
 	`class_id` text NOT NULL,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { DemoLabel } from "@/components/ds";
+import { deletedItems } from "@/domain/account";
 import { FEATURE_FLAGS } from "@/config/features";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn, type ExamDateState } from "@/domain/exam-date";
 import { ExamDate } from "@/features/dashboard/ExamDate";
@@ -94,7 +95,7 @@ export default async function AccountPage(props: PageProps<"/profile">) {
           <MyClassesCard memberships={classes.memberships} joinHref={mockLink(studentLinks.join, mock)} accountHref={mockLink(studentLinks.account, mock)} demo={mock} />
         )}
         <SignInCard signedIn={signedIn} mock={mock} />
-        {signedIn && <DeleteCard mock={mock} />}
+        {signedIn && <DeleteCard mock={mock} items={deletedItems(teacherLive())} />}
       </div>
     </AppShell>
   );

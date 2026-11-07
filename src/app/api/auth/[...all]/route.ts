@@ -1,5 +1,5 @@
 import { getAuth } from "@/server/auth/auth";
-import { accountKey, authLimiters, clientIp } from "@/server/auth/auth-limits";
+import { authLimiters, clientIp, countPasswordFailure, passwordFailureBlocked } from "@/server/auth/auth-limits";
 import { HttpError } from "@/server/errors";
 import { errorResponse, isCrossSite, readBodyWithLimit, withErrorHandling } from "@/server/http";
 
@@ -57,15 +57,14 @@ async function handlePost(original: Request) {
 
   if (path === "/sign-in/email") {
     const email = await emailOf(request);
-    for (const [limiter, key] of [[limits.loginByEmail, email], [limits.loginByIp, ip]] as const) {
-      const state = limiter.isBlocked(key);
+    for (const state of [passwordFailureBlocked(email, ip), limits.loginByIp.isBlocked(ip)]) {
       if (state.blocked) {
         return limited("login_rate_limited", "Too many failed sign-in attempts. Please wait a few minutes and try again.", state.retryAfterSeconds);
       }
     }
     const response = await (await getAuth()).handler(request);
     if (response.status >= 400) {
-      limits.loginByEmail.hit(email);
+      countPasswordFailure(email, ip);
       limits.loginByIp.hit(ip);
     }
     return withoutSessionToken(response);
@@ -77,13 +76,13 @@ async function handlePost(original: Request) {
 /** Wrapped so an unreachable database answers 503 (with the standard error body) instead of an unhandled 500. */
 export const POST = withErrorHandling(handlePost);
 
-/** The lower-cased email from a JSON sign-in body, or a constant when it cannot be read (the library rejects such requests itself). */
+/** The email from a JSON sign-in body, or a constant when it cannot be read (the library rejects such requests itself). */
 async function emailOf(request: Request): Promise<string> {
   try {
     const body = (await request.clone().json()) as { email?: unknown };
-    return typeof body.email === "string" ? accountKey(body.email) : "email:(none)";
+    return typeof body.email === "string" ? body.email : "(none)";
   } catch {
-    return "email:(unreadable)";
+    return "(unreadable)";
   }
 }
 

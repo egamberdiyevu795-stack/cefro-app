@@ -263,11 +263,12 @@ proposes `0006_teachers` for later).
 ## Right after `claude/teacher-plan-v7fp7j`: `claude/teacher-view-kd6wdk` (Teacher view v1, **adds migration `0006`**)
 
 Cut from `claude/teacher-plan-v7fp7j` with the latest `claude/profile-settings` (`f01e5d4`) merged in (normal merge),
-so it comes **after `claude/teacher-plan-v7fp7j`**, merge commit, no squash. (Asked for as `claude/teacher-view`;
-the session's branch is `claude/teacher-view-kd6wdk`, 19 characters after `claude/`.)
+so it comes **after `claude/teacher-plan-v7fp7j`**, merge commit, no squash. Branch name: `claude/teacher-view-kd6wdk`
+(19 characters after `claude/`).
 
 **Migration `0006_teachers`:** four new tables (`classes`, `class_members`, `teacher_ratings`, `rating_pairs`) and
-one column, `users.role` (`'student'` by default, NOT NULL). Additive only: no table is rebuilt and no row changes.
+one column, `users.role` (`'student'` by default, NOT NULL). Additive only: no table is rebuilt and no row changes. Its `-- cefro:reviewed` line for the new unique indexes (on
+tables this migration creates) was approved by Asadbek, 2026-11-07.
 **Run `npm run db:migrate` against the hosted database when this branch is merged (before, or as, it is deployed):**
 the app refuses to start on a hosted database whose migrations are behind. Teachers are made only with
 `node scripts/set-role.mjs <email> teacher` (no API sets a role).
@@ -286,10 +287,15 @@ Contains (docs/teacher-plan.md, built as written; see "Not followed" below):
   Teachers never receive emails, account names, recordings or exam dates (tested). 10 wrong join codes per account per
   hour.
 - **Sign-in / sign-up limits for classrooms** (one shared IP): sign-up 30 per hour per client IP (was 10), 300 in
-  total (was 100); failed sign-ins 5 per 15 min per account (was 8) and 100 per IP (was 30); the auth library's own
-  per-minute limit raised to 120 sign-ins / 60 sign-ups per IP; Change password and Delete my account now count wrong
-  passwords under the same per-account key as sign-in (they used a different key before). The trusted-IP rule from
-  `claude/profile-settings` is unchanged. Tests: `src/server/auth/classroom-limits.test.ts`.
+  total (was 100). Wrong passwords (sign-in, Change password and Delete my account share one counter per account):
+  5 per 15 min per account **and** client IP, and 20 per 15 min per account from any IP, so a classmate failing on
+  purpose from their own phone can't lock the owner out elsewhere (on the same Wi-Fi they share an IP, so it is locked
+  there for 15 minutes); sign-in also 100 failures per 15 min per IP (was 30). The auth library's own per-minute limit
+  is raised to 120 sign-ins / 60 sign-ups per IP. Before this branch, Change password and Delete my account counted
+  wrong passwords under a different key from sign-in. The trusted-IP rule from `claude/profile-settings` is unchanged.
+  Tests: `src/server/auth/classroom-limits.test.ts`.
+- **Delete my account list:** with `TEACHER_LIVE` on, it also lists "Your classes and teacher ratings"
+  (`deletedItems` in `src/domain/account.ts`); off, it is unchanged. Tested in both states.
 - **Shared code touched:** `ScoredResult` (`teacher` read-only mode), `AppShell` / `BackLink` / `Wordmark` /
   `AccountTab` (`back`, `href`, `demoTeacher`), `PractiseNextCard` / `FindYourLevelCard` (`quiet`), `LessonView`
   (`TeacherLessonView`), `DemoLabel` (`class`), icon `plus`, `demo-data.ts` (`evaluateDemoAnswer`),
@@ -300,8 +306,7 @@ Contains (docs/teacher-plan.md, built as written; see "Not followed" below):
 - **Not followed exactly:** (1) teacher account deletion deletes the classes and memberships, as the plan says, so
   students then simply no longer see the class (the plan also says they see "You're no longer in this class"; both
   can't hold once the rows are gone). (2) The Leave confirm card's "Leave class" is grey, not black: a destructive
-  action is never black, and the Account page keeps its own black button. (3) `DELETED_ITEMS` (the Delete my account
-  list) is unchanged while the Teacher view is off; add "Your classes and teacher ratings" when it goes live.
+  action is never black, and the Account page keeps its own black button.
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

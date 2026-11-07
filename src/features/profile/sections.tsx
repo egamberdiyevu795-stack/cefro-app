@@ -120,11 +120,11 @@ export function SignInCard({ signedIn, mock }: { signedIn: boolean; mock: boolea
 }
 
 /** (d) Delete my account: last, in its own section. Accounts only. */
-export function DeleteCard({ mock }: { mock: boolean }) {
+export function DeleteCard({ mock, items }: { mock: boolean; items: readonly string[] }) {
   return (
     <Card aria-labelledby="account-delete">
       <CardHeader title="Delete my account" id="account-delete" />
-      <DeleteAccount demo={mock} />
+      <DeleteAccount demo={mock} items={items} />
     </Card>
   );
 }

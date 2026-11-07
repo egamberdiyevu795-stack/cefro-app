@@ -22,9 +22,12 @@ vi.mock("next/navigation", async (importOriginal) => ({
 vi.setConfig({ testTimeout: 30_000 });
 
 import { eq, inArray, or } from "drizzle-orm";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ProfilePage from "@/app/profile/page";
-import { DELETED_ITEMS } from "@/domain/account";
+import { DELETED_ITEMS, DELETED_TEACHER_ITEM, deletedItems } from "@/domain/account";
+import { DeleteAccount } from "@/features/settings/DeleteAccount";
+import { DeleteCard } from "@/features/profile/sections";
 import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import {
@@ -422,5 +425,33 @@ describe("Delete my account: the Teacher view's rows (class links and ratings), 
     // Alice's Account page no longer lists the class.
     use(alice.browser);
     expect(await (await getMyClasses(req("/x", { method: "GET" }), ctx({}))).json()).toEqual({ classes: [] });
+  });
+});
+
+describe("the Delete my account list follows the Teacher view switch", () => {
+  setUp(() => new LocalAudioStorage(dir));
+  afterEach(() => setTeacherLiveForTesting(undefined));
+  const props = { params: Promise.resolve({}), searchParams: Promise.resolve({}) } as never;
+
+  /** The `items` the Account page hands to Delete my account (the list itself opens only on a tap). */
+  function deleteCardItems(node: unknown): readonly string[] | null {
+    if (!node || typeof node !== "object") return null;
+    if (Array.isArray(node)) return node.map(deleteCardItems).find((x) => x) ?? null;
+    const element = node as { type?: unknown; props?: { items?: readonly string[]; children?: unknown } };
+    if (element.type === DeleteCard) return element.props!.items!;
+    return deleteCardItems(element.props?.children);
+  }
+
+  it.each([
+    [false, DELETED_ITEMS],
+    [true, ["Your practice attempts and their results", "Your recordings and transcripts", "Your exam date", DELETED_TEACHER_ITEM, "Your account: name, email and password"]],
+  ] as const)("TEACHER_LIVE %s: the Account page lists exactly what is deleted", async (live, expected) => {
+    setTeacherLiveForTesting(live);
+    use(await register("alice"));
+    expect(deleteCardItems(await ProfilePage(props))).toEqual(expected);
+    expect(deletedItems(live)).toEqual(expected);
+    const markup = renderToStaticMarkup(createElement(DeleteAccount, { items: deletedItems(live), defaultOpen: true }));
+    expect(markup.includes(DELETED_TEACHER_ITEM)).toBe(live);
+    for (const item of expected) expect(markup).toContain(item);
   });
 });

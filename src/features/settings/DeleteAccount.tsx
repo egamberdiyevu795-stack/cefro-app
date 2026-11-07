@@ -11,17 +11,27 @@ export const DEMO_NOT_DELETED = "Demo mode. Nothing was deleted.";
 
 /**
  * Delete my account, in two steps on the page. First a grey "Delete my account"; it opens the list of exactly what
- * will be deleted (`DELETED_ITEMS`), the account's password and a field where the student types DELETE. "Delete
+ * will be deleted (`items`, from `deletedItems`), the account's password and a field where the student types DELETE. "Delete
  * everything" stays disabled until both are filled and the field says DELETE (and until the page is ready). Then
  * `POST /api/account/delete`, which deletes it all, recordings included, and signs this browser out; the browser then
  * goes to the home page with "Your account and all your data were deleted." Grey, never black: a destructive action is never the page's main
  * one. `demo`: both steps are shown, nothing is sent, and the page says nothing was deleted.
  */
-export function DeleteAccount({ demo = false }: { demo?: boolean }) {
+export function DeleteAccount({
+  demo = false,
+  items = DELETED_ITEMS,
+  defaultOpen = false,
+}: {
+  demo?: boolean;
+  /** What is deleted, as listed (`deletedItems`: the Teacher view adds its line when it is on). */
+  items?: readonly string[];
+  /** Open on the confirm step (tests). */
+  defaultOpen?: boolean;
+}) {
   const id = useId();
   const router = useRouter();
   const ready = useHydrated();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [typed, setTyped] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -92,7 +102,7 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
       <div>
         <p className="text-body font-medium text-fg">This deletes, for good:</p>
         <ul className="mt-1.5 list-disc pl-5 text-body text-fg" data-testid="delete-list">
-          {DELETED_ITEMS.map((item) => (
+          {items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/headers", async () => (await import("../../../test/next-headers-mock")).nextHeadersMock);
 vi.setConfig({ testTimeout: 60_000 });
 
+import { POST as postDelete } from "@/app/api/account/delete/route";
 import { POST as postPassword } from "@/app/api/account/password/route";
 import { getEnv } from "@/server/config/env";
 import { openDatabase, setDbForTesting } from "@/server/db/client";
@@ -32,11 +33,12 @@ afterEach(() => {
 });
 
 describe("the defaults", () => {
-  it("sign-up 30 per hour per address, 300 in total; failed sign-ins 5 per account and 100 per address per 15 minutes", () => {
+  it("sign-up 30 per hour per address, 300 in total; wrong passwords 5 per account and address, 20 per account, 100 per address per 15 minutes", () => {
     const env = getEnv();
     expect(env.LIMIT_REGISTRATIONS_PER_IP_HOUR).toBe(30);
     expect(env.LIMIT_REGISTRATIONS_GLOBAL_HOUR).toBe(300);
-    expect(env.LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN).toBe(5);
+    expect(env.LIMIT_LOGIN_FAILURES_PER_EMAIL_IP_15MIN).toBe(5);
+    expect(env.LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN).toBe(20);
     expect(env.LIMIT_LOGIN_FAILURES_PER_IP_15MIN).toBe(100);
   });
 });
@@ -81,11 +83,24 @@ describe("a class of 30 on one address", () => {
     expect((await signIn("classmate@example.com", PASSWORD, { ip: SCHOOL_WIFI })).status).toBe(200);
   });
 
-  it("the per-account limit holds whatever address the guesses come from", async () => {
-    await signUp("target@example.com", PASSWORD, { ip: "10.3.0.1" });
+  it("a prank: a classmate failing 5 times from their own phone locks the account only there; the owner signs in elsewhere", async () => {
+    await signUp("owner@example.com", PASSWORD, { ip: "10.3.0.1" });
     jar.clear();
-    for (let i = 0; i < 5; i++) expect((await signIn("target@example.com", `guess ${i}`, { ip: `192.0.2.${i + 1}` })).status).toBe(401);
-    expect((await signIn("target@example.com", "guess 5", { ip: "192.0.2.99" })).status).toBe(429);
+    const prankPhone = "192.0.2.10";
+    for (let i = 0; i < 5; i++) expect((await signIn("owner@example.com", `prank ${i}`, { ip: prankPhone })).status).toBe(401);
+    expect((await signIn("owner@example.com", "prank 5", { ip: prankPhone })).status).toBe(429);
+    expect((await signIn("owner@example.com", PASSWORD, { ip: prankPhone })).status).toBe(429);
+    // The owner, on their own connection, is not locked out.
+    expect((await signIn("owner@example.com", PASSWORD, { ip: "198.51.100.7" })).status).toBe(200);
+  });
+
+  it("guesses spread over many addresses: 20 per account in total, then every address waits", async () => {
+    await signUp("target@example.com", PASSWORD, { ip: "10.3.0.2" });
+    jar.clear();
+    // 4 wrong guesses from each of 5 addresses: under the per-address limit everywhere, 20 in total.
+    for (let i = 0; i < 20; i++) expect((await signIn("target@example.com", `guess ${i}`, { ip: `192.0.2.${100 + Math.floor(i / 4)}` })).status, `guess ${i}`).toBe(401);
+    expect((await signIn("target@example.com", "guess 20", { ip: "192.0.2.200" })).status).toBe(429);
+    expect((await signIn("target@example.com", PASSWORD, { ip: "198.51.100.8" })).status).toBe(429);
   });
 
   it("one address trying many accounts is still stopped (100 failures per 15 minutes)", async () => {
@@ -94,21 +109,46 @@ describe("a class of 30 on one address", () => {
     expect((await signIn("nobody-else@example.com", "wrong", { ip: "198.51.100.2" })).status).toBe(401);
   });
 
-  it("wrong passwords on Change password count against the same account as failed sign-ins", async () => {
+  it("Change password, Delete my account and sign-in share one counter per account (and per account + address)", async () => {
     await signUp("pat@example.com", PASSWORD, { ip: "10.4.0.1" });
-    const body = (currentPassword: string) =>
-      new Request("http://localhost/api/account/password", {
-        method: "POST",
-        headers: { "content-type": "application/json", origin: "http://localhost" },
-        body: JSON.stringify({ currentPassword, newPassword: "a long new password" }),
-      });
-    for (let i = 0; i < 3; i++) expect((await postPassword(body(`wrong ${i}`))).status).toBe(400);
     const session = new Map(jar);
+    const post = (url: string, body: unknown, ip: string) =>
+      new Request(`http://localhost${url}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost", "x-forwarded-for": ip },
+        body: JSON.stringify(body),
+      });
+    const change = (currentPassword: string, ip: string) => postPassword(post("/api/account/password", { currentPassword, newPassword: "a long new password" }, ip));
+    const remove = (password: string, ip: string) => postDelete(post("/api/account/delete", { password, confirm: "DELETE" }, ip));
+    const restore = () => {
+      jar.clear();
+      for (const [k, v] of session) jar.set(k, v);
+    };
+
+    // From one address: 2 wrong on Change password, 1 on Delete, 2 at sign-in = 5: that address waits on all three.
+    const home = "10.4.0.2";
+    for (let i = 0; i < 2; i++) expect((await change(`wrong ${i}`, home)).status).toBe(400);
+    expect((await remove("wrong", home)).status).toBe(400);
     jar.clear();
-    for (let i = 0; i < 2; i++) expect((await signIn("pat@example.com", `wrong ${i}`, { ip: "10.4.0.2" })).status).toBe(401);
-    expect((await signIn("pat@example.com", PASSWORD, { ip: "10.4.0.3" })).status).toBe(429);
-    for (const [k, v] of session) jar.set(k, v);
-    expect((await postPassword(body(PASSWORD))).status).toBe(429);
+    for (let i = 0; i < 2; i++) expect((await signIn("pat@example.com", `wrong ${i}`, { ip: home })).status).toBe(401);
+    expect((await signIn("pat@example.com", PASSWORD, { ip: home })).status).toBe(429);
+    restore();
+    expect((await change(PASSWORD, home)).status).toBe(429);
+    expect((await remove(PASSWORD, home)).status).toBe(429);
+    // Another address still works for now.
+    jar.clear();
+    expect((await signIn("pat@example.com", PASSWORD, { ip: "10.4.0.3" })).status).toBe(200);
+
+    // The account's total (20, any address) counts all three routes: 15 more wrong ones, 3 per address, then all wait.
+    restore();
+    for (let i = 0; i < 15; i++) {
+      const ip = `10.4.1.${Math.floor(i / 3)}`;
+      expect((await (i % 2 ? change(`w${i}`, ip) : remove(`w${i}`, ip))).status, `wrong ${i}`).toBe(400);
+    }
+    jar.clear();
+    expect((await signIn("pat@example.com", PASSWORD, { ip: "10.4.9.9" })).status).toBe(429);
+    restore();
+    expect((await change(PASSWORD, "10.4.9.9")).status).toBe(429);
   });
 });
 

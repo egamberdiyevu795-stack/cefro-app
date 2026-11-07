@@ -30,7 +30,7 @@ export function AppShell({
       <div className="mx-auto flex max-w-[1280px] px-4 pt-2 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:pt-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
           <Wordmark className="hidden lg:flex lg:h-12" mock={mock} />
-          <Sidebar items={navItemsFor(flags, mock)} activeHref={activeHref} last={<AccountMenu source={account} />} />
+          <Sidebar items={navItemsFor(flags, mock)} activeHref={activeHref} last={<AccountMenu source={account} active={activeHref === "/profile"} />} />
         </aside>
 
         <div className="min-w-0 flex-1">

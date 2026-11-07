@@ -33,6 +33,7 @@ import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import type { SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 import { demoAnswerText, type DemoAnswerVariant } from "@/features/demo/demo-answers";
 import { formatInternal, parseInternal, withMock } from "@/features/demo/demo-mode";
+import { ACCOUNT as DEMO_ACCOUNT } from "@/features/dashboard/mock-data";
 
 interface DemoAttemptSpec {
   id: string;
@@ -177,6 +178,14 @@ export async function demoAttempts(now: Date): Promise<HistoryAttempt[]> {
 }
 
 /** The demo student's stored exam date, as the database would hold it. */
+/** The demo student joined this many days ago (before their first demo attempt, 9 days ago). */
+export const DEMO_MEMBER_SINCE_DAYS = 30;
+
+/** The demo student's account, as Profile and Settings show it in mock mode (the same name and email as the Account menu). */
+export function demoAccount(now: Date): { kind: "registered"; name: string; email: string; memberSince: string } {
+  return { kind: "registered", ...DEMO_ACCOUNT, memberSince: new Date(now.getTime() - DEMO_MEMBER_SINCE_DAYS * 86_400_000).toISOString() };
+}
+
 export function demoExamDate(now: Date): { examDate: string; examDateSkippedAt: null } {
   return { examDate: addDays(todayIn(now), DEMO_EXAM_IN_DAYS), examDateSkippedAt: null };
 }

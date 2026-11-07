@@ -43,14 +43,17 @@ date, Skip, Cancel and Remove date are small text actions with a 36 px tap area.
 
 Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
 notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons / Settings, the attempt
-row menu (Delete, Report a wrong score), and the Exam parts tiles of parts with no task yet (`examPart1_1`,
-`examPart1_2`, `examPart3`: on, the tile says "Coming soon" and has no link; off, the tile is not rendered). Two flags now cover built features (both on): `history` (the sidebar item and
+row menu (Delete, Report a wrong score). Two flags now cover built features (both on): `history` (the sidebar item and
 "See all" are real links to `/history`; off: not rendered and `/history` is a 404) and `examCountdown` (the real exam
 date: question, countdown, Edit, Add exam date; off: not rendered and Practise next takes the full row).
 
 - **Flag on** (prototype default): the element is shown exactly as designed; tapping it shows a small "Coming soon".
 - **Flag off:** the element is not rendered. Neighbours fill the space (e.g. "Practise next" takes the full row when
   the countdown is off; the search row disappears on phones).
+- **Exam parts are live or not** (`PART_LIVE`, in the same file): one switch per part. On: the tile says "Start"
+  ("Practise" once tried) and links to the part's tasks. Off: "Coming soon", no link. All four tiles are always shown.
+  Part 2 is live; 1.1, 1.2 and 3 are not. These are release switches, not preview flags: `?flags=off` leaves them as they
+  are, and a part goes live only once it has tasks (checked by `progress.test.ts`).
 - Preview with every flag off: `/dashboard?flags=off`. Turn flags off before a page ships; delete a flag when its
   feature is real.
 
@@ -94,8 +97,8 @@ scored, not failed.
   in full on every screen size (no line clamp).
 - **Exam parts:** the latest scored band per part with its label, "Practise"; a part with nothing scored: "No band",
   "Not tried yet", "Start". A part with tasks opens its section of the task list (Part 2: `/#part-2`, where the
-  student picks one of the 7 tasks). A part without a task yet (1.1, 1.2, 3) has **no link**: its tile says "Coming
-  soon", each behind its own flag (`examPart1_1`, `examPart1_2`, `examPart3`; off: the tile is not rendered).
+  student picks one of the 7 tasks), when the part is live (`PART_LIVE`). A part not live yet (1.1, 1.2, 3) has **no
+  link**: its tile says "Coming soon". All four tiles are always shown.
 - **Recent attempts:** the History rows (latest 4); the flagged row menu is hidden on phones, where it squeezed the
   task name onto two lines.
 - **Phone order:** Practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
@@ -121,6 +124,10 @@ scored, not failed.
   on its own line, **"Remove date"**: the date is cleared and the card goes back to "Add exam date").
 - **Past date:** the countdown is hidden and the student is asked "When is your next exam?" ("Your exam date,
   01.11.26, has passed.").
+- **Until the page is ready** (its scripts have run), every exam-date control is disabled. On a slow connection the
+  HTML arrives first: a date picked then stayed on screen but never reached React's state ("Choose a date." under a
+  visible date), and Save tapped then was a plain form submit that reloaded the page and lost the date
+  (`useHydrated` in `ExamDate.tsx`).
 - Days are counted in Uzbekistan's calendar, so the countdown is the same wherever the device is.
 - The date field's border is `fg-subtle` (3.64:1 on the card: an input boundary needs 3:1).
 
@@ -132,14 +139,22 @@ scored, not failed.
   full goal, "Start practice", Coming soon tiles without a link), `domain/exam-date.test.ts`,
   `app/api/cross-user.test.ts` (exam date per user, validation, Skip, Remove date, carried over on sign-up),
   `server/db/migrations.test.ts` (0005 is additive), `e2e/dashboard.spec.ts` (new student; Skip → Add exam date →
-  Edit → Remove date; a passed date asks "When is your next exam?"; attempts not scored yet; 1 then 3 answers with
+  Edit → Remove date; a passed date asks "When is your next exam?"; a slow connection: the picker and Save stay disabled
+  until the page is ready, then the date picked is the date saved; attempts not scored yet; 1 then 3 answers with
   "Still in"; another browser sees nothing; at 390 px on each: no horizontal scroll, no text under 11 px, one black
   button). The passed date and the failed attempt are set in the run's database (`e2e/db.ts`): the app never saves them.
+  `e2e/db.ts` opens only an existing `data/e2e/<run id>.db` file and refuses anything else (`test/e2e-db-guard.test.ts`).
 - Screenshots (1440 px and 390 px), taken from the real app (mock providers, a fresh database): `docs/design-system/dashboard-{first-visit,not-scored-yet,one-answer,normal,exam-date,exam-skipped,exam-passed,flags-off}-{desktop,phone}.png`.
   `not-scored-yet` = one failed attempt; `normal` = five answers on four tasks with a retry, no exam date yet;
   `exam-date` = the same with a date set; `exam-skipped` = after Remove date; `exam-passed` = a date that has passed.
   Part 1.1, 1.2 and 3 show "Coming soon". Audited in the browser: no horizontal scroll, smallest text 11 px, exactly
   one black button on each.
+- **Retake them:** `node scripts/screenshots/dashboard.mjs` (about 2 minutes; `--out <dir>`, `--port <n>`). It starts
+  its own `next dev` with the **mock** transcription and evaluation providers (no audio assessment, API keys not passed
+  on) on a throwaway database under `data/screenshots/`, records answers with Chromium's fake microphone, and writes
+  the PNGs into `docs/design-system/`. It refuses to start if an `.env` file sets `TURSO_*`, stops if a result was not
+  scored by the mock evaluator, and fails a shot that has horizontal scroll, text under 11 px or not exactly one black
+  button. It uses port 3200 unless `--port` says otherwise.
 
 ## Levels and bands
 

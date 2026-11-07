@@ -47,6 +47,23 @@ describe("exam date", () => {
   });
 });
 
+describe("exam date before the page is ready (server HTML, before hydration)", () => {
+  it("every control is disabled, so nothing picked or tapped then can be lost", () => {
+    const states: ExamDateState[] = [
+      { kind: "ask" },
+      { kind: "ask_again", passed: "2026-11-01" },
+      { kind: "countdown", date: "2026-11-30", days: 23, label: "in 23 days" },
+      { kind: "skipped" },
+    ];
+    for (const state of states) {
+      const markup = exam(state);
+      const controls = markup.match(/<(input|button)\b[^>]*>/g) ?? [];
+      expect(controls.length).toBeGreaterThan(0);
+      for (const control of controls) expect(control).toMatch(/\bdisabled=""/);
+    }
+  });
+});
+
 describe("Practise next", () => {
   it("shows the whole goal, never clamped, on every screen size", () => {
     const goal = "Try adding a third conditional sentence (for example, 'If I hadn't listened to him, I would have given up') to show even greater grammatical range when you tell the story.";

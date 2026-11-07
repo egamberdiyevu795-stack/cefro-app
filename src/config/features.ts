@@ -1,3 +1,5 @@
+import type { ExamPartId } from "@/domain/speaking/exam-part";
+
 /**
  * Feature flags for elements that are designed but not built yet.
  *
@@ -21,13 +23,6 @@ export const FEATURE_FLAGS = {
   settings: true,
   /** Row menu on attempts (Delete, Report a wrong score). */
   attemptMenu: true,
-  /**
-   * Exam part tiles for parts that have no task yet: the tile says "Coming soon" (no Start link). Off: the tile is not
-   * rendered. Delete each once its part has a task (Part 2 has no flag: it is real).
-   */
-  examPart1_1: true,
-  examPart1_2: true,
-  examPart3: true,
   /** "Your exam: in N days" card. */
   examCountdown: true,
   /** Result page: "Lesson" link under the biggest fix (the lesson for that fix). */
@@ -43,3 +38,16 @@ export type FeatureFlags = Record<FeatureFlag, boolean>;
 export function allFlags(on: boolean): FeatureFlags {
   return Object.fromEntries(Object.keys(FEATURE_FLAGS).map((k) => [k, on])) as FeatureFlags;
 }
+
+/**
+ * One switch per exam part: is it live? On: its dashboard tile says "Start" ("Practise" once tried) and links to the
+ * part's tasks on the task list. Off: the tile says "Coming soon", with no link. The tile is always shown.
+ * Turn a part on only once it has tasks (checked by progress.test.ts). These are release switches, not preview flags,
+ * so `?flags=off` does not change them.
+ */
+export const PART_LIVE: Record<ExamPartId, boolean> = {
+  "1.1": false,
+  "1.2": false,
+  "2": true,
+  "3": false,
+};

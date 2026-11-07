@@ -7,11 +7,11 @@ import type { HistoryAttempt } from "@/domain/speaking/history";
 import { listSpeakingTasks } from "@/content/speaking";
 import rawQ7 from "@/server/evaluation/rubrics/multilevel_q7.json";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
-import { allFlags, FEATURE_FLAGS } from "@/config/features";
+import { PART_LIVE } from "@/config/features";
+import { EXAM_PART_IDS, examPartOf } from "@/domain/speaking/exam-part";
 import {
   dashboardFix,
   dashboardView,
-  visiblePartTiles,
   formatMinutes,
   middleLevel,
   overallLevel,
@@ -240,7 +240,7 @@ describe("practise next", () => {
 
 describe("exam part tiles", () => {
   it("the latest scored band per part; untried parts have no band (Start)", () => {
-    const tiles = partTiles(sorted([attempt(3, { result: result("A4-b2-all-three") }), attempt(1, { result: result("A2-b1-all-three") }), attempt(0, { status: "evaluating", result: null })]), TASKS);
+    const tiles = partTiles(sorted([attempt(3, { result: result("A4-b2-all-three") }), attempt(1, { result: result("A2-b1-all-three") }), attempt(0, { status: "evaluating", result: null })]));
     expect(tiles.map((t) => [t.partLabel, t.band, t.bandLabel])).toEqual([
       ["Part 1.1", null, null],
       ["Part 1.2", null, null],
@@ -248,7 +248,7 @@ describe("exam part tiles", () => {
       ["Part 3", null, null],
     ]);
     expect(tiles[2].href).toBe("/#part-2"); // the Part 2 tasks on the task list, not one task
-    expect(tiles[0].href).toBeNull(); // no Part 1.1 task yet: no link, the tile says "Coming soon"
+    expect(tiles[0].href).toBeNull(); // Part 1.1 is not live yet: no link, the tile says "Coming soon"
   });
 });
 
@@ -280,9 +280,9 @@ describe("with the 7 real Part 2 tasks", () => {
   });
 
   it("the Part 2 tile shows the latest Part 2 band whichever task it came from, and opens the Part 2 task list", () => {
-    const tiles = partTiles(sorted([on(ALL[0].id, 3), { ...on(ALL[6].id, 1), result: result("A4-b2-all-three") }]), ALL);
+    const tiles = partTiles(sorted([on(ALL[0].id, 3), { ...on(ALL[6].id, 1), result: result("A4-b2-all-three") }]));
     expect(tiles[2]).toMatchObject({ partLabel: "Part 2", band: 4, href: "/#part-2" });
-    expect(partTiles([], ALL).map((t) => t.href)).toEqual([null, null, "/#part-2", null]);
+    expect(partTiles([]).map((t) => t.href)).toEqual([null, null, "/#part-2", null]);
   });
 });
 
@@ -298,15 +298,21 @@ describe("which dashboard", () => {
   });
 });
 
-describe("part tiles without a task: Coming soon behind a flag per part", () => {
-  const tiles = partTiles([], TASKS);
-  it("flags on: all four tiles; 1.1, 1.2 and 3 have no link", () => {
-    const shown = visiblePartTiles(tiles, FEATURE_FLAGS);
-    expect(shown.map((t) => [t.part, t.href])).toEqual([["1.1", null], ["1.2", null], ["2", "/#part-2"], ["3", null]]);
+describe("part tiles: one live switch per part", () => {
+  it("live: a link to the part's tasks (Start); not live: no link (Coming soon); always all four tiles", () => {
+    expect(partTiles([]).map((t) => [t.part, t.href])).toEqual([["1.1", null], ["1.2", null], ["2", "/#part-2"], ["3", null]]);
+    const allLive = { "1.1": true, "1.2": true, "2": true, "3": true };
+    expect(partTiles([], allLive).map((t) => t.href)).toEqual(["/#part-1-1", "/#part-1-2", "/#part-2", "/#part-3"]);
+    const noneLive = { "1.1": false, "1.2": false, "2": false, "3": false };
+    expect(partTiles([], noneLive).map((t) => [t.part, t.href])).toEqual([["1.1", null], ["1.2", null], ["2", null], ["3", null]]);
   });
-  it("each part's flag hides only its own tile; Part 2 is always there", () => {
-    expect(visiblePartTiles(tiles, allFlags(false)).map((t) => t.part)).toEqual(["2"]);
-    expect(visiblePartTiles(tiles, { ...FEATURE_FLAGS, examPart1_2: false }).map((t) => t.part)).toEqual(["1.1", "2", "3"]);
-    expect(visiblePartTiles(tiles, { ...FEATURE_FLAGS, examPart3: false }).map((t) => t.part)).toEqual(["1.1", "1.2", "2"]);
+
+  it("Part 2 is live, the others are not yet", () => {
+    expect(PART_LIVE).toEqual({ "1.1": false, "1.2": false, "2": true, "3": false });
+  });
+
+  it("every live part has at least one task, so its link lands on a section of the task list", () => {
+    const tasks = listSpeakingTasks();
+    for (const part of EXAM_PART_IDS.filter((p) => PART_LIVE[p])) expect(tasks.some((t) => examPartOf(t) === part)).toBe(true);
   });
 });

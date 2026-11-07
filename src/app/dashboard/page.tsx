@@ -16,7 +16,6 @@ import {
   practiseNext,
   progress,
   scoredAttempts,
-  visiblePartTiles,
   type TaskInfo,
 } from "@/features/dashboard/progress";
 import {
@@ -57,7 +56,7 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *
  * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
  *   small "Add exam date".
- * Part tiles with no task yet (1.1, 1.2, 3) say "Coming soon", each behind its own flag.
+ * Exam part tiles: all four, always. A live part (`PART_LIVE`) says Start / Practise; the others "Coming soon".
  * `?flags=off` previews the page with every flag off.
  */
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
@@ -79,7 +78,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const transcript = latestScored && userId ? ((await getAttemptViewForUser(userId, latestScored.id)).transcript?.text ?? "") : "";
   const fix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript, target });
   const next = practiseNext(attempts, tasks);
-  const tiles: ExamPartTileView[] = visiblePartTiles(partTiles(attempts, tasks), flags).map((t) => ({ ...t, part: t.partLabel }));
+  const tiles: ExamPartTileView[] = partTiles(attempts).map((t) => ({ ...t, part: t.partLabel }));
   const view = dashboardView(attempts);
   const recent = toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts);
 

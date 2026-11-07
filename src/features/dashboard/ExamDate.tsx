@@ -1,9 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import { Card, cx, styles } from "@/components/ds";
 import { formatDay, type ExamDateState } from "@/domain/exam-date";
+
+const subscribeNever = () => () => undefined;
+
+/**
+ * False in the server HTML and while React hydrates it; true once the page's scripts run.
+ *
+ * Why the controls wait for it (on a slow connection the HTML arrives long before the scripts):
+ * - a date picked before hydration stays in the field but never reaches React's state (the input is controlled, and
+ *   React does not read a value typed before it took over), so Save would say "Choose a date." under a visible date;
+ * - Save tapped before hydration is a plain form submit: the browser reloads /dashboard and the date is gone.
+ * So every control here renders disabled until the page is ready.
+ */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(subscribeNever, () => true, () => false);
+}
 
 /** The small text actions here (Edit, Add exam date, Skip, Cancel, Remove date): a 36 px tap area, like Save. */
 export const EXAM_TEXT_ACTION = cx(styles.SMALL_ACTION, "min-h-9 px-1");
@@ -33,11 +48,12 @@ export function ExamDate({
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
+  const ready = useHydrated();
   let body: React.ReactNode;
   if (state.kind === "countdown" && !editing) {
     body = (
       <Summary title={<span data-testid="exam-countdown">{state.label}</span>} detail={formatDay(state.date)} big>
-        <button type="button" onClick={() => setEditing(true)} aria-label="Edit exam date" className={EXAM_TEXT_ACTION}>
+        <button type="button" disabled={!ready} onClick={() => setEditing(true)} aria-label="Edit exam date" className={EXAM_TEXT_ACTION}>
           Edit
         </button>
       </Summary>
@@ -45,7 +61,7 @@ export function ExamDate({
   } else if (state.kind === "skipped" && !editing) {
     body = (
       <Summary title="Not set">
-        <button type="button" onClick={() => setEditing(true)} className={EXAM_TEXT_ACTION} data-testid="exam-add">
+        <button type="button" disabled={!ready} onClick={() => setEditing(true)} className={EXAM_TEXT_ACTION} data-testid="exam-add">
           Add exam date
         </button>
       </Summary>
@@ -114,6 +130,7 @@ function ExamDateForm({
   const [date, setDate] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ready = useHydrated();
 
   async function send(body: { date: string } | { skip: true } | { remove: true }) {
     setBusy(true);
@@ -158,27 +175,28 @@ function ExamDateForm({
           value={date}
           min={today}
           max={max}
+          disabled={!ready}
           onChange={(event) => setDate(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={cx("h-9 min-w-0 rounded-full border border-fg-subtle bg-card px-4 text-body text-fg", styles.FOCUS_RING)}
+          className={cx("h-9 min-w-0 rounded-full border border-fg-subtle bg-card px-4 text-body text-fg disabled:cursor-wait", styles.FOCUS_RING)}
         />
-        <button type="submit" disabled={busy} className={cx(styles.PILL_QUIET, "disabled:opacity-60")}>
+        <button type="submit" disabled={busy || !ready} className={cx(styles.PILL_QUIET, "disabled:opacity-60")}>
           Save
         </button>
         {onCancel ? (
-          <button type="button" onClick={onCancel} className={EXAM_TEXT_ACTION}>
+          <button type="button" disabled={!ready} onClick={onCancel} className={EXAM_TEXT_ACTION}>
             Cancel
           </button>
         ) : (
-          <button type="button" disabled={busy} onClick={() => void send({ skip: true })} className={EXAM_TEXT_ACTION}>
+          <button type="button" disabled={busy || !ready} onClick={() => void send({ skip: true })} className={EXAM_TEXT_ACTION}>
             Skip
           </button>
         )}
       </div>
       {canRemove && (
         // On its own line, away from Save, so it is not tapped by mistake.
-        <button type="button" disabled={busy} onClick={() => void send({ remove: true })} className={cx(EXAM_TEXT_ACTION, "-ml-1 mt-1")}>
+        <button type="button" disabled={busy || !ready} onClick={() => void send({ remove: true })} className={cx(EXAM_TEXT_ACTION, "-ml-1 mt-1")}>
           Remove date
         </button>
       )}

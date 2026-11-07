@@ -124,10 +124,8 @@ test("new student: the first visit, with the exam date question; saving a date s
 test("Skip: the question is not asked again, but a small 'Add exam date' opens the picker; Remove date goes back to it", async ({ page }) => {
   await page.goto("/dashboard");
   await expectTapHeight(page.getByRole("button", { name: "Skip" }));
-  await expect(async () => {
-    await page.getByRole("button", { name: "Skip" }).click(); // retried: a tap before hydration does nothing
-    await expect(page.getByLabel("When is your exam?")).toHaveCount(0, { timeout: 2_000 });
-  }).toPass();
+  await page.getByRole("button", { name: "Skip" }).click();
+  await expect(page.getByLabel("When is your exam?")).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Find your level" })).toBeVisible();
   await expect(page.getByLabel("When is your exam?")).toHaveCount(0);
@@ -168,12 +166,9 @@ test("Skip: the question is not asked again, but a small 'Add exam date' opens t
 test("a saved date that has passed: no countdown, 'When is your next exam?', and a new date can be saved", async ({ page }) => {
   await page.goto("/dashboard");
   const marker = dayFromToday(611); // a date no other test uses, to find this browser's user
-  // The first thing done on a freshly loaded page: retried, as typing before React has hydrated is lost.
-  await expect(async () => {
-    await page.getByLabel("When is your exam?").fill(marker);
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByTestId("exam-countdown")).toBeVisible({ timeout: 2_000 });
-  }).toPass();
+  await page.getByLabel("When is your exam?").fill(marker);
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByTestId("exam-countdown")).toBeVisible();
 
   // The app never saves a past date, so the exam is moved into the past in the database, as time would.
   const passed = dayFromToday(-2);
@@ -189,6 +184,42 @@ test("a saved date that has passed: no countdown, 'When is your next exam?', and
   await page.getByLabel("When is your next exam?").fill(dayFromToday(14));
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("exam-countdown")).toHaveText("in 14 days");
+});
+
+test("slow connection: the date picker and Save wait until the page is ready, and a date picked then is saved", async ({ page }) => {
+  await page.goto("/dashboard"); // compiled once, so only the delay below is slow
+  // Slow 3G, roughly: the HTML arrives, the page's scripts take 4 s more.
+  let delayed = 0;
+  await page.route("**/_next/static/chunks/**", async (route) => {
+    delayed += 1;
+    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    await route.continue();
+  });
+  const navigations: string[] = [];
+  page.on("request", (request) => {
+    if (request.isNavigationRequest()) navigations.push(request.url());
+  });
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+  // Before the scripts run: shown, but nothing can be picked or sent (no plain form submit, no value React misses).
+  const picker = page.getByLabel("When is your exam?");
+  await expect(picker).toBeVisible();
+  await expect(picker).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Skip" })).toBeDisabled();
+  expect(delayed).toBeGreaterThan(0);
+
+  // As soon as the page is ready the controls work, and the date picked is the date saved.
+  const exam = dayFromToday(57);
+  await expect(picker).toBeEnabled({ timeout: 30_000 });
+  await picker.fill(exam);
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByTestId("exam-countdown")).toHaveText("in 57 days");
+  await expect(page.getByText(shown(exam))).toBeVisible();
+  expect(navigations).toHaveLength(1); // only the first load: Save never reloaded the page
+  await page.unroute("**/_next/static/chunks/**");
+  await page.reload();
+  await expect(page.getByTestId("exam-countdown")).toHaveText("in 57 days"); // stored
 });
 
 test("attempts that are not scored: no first-visit screen; Recent attempts and 'Start practice', no level yet", async ({ page }) => {

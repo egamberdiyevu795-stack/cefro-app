@@ -134,8 +134,8 @@ Cut from `cefro-part-2-tasks-yfr6x5`, so it comes after it, merge commit. Fixes 
 - **Exam date:** after Skip, a small "Add exam date" in the countdown's place opens the picker; Edit has "Remove date"
   (`PUT /api/account/exam-date { remove: true }`: clears the date, back to "Add exam date"). Edit, Skip, Cancel, Add
   exam date and Remove date have a 36 px tap area. No new column: Remove reuses `exam_date_skipped_at`.
-- **Part tiles:** 1.1, 1.2 and 3 have no task, so no "Start" link: "Coming soon", behind new flags `examPart1_1`,
-  `examPart1_2`, `examPart3` (off: the tile is not rendered). Part 2 unchanged.
+- **Part tiles:** 1.1, 1.2 and 3 have no task, so no "Start" link: "Coming soon". Part 2 unchanged. (The first commit
+  used `examPart*` flags; the follow-up replaced them with `PART_LIVE`, below.)
 - **Attempts, none scored:** no first-visit screen any more; "Welcome back", the black "Start practice", and Recent
   attempts. Level and skills still wait for a scored answer.
 - **Practise next:** the retry goal is shown in full (no line clamp).
@@ -144,6 +144,10 @@ Cut from `cefro-part-2-tasks-yfr6x5`, so it comes after it, merge commit. Fixes 
   now shares its run id with the test workers (`E2E_RUN_ID`), so `e2e/db.ts` can set the two states the app refuses
   to create (a passed exam date, a failed attempt) in the run's throwaway database.
 - **Screenshots** retaken from the real app; two new states (`not-scored-yet`, `exam-skipped`).
+- **Follow-up commit:** the exam-date controls are disabled until the page is ready (a date picked on a slow
+  connection was lost; browser test with delayed scripts); parts are live or not (`PART_LIVE`: Part 2 live, the
+  others "Coming soon", all four tiles always shown; replaces the `examPart*` flags); `e2e/db.ts` refuses anything
+  but the run's own test database; the screenshot script is in `scripts/screenshots/dashboard.mjs` (mock providers only).
 
 ## Corrections to earlier notes
 

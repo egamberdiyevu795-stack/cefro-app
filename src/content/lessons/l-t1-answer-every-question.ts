@@ -73,7 +73,7 @@ export const lessonT1: Lesson = {
     },
   ],
   drill: {
-    intro: "Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.",
+    intro: "Record each prompt, listen back, then answer the check below it. Self-check only, no AI scoring.",
     topic: {
       intro: "Drill topic (made up): *\"Describe a place you like to visit.\"*",
       title: "Describe a place you like to visit.",

@@ -54,7 +54,7 @@ These examples use a different topic from your task, so you practise the skill, 
 
 ## 4. Speaking drill
 
-Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.
+Record each prompt, listen back, then answer the check below it. Self-check only, no AI scoring.
 
 Drill set version 2: the neutral drill from `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07. The same drill is shown for every retry task.
 

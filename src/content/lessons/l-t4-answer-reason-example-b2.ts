@@ -85,7 +85,7 @@ export const lessonT4B2: Lesson = {
     },
   ],
   drill: {
-    intro: "Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring.",
+    intro: "Record each prompt, listen back, then answer the check below it. Self-check only, no AI scoring.",
     topic: {
       intro: "Drill topic (made up): *\"Describe a book or film you enjoyed.\"*",
       title: "Describe a book or film you enjoyed.",

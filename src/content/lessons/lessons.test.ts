@@ -141,6 +141,11 @@ describe("the lessons work for every Part 2 task (approved rewrites, 2026-11-07)
     }
   });
 
+  it.each(shownLessons().map((l) => [l.slug, l] as const))("%s: no shown text mentions a checklist (none is shown)", (_slug, lesson) => {
+    for (const { text } of shownTexts(lesson)) expect(text).not.toMatch(/checklist/i);
+    expect(lesson.drill.intro).toBe("Record each prompt, listen back, then answer the check below it. Self-check only, no AI scoring.");
+  });
+
   it("the rewritten lines are in the app, the old ones are gone", () => {
     const all = ALL_LESSONS.flatMap((l) => texts(l)).join("\n");
     for (const line of [

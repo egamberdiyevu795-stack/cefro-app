@@ -84,7 +84,7 @@ export interface Lesson {
   };
   examples: LessonExample[];
   drill: {
-    /** "Record each prompt, listen back, then tick the checklist. Self-check only, no AI scoring." */
+    /** "Record each prompt, listen back, then answer the check below it. Self-check only, no AI scoring." */
     intro: string;
     /**
      * The drill's own made-up topic (docs/lessons/drill-drafts.md, approved): never one of the Part 2 tasks, so the same

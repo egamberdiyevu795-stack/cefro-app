@@ -1,107 +1,120 @@
 # Teacher view (v1): plan
 
-Status: **plan, not approved.** No code yet. The owner's decisions (2026-11-07) are taken as given; the rest is a
-proposal. **Not in v1:** audio playback, messages, editing scores, mocks or deadlines (v2), public teacher sign-up
-(teachers are approved by the owner by hand). Teachers see first names only, never emails.
+Status: **plan, not approved.** No code yet. Built on `claude/profile-settings` (the Account page at `/profile`, Delete
+my account). Decisions by the owner and Asadbek (2026-11-07) are taken as given; the rest is a proposal.
+**Not in v1:** audio playback, messages, editing scores, mocks or deadlines (v2), public teacher sign-up (teachers are
+approved by the owner by hand). Teachers see the name the student chose for them, never emails.
+
+**Mock mode only until launch.** Real teacher pages and APIs stay off (a release switch, 404) until parent consent for
+under-18s is built (section 7). Until then only `?mock=1` works.
 
 ## 1. User flows
 
-**Teacher:** owner marks an existing account as teacher → teacher opens Classes → Create class (name) → gets the code
-(e.g. `K7M4QD`) and gives it to the class → students appear in the overview after they share → teacher opens a
-student → opens an attempt → Agree or Choose level.
+**Teacher:** owner marks the account as teacher → Create class → code (e.g. `K7M4QD`) → students appear once they
+share → student → attempt → Agree or Choose level. Also: close class, reset code (old code stops, members stay),
+remove a student.
 
-**Student (signed in; a browser with no account is asked to create one first):** Profile → Join a class → enters the
-code → sees the share screen (who, what, how to stop) → taps **Share with this teacher**. Nothing is stored before
-that tap; "Not now" or closing the page shares nothing. Later: Profile → Leave class → confirm → sharing stops at once.
+**Student (signed in; no account → create one first):** Account page → Join a class → code → Share screen (confirm
+or edit **Name your teacher sees**) → **Share with this teacher**. Nothing is stored before that tap; only attempts
+made **after** it are shared. Several classes allowed, each shared separately. Leave: Account page → Leave class →
+confirm. Students never see the teacher's rating in v1.
 
-## 2. Screens (phone first, design system, exactly one black button each)
+## 2. Screens (phone first, design system, at most one black button)
 
 | Screen | Content | Black button |
 | --- | --- | --- |
 | T1 Classes | One row per class: name, students, last activity. Empty: "No classes yet". | Create class |
-| T2 Create class | Name field; then the code, large, with "Students enter this in Profile". | Create class, then Copy code |
-| T3 Class overview | Join code (quiet Copy). **Most common problems**: top 3 biggest fixes, counted once per student from their latest scored attempt ("4 of 9 students"), each with a quiet link to its approved lesson (read-only preview; none if no approved lesson). **Students**: first name, current level, attempts, last practice (dd.mm.yy), current biggest fix, retry goal (Goal met / Not yet / —). Rows open T4. | Copy join code |
-| T4 Student | First name, current level, skills (as on the dashboard), attempts newest first (as History). | Open latest attempt |
-| T5 Attempt (read-only) | The result page's components: band, questions, biggest fix (quote, Try instead, goal), skills, transcript. No player, no Retry, no Learn how. **Your view** card: "CEFRO: Part 2 · Band 3 · Lower B2". After a choice: "You: Agree" or "You: Band 4 · Higher B2", quiet Change. | Agree (quiet: Choose level → the part's bands 0–5 with labels → Save) |
-| S1 Join a class | Code field (6 characters, not case-sensitive). Wrong code: "We can't find a class with this code." | Continue |
-| S2 Share | "Ms Karimova · Group B". **Will see:** your first name, your levels, every Part 2 attempt (past and future) with transcript, quotes and feedback. **Won't see:** your email, your recordings, your exam date. "Leave any time in Profile; they then lose access to everything." Quiet Not now. | Share with this teacher |
-| S3 Profile | New page (Account menu → Profile). Class card per class: teacher, class, "Sharing since 07.11.26", quiet Leave class → confirm card. | Leave class (on the confirm card only); otherwise Join a class |
-
-The student never sees the teacher's rating in v1 (question 7).
+| T2 Create class | Name field; then the code, large: "Students enter this on their Account page". | Create class, then Copy code |
+| T3 Class overview | Join code (quiet Reset code). **Most common problems**: top 3 biggest fixes, once per student from their latest shared scored attempt ("4 of 9 students"), each with a quiet link to its approved lesson (read-only; none if not approved). **Students**: name, current level, attempts, last practice (dd.mm.yy), current biggest fix, retry goal (Goal met / Not yet / —). Quiet Close class at the bottom (confirm card). | Copy join code |
+| T4 Student | Name, current level, skills, shared attempts newest first. Quiet Remove from class (confirm card). | Open latest attempt |
+| T5 Attempt (read-only) | The result page's components: band, questions, biggest fix (quote, Try instead, goal), skills, transcript. No player, Retry or Learn how. A retry of an attempt from before joining shows no comparison. **Your view**: "CEFRO: Part 2 · Band 3 · Lower B2", then **Agree** and **Choose level**, both grey, same size, side by side, so the design doesn't push agreement. Choose level lists the part's bands with our labels ("Band 4 · Higher B2"). After: "You: Agree" or "You: Higher B2 (Band 4)", quiet Change. | **None** |
+| S1 Join a class (Account page) | Code field (6 characters, not case-sensitive). Wrong code: "We can't find a class with this code." | Continue |
+| S2 Share | "Ms Karimova · Group B". **Name your teacher sees** (prefilled with the first word of the account name, editable, this class only). **Will see:** that name, your level, and every Part 2 attempt you make from now on, with transcript, quotes and feedback. **Won't see:** earlier attempts, email, recordings, exam date. **If you leave:** "Your teacher loses access to everything. We keep only their level and our band for each rated attempt, with no name or answer, to check our scoring." Quiet Not now. | Share with this teacher |
+| S3 My classes (Account page) | Per class: teacher, class, name shown, "Sharing since 07.11.26", quiet Leave class → confirm card. Closed or removed: "You're no longer in this class." | Leave class (confirm card only); Join a class is grey, the Account page keeps its own black button |
 
 ## 3. Data model (one additive migration, `0006_teachers`)
 
-- `users.role`: `student` (default) or `teacher`. Set only by the owner (a script), never by any API.
-- `classes`: `id`, `teacher_user_id`, `name`, `join_code` (unique; 6 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ`,
-  no 0/O/1/I/L), `created_at`, `closed_at`.
-- `class_members`: `id`, `class_id`, `student_user_id`, `shared_at`, `share_text_version`, `left_at` (null = sharing).
-  At most one open row per class and student. Rejoining makes a new row after a new S2 tap.
-- `teacher_ratings`: `id`, `attempt_id`, `teacher_user_id`, `agrees` (bool), `teacher_band` (null when agrees),
-  `app_band`, `evaluator_version`, `rubric_version` (snapshots for the later comparison), `created_at`, `updated_at`.
-  Unique per attempt and teacher. **Never read by the scorer, result page, dashboard or History.**
+- `users.role`: `student` (default) or `teacher`. Set only by an owner script, never by any API.
+- `classes`: `id`, `teacher_user_id`, `name`, `join_code` (unique; 6 characters from
+  `23456789ABCDEFGHJKMNPQRSTUVWXYZ`), `created_at`, `closed_at`.
+- `class_members`: `id`, `class_id`, `student_user_id`, `shown_name`, `shared_at`, `share_text_version`, `ended_at`,
+  `ended_by` (`student` / `teacher` / `class_closed`). One open row per class and student; rejoining is a new row, a
+  new S2 tap and a new `shared_at`.
+- `teacher_ratings`: `id`, `attempt_id`, `teacher_user_id`, `class_id`, `agrees`, `teacher_band` (0–5, null when
+  agrees), `app_band`, `evaluator_version`, `rubric_version`. Unique per attempt and teacher. Shown with the part's
+  band labels. **Never read by the scorer, result page, dashboard or History.**
+- `rating_pairs` (anonymous): `teacher_band`, `app_band`, `evaluator_version`, `rubric_version`, `month`. No ids of
+  any kind, no transcript, no exact time, so a pair can't be linked back to a student, attempt or teacher.
 
 ## 4. Access rules (server only)
 
-One function decides everything: `teacherCanSee(teacherId, studentId)` = caller's role is `teacher` **and** an open
-`class_members` row joins a class owned by the caller to that student. It runs on **every** teacher request (pages
-and API, dynamic, no cache). Anything else, including a left student, an unknown id and another teacher's student,
-gets the same 404 as a stranger's result today.
+One check decides: `teacherCanSee(teacherId, attemptId)` = the caller's role is `teacher`, an open `class_members`
+row joins one of the caller's open classes to the attempt's owner, and the attempt was **created after `shared_at`**.
+It runs on every teacher page and API request (dynamic, no cache). Anything else is the same 404 as a stranger's
+result.
 
-- Teacher reads: their classes; for visible students: first name (first word of `users.name`, else "Student"),
-  scored attempts, transcripts, evaluations, retry outcomes. Never: email, recordings (recording route stays owner
-  only), exam date, analytics, account data.
-- Teacher writes: their own classes and their own ratings on attempts they can see. Nothing of the student's.
-- Student reads: their own memberships (teacher's display name, class name). Never the class list or other students.
-- Join: rate-limited (10 wrong codes per hour per account) so codes can't be guessed.
+- Teacher reads: `shown_name`, shared attempts with transcript, evaluation and retry outcome, and levels computed
+  from shared attempts only. Never: email, account name, recordings (that route stays owner only), exam date,
+  earlier attempts, analytics.
+- Teacher writes: own classes, own ratings on attempts they can see, ending a membership in their own class.
+- Student reads: own memberships (teacher's display name, class name). Never other students.
+- Join: 10 wrong codes per hour per account, so codes can't be guessed.
 
-## 5. Leave class and account deletion
+## 5. Leave, remove, close, delete
 
-- **Leave class:** sets `left_at`; the next teacher request is a 404. The student vanishes from the overview and the
-  common-problems counts. The teacher's ratings on that student's attempts are hidden from the teacher (kept for
-  calibration only, owner access, question 2).
-- **Student deletes account** (account deletion doesn't exist yet; it must before launch): memberships and every
-  rating on their attempts are deleted with their attempts.
-- **Teacher account removed or class closed:** classes closed, all memberships ended; the student's Profile says
-  "This class has closed." Ratings keep only the band numbers and versions, no teacher id.
+- **Leave class, removed by the teacher, class closed:** in one transaction, `ended_at` is set, each of that
+  teacher's ratings on that student's attempts becomes an anonymous `rating_pair`, and the rating row is deleted. The
+  next teacher request is a 404; the student leaves the overview and the counts.
+- **Student deletes their account** (`delete-account.ts`, password + DELETE): also deletes every `class_members` row
+  and every `teacher_ratings` row on their attempts, with no pair made. Pairs made at an earlier Leave hold nothing
+  that links them to the student, so they can't be found or deleted (question 2).
+- **Teacher deletes their account:** classes closed (students see "You're no longer in this class"), the teacher's
+  ratings, classes and memberships deleted. Students' attempts are untouched.
+- Add the new tables to `delete-account.ts` and its table-by-table test.
 
 ## 6. Mock mode (`?mock=1`)
 
-A demo teacher ("Demo teacher") with one demo class ("Demo class", code `DEMO42`) and six made-up students (first names
-only), built like the demo student: hand-written answers through the real evaluation with the mock evaluator, real
-types, no database, cookies or identity read. Agree / Choose level change the page only. The student side: Profile
-→ Join → `DEMO42` → S2; Share changes the page only. `DemoLabel` on every screen; every link keeps `?mock=1`. Works
-on a Vercel Preview with no variables.
+A demo teacher ("Demo teacher") with one demo class ("Demo class", code `DEMO42`) and six made-up students, built like
+the demo student: hand-written answers through the real evaluation with the mock evaluator, no database, cookies or
+identity. Agree, Choose level, Reset code, Remove and Close change the page only. Student side: Account page → Join →
+`DEMO42` → S2 → Share changes the page only. `DemoLabel` on every screen; every link keeps `?mock=1`; works on a
+Vercel Preview with no variables.
 
-## 7. Under-18 risks and what the consent work must add before launch
+## 7. Under-18s (aligned with `docs/privacy-todo.md`)
 
-Many exam takers are school students under 18. Risks: an adult sees a minor's data; Part 2 answers are personal stories
-(family, health, school problems) and transcripts carry them; a first name plus a class can identify a child; a minor's
-own tap may not count as valid consent; a teacher account could be misused.
+Decided: under-18s join only with a parent's consent; age limit 18, to be confirmed by the legal check. Risks: an
+adult reads a minor's stories (family, health, school); a name plus a class identifies a child; a minor's tap is not
+consent.
 
-The consent work must add, **before any real class opens:** an age question at sign-up; for under-18s, parental consent
-recorded before S2 can be used (or joining blocked); a privacy notice that names teacher sharing; the S2 text versioned
-and stored with each share; teacher terms (use only for teaching, no copies, no sharing) accepted on approval; account
-deletion; a retention rule for ratings; a check with a lawyer on Uzbekistan's personal-data law (including where the
-data is stored).
+Before real teacher pages go on, the consent work must add (privacy-todo items in brackets):
+1. Age, asked once, not freely editable (Profile 1); S2 refuses an under-18 account without consent.
+2. Guardian name, email and consent status, set by the guardian, never by the student (Profile 2); the consent
+   notice names **teacher sharing** and the anonymous pairs.
+3. Email sending and verification for the guardian link (Profile 3).
+4. First name only for under-18s (Profile 4): `shown_name` must be a first name.
+5. Withdrawn consent = full deletion through `delete-account.ts`, now including class links and ratings
+   (Settings 1); a guardian's deletion request without the password (Settings 2).
+6. Recording before an age is known; a privacy notice naming the scoring providers; Uzbekistan's Law on Personal
+   Data, its age of consent and its rule on storing data in Uzbekistan (Gaps).
+7. Teacher terms (teaching use only, no copies) accepted at approval; `share_text_version` stored with each share.
 
 ## 8. Tests
 
-- Unit: `teacherCanSee` (not a teacher, other teacher, left, rejoined, closed class); join codes; common-problems
-  counts and approved-only lesson links; first-name rule.
-- API (as `cross-user.test.ts`): teacher, other teacher, student, stranger and anonymous browser on every teacher
-  endpoint; no `@` in any teacher response; recordings refuse the teacher; 404 right after Leave; nothing stored
-  before the S2 tap; rate limit; no endpoint can set a role.
-- Ratings never change the result, dashboard or History. Migration additive. Deletion removes memberships and ratings.
-- Mock pages: no database, one black button, no text under 11 px, only `?mock=1` links.
-- Browser: create class → join and share → overview, student, attempt → Agree → Leave → teacher gets 404; 390 px.
+- Unit: `teacherCanSee` (not a teacher, other teacher, ended, rejoined, closed, attempt before `shared_at`); codes;
+  common-problems counts; approved-only lesson links; band labels.
+- API (as `cross-user.test.ts`), every endpoint × teacher, other teacher, student, stranger, anonymous: no `@` or
+  account name in responses; recordings refuse teachers; 404 right after Leave / Remove / Close; nothing stored before
+  the S2 tap; rate limit; no endpoint sets a role; real pages 404 while the switch is off.
+- Leave / Remove / Close: one id-free pair per rating, rating gone. Deletion (both roles) in the table-by-table test.
+  Ratings never change the result, dashboard or History.
+- Mock: T5 has **no** black button and two equal grey ones; one black elsewhere; no text under 11 px; `?mock=1` links
+  only. Browser: create → join → share → attempt → Agree → Leave, at 390 px.
 
-## 9. Open questions
+## 9. New questions
 
-1. Share **past** attempts too (proposed), or only attempts after joining?
-2. After Leave: keep the teacher's ratings for calibration (owner only), or delete them?
-3. Can a teacher remove a student, reset a code or close a class in v1? (Proposed: close class and reset code only.)
-4. Under-18: block joining until parental consent is recorded, or allow with a notice? Which age?
-5. Teacher's level: the part's band 0–5 (proposed, comparable to ours) or a CEFR level?
-6. First name: first word of the display name (proposed), or ask the student to confirm it on S2?
-7. Should the student ever see the teacher's rating?
-8. One student in several classes at once (proposed yes, each shared separately)?
+1. Pairs: also keep `rubric_version` and the month (proposed; the band means nothing without its part)?
+2. Pairs made at an earlier Leave survive account deletion because nothing links them to the student. Is that
+   acceptable, or should the Share screen say so too?
+3. Where does a teacher find Classes: a section on their Account page (proposed, keeps 5 tabs) or a sixth tab?
+4. After Remove or Close, is the student only told on the Account page (proposed), or also by email once email
+   sending exists?

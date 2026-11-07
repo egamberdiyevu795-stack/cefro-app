@@ -58,7 +58,7 @@ const SENTINEL_TASK: SpeakingTask = {
   question: "Sentinel question?",
   prompts: ["Sentinel question one", "Sentinel question two", "Sentinel question three"],
   // A picture, so that the template covers the picture line of <task>.
-  picture: { src: "/sentinel.svg", alt: "Sentinel picture.", width: 1, height: 1, source: "Sentinel", licence: "CC0 1.0", licenceUrl: "https://example.invalid" },
+  picture: { src: "/sentinel.svg", alt: "Sentinel picture.", width: 1, height: 1, source: "Sentinel", licence: "© 2026 CEFRO. All rights reserved." },
   instructions: [],
   preparationSeconds: 60,
   speakingSeconds: 120,

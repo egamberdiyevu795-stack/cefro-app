@@ -1,7 +1,10 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { bandLabel, scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
+import { GeminiEvaluationModel } from "@/server/evaluation/gemini-evaluation-model";
 import { MockEvaluationModel } from "@/server/evaluation/mock-evaluation-model";
 import { buildMultilevelEvaluationPrompt } from "@/server/evaluation/prompts/multilevel-evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
@@ -93,5 +96,59 @@ describe("Part 2 anchor answers for the six newer tasks (not yet live-tested)", 
     const task = getSpeakingTask(a.taskId)!;
     for (const q of task.prompts) expect(prompt.user).toContain(q);
     expect(prompt.user.split("<transcript>")[1]).toContain(a.transcript.slice(0, 40));
+  });
+});
+
+describe("the new anchors stay test-only until the live run", () => {
+  const repo = path.resolve(__dirname, "../..");
+  const files = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+
+  it("no app code and no live evaluation run imports them", () => {
+    const importers = [...files(path.join(repo, "src")), ...files(path.join(repo, "test", "live"))]
+      .filter((f) => /\.(ts|tsx|mjs|js)$/.test(f))
+      .filter((f) => fs.readFileSync(f, "utf8").includes("part2-new-task-anchors"));
+    expect(importers).toEqual([]);
+  });
+
+  it.each(NEW_TASK_IDS)("%s: the request sent to Gemini contains none of the anchors (another student's answer is scored)", async (taskId) => {
+    const task = getSpeakingTask(taskId)!;
+    const transcript = "This is a different student's answer, used only to build the request.";
+    const bodies: string[] = [];
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      bodies.push(String(init.body));
+      throw new Error("stop after capturing the request");
+    });
+    const model = new GeminiEvaluationModel({
+      apiKey: "test-key-not-real-0123456789",
+      model: "gemini-3.8-flash",
+      maxTokens: 24000,
+      structuredOutput: "schema",
+      timeoutMs: 5_000,
+      maxRetries: 0,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    await evaluateSpeaking(
+      {
+        task,
+        rubric: getSpeakingRubric(task),
+        transcript,
+        metrics: computeSpeechMetrics(transcript, 90_000, task.speakingSeconds),
+        audio: { storageProvider: "local", storageKey: "k", mimeType: "audio/webm", durationMs: 90_000 },
+        previousAttempt: null,
+      },
+      model,
+    ).catch(() => undefined);
+
+    expect(bodies.length).toBeGreaterThan(0); // the request was really built
+    for (const body of bodies) {
+      expect(body).toContain("This is a different student");
+      for (const a of PART2_NEW_TASK_ANCHORS) {
+        expect(body).not.toContain(a.transcript.slice(0, 60));
+        expect(body).not.toContain(a.id);
+        expect(body).not.toContain(a.why.slice(0, 40));
+      }
+      expect(body).not.toContain(NOT_YET_LIVE_TESTED);
+    }
   });
 });

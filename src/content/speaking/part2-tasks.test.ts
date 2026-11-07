@@ -151,6 +151,16 @@ describe.each(tasks.map((t) => [t.id, t] as const))("%s", (_id, task) => {
   });
 });
 
+describe("no CC0 link anywhere", () => {
+  it("no task has a licenceUrl, and no task file, picture or the pictures' README links to Creative Commons", () => {
+    for (const task of tasks) expect(task.picture?.licenceUrl, task.id).toBeUndefined();
+    const dirs = [path.join(process.cwd(), "src", "content", "speaking"), path.join(process.cwd(), "public", "tasks")];
+    const files = dirs.flatMap((d) => fs.readdirSync(d, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).map((e) => path.join(e.parentPath, e.name)));
+    const offenders = files.filter((f) => !f.endsWith(".test.ts") && /creativecommons\.org/i.test(fs.readFileSync(f, "utf8")));
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("snapshots", () => {
   afterEach(() => setDbForTesting(undefined));
 

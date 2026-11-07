@@ -245,6 +245,12 @@ email, sign-up date and exam date columns already exist, and deletion only remov
   also needs the account's password; "Test your microphone" moved to the practice brief as the grey "Check
   microphone" above Start preparation. The `settings` feature flag is removed; the (site) header keeps its Account menu.
   Still no migration.
+- **Follow-up 2:** the per-IP sign-in / sign-up limits now read the client address only from Vercel's `x-real-ip` on
+  Vercel (a visitor's own `x-forwarded-for` is ignored); tests may set `x-forwarded-for` only in a test run (vitest, or
+  the browser tests' server with `CEFRO_TEST_CLIENT_IP=1`, never a production build or Vercel); off Vercel outside tests
+  every caller counts as one client (`src/server/auth/auth-limits.ts`, test `src/server/auth/client-ip.test.ts`).
+  After "Delete my account" the browser is signed out and lands on `/?deleted=1`: "Your account and all your data were
+  deleted." No new environment variable is needed on Vercel.
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

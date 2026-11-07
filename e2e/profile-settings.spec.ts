@@ -292,7 +292,11 @@ test.describe("real account", () => {
     expect(fs.existsSync(file)).toBe(true);
     await page.getByLabel("Your password").fill("another good password");
     await page.getByRole("button", { name: "Delete everything" }).click();
-    await expect(page.getByTestId("delete-done")).toHaveText("Your account and everything in it were deleted.");
+    // Signed out, on the home page, with the message.
+    await expect(page).toHaveURL(/\/\?deleted=1$/);
+    await expect(page.getByTestId("account-deleted")).toHaveText("Your account and all your data were deleted.");
+    await expect(page.getByTestId("account-status")).toHaveAttribute("data-state", "anonymous");
+    expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
 
     expect(fs.existsSync(file)).toBe(false);
     expect(await querySql("SELECT id FROM users WHERE email = ?", [email])).toEqual([]);

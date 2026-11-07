@@ -634,7 +634,9 @@ notifications or "Coming soon" items. Top to bottom:
    then Sign out (grey).
 4. **Delete my account**, last, in its own card: grey; opens the list of exactly what is deleted, "Your password" and
    "Type DELETE to confirm"; "Delete everything" stays disabled until both are filled and the field says DELETE. The
-   server checks the password (wrong ones count like failed sign-ins) before deleting anything.
+   server checks the password (wrong ones count like failed sign-ins) before deleting anything. Afterwards the browser
+   is signed out and lands on the home page (`/?deleted=1`) with "Your account and all your data were deleted."
+   (`role="status"`; never shown in mock mode).
 
 Without an account: "Practising without an account" (no name or email), the level, attempts and exam date, then grey
 Sign in / Create account; no password, sign-out or delete sections.

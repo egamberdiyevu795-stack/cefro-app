@@ -1,23 +1,25 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { DELETED_ITEMS, DELETE_CONFIRMATION, isDeleteConfirmed } from "@/domain/account";
 import { FIELD, FIELD_LABEL, QUIET_BUTTON, TEXT_BUTTON, errorMessage } from "@/features/account/fields";
+import { ACCOUNT_DELETED_HREF } from "./deleted";
 
-export const ACCOUNT_DELETED = "Your account and everything in it were deleted.";
 export const DEMO_NOT_DELETED = "Demo mode. Nothing was deleted.";
 
 /**
  * Delete my account, in two steps on the page. First a grey "Delete my account"; it opens the list of exactly what
  * will be deleted (`DELETED_ITEMS`), the account's password and a field where the student types DELETE. "Delete
- * everything" stays disabled until both are filled and the field says DELETE (and until the page is ready). Then `POST /api/account/delete`, which deletes it all,
- * recordings included, and signs this browser out. Grey, never black: a destructive action is never the page's main
+ * everything" stays disabled until both are filled and the field says DELETE (and until the page is ready). Then
+ * `POST /api/account/delete`, which deletes it all, recordings included, and signs this browser out; the browser then
+ * goes to the home page with "Your account and all your data were deleted." Grey, never black: a destructive action is never the page's main
  * one. `demo`: both steps are shown, nothing is sent, and the page says nothing was deleted.
  */
 export function DeleteAccount({ demo = false }: { demo?: boolean }) {
   const id = useId();
+  const router = useRouter();
   const ready = useHydrated();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
@@ -25,19 +27,6 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
-
-  if (done === ACCOUNT_DELETED) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p role="status" className="text-body font-medium text-fg" data-testid="delete-done">
-          {done}
-        </p>
-        <Link href="/" className={TEXT_BUTTON}>
-          Go to CEFRO
-        </Link>
-      </div>
-    );
-  }
 
   if (!open) {
     return (
@@ -68,6 +57,7 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
       return setDone(DEMO_NOT_DELETED);
     }
     setBusy(true);
+    let leaving = false;
     try {
       const response = await fetch("/api/account/delete", {
         method: "POST",
@@ -76,11 +66,15 @@ export function DeleteAccount({ demo = false }: { demo?: boolean }) {
         body: JSON.stringify({ password, confirm: typed }),
       });
       if (!response.ok) return setError(await errorMessage(response));
-      setDone(ACCOUNT_DELETED);
+      // Signed out already (the server cleared the session): the home page, with "Your account and all your data
+      // were deleted." Refreshed, so nothing on screen still shows the deleted account.
+      leaving = true; // keep the button disabled while the home page loads
+      router.replace(ACCOUNT_DELETED_HREF);
+      router.refresh();
     } catch {
       setError("That didn't work. Check your connection and try again.");
     } finally {
-      setBusy(false);
+      if (!leaving) setBusy(false);
     }
   }
 

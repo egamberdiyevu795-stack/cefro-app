@@ -210,6 +210,10 @@ too, unchanged. Contains:
   `view-model.test.ts` and `e2e/mock-mode.spec.ts`; `mock-answer-rules.test.ts`.
 - `docs/lessons/drill-drafts.md`: neutral drill sets for the three lessons, **draft, not shown**.
 
+## Duplicate: `claude/lessons-adi79w` (never merge)
+
+claude/lessons-adi79w: duplicate of claude/lessons, never merge.
+
 ## Preview alias: `claude/mock` (never merge)
 
 `claude/mock` is **only a short alias** for a Vercel Preview of `claude/mock-mode-vercel-preview-8uzlim`, created at

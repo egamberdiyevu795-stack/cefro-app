@@ -1,17 +1,24 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useHydrated } from "@/components/ds/useHydrated";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 
 /**
  * Sign-in / registration form. It only talks to the auth endpoints; the server decides everything (the browser never
  * sends or chooses a user id), and the page is reloaded afterwards so every part of it sees the new state.
+ *
+ * The submit button is disabled until the page is ready (`useHydrated`). Before the scripts ran, a tap (or Enter)
+ * submitted the form the browser's way: a GET to the same page with the email and password in the address (and so in
+ * the browser history and server logs), the page reloaded and nothing was signed in. With the only submit button
+ * disabled, Enter submits nothing either. The fields stay usable: they are read when the form is sent.
  */
 export function AuthForm({ mode, next }: { mode: "login" | "register"; next: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isRegister = mode === "register";
+  const ready = useHydrated();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,7 +84,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "register"; next: str
         )}
       </div>
       {error && <Alert tone="danger" title={error} />}
-      <Button type="submit" size="lg" disabled={busy} className="w-full">
+      <Button type="submit" size="lg" disabled={busy || !ready} className="w-full">
         {busy ? "One moment…" : isRegister ? "Create account" : "Sign in"}
       </Button>
     </form>

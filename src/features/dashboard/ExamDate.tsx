@@ -1,24 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState, useSyncExternalStore } from "react";
+import { useId, useState } from "react";
 import { Card, cx, styles } from "@/components/ds";
-import { formatDay, type ExamDateState } from "@/domain/exam-date";
-
-const subscribeNever = () => () => undefined;
-
-/**
- * False in the server HTML and while React hydrates it; true once the page's scripts run.
- *
- * Why the controls wait for it (on a slow connection the HTML arrives long before the scripts):
- * - a date picked before hydration stays in the field but never reaches React's state (the input is controlled, and
- *   React does not read a value typed before it took over), so Save would say "Choose a date." under a visible date;
- * - Save tapped before hydration is a plain form submit: the browser reloads /dashboard and the date is gone.
- * So every control here renders disabled until the page is ready.
- */
-export function useHydrated(): boolean {
-  return useSyncExternalStore(subscribeNever, () => true, () => false);
-}
+import { useHydrated } from "@/components/ds/useHydrated";
+import { examDateProblem, examDateState, formatDay, type ExamDateState } from "@/domain/exam-date";
 
 /** The small text actions here (Edit, Add exam date, Skip, Cancel, Remove date): a 36 px tap area, like Save. */
 export const EXAM_TEXT_ACTION = cx(styles.SMALL_ACTION, "min-h-9 px-1");
@@ -31,12 +17,19 @@ export const EXAM_TEXT_ACTION = cx(styles.SMALL_ACTION, "min-h-9 px-1");
  * - "skipped" (Skip, or Remove date): "Your exam · Not set" and a small "Add exam date" that opens the picker.
  * Saved per user (`PUT /api/account/exam-date`), then the page re-renders from the server.
  * Save is the quiet pill: the screen's one black button is elsewhere (Practise next / Start practice).
+ *
+ * Every control is disabled until the page is ready (`useHydrated`): on a slow connection a date picked before then
+ * never reached React's state, and Save tapped then was a plain form submit that reloaded the page and lost the date.
+ *
+ * `demo` (mock mode): nothing is sent. Save, Skip and Remove date change only what this page shows, and a reload
+ * brings the demo date back.
  */
 export function ExamDate({
-  state,
+  state: given,
   today,
   max,
   variant,
+  demo = false,
   className,
 }: {
   state: ExamDateState;
@@ -45,9 +38,14 @@ export function ExamDate({
   max: string;
   /** "card": its own card (returning dashboard). "inline": a section inside the welcome card. */
   variant: "card" | "inline";
+  /** Mock mode: nothing is sent; changes are kept on this page only. */
+  demo?: boolean;
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
+  // Mock mode: what the student saved on this page, in place of the server's state.
+  const [demoState, setDemoState] = useState<ExamDateState | null>(null);
+  const state = (demo && demoState) || given;
   const ready = useHydrated();
   let body: React.ReactNode;
   if (state.kind === "countdown" && !editing) {
@@ -78,6 +76,14 @@ export function ExamDate({
         onCancel={state.kind === "countdown" || state.kind === "skipped" ? () => setEditing(false) : null}
         canRemove={state.kind === "countdown"}
         onSaved={() => setEditing(false)}
+        onDemoSave={
+          demo
+            ? (body) =>
+                setDemoState(
+                  "date" in body ? examDateState({ examDate: body.date, examDateSkippedAt: null }, new Date()) : { kind: "skipped" },
+                )
+            : null
+        }
       />
     );
   }
@@ -104,6 +110,8 @@ function Summary({ title, detail, big = false, children }: { title: React.ReactN
   );
 }
 
+type SaveBody = { date: string } | { skip: true } | { remove: true };
+
 function ExamDateForm({
   question,
   note,
@@ -113,6 +121,7 @@ function ExamDateForm({
   onCancel,
   canRemove,
   onSaved,
+  onDemoSave,
 }: {
   question: string;
   note: string | null;
@@ -124,6 +133,8 @@ function ExamDateForm({
   /** Edit of a saved date: "Remove date" clears it. */
   canRemove: boolean;
   onSaved: () => void;
+  /** Mock mode: called instead of sending anything. */
+  onDemoSave: ((body: SaveBody) => void) | null;
 }) {
   const router = useRouter();
   const id = useId();
@@ -132,9 +143,19 @@ function ExamDateForm({
   const [error, setError] = useState<string | null>(null);
   const ready = useHydrated();
 
-  async function send(body: { date: string } | { skip: true } | { remove: true }) {
-    setBusy(true);
+  async function send(body: SaveBody) {
     setError(null);
+    if (onDemoSave) {
+      // The same rule the server applies (today up to two years ahead), without asking it.
+      const problem = "date" in body ? examDateProblem(body.date, new Date()) : null;
+      if (problem) setError(problem);
+      else {
+        onDemoSave(body);
+        onSaved();
+      }
+      return;
+    }
+    setBusy(true);
     try {
       const response = await fetch("/api/account/exam-date", {
         method: "PUT",

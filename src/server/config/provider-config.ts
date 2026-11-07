@@ -25,11 +25,19 @@ export function describeProviderMode(env: ServerEnv): ProviderMode {
   return { transcription: env.TRANSCRIPTION_PROVIDER, evaluation: env.EVALUATION_PROVIDER, mode: mock ? "development_mock" : "real" };
 }
 
-/** The provider choices that must be explicit on Vercel, with what they can be set to. */
+/**
+ * The provider choices that must be explicit on Vercel, with the values each accepts there (`mock` is refused in
+ * production, so it is not offered). Each variable names its own values: speech-to-text is OpenAI or Gemini, scoring
+ * is Gemini or Anthropic.
+ */
 export const EXPLICIT_ON_VERCEL = {
-  TRANSCRIPTION_PROVIDER: "openai or gemini",
-  EVALUATION_PROVIDER: "gemini or anthropic",
-} as const;
+  TRANSCRIPTION_PROVIDER: ["openai", "gemini"],
+  EVALUATION_PROVIDER: ["gemini", "anthropic"],
+} as const satisfies {
+  // Only values the parser accepts for that variable (checked by the compiler).
+  TRANSCRIPTION_PROVIDER: readonly ServerEnv["TRANSCRIPTION_PROVIDER"][];
+  EVALUATION_PROVIDER: readonly ServerEnv["EVALUATION_PROVIDER"][];
+};
 
 /**
  * On Vercel (Production, Preview, Development) the speech-to-text and scoring providers must be chosen explicitly. The
@@ -44,7 +52,7 @@ export function validateExplicitProviders(raw: Record<string, string | undefined
     .filter((variable) => !raw[variable])
     .map((variable) => ({
       variable,
-      message: `must be set explicitly on Vercel (${EXPLICIT_ON_VERCEL[variable]}); the local default is not used there. Set it for this environment in the Vercel project settings.`,
+      message: `must be set explicitly on Vercel: ${EXPLICIT_ON_VERCEL[variable].map((value) => `${variable}=${value}`).join(" or ")}. The local default is not used there. Set it for this environment in the Vercel project settings.`,
     }));
 }
 

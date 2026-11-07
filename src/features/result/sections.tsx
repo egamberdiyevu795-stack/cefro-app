@@ -3,6 +3,7 @@ import { Card, CardHeader, ComingSoonButton, DeltaLabel, DemoLabel, Icon, PillAc
 import type { FeatureFlags } from "@/config/features";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
+import { mockLink } from "@/features/demo/demo-mode";
 import { practiceHref as practiceLink } from "@/features/speaking-practice/lib/practice-flow";
 import { GOAL_LABEL, GOAL_NOTE, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
 
@@ -556,9 +557,9 @@ export function FailedResult({
   );
 }
 
-export function BackLink() {
+export function BackLink({ mock = false }: { mock?: boolean }) {
   return (
-    <Link href="/dashboard" className={cx("inline-flex min-h-11 items-center gap-1 text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
+    <Link href={mockLink("/dashboard", mock)} className={cx("inline-flex min-h-11 items-center gap-1 text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
       <Icon name="chevronDown" size={14} className="rotate-90" />
       Dashboard
     </Link>

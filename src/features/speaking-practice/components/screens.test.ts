@@ -76,8 +76,8 @@ describe("retry goal hand-off (mock mode)", () => {
       "/practice/speaking/b2-part2-advice-from-someone?mock=1&retry=A2-b1-all-three&run=1",
     );
     expect(practiceHref(task.id, { retry: "abc" })).toBe("/practice/speaking/b2-part2-advice-from-someone?retry=abc");
-    expect(mockScoringHref({ anchor: "A2-b1-all-three", run: 1 })).toBe("/result?state=scoring&next=1&from=A2-b1-all-three&fromRun=1");
-    expect(mockScoringHref(null)).toBe("/result?state=scoring&next=1");
+    expect(mockScoringHref({ anchor: "A2-b1-all-three", run: 1 })).toBe("/result?state=scoring&next=1&from=A2-b1-all-three&fromRun=1&mock=1");
+    expect(mockScoringHref(null)).toBe("/result?state=scoring&next=1&mock=1");
   });
 
   it("Scoring… shows the same goal, then opens the retry result, which says 'Goal met' or 'Not yet'", () => {
@@ -87,8 +87,8 @@ describe("retry goal hand-off (mock mode)", () => {
     if (state.kind !== "scoring") throw new Error(state.kind);
     expect(state.goal).toBe(goal!.objective);
     expect(html(createElement(ScoringResult, { state, flags: FEATURE_FLAGS }))).toContain("Your goal:");
-    expect(mockResultHref(selection)).toBe("/result?state=retry&from=A2-b1-all-three&fromRun=1");
-    expect(mockResultHref(selectMock({ state: "scoring", next: "1" }))).toBe("/result?anchor=A2-b1-all-three");
+    expect(mockResultHref(selection)).toBe("/result?state=retry&from=A2-b1-all-three&fromRun=1&mock=1");
+    expect(mockResultHref(selectMock({ state: "scoring", next: "1" }))).toBe("/result?anchor=A2-b1-all-three&mock=1");
 
     const met = resultPageState(mockResultSource(selectMock({ state: "retry", from: "A2-b1-all-three", fromRun: "1" }), task, config));
     const notYet = resultPageState(mockResultSource(selectMock({ state: "retry", from: "A3-b2-q3-missing", fromRun: "1" }), task, config));

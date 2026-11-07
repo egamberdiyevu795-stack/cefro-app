@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardHeader, Icon, PillButton, ScoringLabel, Thumb, cx, styles } from "@/components/ds";
 import { FIRST_VISIT } from "@/features/dashboard/mock-data";
+import { mockLink } from "@/features/demo/demo-mode";
 import type { BandChart, FilterOption, HistoryRow, HistoryView } from "./view-model";
 
 /*
@@ -10,8 +11,8 @@ import type { BandChart, FilterOption, HistoryRow, HistoryView } from "./view-mo
  * Desktop: [filter] then [Your attempts] | [Band over time]. Phone: filter, chart, list.
  * No black button except the empty state's "Start your first practice".
  */
-export function HistoryContent({ view }: { view: HistoryView }) {
-  if (view.total === 0) return <EmptyHistory />;
+export function HistoryContent({ view, mock = false }: { view: HistoryView; mock?: boolean }) {
+  if (view.total === 0) return <EmptyHistory mock={mock} />;
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:col-span-2">
@@ -253,7 +254,7 @@ export function BandChartCard({ chart, className }: { chart: BandChart; classNam
 }
 
 /** No attempts yet: one line of what the page will show, and the screen's one black action. */
-export function EmptyHistory() {
+export function EmptyHistory({ mock = false }: { mock?: boolean }) {
   return (
     <div className="grid grid-cols-1 gap-4">
       <h1 className="text-title font-medium tracking-[-0.01em] text-fg">History</h1>
@@ -265,7 +266,7 @@ export function EmptyHistory() {
           Every answer you record is listed here, with your level and band, so you can see how you are getting on.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <PillButton href={FIRST_VISIT.href}>Start your first practice</PillButton>
+          <PillButton href={mockLink(FIRST_VISIT.href, mock)}>Start your first practice</PillButton>
           <span className="text-label text-fg-muted">About {FIRST_VISIT.minutes} min</span>
         </div>
       </Card>

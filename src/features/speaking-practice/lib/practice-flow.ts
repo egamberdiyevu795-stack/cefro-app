@@ -66,5 +66,6 @@ export function mockScoringHref(from: MockAttemptKey | null): string {
     params.set("from", from.anchor);
     params.set("fromRun", String(from.run));
   }
+  params.set("mock", "1"); // every link in mock mode keeps it
   return `/result?${params}`;
 }

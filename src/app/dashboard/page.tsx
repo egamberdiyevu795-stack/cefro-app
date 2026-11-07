@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { ComingSoonButton, ComingSoonToast, Icon, Sidebar, SearchSoon, TopBar, TopBarLink, cx, styles } from "@/components/ds";
+import { ComingSoonButton, ComingSoonToast, DemoLabel, Icon, Sidebar, SearchSoon, TopBar, TopBarLink, cx, styles } from "@/components/ds";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
@@ -8,6 +8,8 @@ import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { AccountMenu } from "@/features/dashboard/AccountMenu";
 import { ExamDate } from "@/features/dashboard/ExamDate";
+import { demoAttempts, demoExamDate, demoHref, demoTranscript } from "@/features/demo/demo-data";
+import { isMockQuery, mockLink } from "@/features/demo/demo-mode";
 import { navItemsFor } from "@/features/dashboard/mock-data";
 import {
   dashboardFix,
@@ -58,6 +60,10 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *   small "Add exam date".
  * Exam part tiles: all four, always. A live part (`PART_LIVE`) says Start / Practise; the others "Coming soon".
  * `?flags=off` previews the page with every flag off.
+ *
+ * `?mock=1` (mock mode): the demo student (features/demo/demo-data.ts) instead of the caller's own data, through the
+ * same code. No database, no cookie read, no API call (the exam date changes only on the page); works with no
+ * configuration at all (a Vercel Preview with no variables). Every link keeps ?mock=1, and the demo label is shown.
  */
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const query = await props.searchParams;
@@ -65,9 +71,13 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   await connection();
   const now = new Date();
 
-  const userId = await findCurrentUserId();
-  const attempts: HistoryAttempt[] = userId ? await listAttemptHistory(userId) : [];
-  const stored = userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+  const mock = isMockQuery(query);
+  // Mock mode reads nothing: no cookie, no database.
+  const userId = mock ? null : await findCurrentUserId();
+  const attempts: HistoryAttempt[] = mock ? demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
+  const stored = mock ? demoExamDate(now) : userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+  // Links built from the attempts: in mock mode they open the demo's own pages, with ?mock=1.
+  const link = mock ? demoHref : (href: string) => href;
 
   const tasks: TaskInfo[] = listSpeakingTasks().map(({ id, title, part, level, preparationSeconds, speakingSeconds }) => ({
     id, title, part, level, preparationSeconds, speakingSeconds,
@@ -75,18 +85,26 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const target = getSpeakingRubric(getSpeakingTask(RECOMMENDED_TASK_ID)!).targetLevel as FeatureLevel;
   const summary = progress(attempts, { target, now });
   const latestScored = scoredAttempts(attempts)[0];
-  const transcript = latestScored && userId ? ((await getAttemptViewForUser(userId, latestScored.id)).transcript?.text ?? "") : "";
-  const fix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript, target });
-  const next = practiseNext(attempts, tasks);
-  const tiles: ExamPartTileView[] = partTiles(attempts).map((t) => ({ ...t, part: t.partLabel }));
+  const transcript = !latestScored
+    ? ""
+    : mock
+      ? demoTranscript(latestScored.id)
+      : userId
+        ? ((await getAttemptViewForUser(userId, latestScored.id)).transcript?.text ?? "")
+        : "";
+  const builtFix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript, target });
+  const fix = builtFix && { ...builtFix, retryHref: link(builtFix.retryHref) };
+  const builtNext = practiseNext(attempts, tasks);
+  const next = builtNext && { ...builtNext, href: link(builtNext.href) };
+  const tiles: ExamPartTileView[] = partTiles(attempts).map((t) => ({ ...t, part: t.partLabel, href: t.href && link(t.href) }));
   const view = dashboardView(attempts);
-  const recent = toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts);
+  const recent = toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts).map((row) => ({ ...row, href: link(row.href) }));
 
   const today = todayIn(now);
   const exam = examDateState(stored, now);
   const examSlot = (variant: "card" | "inline", className?: string) =>
     flags.examCountdown ? (
-      <ExamDate state={exam} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant={variant} className={className} />
+      <ExamDate state={exam} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant={variant} demo={mock} className={className} />
     ) : null;
   const countdown = flags.examCountdown;
 
@@ -94,14 +112,14 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
     <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
       <div className="mx-auto flex max-w-[1280px] px-4 pt-4 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
-          <Wordmark className="hidden lg:flex lg:h-12" />
-          <Sidebar items={navItemsFor(flags)} activeHref="/dashboard" last={<AccountMenu source="real" />} />
+          <Wordmark className="hidden lg:flex lg:h-12" mock={mock} />
+          <Sidebar items={navItemsFor(flags, mock)} activeHref="/dashboard" last={<AccountMenu source={mock ? "mock" : "real"} />} />
         </aside>
 
         <div className="min-w-0 flex-1">
           <header className="mb-4 flex flex-col gap-2 lg:mb-5">
             <div className="flex h-11 items-center justify-between lg:hidden">
-              <Wordmark />
+              <Wordmark mock={mock} />
               {flags.notifications && <Bell />}
             </div>
             <div className={cx(!flags.search && "hidden sm:block")}>
@@ -109,7 +127,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 search={flags.search ? <SearchSoon placeholder="Search tasks and lessons…" /> : undefined}
                 actions={
                   <>
-                    <TopBarLink href="/" icon="layers">
+                    <TopBarLink href={mockLink("/", mock)} icon="layers">
                       All tasks
                     </TopBarLink>
                     {flags.mockExam && (
@@ -129,6 +147,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 }
               />
             </div>
+            {mock && <DemoLabel variant="data" className="self-start bg-card" />}
           </header>
 
           <main id="main" className="grid grid-cols-1 gap-4 pb-28 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:pb-0">
@@ -144,13 +163,13 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                   radarClassName="order-5 lg:order-none"
                 />
                 <ExamPartsCard parts={tiles} className="order-7 lg:order-none lg:col-start-2 lg:row-start-2" />
-                <RecentAttemptsCard flags={flags} rows={recent} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
+                <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
                 <BiggestFixCard fix={fix} className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
             ) : (
               <>
-                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} className="lg:col-span-2" />
-                {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} className="lg:col-span-2" />}
+                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} className="lg:col-span-2" />
+                {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
                   wide

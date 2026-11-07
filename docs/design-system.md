@@ -268,7 +268,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
 | `ScoringLabel` | The only attempt status: grey hourglass + "Scoring…", shown in place of the level while an answer is processed. No Passed/Failed, no colour. |
 | `DeltaLabel` | Small lime pill for an improvement. Only for positive change. |
-| `DemoLabel` | "Demo result. Your answer was not scored." A `well` pill (or `card` off a card) with the `info` glyph, `text-label` (12 px), `fg` text (15.46:1 on well, 17.78:1 on card; glyph `fg-subtle` 3.16 / 3.64:1), `role="note"`, not a button. On every screen built from mock data: at the top of the result card of the `/result` prototype (every state: result, retry, Scoring…, couldn't score) and above the step card of the practice page's mock mode (`?mock=1`). Real results never pass `demo`; tests check both. |
+| `DemoLabel` | "Demo result. Your answer was not scored." (`variant="mode"`: "Demo mode. Your answer won't be scored.", practice and task list in mock mode; `variant="data"`: "Demo mode. These are example attempts, not yours.", dashboard and History in mock mode). A `well` pill (or `card` off a card) with the `info` glyph, `text-label` (12 px), `fg` text (15.46:1 on well, 17.78:1 on card; glyph `fg-subtle` 3.16 / 3.64:1), `role="note"`, not a button. On every screen built from mock data: at the top of the result card of the `/result` prototype (every state: result, retry, Scoring…, couldn't score) and above the step card of the practice page's mock mode (`?mock=1`). Real results never pass `demo`; tests check both. |
 | `StatRow` | `label │ value` row inside a `<dl>`: muted label, thin divider, right-aligned semibold value. |
 | `ProgressBar` | 4 px accent bar on a `well` track, with progressbar semantics. |
 | `GoalBar` | Grey pill with a black check square, a sentence, and a faint fill for how far along the goal is. |
@@ -475,6 +475,39 @@ without JavaScript and a filtered view has its own address.
 - Screenshots (1440 px and 390 px, seeded data; the Part 1.1 / 1.2 rows are relabelled Part 2 results, as Part 1 has
   no evaluator yet): `docs/design-system/history-{full,filtered,empty,few}-{desktop,phone}.png`. Audited in the browser:
   no horizontal scroll, smallest text 11 px, one black button on the empty state and none elsewhere.
+
+## Mock mode everywhere (`?mock=1`)
+
+Every page a tester walks through has a mock mode: the task list (`/?mock=1`), the practice page, the result
+prototype, the dashboard and History. Built so a branch's Vercel Preview (no variables, no database) can be clicked
+through end to end.
+
+- **Demo student** (`features/demo/demo-data.ts`): six attempts on five Part 2 tasks, newest first: a retry of "Advice
+  from someone" with its goal ("Goal met", the result prototype's retry pair), its original, three answers on other
+  tasks, one attempt with no speech ("Not scored"); exam in 23 days. Scored results are saved live evaluator outputs in
+  the real `MultilevelResult` type; the dashboard and History run their real functions on them. The attempts on other
+  tasks borrow a saved run's levels: opening one shows the demo result of "Advice from someone".
+- **Links:** `features/demo/demo-mode.ts` (`withMock`, `mockLink`, `isMockQuery`) and `demoHref`, which turns links built
+  from demo attempts into mock ones (`/result/<demo id>` → the prototype with that saved run; `?retry=<demo id>` → that
+  saved run). Components with fixed links take a `mock` prop (`AppShell`, `Wordmark`, `BackLink`, `navItemsFor`,
+  `FindYourLevelCard`, `RecentAttemptsCard`, `HistoryContent`). The nav's active item is matched on the path.
+- **Labels:** one `DemoLabel` per mock page (task list and dashboard: under the header; History: above the content;
+  practice and result as before). 12 px, `fg` on `card`, so contrast and size rules hold.
+- **Exam date** in mock mode: Save, Skip and Remove date change the page only (`ExamDate demo`), with the server's own
+  date rule (`examDateProblem`).
+- **Account menu** in mock mode: the demo account and "Demo account. Sign-in is off in demo mode."; no items.
+- **Checks:** `features/demo/mock-pages.test.ts` (each mock page on a Preview-like configuration with the database,
+  cookies and identity throwing: label, only `mock=1` links, one black button where there is one, no text under 11 px;
+  real pages still refuse), `features/demo/demo-data.test.ts`, `e2e/mock-mode.spec.ts` (also on a production build:
+  `npm run test:e2e:preview`).
+
+## Controls wait for the page (`useHydrated`)
+
+`components/ds/useHydrated.ts`: false in the server HTML and during hydration, true once the scripts run. A control that
+needs React renders disabled until then, so it is never used "before the page is ready": the exam-date picker, Save,
+Skip, Edit, Cancel, Remove date; the sign-in and Create account buttons (before: a tap or Enter submitted the form as a
+GET, with the email and password in the address, and reloaded the page); the brief's Start preparation and Practise
+without the goal (before: a tap did nothing). Browser tests delay the scripts by 4 s and check each.
 
 ## Page failures
 

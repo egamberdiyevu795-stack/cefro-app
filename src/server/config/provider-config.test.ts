@@ -251,8 +251,18 @@ describe("providers must be explicit on Vercel", () => {
     const [problem] = validateExplicitProviders({ VERCEL: "1", TRANSCRIPTION_PROVIDER: "openai" });
     expect(problem).toEqual({
       variable: "EVALUATION_PROVIDER",
-      message: expect.stringMatching(/^must be set explicitly on Vercel \(gemini or anthropic\); the local default is not used there/),
+      message: expect.stringMatching(/^must be set explicitly on Vercel: EVALUATION_PROVIDER=gemini or EVALUATION_PROVIDER=anthropic\. The local default is not used there/),
     });
+  });
+
+  it("names each variable's own values: speech-to-text is openai or gemini, scoring is gemini or anthropic", () => {
+    const messages = Object.fromEntries(validateExplicitProviders({ VERCEL: "1" }).map((p) => [p.variable, p.message]));
+    expect(messages.TRANSCRIPTION_PROVIDER).toContain("TRANSCRIPTION_PROVIDER=openai or TRANSCRIPTION_PROVIDER=gemini.");
+    expect(messages.EVALUATION_PROVIDER).toContain("EVALUATION_PROVIDER=gemini or EVALUATION_PROVIDER=anthropic.");
+    // Never the other step's provider: anthropic does no speech-to-text, openai does no scoring here.
+    expect(messages.TRANSCRIPTION_PROVIDER).not.toMatch(/anthropic/);
+    expect(messages.EVALUATION_PROVIDER).not.toMatch(/openai/);
+    for (const message of Object.values(messages)) expect(message).not.toMatch(/mock/);
   });
 
   it("is part of the provider check, which sees the raw variables (the parsed ones already hold the defaults)", () => {

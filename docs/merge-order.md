@@ -149,6 +149,35 @@ Cut from `cefro-part-2-tasks-yfr6x5`, so it comes after it, merge commit. Fixes 
   others "Coming soon", all four tiles always shown; replaces the `examPart*` flags); `e2e/db.ts` refuses anything
   but the run's own test database; the screenshot script is in `scripts/screenshots/dashboard.mjs` (mock providers only).
 
+## After that: `claude/mock-mode-vercel-preview-8uzlim` (mock mode everywhere, no migration)
+
+Cut from `review-dashboard-real-data-4jikaa`, so it comes after it, merge commit. Contains:
+
+- **Mock mode on every page (`?mock=1`):** the task list, dashboard and History join the practice and result pages.
+  The dashboard and History show a demo student (`src/features/demo/demo-data.ts`: six attempts on five Part 2 tasks,
+  one with no speech, a retry with its goal, an exam date) built from the saved evaluator outputs in the real types,
+  through the pages' real code. Mock mode never reads or writes the database (or cookies, the caller's identity, any
+  API) and skips the configuration check, so it works on a Vercel Preview with no variables. Real pages keep refusing.
+- **`?mock=1` stays on every link** inside mock mode (nav, back link, wordmark, task tiles, rows, filters, "Show more",
+  Practise next, Start retry, Retry with this goal, Scoring… → result). Demo attempt ids are rewritten to their demo
+  result (`/result?…&mock=1`) and their saved run (`?retry=<saved run>&run=n`). `src/proxy.ts` passes `?mock=1` to the
+  `(site)` layout as the header `x-cefro-mock` (a layout gets no query).
+- **Demo labels:** practice and task list "Demo mode. Your answer won't be scored."; results "Demo result. Your answer
+  was not scored."; dashboard and History "Demo mode. These are example attempts, not yours." Never on real pages.
+- **Mock-only behaviour:** the exam date changes only on the page (nothing sent); the demo Account menu has no sign-in
+  or Log out (it used to call the real sign-out endpoint).
+- **Config wording:** each provider variable names its own values (`TRANSCRIPTION_PROVIDER=openai or …=gemini`,
+  `EVALUATION_PROVIDER=gemini or …=anthropic`).
+- **"Used before the page is ready" fixes:** the sign-in and Create account buttons (a tap or Enter before the scripts
+  ran sent the email and password in the address), and the brief's Start preparation / Practise without the goal (a
+  tap did nothing). `useHydrated` moved to `components/ds`.
+- **Tests:** `src/features/demo/*.test.ts` (demo data, links, every mock page rendered with the database, cookies and
+  identity wired to throw, on a Preview-like configuration); `e2e/mock-mode.spec.ts` (the whole loop, no API call, no
+  real page, 390 px audits) on `next dev` and, with `npm run test:e2e:preview`, on a production build started like a
+  Preview with no variables (`playwright.preview.config.ts`); slow-connection tests in `auth.spec.ts` and
+  `practice-flow.spec.ts`.
+- `docs/DEPLOY_VERCEL.md`: the mock URLs that work on a Preview.
+
 ## Corrections to earlier notes
 
 - `docs/design-system.md` called `friendly-darwin-l73xx9` "PR #5's branch". **PR #5 is

@@ -369,6 +369,34 @@ test("an attempt the server can no longer find stops polling and offers a new re
   await expect(page.getByRole("button", { name: "Start preparation" })).toBeVisible();
 });
 
+for (const [name, url] of [
+  ["brief", `${TASK_URL}?mock=1`],
+  ["retry brief", `${TASK_URL}?mock=1&retry=A2-b1-all-three&run=1`],
+] as const) {
+  test(`slow connection: the ${name}'s Start preparation is disabled until the page is ready, then works`, async ({ page }) => {
+    await page.goto(url); // compiled once, so only the delay below is slow
+    let delayed = 0;
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      delayed += 1;
+      await new Promise((resolve) => setTimeout(resolve, 4_000));
+      await route.continue();
+    });
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+
+    // Before the scripts run, a tap did nothing at all (no microphone prompt, no sign): now the button says so.
+    const start = page.getByRole("button", { name: "Start preparation" });
+    await expect(start).toBeVisible();
+    await expect(start).toBeDisabled();
+    if (name === "retry brief") await expect(page.getByRole("button", { name: "Practise without the goal" })).toBeDisabled();
+    expect(delayed).toBeGreaterThan(0);
+
+    await expect(start).toBeEnabled({ timeout: 30_000 });
+    await page.unroute("**/_next/static/chunks/**");
+    await start.click();
+    await expect(page.getByText("to prepare")).toBeVisible();
+  });
+}
+
 test("mobile layout has no horizontal scroll", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
   const page = await context.newPage();

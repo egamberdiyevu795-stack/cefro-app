@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import HomePage from "@/app/(site)/page";
@@ -178,21 +177,33 @@ describe("snapshots", () => {
   });
 });
 
+/** The task list page as Next renders it (an async server component that reads the query). */
+const homePage = async (query: Record<string, string> = {}) =>
+  renderToStaticMarkup(await HomePage({ params: Promise.resolve({}), searchParams: Promise.resolve(query) } as never));
+
 describe("task list page (/)", () => {
-  it("shows all 7 tasks, each linking to its own practice page, in order", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
+  it("shows all 7 tasks, each linking to its own practice page, in order", async () => {
+    const html = await homePage();
     const hrefs = [...html.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
     expect(hrefs).toEqual(tasks.map((t) => t.id));
     for (const task of tasks) expect(html).toContain(`>${task.title.replace(/'/g, "&#x27;")}<`);
     expect(html.match(/1 min preparation · 2 min speaking/g)).toHaveLength(7);
   });
 
-  it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/#part-2)", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
+  it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/#part-2)", async () => {
+    const html = await homePage();
     const section = html.split('<section id="part-2"')[1]?.split("</section>")[0];
     expect(section, "Part 2 section").toBeDefined();
     expect(section).toContain("Part 2 · Long turn");
     expect(section!.match(/href="\/practice\/speaking\//g)).toHaveLength(7);
     expect(html).not.toContain('id="part-1-1"'); // no section for a part without tasks
+  });
+
+  it("no demo label on the real list; in mock mode (?mock=1) the label, and every task opens its brief in mock mode", async () => {
+    expect(await homePage()).not.toContain('data-testid="demo-label"');
+    const html = await homePage({ mock: "1" });
+    expect(html).toContain('data-testid="demo-label"');
+    const hrefs = [...html.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
+    expect(hrefs).toEqual(tasks.map((t) => `${t.id}?mock=1`));
   });
 });

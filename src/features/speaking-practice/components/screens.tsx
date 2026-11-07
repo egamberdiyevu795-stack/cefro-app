@@ -95,10 +95,16 @@ export function BriefCard({
   onStart,
   onDropGoal,
   microphone,
+  ready = true,
 }: {
   task: PublicSpeakingTask;
   goal: RetryGoal | null;
   onStart: () => void;
+  /**
+   * False until the page's scripts have run: the buttons are disabled until then. Before that a tap on them did
+   * nothing at all (no microphone prompt, no sign), on a slow connection for several seconds.
+   */
+  ready?: boolean;
   /** Retry only: practise the task without the goal. */
   onDropGoal?: () => void;
   /** Shown instead of the start button while the microphone is being asked for, or when it can't be used. */
@@ -123,14 +129,19 @@ export function BriefCard({
       <div className="mt-6 border-t border-line pt-5">
         {microphone ?? (
           <>
-            <PillAction size="lg" icon="mic" onClick={onStart} className="w-full sm:w-auto">
+            <PillAction size="lg" icon="mic" onClick={onStart} disabled={!ready} className="w-full sm:w-auto disabled:cursor-wait">
               Start preparation
             </PillAction>
             <p className="mt-3 text-label text-fg-muted">
               We&rsquo;ll ask to use your microphone first. Recording starts by itself when preparation ends.
             </p>
             {onDropGoal && (
-              <button type="button" onClick={onDropGoal} className={cx("mt-3 inline-flex min-h-11 items-center text-label text-fg-muted underline hover:text-fg", styles.FOCUS_RING)}>
+              <button
+                type="button"
+                onClick={onDropGoal}
+                disabled={!ready}
+                className={cx("mt-3 inline-flex min-h-11 items-center text-label text-fg-muted underline hover:text-fg disabled:cursor-wait", styles.FOCUS_RING)}
+              >
                 Practise without the goal
               </button>
             )}

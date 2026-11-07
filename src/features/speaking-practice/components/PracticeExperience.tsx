@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { DemoLabel } from "@/components/ds";
+import { useHydrated } from "@/components/ds/useHydrated";
 import type { FeatureFlags } from "@/config/features";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -79,6 +80,8 @@ export function PracticeExperience({
   // Mock mode sends nothing, analytics included.
   const track: typeof trackEvent = useCallback((...args) => (isMock ? undefined : trackEvent(...args)), [isMock]);
   const recorder = useAudioRecorder();
+  // The brief's buttons wait for the page's scripts (a tap before then did nothing).
+  const ready = useHydrated();
   const level = useAudioLevel(recorder.stream, phase.kind === "recording");
 
   const [history, setHistory] = useState<AttemptSummary[]>([]);
@@ -378,6 +381,7 @@ export function PracticeExperience({
               onStart={startPreparation}
               onDropGoal={isRetry ? backToBrief : undefined}
               microphone={microphone}
+              ready={ready}
             />
           }
           below={

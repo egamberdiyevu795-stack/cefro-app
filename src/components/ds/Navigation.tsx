@@ -42,7 +42,8 @@ export function Sidebar({ items, activeHref, last }: { items: readonly NavItem[]
       <ul className="flex items-center justify-around lg:flex-col lg:justify-start lg:gap-3">
         {items.map((item) => (
           <li key={item.label}>
-            <SidebarItem item={item} active={item.href === activeHref} />
+            {/* The path decides (mock mode adds ?mock=1 to every link). */}
+            <SidebarItem item={item} active={item.href.split(/[?#]/)[0] === activeHref} />
           </li>
         ))}
         {last && <li>{last}</li>}

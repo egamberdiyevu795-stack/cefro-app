@@ -5,6 +5,7 @@ import { cx, styles } from "@/components/ds";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { toPublicTask } from "@/domain/speaking/task";
+import { withMock } from "@/features/demo/demo-mode";
 import { AutoAdvance } from "@/features/result/AutoAdvance";
 import { DEFAULT_ANCHOR, FIXTURE_ANCHORS, RESULT_STATES, describeMock, mockResultHref, mockResultSource, selectMock, shownAttempt, type MockSelection } from "@/features/result/mock-data";
 import { FailedResult, NotScoredResult, ScoredResult, ScoringResult } from "@/features/result/sections";
@@ -23,8 +24,9 @@ export const metadata: Metadata = { title: "Your result" };
  * Switches: ?anchor=<fixture id> (&run=1..3), ?state=scored|scoring|too-short|no-speech|retry, ?flags=off,
  * &from=<fixture id>&fromRun=1..3 (the attempt a retry comes from), &next=1 ("Scoring…" opens the result by itself).
  *
- * Every practice link here opens the practice page's mock mode (?mock=1), so the loop can be clicked through without
- * API keys: "Retry with this goal" carries this attempt (a saved run) as the one being retried.
+ * This page is always mock data, with or without ?mock=1, and every link on it keeps ?mock=1 (mock mode), so the loop
+ * can be clicked through without API keys or a database: "Retry with this goal" opens the practice page's mock mode
+ * with this attempt (a saved run) as the one being retried; the navigation and "Dashboard" open the demo dashboard.
  */
 export default async function ResultPage(props: PageProps<"/result">) {
   const query = await props.searchParams;
@@ -62,7 +64,7 @@ function PrototypeSwitches({ selection }: { selection: MockSelection }) {
   const link = (params: Record<string, string>, label: string, active: boolean) => (
     <Link
       key={label}
-      href={`/result?${new URLSearchParams(params)}`}
+      href={withMock(`/result?${new URLSearchParams(params)}`)}
       aria-current={active ? "page" : undefined}
       className={cx("inline-flex min-h-6 items-center text-caption", active ? "font-semibold text-fg" : "text-fg-muted underline hover:text-fg", styles.FOCUS_RING)}
     >

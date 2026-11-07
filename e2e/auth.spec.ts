@@ -187,3 +187,61 @@ test("Journey D: one signed-in user cannot read, play or restart another user's 
     await bob.context.close();
   }
 });
+
+/**
+ * A very slow connection: the HTML arrives, the page's scripts are held back until the test calls `release()`, so
+ * nothing races the checks made before then. Returns every page the browser loads, so a test can tell a plain form
+ * submit (a reload) from the app's own request.
+ */
+async function holdScripts(page: Page) {
+  let held = 0;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/_next/static/chunks/**", async (route) => {
+    held += 1;
+    await gate;
+    await route.continue();
+  });
+  const navigations: string[] = [];
+  page.on("request", (request) => {
+    if (request.isNavigationRequest()) navigations.push(request.url());
+  });
+  return { navigations, held: () => held, release };
+}
+
+for (const mode of ["login", "register"] as const) {
+  const submit = mode === "login" ? "Sign in" : "Create account";
+  test(`slow connection: ${submit} waits until the page is ready; the password never goes into the address`, async ({ page }) => {
+    await page.goto(`/${mode}`); // compiled once, so only the delay below is slow
+    const slow = await holdScripts(page);
+    // The form is in the HTML; the page's deferred scripts (held) would block "domcontentloaded".
+    await page.goto(`/${mode}`, { waitUntil: "commit" });
+
+    // Before the scripts run: the fields can be filled, but the form can't be sent (no plain GET with the password).
+    const button = page.getByRole("button", { name: submit });
+    await expect(button).toBeDisabled();
+    expect(slow.held()).toBeGreaterThan(0);
+    const email = uniqueEmail(`slow-${mode}`);
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password").fill(PASSWORD);
+    await page.getByLabel("Password").press("Enter"); // implicit submission: nothing, while the only submit button is disabled
+    await button.click({ force: true }); // a tap does nothing either
+    expect(slow.navigations.every((url) => !url.includes("password"))).toBe(true);
+    await page.waitForTimeout(500); // a form sent the browser's way would have started loading by now
+    expect(slow.navigations).toHaveLength(1);
+    await expect(button).toBeDisabled();
+
+    // Once ready, the same form is sent by the app: the values typed early are used.
+    slow.release();
+    await expect(button).toBeEnabled({ timeout: 30_000 });
+    await page.unroute("**/_next/static/chunks/**");
+    await button.click();
+    if (mode === "login") {
+      await expect(page.getByText("The email or password is not right.")).toBeVisible(); // no such account: the app's own answer
+    } else {
+      await expect(page).toHaveURL(/\/$/);
+      await expect(header(page)).toHaveAttribute("data-state", "authenticated");
+    }
+    expect(slow.navigations.every((url) => !url.includes("password"))).toBe(true);
+  });
+}

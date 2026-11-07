@@ -28,8 +28,8 @@ export const DEFAULT_ANCHOR = "A2-b1-all-three";
 export const FIXTURE_ANCHORS = Object.keys(LIVE_36_FLASH_FIXTURES);
 
 /** The retry pair: a B1 answer whose goal was grammar, then a B2 answer (both saved live outputs). */
-const RETRY_PREVIOUS = { anchor: "A2-b1-all-three", run: 1 };
-const RETRY_CURRENT = { anchor: "A3-b2-q3-missing", run: 1 };
+export const RETRY_PREVIOUS: MockAttemptKey = { anchor: "A2-b1-all-three", run: 1 };
+export const RETRY_CURRENT: MockAttemptKey = { anchor: "A3-b2-q3-missing", run: 1 };
 
 /** A made-up answer under the rubric's minimum words, for the "too short" state. */
 const TOO_SHORT_TRANSCRIPT = "My teacher gave me advice. She said speak English every day. I followed it.";
@@ -75,10 +75,13 @@ export function shownAttempt(selection: MockSelection): MockAttemptKey {
   return selection.state === "retry" ? RETRY_CURRENT : { anchor: selection.anchor, run: selection.run };
 }
 
-/** Where "Scoring…" goes next in mock mode: the retry result when it was a retry, else the default scored result. */
+/**
+ * Where "Scoring…" goes next in mock mode: the retry result when it was a retry, else the default scored result.
+ * Keeps `mock=1`, like every link in mock mode.
+ */
 export function mockResultHref(selection: MockSelection): string {
-  if (!selection.from) return `/result?anchor=${encodeURIComponent(DEFAULT_ANCHOR)}`;
-  return `/result?${new URLSearchParams({ state: "retry", from: selection.from.anchor, fromRun: String(selection.from.run) })}`;
+  if (!selection.from) return `/result?${new URLSearchParams({ anchor: DEFAULT_ANCHOR, mock: "1" })}`;
+  return `/result?${new URLSearchParams({ state: "retry", from: selection.from.anchor, fromRun: String(selection.from.run), mock: "1" })}`;
 }
 
 /**
@@ -119,11 +122,13 @@ export function mockRetryAttempt(key: MockAttemptKey, task: PublicSpeakingTask):
   };
 }
 
-function evaluationOf(anchor: string, run: number): ResultEvaluation {
+/** A saved run's evaluation (the evaluator's own return type). */
+export function evaluationOf(anchor: string, run: number): ResultEvaluation {
   return LIVE_36_FLASH_FIXTURES[anchor].runs[run - 1].evaluation;
 }
 
-function anchorOf(anchor: string) {
+/** The anchor answer a saved run scored: its transcript and length. */
+export function anchorOf(anchor: string) {
   const found = PART2_BAND_ANCHORS.find((a) => a.id === anchor);
   if (!found) throw new Error(`No anchor ${anchor}`);
   return found;

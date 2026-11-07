@@ -15,6 +15,7 @@ import {
   styles,
 } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
+import { mockLink } from "@/features/demo/demo-mode";
 import { AttemptRow } from "@/features/history/sections";
 import type { HistoryRow } from "@/features/history/view-model";
 import { ATTEMPT_MENU_ITEMS, FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
@@ -56,11 +57,14 @@ export function PractiseNextCard({ next, className }: { next: PractiseNext; clas
 export function FindYourLevelCard({
   exam,
   hasAttempts = false,
+  mock = false,
   className,
 }: {
   exam: React.ReactNode;
   /** The student has attempts, none scored yet: "Welcome back" and "Start practice" (not their first). */
   hasAttempts?: boolean;
+  /** Mock mode: the link keeps ?mock=1. */
+  mock?: boolean;
   className?: string;
 }) {
   const copy = hasAttempts ? NOT_SCORED_YET : FIRST_VISIT;
@@ -72,7 +76,7 @@ export function FindYourLevelCard({
       </h2>
       <p className="mt-3 max-w-md text-body text-fg-muted">{copy.text}</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PillButton href={FIRST_VISIT.href}>{hasAttempts ? "Start practice" : "Start your first practice"}</PillButton>
+        <PillButton href={mockLink(FIRST_VISIT.href, mock)}>{hasAttempts ? "Start practice" : "Start your first practice"}</PillButton>
         <span className="text-label text-fg-muted">About {FIRST_VISIT.minutes} min</span>
       </div>
       {exam && <div className="mt-6 border-t border-line pt-4">{exam}</div>}
@@ -218,7 +222,18 @@ export const RECENT_ATTEMPT_COUNT = 4;
  * The student's latest attempts, from the same data and rows as the History page (`rows` = its first rows; null when
  * they could not be read). Each row opens its result; "See all" opens History (flag `history`).
  */
-export function RecentAttemptsCard({ flags, rows, className }: { flags: FeatureFlags; rows: readonly HistoryRow[] | null; className?: string }) {
+export function RecentAttemptsCard({
+  flags,
+  rows,
+  mock = false,
+  className,
+}: {
+  flags: FeatureFlags;
+  rows: readonly HistoryRow[] | null;
+  /** Mock mode: "See all" keeps ?mock=1 (the rows carry their own links). */
+  mock?: boolean;
+  className?: string;
+}) {
   return (
     <Card aria-labelledby="attempts-title" className={cx("flex flex-col", className)}>
       <CardHeader
@@ -226,7 +241,7 @@ export function RecentAttemptsCard({ flags, rows, className }: { flags: FeatureF
         title="Recent attempts"
         action={
           flags.history ? (
-            <Link href="/history" aria-label="See all attempts" className={styles.SMALL_ACTION}>
+            <Link href={mockLink("/history", mock)} aria-label="See all attempts" className={styles.SMALL_ACTION}>
               See all
             </Link>
           ) : undefined
@@ -296,9 +311,9 @@ export function BiggestFixCard({ fix, className }: { fix: DashboardFix; classNam
   );
 }
 
-export function Wordmark({ className = "flex" }: { className?: string }) {
+export function Wordmark({ className = "flex", mock = false }: { className?: string; mock?: boolean }) {
   return (
-    <Link href="/dashboard" className={cx("items-center text-body font-semibold tracking-[0.08em] text-fg", className)}>
+    <Link href={mockLink("/dashboard", mock)} className={cx("items-center text-body font-semibold tracking-[0.08em] text-fg", className)}>
       CEFRO
     </Link>
   );

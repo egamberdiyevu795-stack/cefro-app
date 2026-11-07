@@ -20,7 +20,8 @@ const PANEL = {
  * - `source="real"` (every real page): asks the server who is signed in (`/api/account/me`). Signed in: their name
  *   and email, then Log out (the real sign-out endpoint, then the sign-in page). Not signed in: "Practising without an
  *   account", then Sign in and Create account.
- * - `source="mock"` (the design prototypes: dashboard, result, practice mock mode): the mocked name and email.
+ * - `source="mock"` (mock mode `?mock=1`, and the design prototypes): the demo account's name and email, and that
+ *   sign-in is off. No menu item: mock mode calls no API, sign-out included, and never leads to a real page.
  *
  * `data-testid="account-status"` and `data-state` say which state it is in (anonymous / authenticated), for tests.
  */
@@ -62,7 +63,9 @@ export function AccountMenu({ source = "mock", placement = "rail" }: { source?: 
   }
 
   const items: MenuItem[] =
-    account.state === "authenticated"
+    source === "mock"
+      ? []
+      : account.state === "authenticated"
       ? [{ label: "Log out", onSelect: () => void logOut() }]
       : account.state === "anonymous"
         ? [
@@ -76,6 +79,7 @@ export function AccountMenu({ source = "mock", placement = "rail" }: { source?: 
       <>
         <p className="text-label font-semibold text-fg">{account.name ?? account.email.split("@")[0]}</p>
         <p className="text-caption text-fg-muted">{account.email}</p>
+        {source === "mock" && <p className="mt-1 text-caption text-fg-muted">Demo account. Sign-in is off in demo mode.</p>}
       </>
     ) : account.state === "anonymous" ? (
       <>

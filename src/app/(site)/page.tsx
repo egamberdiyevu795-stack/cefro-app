@@ -1,16 +1,25 @@
 import Link from "next/link";
+import { DemoLabel } from "@/components/ds";
 import { Badge } from "@/components/ui/Badge";
 import { listSpeakingTasks } from "@/content/speaking";
 import { EXAM_PART_IDS, examPartAnchor, examPartLabel, examPartOf } from "@/domain/speaking/exam-part";
 import { PART_NAMES } from "@/features/dashboard/progress";
+import { isMockQuery } from "@/features/demo/demo-mode";
+import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
 
-export default function HomePage() {
+/**
+ * The task list. `?mock=1` (mock mode): the same list, with the demo label, and every task opens its brief in mock
+ * mode (no configuration, no database, nothing is scored). The (site) layout skips its configuration check then.
+ */
+export default async function HomePage(props: PageProps<"/">) {
+  const mock = isMockQuery(await props.searchParams);
   const tasks = listSpeakingTasks();
   // One section per exam part that has tasks; the dashboard's part tiles link to them (`/#part-2`).
   const parts = EXAM_PART_IDS.map((part) => ({ part, tasks: tasks.filter((t) => examPartOf(t) === part) })).filter((p) => p.tasks.length > 0);
   return (
     <div className="space-y-10">
       <section className="max-w-2xl space-y-3">
+        {mock && <DemoLabel variant="mode" className="font-ui" />}
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Speak. Get specific feedback. Try again.</h1>
         <p className="text-lg text-muted">
           Practise CEFR speaking tasks under exam timing. CEFRO shows you exactly what to fix in your own answer — then lets you retry and see whether it worked.
@@ -30,7 +39,7 @@ export default function HomePage() {
               {partTasks.map((task) => (
                 <li key={task.id}>
                   <Link
-                    href={`/practice/speaking/${task.id}`}
+                    href={practiceHref(task.id, { mock })}
                     className="block h-full rounded-2xl border border-border bg-surface p-6 transition hover:border-brand/40 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-brand"
                   >
                     <div className="flex flex-wrap gap-2">

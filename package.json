@@ -17,6 +17,7 @@
     "eval:transcription": "vitest run --config vitest.live.config.mts test/live/transcription.live.test.ts",
     "stats": "node scripts/processing-stats.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:preview": "next build && playwright test -c playwright.preview.config.ts",
     "eval:transcription:controlled": "vitest run --config vitest.live.config.mts test/live/transcription-validation.live.test.ts",
     "eval:pipeline": "vitest run --config vitest.live.config.mts test/live/full-pipeline.live.test.ts",
     "test:e2e:live": "playwright test -c playwright.live.config.ts",

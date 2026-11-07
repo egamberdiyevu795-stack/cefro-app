@@ -94,7 +94,7 @@ workflow. With it, the workflow is the only thing that deploys production.
 (`src/server/config/boot-check.ts`) applies to it. At start-up it logs every problem (variable names only, never a
 value); it is then enforced on every request that needs the configuration: every API route answers 503
 `service_not_configured`, `/api/health` answers 503 "unavailable", and the app's pages (home, login, register, practice)
-fail with HTTP 500. It fails in either direction:
+fail with HTTP 500, except in mock mode (`?mock=1`, below). It fails in either direction:
 
 - *With Turso credentials* (a variable ticked for Preview by mistake): the check reports "Database credentials are
   present in a Vercel Preview or Development environment…" and everything that can reach the database is refused as
@@ -103,22 +103,51 @@ fail with HTTP 500. It fails in either direction:
 - *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the
   same check fails ("required on Vercel…") and the same routes are refused.
 
-**The dashboard and History no longer work on a Preview without environment variables.** `/dashboard` used to be a
-mocked prototype that worked with no variables at all. Since `history-page` and `dashboard-real-data` it shows the
-student's real attempts and exam date, so it opens the database like `/history` does. A Preview with no database
-answers 500 on both and shows "CEFRO isn't available right now" (`app/error.tsx`); `?flags=off` changes nothing.
+**Mock mode: the whole app on a Preview with no variables (`?mock=1`).** Add `?mock=1` to an address and the page
+shows demo data instead of the student's own: a demo student with six attempts on five Part 2 tasks (one failed with
+no speech, one retry with its goal), a level, a biggest fix and an exam date 23 days away. The scored results are
+saved live evaluator outputs (`test/fixtures/live-3.6-flash/`, gemini-3.6-flash, **not** the production model) in the
+real evaluator types; the dashboard and History run their real code on them (`src/features/demo/demo-data.ts`).
+Mock mode never reads or writes the database, reads no cookie or identity, calls no API and no AI provider, and skips
+the configuration check, so it works on a Preview where every real page is refused. Every link inside it keeps
+`?mock=1` (navigation, back links, task tiles, rows, filters, retries), so a tester cannot fall into a real page by
+accident. Every mock page shows a demo label: "Demo mode. Your answer won't be scored." (task list and practice),
+"Demo result. Your answer was not scored." (results), "Demo mode. These are example attempts, not yours." (dashboard
+and History). Real pages never show it. In mock mode the exam date can be changed on the dashboard, but only on that
+page (nothing is saved; a reload brings the demo date back), and the Account menu shows the demo account with no
+sign-in or Log out.
 
 What a Preview **with no environment variables** serves, checked on 2026-11-07 with a production build started the way
-a Preview runs (`NODE_ENV=production`, `VERCEL=1`, `VERCEL_ENV=preview`, no other variables, no writable disk):
+a Preview runs (`NODE_ENV=production`, `VERCEL=1`, `VERCEL_ENV=preview`, no other variables, a database path that
+cannot be created): `npm run test:e2e:preview` (`playwright.preview.config.ts`, `e2e/mock-mode.spec.ts`).
 
-| Works (200) | Fails (500 page, 503 API) |
-|---|---|
-| The Part 2 briefs in mock mode: `/practice/speaking/<task id>?mock=1`, for all 7 tasks (`b2-part2-advice-from-someone`, `b2-part2-important-decision`, `b2-part2-goal-you-set`, `b2-part2-working-in-a-team`, `b2-part2-trying-and-failing`, `b2-part2-a-tradition`, `b2-part2-happy-day`), and the whole mock loop from there (preparation, recording, Finish → `/result?state=scoring&next=1` → mock result) | `/` (the task list: it has no mock mode), `/login`, `/register` (the configuration check) |
-| The `/result` prototype (`?anchor=…`, `?state=…`) | `/dashboard`, `/history`, `/result/<attempt id>` (the database) |
-| Static files, e.g. the task pictures `/tasks/*.svg` | The practice pages without `?mock=1`, every API route, `/api/health` (503) |
+**Mock URLs that work on a Preview (200):**
 
-So to look at a branch on its Preview without a database, open the briefs with `?mock=1`. (Until November 2026 a failed
-check made the start-up hook throw, which made Next.js answer 500 on every route.)
+| Page | Address |
+| --- | --- |
+| Task list | `/?mock=1` (every task opens its brief in mock mode) |
+| Part 2 brief, then preparation, recording, Scoring… and the demo result | `/practice/speaking/<task id>?mock=1`, for all 7 tasks: `b2-part2-advice-from-someone`, `b2-part2-important-decision`, `b2-part2-goal-you-set`, `b2-part2-working-in-a-team`, `b2-part2-trying-and-failing`, `b2-part2-a-tradition`, `b2-part2-happy-day` |
+| A retry with its goal | `/practice/speaking/<task id>?mock=1&retry=<saved run>&run=1..3` (e.g. `retry=A2-b1-all-three&run=1`; opened by "Retry with this goal" and "Start retry") |
+| Demo result | `/result?mock=1`, `/result?mock=1&anchor=<saved run>&run=1..3`, `/result?mock=1&state=scoring\|too-short\|no-speech\|retry` (`/result` without `mock=1` is the same prototype; its links add it) |
+| Dashboard | `/dashboard?mock=1` (`&flags=off` also works) |
+| History | `/history?mock=1`, `/history?mock=1&part=2` |
+| Static files | e.g. the task pictures `/tasks/*.svg` |
+
+Start a tester at `/?mock=1` (or `/dashboard?mock=1`): the loop task list → brief → practice → result → retry →
+dashboard → History clicks through without leaving mock mode. Only exactly `mock=1` counts (`mock=0`, `mock=true`
+are real pages).
+
+**Still refused on a Preview with no variables** (unchanged): every page without `?mock=1`: `/`, `/login`,
+`/register`, the practice pages (HTTP 500, "CEFRO isn't available right now", the configuration check), `/dashboard`,
+`/history`, `/result/<attempt id>` (500: the configuration check or the database); every API route (503
+`service_not_configured`) and `/api/health` (503 "unavailable").
+
+How mock mode reaches the task list: `/` sits in the `(site)` layout, which runs the configuration check, and a layout
+gets no query. `src/proxy.ts` therefore passes `?mock=1` on as the request header `x-cefro-mock: 1` (and removes one
+sent by a browser); the layout skips the check only then. The pages themselves read `?mock=1`.
+
+So to look at a branch on its Preview without a database, open `/?mock=1`. (Until November 2026 a failed check made
+the start-up hook throw, which made Next.js answer 500 on every route.)
 
 **Which variables the check reports on a Preview with none set:** `TRANSCRIPTION_PROVIDER` and `EVALUATION_PROVIDER`
 (they must be explicit on Vercel, see "AI providers" below), the key of each chosen provider (`GEMINI_API_KEY` with the
@@ -153,14 +182,15 @@ self-hosted server). On Vercel (Production, Preview and Development: whenever `V
 another provider silently. At start-up the server logs, for each one:
 
 ```
-{"level":"error","message":"must be set explicitly on Vercel (gemini or anthropic); the local default is not used there. Set it for this environment in the Vercel project settings.","variable":"EVALUATION_PROVIDER",…}
+{"level":"error","message":"must be set explicitly on Vercel: TRANSCRIPTION_PROVIDER=openai or TRANSCRIPTION_PROVIDER=gemini. The local default is not used there. Set it for this environment in the Vercel project settings.","variable":"TRANSCRIPTION_PROVIDER",…}
+{"level":"error","message":"must be set explicitly on Vercel: EVALUATION_PROVIDER=gemini or EVALUATION_PROVIDER=anthropic. The local default is not used there. Set it for this environment in the Vercel project settings.","variable":"EVALUATION_PROVIDER",…}
 {"level":"error","message":"Server not configured: API routes, the app's pages and /api/health refuse until this is fixed","variables":["EVALUATION_PROVIDER",…]}
 ```
 
 and then refuses like any other configuration problem: every API route 503, the app's pages 500, `/api/health` 503, so
 the production pipeline's post-deploy health check fails. It does **not** crash the server at start-up: a throwing
 start-up hook makes Next.js answer 500 on every route, which would also take down the pages that need no
-configuration (the `?mock=1` briefs, the `/result` prototype). The defaults themselves are unchanged.
+configuration (the `?mock=1` pages, the `/result` prototype). The defaults themselves are unchanged.
 
 ### One-time setup
 

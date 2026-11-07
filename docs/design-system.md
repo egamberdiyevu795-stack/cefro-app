@@ -237,6 +237,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
 | `ScoringLabel` | The only attempt status: grey hourglass + "Scoring…", shown in place of the level while an answer is processed. No Passed/Failed, no colour. |
 | `DeltaLabel` | Small lime pill for an improvement. Only for positive change. |
+| `DemoLabel` | "Demo result. Your answer was not scored." A `well` pill (or `card` off a card) with the `info` glyph, `text-label` (12 px), `fg` text (15.46:1 on well, 17.78:1 on card; glyph `fg-subtle` 3.16 / 3.64:1), `role="note"`, not a button. On every screen built from mock data: at the top of the result card of the `/result` prototype (every state: result, retry, Scoring…, couldn't score) and above the step card of the practice page's mock mode (`?mock=1`). Real results never pass `demo`; tests check both. |
 | `StatRow` | `label │ value` row inside a `<dl>`: muted label, thin divider, right-aligned semibold value. |
 | `ProgressBar` | 4 px accent bar on a `well` track, with progressbar semantics. |
 | `GoalBar` | Grey pill with a black check square, a sentence, and a faint fill for how far along the goal is. |
@@ -287,7 +288,10 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   band 0 run), `?state=scoring|too-short|no-speech|retry`, `?flags=off`, `&from=<fixture id>&fromRun=n` (the attempt
   a retry comes from: its goal on Scoring… and the one the retry result checks), `&next=1` (Scoring… opens the result
   after about 4 s: used by the practice page's mock mode).
-- **New flags:** `fixLesson`, `recordingPlayback`. **New icons:** `play`, `partly`, `cross`. **New style:** `PILL_QUIET`.
+- **New flags:** `fixLesson`, `recordingPlayback`. **New icons:** `play`, `partly`, `cross`, `info`. **New style:** `PILL_QUIET`.
+- **Demo label:** every prototype screen starts its result card with `DemoLabel` ("Demo result. Your answer was not
+  scored."), so a tester can't mistake a saved demo score for their own. Real attempts (`/result/[attemptId]`) never
+  show it.
 - **Checks:** `src/features/result/view-model.test.ts` builds all 19 saved runs, renders every anchor and state with
   flags on and off, and asserts one black button (none while scoring) and no text under 11 px. The screenshots were
   audited in the browser: no horizontal scroll, smallest text 11 px, lowest text contrast 5.26:1.

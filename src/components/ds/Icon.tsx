@@ -90,6 +90,13 @@ const PATHS = {
   ),
   play: <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor" />,
   /** Status glyphs (result page questions): a full check, a half-filled circle, a cross. */
+  info: (
+    <>
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 11v5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="7.75" r="1.25" fill="currentColor" />
+    </>
+  ),
   partly: (
     <>
       <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="2" />

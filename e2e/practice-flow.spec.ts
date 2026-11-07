@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
+const DEMO_TEXT = "Demo result. Your answer was not scored.";
 
 /** Brief → preparation → recording → Finish. A short test answer opens the early-finish warning: "Finish anyway". */
 async function recordAndSubmit(page: Page, speakMs = 2500) {
@@ -35,6 +36,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   await page.goto("/");
   await page.getByRole("link", { name: /Advice from someone/ }).click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
+  await expect(page.getByTestId("demo-label")).toHaveCount(0); // the real brief: no demo label
 
   // Attempt 1: record → upload → Scoring… → the new result page at the attempt's own address, from the stored attempt.
   await recordAndSubmit(page);
@@ -42,6 +44,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
   await expect(page).toHaveURL(/\/result\/[0-9a-f-]{36}$/);
   await expect(page.getByTestId("development-evaluator")).toContainText("Development evaluator");
+  await expect(page.getByTestId("demo-label")).toHaveCount(0); // a real result is never labelled as a demo
   // The new page's cards, and nothing from the old report.
   for (const title of ["Questions", "Biggest fix", "Skills", "Your answer"]) await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await expect(page.getByText("The biggest thing to fix")).toHaveCount(0);
@@ -276,11 +279,20 @@ test("mock mode: the whole loop without API calls, and a retry's goal on every s
   page.on("request", (r) => {
     if (new URL(r.url()).pathname.startsWith("/api/")) apiCalls.push(r.url());
   });
+  const demo = page.getByTestId("demo-label");
   await page.goto(`${TASK_URL}?mock=1`);
+  await expect(demo).toHaveText(DEMO_TEXT); // the mock brief
   await recordAndSubmit(page, 1000);
   await expect(page).toHaveURL(/\/result\?state=scoring/);
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
+  await expect(demo).toHaveText(DEMO_TEXT); // mock Scoring…
   await expect(page.getByRole("heading", { name: /Band 2/ })).toBeVisible({ timeout: 15_000 });
+  // The mock result: the label is at the top of the result card, and is not a button.
+  const resultCard = page.locator('[aria-labelledby="result-title"]');
+  await expect(resultCard.getByTestId("demo-label")).toHaveText(DEMO_TEXT);
+  await expect(demo).toHaveCount(1);
+  await expect(demo).toHaveJSProperty("tagName", "P");
+  expect(await demo.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(11);
 
   // "Retry with this goal" carries the goal through brief, preparation, recording and Scoring… to the result.
   await page.getByRole("link", { name: "Retry with this goal" }).click();
@@ -295,6 +307,7 @@ test("mock mode: the whole loop without API calls, and a retry's goal on every s
   await page.getByRole("button", { name: "Finish anyway" }).click();
   await expect(page.getByTestId("goal-card")).toBeVisible();
   await expect(page.getByText("Goal met")).toBeVisible({ timeout: 15_000 });
+  await expect(demo).toHaveText(DEMO_TEXT); // the mock retry result
   expect(apiCalls).toEqual([]);
 });
 

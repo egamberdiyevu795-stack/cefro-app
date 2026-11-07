@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, CardHeader, ComingSoonButton, DeltaLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
+import { Card, CardHeader, ComingSoonButton, DeltaLabel, DemoLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
@@ -67,10 +67,13 @@ export function ScoredResult({
   retryHref,
   onCompare,
   audio,
+  demo = false,
 }: {
   view: ResultView;
   task: Task;
   flags: FeatureFlags;
+  /** Mock data (the /result prototype): the "Demo result" label at the top of the result card. Never for a real attempt. */
+  demo?: boolean;
   /** "Retry with this goal": a link (default: the practice page) or a callback. */
   retryHref?: ActionTarget;
   /** A retry: open the side-by-side comparison with the previous attempt. */
@@ -80,7 +83,7 @@ export function ScoredResult({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.62fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-        <ResultCard view={view} onCompare={onCompare ?? null} className="order-1 lg:order-none" />
+        <ResultCard view={view} onCompare={onCompare ?? null} demo={demo} className="order-1 lg:order-none" />
         <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} flags={flags} className="order-3 lg:order-none" />
         {view.patterns.length > 0 && <PatternsCard patterns={view.patterns} className="order-4 lg:order-none" />}
         <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} audio={audio} className="order-6 lg:order-none" />
@@ -99,11 +102,12 @@ const ZERO_TEXT: Partial<Record<NonNullable<ResultView["zeroReason"]>, string>> 
   no_question_on_topic: "Band 0 because no question was answered.",
 };
 
-function ResultCard({ view, onCompare, className }: { view: ResultView; onCompare: ActionTarget | null; className?: string }) {
+function ResultCard({ view, onCompare, demo, className }: { view: ResultView; onCompare: ActionTarget | null; demo: boolean; className?: string }) {
   const retry = view.retry;
   const change = retry ? retry.band - retry.previousBand : 0;
   return (
     <Card aria-labelledby="result-title" className={className}>
+      {demo && <DemoLabel className="mb-3" />}
       <p className="text-caption text-fg-muted">Your result · {view.taskTitle}</p>
       {retry && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -387,15 +391,19 @@ export function ScoringResult({
   state,
   flags,
   notice,
+  demo = false,
 }: {
   state: Extract<ResultPageState, { kind: "scoring" }>;
   flags: FeatureFlags;
   notice?: string | null;
+  /** Mock data: the "Demo result" label. Never for a real attempt. */
+  demo?: boolean;
 }) {
   const current = STEPS.findIndex((s) => s.key === state.step);
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4">
       <Card aria-labelledby="result-title">
+        {demo && <DemoLabel className="mb-3" />}
         <p className="text-caption text-fg-muted">Your result · {state.task.title}</p>
         <h1 id="result-title" className="mt-2 text-stat font-light tracking-[-0.03em] text-fg">
           Scoring…
@@ -440,16 +448,20 @@ export function NotScoredResult({
   flags,
   recordHref,
   audio,
+  demo = false,
 }: {
   state: Extract<ResultPageState, { kind: "not_scored" }>;
   flags: FeatureFlags;
   recordHref?: ActionTarget;
   audio?: AnswerAudio | null;
+  /** Mock data: the "Demo result" label. Never for a real attempt. */
+  demo?: boolean;
 }) {
   const tooShort = state.reason === "too_short";
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4">
       <Card aria-labelledby="result-title">
+        {demo && <DemoLabel className="mb-3" />}
         <p className="text-caption text-fg-muted">Your result · {state.task.title}</p>
         <h1 id="result-title" className="mt-2 text-title font-medium tracking-[-0.01em] text-fg">
           We couldn&rsquo;t score this answer
@@ -495,8 +507,11 @@ export function FailedResult({
   onTryAgain,
   isRetrying = false,
   retryError = null,
+  demo = false,
 }: {
   state: Extract<ResultPageState, { kind: "failed" }>;
+  /** Mock data: the "Demo result" label. Never for a real attempt. */
+  demo?: boolean;
   recordHref?: ActionTarget;
   onTryAgain?: (() => void) | null;
   isRetrying?: boolean;
@@ -508,6 +523,7 @@ export function FailedResult({
   return (
     <div className="mx-auto max-w-2xl">
       <Card aria-labelledby="result-title">
+        {demo && <DemoLabel className="mb-3" />}
         <p className="text-caption text-fg-muted">Your result · {state.task.title}</p>
         <h1 id="result-title" className="mt-2 text-title font-medium tracking-[-0.01em] text-fg">
           {copy.title}

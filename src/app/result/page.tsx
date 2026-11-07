@@ -43,13 +43,13 @@ export default async function ResultPage(props: PageProps<"/result">) {
   return (
     <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} />
+        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} demo />
       ) : state.kind === "scoring" ? (
-        <ScoringResult state={state} flags={flags} />
+        <ScoringResult state={state} flags={flags} demo />
       ) : state.kind === "not_scored" ? (
-        <NotScoredResult state={state} flags={flags} recordHref={recordHref} />
+        <NotScoredResult state={state} flags={flags} recordHref={recordHref} demo />
       ) : (
-        <FailedResult state={state} recordHref={recordHref} />
+        <FailedResult state={state} recordHref={recordHref} demo />
       )}
       {state.kind === "scoring" && selection.next && <AutoAdvance href={mockResultHref(selection)} />}
       <PrototypeSwitches selection={selection} />

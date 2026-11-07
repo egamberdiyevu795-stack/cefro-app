@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { DemoLabel } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -419,6 +420,8 @@ export function PracticeExperience({
 
   return (
     <div className="space-y-4">
+      {/* Mock mode scores nothing (Finish opens the demo result); a mock retry's goal comes from a saved demo run. */}
+      {isMock && <DemoLabel className="bg-card" />}
       {pageError && <InlineNotice title="Something went wrong.">{pageError}</InlineNotice>}
       {content}
     </div>

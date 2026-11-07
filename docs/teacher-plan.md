@@ -1,7 +1,7 @@
 # Teacher view (v1): plan
 
-Status: **plan, not approved.** No code yet. Built on `claude/profile-settings` (the Account page at `/profile`, Delete
-my account). Decisions by the owner and Asadbek (2026-11-07) are taken as given; the rest is a proposal.
+Status: **Final, approved by Asadbek 2026-11-07.** No code yet. Built on `claude/profile-settings` (the Account page
+at `/profile`, Delete my account). All decisions are in this plan; section 9 lists them.
 **Not in v1:** audio playback, messages, editing scores, mocks or deadlines (v2), public teacher sign-up (teachers are
 approved by the owner by hand). Teachers see the name the student chose for them, never emails.
 
@@ -10,7 +10,7 @@ under-18s is built (section 7). Until then only `?mock=1` works.
 
 ## 1. User flows
 
-**Teacher:** owner marks the account as teacher → Create class → code (e.g. `K7M4QD`) → students appear once they
+**Teacher:** owner marks the account as teacher → Home → **Your classes** (or the link on the Account page) → Create class → code (e.g. `K7M4QD`) → students appear once they
 share → student → attempt → Agree or Choose level. Also: close class, reset code (old code stops, members stay),
 remove a student.
 
@@ -23,13 +23,13 @@ confirm. Students never see the teacher's rating in v1.
 
 | Screen | Content | Black button |
 | --- | --- | --- |
-| T1 Classes | One row per class: name, students, last activity. Empty: "No classes yet". | Create class |
+| T1 Your classes | Teacher accounts only: a section at the **top of Home** (dashboard), above the student cards, plus a quiet "Your classes" link on the Account page. No sixth tab. One row per class: name, students, last activity. Empty: "No classes yet". | Create class (Home keeps one black button: for a teacher it is this one) |
 | T2 Create class | Name field; then the code, large: "Students enter this on their Account page". | Create class, then Copy code |
 | T3 Class overview | Join code (quiet Reset code). **Most common problems**: top 3 biggest fixes, once per student from their latest shared scored attempt ("4 of 9 students"), each with a quiet link to its approved lesson (read-only; none if not approved). **Students**: name, current level, attempts, last practice (dd.mm.yy), current biggest fix, retry goal (Goal met / Not yet / —). Quiet Close class at the bottom (confirm card). | Copy join code |
 | T4 Student | Name, current level, skills, shared attempts newest first. Quiet Remove from class (confirm card). | Open latest attempt |
 | T5 Attempt (read-only) | The result page's components: band, questions, biggest fix (quote, Try instead, goal), skills, transcript. No player, Retry or Learn how. A retry of an attempt from before joining shows no comparison. **Your view**: "CEFRO: Part 2 · Band 3 · Lower B2", then **Agree** and **Choose level**, both grey, same size, side by side, so the design doesn't push agreement. Choose level lists the part's bands with our labels ("Band 4 · Higher B2"). After: "You: Agree" or "You: Higher B2 (Band 4)", quiet Change. | **None** |
 | S1 Join a class (Account page) | Code field (6 characters, not case-sensitive). Wrong code: "We can't find a class with this code." | Continue |
-| S2 Share | "Ms Karimova · Group B". **Name your teacher sees** (prefilled with the first word of the account name, editable, this class only). **Will see:** that name, your level, and every Part 2 attempt you make from now on, with transcript, quotes and feedback. **Won't see:** earlier attempts, email, recordings, exam date. **If you leave:** "Your teacher loses access to everything. We keep only their level and our band for each rated attempt, with no name or answer, to check our scoring." Quiet Not now. | Share with this teacher |
+| S2 Share | "Ms Karimova · Group B". **Name your teacher sees** (prefilled with the first word of the account name, editable, this class only). **Will see:** that name, your level, and every Part 2 attempt you make from now on, with transcript, quotes and feedback. **Won't see:** earlier attempts, email, recordings, exam date. **If you leave:** "Your teacher loses access to everything." and "If you leave, we keep your teacher's level and ours as an anonymous number pair to improve scoring. It can't be linked to you." Quiet Not now. | Share with this teacher |
 | S3 My classes (Account page) | Per class: teacher, class, name shown, "Sharing since 07.11.26", quiet Leave class → confirm card. Closed or removed: "You're no longer in this class." | Leave class (confirm card only); Join a class is grey, the Account page keeps its own black button |
 
 ## 3. Data model (one additive migration, `0006_teachers`)
@@ -43,8 +43,9 @@ confirm. Students never see the teacher's rating in v1.
 - `teacher_ratings`: `id`, `attempt_id`, `teacher_user_id`, `class_id`, `agrees`, `teacher_band` (0–5, null when
   agrees), `app_band`, `evaluator_version`, `rubric_version`. Unique per attempt and teacher. Shown with the part's
   band labels. **Never read by the scorer, result page, dashboard or History.**
-- `rating_pairs` (anonymous): `teacher_band`, `app_band`, `evaluator_version`, `rubric_version`, `month`. No ids of
-  any kind, no transcript, no exact time, so a pair can't be linked back to a student, attempt or teacher.
+- `rating_pairs` (anonymous): `teacher_band` (the app band when the teacher agreed), `app_band`, `evaluator_version`,
+  `rubric_version`, `part`, `month` (YYYY-MM). **Nothing else:** no ids, no name, no transcript, no exact time, so a
+  pair can't be linked to a student, attempt or teacher, and can't be deleted later.
 
 ## 4. Access rules (server only)
 
@@ -66,10 +67,12 @@ result.
   teacher's ratings on that student's attempts becomes an anonymous `rating_pair`, and the rating row is deleted. The
   next teacher request is a 404; the student leaves the overview and the counts.
 - **Student deletes their account** (`delete-account.ts`, password + DELETE): also deletes every `class_members` row
-  and every `teacher_ratings` row on their attempts, with no pair made. Pairs made at an earlier Leave hold nothing
-  that links them to the student, so they can't be found or deleted (question 2).
+  and every `teacher_ratings` row on their attempts, with no pair made. Pairs made at an earlier Leave can't be linked to
+  the student and are not deleted (the Share screen says so).
 - **Teacher deletes their account:** classes closed (students see "You're no longer in this class"), the teacher's
   ratings, classes and memberships deleted. Students' attempts are untouched.
+- **After Remove or Close:** the student is told only on the Account page ("You're no longer in this class") in v1;
+  email comes later, once CEFRO sends email.
 - Add the new tables to `delete-account.ts` and its table-by-table test.
 
 ## 6. Mock mode (`?mock=1`)
@@ -110,11 +113,11 @@ Before real teacher pages go on, the consent work must add (privacy-todo items i
 - Mock: T5 has **no** black button and two equal grey ones; one black elsewhere; no text under 11 px; `?mock=1` links
   only. Browser: create → join → share → attempt → Agree → Leave, at 390 px.
 
-## 9. New questions
+## 9. Decisions (Asadbek, 2026-11-07)
 
-1. Pairs: also keep `rubric_version` and the month (proposed; the band means nothing without its part)?
-2. Pairs made at an earlier Leave survive account deletion because nothing links them to the student. Is that
-   acceptable, or should the Share screen say so too?
-3. Where does a teacher find Classes: a section on their Account page (proposed, keeps 5 tabs) or a sixth tab?
-4. After Remove or Close, is the student only told on the Account page (proposed), or also by email once email
-   sending exists?
+Share only attempts made after joining · on Leave, Remove or Close keep only the anonymous pair (section 3), never
+deletable, said on the Share screen · on account deletion delete everything else · teacher controls: close class,
+reset code, remove a student · under-18s only with parent consent, age limit 18 pending the legal check, mock mode only
+until then · teacher level stored as band 0–5, shown with our labels · the student confirms "Name your teacher sees" ·
+students don't see ratings in v1 · several classes per student · teachers reach classes from "Your classes" at the top
+of Home and a link on the Account page, no sixth tab · Remove / Close: Account page notice only in v1, email later.

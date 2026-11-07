@@ -240,11 +240,13 @@ email, sign-up date and exam date columns already exist, and deletion only remov
   `features.test.ts`; `e2e/profile-settings.spec.ts`; `e2e/mock-mode.spec.ts` (390 px audit and Preview lists).
 - `docs/privacy-todo.md`: what the under-18 consent work will need from these pages.
 
-## Docs branch: `claude/teacher-plan-v7fp7j` (one new doc, no code)
+## Right after `claude/profile-settings`: `claude/teacher-plan-v7fp7j` (contains profile-settings code)
 
-Cut from `claude/lessons`, then `claude/profile-settings` merged in, so it comes **after `profile-settings`**, merge
-commit. Its own changes are docs only: `docs/teacher-plan.md` (Teacher view v1 plan) and this entry. No app code, no
-migration (the plan proposes `0006_teachers` for later).
+**This branch contains all of `claude/profile-settings`, app code included** (merged in, not just referenced). Merge
+it **right after `claude/profile-settings`, never earlier**: merged before it, it would bring the Profile, Settings
+and account-deletion code into `main` unreviewed. Merge commit, no squash. Its own commits change docs only:
+`docs/teacher-plan.md` (Teacher view v1, final, approved by Asadbek 2026-11-07) and this entry. No migration (the plan
+proposes `0006_teachers` for later).
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

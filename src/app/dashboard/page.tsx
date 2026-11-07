@@ -9,7 +9,16 @@ import type { HistoryAttempt } from "@/domain/speaking/history";
 import { AccountMenu } from "@/features/dashboard/AccountMenu";
 import { ExamDate } from "@/features/dashboard/ExamDate";
 import { navItemsFor } from "@/features/dashboard/mock-data";
-import { dashboardFix, partTiles, practiseNext, progress, scoredAttempts, type TaskInfo } from "@/features/dashboard/progress";
+import {
+  dashboardFix,
+  dashboardView,
+  partTiles,
+  practiseNext,
+  progress,
+  scoredAttempts,
+  visiblePartTiles,
+  type TaskInfo,
+} from "@/features/dashboard/progress";
 import {
   BiggestFixCard,
   ExamPartsCard,
@@ -41,10 +50,14 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *   row 2: [ Speaking progress + radar ] [ Exam parts      ]
  *   row 3: [ Recent attempts           ] [ Biggest fix     ]
  * Returning, phone: practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
- * First visit (nothing scored yet): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
+ * Attempts, none scored yet (still scoring, failed, too short): [ Find your level ("Start practice"), exam date* ],
+ *   [ Recent attempts ], [ Exam parts ]. No level, skills or biggest fix until an answer is scored.
+ * First visit (no attempts): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
  * The Account item (with Log out) is always in the nav, whatever the flags.
  *
- * * flag `examCountdown`; with it off, or when the student chose Skip, Practise next takes the full row.
+ * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
+ *   small "Add exam date".
+ * Part tiles with no task yet (1.1, 1.2, 3) say "Coming soon", each behind its own flag.
  * `?flags=off` previews the page with every flag off.
  */
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
@@ -66,16 +79,17 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const transcript = latestScored && userId ? ((await getAttemptViewForUser(userId, latestScored.id)).transcript?.text ?? "") : "";
   const fix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript, target });
   const next = practiseNext(attempts, tasks);
-  const tiles: ExamPartTileView[] = partTiles(attempts, tasks).map((t) => ({ ...t, part: t.partLabel }));
+  const tiles: ExamPartTileView[] = visiblePartTiles(partTiles(attempts, tasks), flags).map((t) => ({ ...t, part: t.partLabel }));
+  const view = dashboardView(attempts);
   const recent = toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts);
 
   const today = todayIn(now);
   const exam = examDateState(stored, now);
   const examSlot = (variant: "card" | "inline", className?: string) =>
-    flags.examCountdown && exam.kind !== "skipped" ? (
+    flags.examCountdown ? (
       <ExamDate state={exam} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant={variant} className={className} />
     ) : null;
-  const countdown = flags.examCountdown && exam.kind !== "skipped";
+  const countdown = flags.examCountdown;
 
   return (
     <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
@@ -119,7 +133,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
           </header>
 
           <main id="main" className="grid grid-cols-1 gap-4 pb-28 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:pb-0">
-            {summary && fix && next ? (
+            {view === "returning" && summary && fix && next ? (
               <>
                 <PractiseNextCard next={next} className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
                 {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
@@ -136,7 +150,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               </>
             ) : (
               <>
-                <FindYourLevelCard exam={examSlot("inline")} className="lg:col-span-2" />
+                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} className="lg:col-span-2" />
+                {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} className="lg:col-span-2" />}
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
                   wide

@@ -21,6 +21,13 @@ export const FEATURE_FLAGS = {
   settings: true,
   /** Row menu on attempts (Delete, Report a wrong score). */
   attemptMenu: true,
+  /**
+   * Exam part tiles for parts that have no task yet: the tile says "Coming soon" (no Start link). Off: the tile is not
+   * rendered. Delete each once its part has a task (Part 2 has no flag: it is real).
+   */
+  examPart1_1: true,
+  examPart1_2: true,
+  examPart3: true,
   /** "Your exam: in N days" card. */
   examCountdown: true,
   /** Result page: "Lesson" link under the biggest fix (the lesson for that fix). */

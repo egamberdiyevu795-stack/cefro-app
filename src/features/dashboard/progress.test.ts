@@ -7,8 +7,11 @@ import type { HistoryAttempt } from "@/domain/speaking/history";
 import { listSpeakingTasks } from "@/content/speaking";
 import rawQ7 from "@/server/evaluation/rubrics/multilevel_q7.json";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
+import { allFlags, FEATURE_FLAGS } from "@/config/features";
 import {
   dashboardFix,
+  dashboardView,
+  visiblePartTiles,
   formatMinutes,
   middleLevel,
   overallLevel,
@@ -245,7 +248,7 @@ describe("exam part tiles", () => {
       ["Part 3", null, null],
     ]);
     expect(tiles[2].href).toBe("/#part-2"); // the Part 2 tasks on the task list, not one task
-    expect(tiles[0].href).toBe("/"); // no Part 1.1 task yet: the task list
+    expect(tiles[0].href).toBeNull(); // no Part 1.1 task yet: no link, the tile says "Coming soon"
   });
 });
 
@@ -279,6 +282,31 @@ describe("with the 7 real Part 2 tasks", () => {
   it("the Part 2 tile shows the latest Part 2 band whichever task it came from, and opens the Part 2 task list", () => {
     const tiles = partTiles(sorted([on(ALL[0].id, 3), { ...on(ALL[6].id, 1), result: result("A4-b2-all-three") }]), ALL);
     expect(tiles[2]).toMatchObject({ partLabel: "Part 2", band: 4, href: "/#part-2" });
-    expect(partTiles([], ALL).map((t) => t.href)).toEqual(["/", "/", "/#part-2", "/"]);
+    expect(partTiles([], ALL).map((t) => t.href)).toEqual([null, null, "/#part-2", null]);
+  });
+});
+
+describe("which dashboard", () => {
+  it("first visit only with no attempts at all; attempts that are all unscored still count as returning", () => {
+    expect(dashboardView([])).toBe("first_visit");
+    expect(dashboardView([attempt(0, { status: "failed", result: null, failureCode: "evaluation_failed" })])).toBe("not_scored_yet");
+    expect(dashboardView([attempt(0, { status: "evaluating", result: null })])).toBe("not_scored_yet");
+    const tooShort = result();
+    tooShort.scoring.zero_reason = "too_short";
+    expect(dashboardView([attempt(0, { result: tooShort })])).toBe("not_scored_yet");
+    expect(dashboardView(sorted([attempt(1), attempt(0, { status: "failed", result: null })]))).toBe("returning");
+  });
+});
+
+describe("part tiles without a task: Coming soon behind a flag per part", () => {
+  const tiles = partTiles([], TASKS);
+  it("flags on: all four tiles; 1.1, 1.2 and 3 have no link", () => {
+    const shown = visiblePartTiles(tiles, FEATURE_FLAGS);
+    expect(shown.map((t) => [t.part, t.href])).toEqual([["1.1", null], ["1.2", null], ["2", "/#part-2"], ["3", null]]);
+  });
+  it("each part's flag hides only its own tile; Part 2 is always there", () => {
+    expect(visiblePartTiles(tiles, allFlags(false)).map((t) => t.part)).toEqual(["2"]);
+    expect(visiblePartTiles(tiles, { ...FEATURE_FLAGS, examPart1_2: false }).map((t) => t.part)).toEqual(["1.1", "2", "3"]);
+    expect(visiblePartTiles(tiles, { ...FEATURE_FLAGS, examPart3: false }).map((t) => t.part)).toEqual(["1.1", "1.2", "2"]);
   });
 });

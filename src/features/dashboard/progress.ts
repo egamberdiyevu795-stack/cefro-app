@@ -11,6 +11,7 @@ import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { EXAM_PART_IDS, examPartLabel, examPartListHref, examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import type { RadarAxis } from "@/components/ds/RadarChart";
+import type { FeatureFlag, FeatureFlags } from "@/config/features";
 import { formatDate } from "@/features/history/view-model";
 import { biggestFix, compareWithPrevious, type BiggestFixView } from "@/features/result/view-model";
 
@@ -285,12 +286,13 @@ export interface PartTile {
   /** The latest scored band of this part; null when none is scored yet ("Start"). */
   band: number | null;
   bandLabel: string | null;
-  href: string;
+  /** That part's tasks on the task list; null when the part has no task yet (the tile says "Coming soon"). */
+  href: string | null;
 }
 
 /**
  * One tile per exam part: its latest scored band, and a link to that part's tasks on the task list (`/#part-2`), so
- * the student picks the task. A part with no task yet links to the top of the task list.
+ * the student picks the task. A part with no task yet has no link (`href: null`).
  */
 export function partTiles(attempts: readonly HistoryAttempt[], tasks: readonly TaskInfo[]): PartTile[] {
   const scored = scoredAttempts(attempts);
@@ -303,7 +305,34 @@ export function partTiles(attempts: readonly HistoryAttempt[], tasks: readonly T
       name: PART_NAMES[part],
       band: latest ? latest.result.scoring.band : null,
       bandLabel: latest ? latest.result.scoring.label : null,
-      href: task ? examPartListHref(part) : "/",
+      href: task ? examPartListHref(part) : null,
     };
   });
+}
+
+/** The flag of each part that has no task yet: its tile says "Coming soon" (flag on) or is not rendered (off). */
+export const PART_FLAGS: Partial<Record<ExamPartId, FeatureFlag>> = { "1.1": "examPart1_1", "1.2": "examPart1_2", "3": "examPart3" };
+
+/** The tiles the dashboard shows: every part with tasks; a part without tasks only while its flag is on. */
+export function visiblePartTiles(tiles: readonly PartTile[], flags: FeatureFlags): PartTile[] {
+  return tiles.filter((t) => {
+    if (t.href !== null) return true;
+    const flag = PART_FLAGS[t.part];
+    return flag !== undefined && flags[flag];
+  });
+}
+
+/* ── Which dashboard ─────────────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * - "returning": at least one scored answer (level, skills, biggest fix, Practise next).
+ * - "not_scored_yet": attempts, none scored (still scoring, failed, too short): no level yet, but Recent attempts and
+ *   "Start practice" (never the first visit's "Start your first practice").
+ * - "first_visit": no attempts at all.
+ */
+export type DashboardView = "returning" | "not_scored_yet" | "first_visit";
+
+export function dashboardView(attempts: readonly HistoryAttempt[]): DashboardView {
+  if (scoredAttempts(attempts).length > 0) return "returning";
+  return attempts.length > 0 ? "not_scored_yet" : "first_visit";
 }

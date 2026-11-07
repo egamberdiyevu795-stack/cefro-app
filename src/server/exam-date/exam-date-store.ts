@@ -27,3 +27,8 @@ export async function saveExamDate(userId: string, date: unknown, now = new Date
 export async function skipExamDate(userId: string): Promise<void> {
   await (await getDb()).update(users).set({ examDateSkippedAt: nowIso() }).where(eq(users.id, userId)).run();
 }
+
+/** "Remove date": clear the date and stop asking (the dashboard then offers "Add exam date", as after Skip). */
+export async function removeExamDate(userId: string): Promise<void> {
+  await (await getDb()).update(users).set({ examDate: null, examDateSkippedAt: nowIso() }).where(eq(users.id, userId)).run();
+}

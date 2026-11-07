@@ -5,13 +5,17 @@ import { useId, useState } from "react";
 import { Card, cx, styles } from "@/components/ds";
 import { formatDay, type ExamDateState } from "@/domain/exam-date";
 
+/** The small text actions here (Edit, Add exam date, Skip, Cancel, Remove date): a 36 px tap area, like Save. */
+export const EXAM_TEXT_ACTION = cx(styles.SMALL_ACTION, "min-h-9 px-1");
+
 /**
  * The exam date on the dashboard (flag `examCountdown`).
  * - "ask": "When is your exam?" with a date picker, Save and Skip.
  * - "ask_again": the saved date has passed: the countdown is gone and the student is asked for the next date.
- * - "countdown": "Your exam: in N days", the date, and Edit (opens the same picker, with Cancel).
+ * - "countdown": "Your exam: in N days", the date, and Edit (the same picker, with Cancel and Remove date).
+ * - "skipped" (Skip, or Remove date): "Your exam · Not set" and a small "Add exam date" that opens the picker.
  * Saved per user (`PUT /api/account/exam-date`), then the page re-renders from the server.
- * Save is the quiet pill: the screen's one black button is elsewhere (Practise next / Start your first practice).
+ * Save is the quiet pill: the screen's one black button is elsewhere (Practise next / Start practice).
  */
 export function ExamDate({
   state,
@@ -20,46 +24,67 @@ export function ExamDate({
   variant,
   className,
 }: {
-  state: Exclude<ExamDateState, { kind: "skipped" }>;
+  state: ExamDateState;
   /** "YYYY-MM-DD" in Uzbekistan: the earliest date that can be chosen. */
   today: string;
   max: string;
-  /** "card": its own card (returning dashboard). "inline": a section inside the first-visit card. */
+  /** "card": its own card (returning dashboard). "inline": a section inside the welcome card. */
   variant: "card" | "inline";
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
-  const body =
-    state.kind === "countdown" && !editing ? (
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-caption text-fg-muted">Your exam</p>
-          <p className="mt-0.5 text-title font-medium tracking-[-0.01em] text-fg" data-testid="exam-countdown">
-            {state.label}
-          </p>
-          <p className="mt-0.5 text-label text-fg-muted">{formatDay(state.date)}</p>
-        </div>
-        <button type="button" onClick={() => setEditing(true)} aria-label="Edit exam date" className={styles.SMALL_ACTION}>
+  let body: React.ReactNode;
+  if (state.kind === "countdown" && !editing) {
+    body = (
+      <Summary title={<span data-testid="exam-countdown">{state.label}</span>} detail={formatDay(state.date)} big>
+        <button type="button" onClick={() => setEditing(true)} aria-label="Edit exam date" className={EXAM_TEXT_ACTION}>
           Edit
         </button>
-      </div>
-    ) : (
+      </Summary>
+    );
+  } else if (state.kind === "skipped" && !editing) {
+    body = (
+      <Summary title="Not set">
+        <button type="button" onClick={() => setEditing(true)} className={EXAM_TEXT_ACTION} data-testid="exam-add">
+          Add exam date
+        </button>
+      </Summary>
+    );
+  } else {
+    body = (
       <ExamDateForm
         question={state.kind === "ask_again" ? "When is your next exam?" : state.kind === "countdown" ? "Change your exam date" : "When is your exam?"}
         note={state.kind === "ask_again" ? `Your exam date, ${formatDay(state.passed)}, has passed.` : null}
         initial={state.kind === "countdown" ? state.date : ""}
         today={today}
         max={max}
-        onCancel={state.kind === "countdown" ? () => setEditing(false) : null}
+        // Skip only where the question is asked unprompted; once the student opened the picker, Cancel closes it.
+        onCancel={state.kind === "countdown" || state.kind === "skipped" ? () => setEditing(false) : null}
+        canRemove={state.kind === "countdown"}
         onSaved={() => setEditing(false)}
       />
     );
+  }
 
   if (variant === "inline") return <div className={className}>{body}</div>;
   return (
     <Card aria-label="Your exam date" className={cx("flex flex-col justify-center", className)}>
       {body}
     </Card>
+  );
+}
+
+/** "Your exam", a line (the countdown, or "Not set"), an optional detail, and one small action on the right. */
+function Summary({ title, detail, big = false, children }: { title: React.ReactNode; detail?: string; big?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-caption text-fg-muted">Your exam</p>
+        <p className={cx("mt-0.5", big ? "text-title font-medium tracking-[-0.01em] text-fg" : "text-label text-fg-muted")}>{title}</p>
+        {detail && <p className="mt-0.5 text-label text-fg-muted">{detail}</p>}
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -70,6 +95,7 @@ function ExamDateForm({
   today,
   max,
   onCancel,
+  canRemove,
   onSaved,
 }: {
   question: string;
@@ -77,8 +103,10 @@ function ExamDateForm({
   initial: string;
   today: string;
   max: string;
-  /** Edit only: back to the countdown. Without it the form offers Skip. */
+  /** Back to the summary. Without it the form offers Skip. */
   onCancel: (() => void) | null;
+  /** Edit of a saved date: "Remove date" clears it. */
+  canRemove: boolean;
   onSaved: () => void;
 }) {
   const router = useRouter();
@@ -87,7 +115,7 @@ function ExamDateForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function send(body: { date: string } | { skip: true }) {
+  async function send(body: { date: string } | { skip: true } | { remove: true }) {
     setBusy(true);
     setError(null);
     try {
@@ -139,15 +167,21 @@ function ExamDateForm({
           Save
         </button>
         {onCancel ? (
-          <button type="button" onClick={onCancel} className={cx(styles.SMALL_ACTION, "min-h-9 px-1")}>
+          <button type="button" onClick={onCancel} className={EXAM_TEXT_ACTION}>
             Cancel
           </button>
         ) : (
-          <button type="button" disabled={busy} onClick={() => void send({ skip: true })} className={cx(styles.SMALL_ACTION, "min-h-9 px-1")}>
+          <button type="button" disabled={busy} onClick={() => void send({ skip: true })} className={EXAM_TEXT_ACTION}>
             Skip
           </button>
         )}
       </div>
+      {canRemove && (
+        // On its own line, away from Save, so it is not tapped by mistake.
+        <button type="button" disabled={busy} onClick={() => void send({ remove: true })} className={cx(EXAM_TEXT_ACTION, "-ml-1 mt-1")}>
+          Remove date
+        </button>
+      )}
       {error && (
         <p id={`${id}-error`} role="alert" className="mt-2 text-label text-fg">
           {error}

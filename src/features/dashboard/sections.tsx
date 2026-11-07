@@ -17,7 +17,7 @@ import {
 import type { FeatureFlags } from "@/config/features";
 import { AttemptRow } from "@/features/history/sections";
 import type { HistoryRow } from "@/features/history/view-model";
-import { ATTEMPT_MENU_ITEMS, FIRST_VISIT } from "./mock-data";
+import { ATTEMPT_MENU_ITEMS, FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
 import { radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress } from "./progress";
 
 /*
@@ -38,7 +38,8 @@ export function PractiseNextCard({ next, className }: { next: PractiseNext; clas
         <p className="mt-0.5 text-label text-fg-muted">
           {next.partLabel} · {next.minutes} min · {next.reason}
         </p>
-        {next.goal && <p className="mt-1 line-clamp-2 text-label text-fg">Your goal: {next.goal}</p>}
+        {/* The whole goal, on every screen size: it is what the retry is for. */}
+        {next.goal && <p className="mt-1 break-words text-label text-fg" data-testid="next-goal">Your goal: {next.goal}</p>}
       </div>
       <PillButton href={next.href} label={`Start ${next.goal ? "retry of " : ""}${next.title}`} className="shrink-0">
         Start
@@ -48,19 +49,30 @@ export function PractiseNextCard({ next, className }: { next: PractiseNext; clas
 }
 
 /**
- * First visit (no scored answer yet). "Start your first practice" is the screen's one black action; it goes to the
+ * No scored answer yet: the first visit, or (`hasAttempts`) a student whose attempts are all still scoring or failed.
+ * "Start your first practice" ("Start practice" with attempts) is the screen's one black action; it goes to the
  * recommended part (Part 2), whose tile only carries a "Recommended" label. `exam` = the exam-date question (flagged).
  */
-export function FindYourLevelCard({ exam, className }: { exam: React.ReactNode; className?: string }) {
+export function FindYourLevelCard({
+  exam,
+  hasAttempts = false,
+  className,
+}: {
+  exam: React.ReactNode;
+  /** The student has attempts, none scored yet: "Welcome back" and "Start practice" (not their first). */
+  hasAttempts?: boolean;
+  className?: string;
+}) {
+  const copy = hasAttempts ? NOT_SCORED_YET : FIRST_VISIT;
   return (
     <Card aria-labelledby="find-title" className={cx("flex flex-col justify-center", className)}>
-      <p className="text-label text-fg-muted">{FIRST_VISIT.welcome}</p>
+      <p className="text-label text-fg-muted">{copy.welcome}</p>
       <h2 id="find-title" className="mt-2 text-stat font-light tracking-[-0.03em] text-fg">
-        {FIRST_VISIT.title}
+        {copy.title}
       </h2>
-      <p className="mt-3 max-w-md text-body text-fg-muted">{FIRST_VISIT.text}</p>
+      <p className="mt-3 max-w-md text-body text-fg-muted">{copy.text}</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PillButton href={FIRST_VISIT.href}>Start your first practice</PillButton>
+        <PillButton href={FIRST_VISIT.href}>{hasAttempts ? "Start practice" : "Start your first practice"}</PillButton>
         <span className="text-label text-fg-muted">About {FIRST_VISIT.minutes} min</span>
       </div>
       {exam && <div className="mt-6 border-t border-line pt-4">{exam}</div>}
@@ -146,13 +158,14 @@ function PeriodFilter() {
   );
 }
 
-/** One exam part tile: its latest band, or "Start" when nothing is scored in it yet. */
+/** One exam part tile: its latest band, or "Start" when nothing is scored in it yet; "Coming soon" with no task yet. */
 export type ExamPartTileView = {
   part: string;
   name: string;
   band: number | null;
   bandLabel: string | null;
-  href: string;
+  /** Null: the part has no task yet. The tile says "Coming soon" and has no link. */
+  href: string | null;
   /** Set on the one recommended part (first visit): shown on the tile with a "Recommended" label. */
   recommendation?: string;
 };
@@ -165,6 +178,15 @@ export function ExamPartsCard({ parts, wide = false, className }: { parts: reado
       <ul className={cx("grid grid-cols-2 gap-3", wide && "sm:grid-cols-4")}>
         {parts.map((p) => {
           const tried = p.band !== null;
+          if (p.href === null) {
+            return (
+              <li key={p.part} className="flex flex-col rounded-tile bg-well p-3" data-testid="part-tile">
+                <h3 className="whitespace-nowrap text-caption font-semibold text-fg">{p.part}</h3>
+                <p className="truncate text-caption text-fg-muted">{p.name}</p>
+                <p className="mt-3 text-label text-fg-muted">Coming soon</p>
+              </li>
+            );
+          }
           return (
             <li key={p.part} className="flex flex-col rounded-tile bg-well p-3" data-testid="part-tile">
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">

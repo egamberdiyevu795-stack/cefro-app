@@ -127,6 +127,24 @@ the dashboard and History tests now also run on all 7 tasks. Two browser tests n
 (the task list has 7 "Start practice" links), and the dashboard browser test expects Practise next to move on to
 "An important decision" after the first answer.
 
+## After that: `claude/review-dashboard-real-data-4jikaa` (dashboard fixes, no migration)
+
+Cut from `cefro-part-2-tasks-yfr6x5`, so it comes after it, merge commit. Fixes from the dashboard review:
+
+- **Exam date:** after Skip, a small "Add exam date" in the countdown's place opens the picker; Edit has "Remove date"
+  (`PUT /api/account/exam-date { remove: true }`: clears the date, back to "Add exam date"). Edit, Skip, Cancel, Add
+  exam date and Remove date have a 36 px tap area. No new column: Remove reuses `exam_date_skipped_at`.
+- **Part tiles:** 1.1, 1.2 and 3 have no task, so no "Start" link: "Coming soon", behind new flags `examPart1_1`,
+  `examPart1_2`, `examPart3` (off: the tile is not rendered). Part 2 unchanged.
+- **Attempts, none scored:** no first-visit screen any more; "Welcome back", the black "Start practice", and Recent
+  attempts. Level and skills still wait for a scored answer.
+- **Practise next:** the retry goal is shown in full (no line clamp).
+- **Tests:** unit (`sections.test.ts`, more in `progress.test.ts` and `cross-user.test.ts`) and browser (Add exam date
+  / Remove date, passed date, not scored yet, "Still in", a 390 px audit on every state). `playwright.config.ts`
+  now shares its run id with the test workers (`E2E_RUN_ID`), so `e2e/db.ts` can set the two states the app refuses
+  to create (a passed exam date, a failed attempt) in the run's throwaway database.
+- **Screenshots** retaken from the real app; two new states (`not-scored-yet`, `exam-skipped`).
+
 ## Corrections to earlier notes
 
 - `docs/design-system.md` called `friendly-darwin-l73xx9` "PR #5's branch". **PR #5 is

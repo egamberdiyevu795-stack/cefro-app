@@ -36,5 +36,12 @@ export const FIRST_VISIT = {
   href: "/practice/speaking/b2-part2-advice-from-someone",
 };
 
+/** The same card for a student who has attempts but none scored yet (still scoring, failed, too short). */
+export const NOT_SCORED_YET = {
+  welcome: "Welcome back",
+  title: "Find your level",
+  text: "Your level and skills appear here once an answer is scored. Your attempts so far are in Recent attempts.",
+};
+
 /** Future actions in each attempt's row menu (flag `attemptMenu`). */
 export const ATTEMPT_MENU_ITEMS = ["Delete", "Report a wrong score"] as const;

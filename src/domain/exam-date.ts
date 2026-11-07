@@ -49,7 +49,7 @@ export type ExamDateState =
   | { kind: "ask" }
   /** The saved date has passed: the countdown is hidden and the student is asked for the next one. */
   | { kind: "ask_again"; passed: string }
-  /** The student chose Skip: nothing is shown. */
+  /** The student chose Skip, or removed their date: only a small "Add exam date" is shown. */
   | { kind: "skipped" };
 
 export function examDateState(stored: { examDate: string | null; examDateSkippedAt: string | null }, now: Date): ExamDateState {

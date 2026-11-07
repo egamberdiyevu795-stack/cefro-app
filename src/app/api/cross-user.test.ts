@@ -36,7 +36,7 @@ import { GET as getMe } from "./account/me/route";
 import HistoryPage from "../history/page";
 import { PUT as putExamDate } from "./account/exam-date/route";
 import { users } from "@/server/db/schema";
-import { todayIn, addDays } from "@/domain/exam-date";
+import { todayIn, addDays, examDateState } from "@/domain/exam-date";
 import type { HistoryView } from "@/features/history/view-model";
 
 /** The History page as this actor's browser gets it: the view it renders (the shell around it is not needed). */
@@ -183,6 +183,22 @@ describe("exam date: saved per user, only ever the caller's own", () => {
     expect((await dateOf("alice@example.com")).skipped).not.toBeNull();
     await put({ date: inDays(3) });
     expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(3), skipped: null });
+  });
+
+  it("Remove date clears alice's date and stops asking (the dashboard offers Add exam date); bob's is untouched", async () => {
+    actAs(actors.bob);
+    await put({ date: inDays(9) });
+    actAs(actors.alice);
+    await put({ date: inDays(5) });
+    expect((await put({ remove: true })).status).toBe(204);
+    const alice = await dateOf("alice@example.com");
+    expect(alice.examDate).toBeNull();
+    expect(alice.skipped).not.toBeNull();
+    expect(examDateState({ examDate: alice.examDate, examDateSkippedAt: alice.skipped }, new Date())).toEqual({ kind: "skipped" });
+    expect(await dateOf("bob@example.com")).toEqual({ examDate: inDays(9), skipped: null });
+    // Adding a date again from there works as before.
+    await put({ date: inDays(6) });
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(6), skipped: null });
   });
 
   it("an anonymous visitor's date carries over when they create an account", async () => {

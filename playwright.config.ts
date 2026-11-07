@@ -7,7 +7,8 @@ import { defineConfig, devices } from "@playwright/test";
  * fake microphone. Real providers are validated separately (npm run eval:live).
  */
 const PORT = Number(process.env.E2E_PORT ?? 3100);
-const runId = Date.now();
+// One id per run, shared with the test workers (they re-read this file), so a test can reach the run's database.
+const runId = (process.env.E2E_RUN_ID ??= String(Date.now()));
 // Use a system Chromium when the Playwright-managed browser is not installed (e.g. CI images).
 const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_PATH ?? (fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);

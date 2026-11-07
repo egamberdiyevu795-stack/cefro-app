@@ -35,15 +35,18 @@ API routes (`src/app/api/**`) did not move.
 
 Only one near-black (`primary`) action per screen. Every other action uses the grey `quiet` pill (or `light` on a
 `well` tile). Dashboard: returning = "Practise next · Start" (Biggest fix "Start retry" is grey); first visit = the
-welcome card's "Start your first practice" (it goes to the recommended part, Part 2). All part tiles use the white tile pill.
+welcome card's "Start your first practice" (it goes to the recommended part, Part 2); attempts but none scored = the
+same card's "Start practice". All part tiles use the white tile pill. The exam date's Save is grey; Edit, Add exam
+date, Skip, Cancel and Remove date are small text actions with a 36 px tap area.
 
 ## Feature flags
 
 Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
 notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons / Settings, the attempt
-row menu (Delete, Report a wrong score). Two flags now cover built features (both on): `history` (the sidebar item and
+row menu (Delete, Report a wrong score), and the Exam parts tiles of parts with no task yet (`examPart1_1`,
+`examPart1_2`, `examPart3`: on, the tile says "Coming soon" and has no link; off, the tile is not rendered). Two flags now cover built features (both on): `history` (the sidebar item and
 "See all" are real links to `/history`; off: not rendered and `/history` is a 404) and `examCountdown` (the real exam
-date: question, countdown, Edit; off: not rendered and Practise next takes the full row).
+date: question, countdown, Edit, Add exam date; off: not rendered and Practise next takes the full row).
 
 - **Flag on** (prototype default): the element is shown exactly as designed; tapping it shows a small "Coming soon".
 - **Flag off:** the element is not rendered. Neighbours fill the space (e.g. "Practise next" takes the full row when
@@ -61,9 +64,12 @@ as History and the result page) and their exam date. Only the first visit's word
 "Scored" = a completed Multilevel result that is a rating: not "too short to rate", not old-method, not still being
 scored, not failed.
 
-- **First visit** = no scored answer yet (a brand-new student, or one whose answers are all still scoring or failed):
-  "Welcome to CEFRO", "Find your level", the black "Start your first practice" (Part 2), "When is your exam?"*, then
-  the four part tiles (Part 2 "Recommended"). No level, chart or list.
+- **First visit** = no attempts at all: "Welcome to CEFRO", "Find your level", the black "Start your first practice"
+  (Part 2), "When is your exam?"*, then the part tiles (Part 2 "Recommended"). No level, chart or list.
+- **Attempts, none scored yet** (all still scoring, failed or too short to rate): not the first visit. The same card
+  says "Welcome back", "Your level and skills appear here once an answer is scored", and the black **"Start practice"**;
+  then **Recent attempts** (with "Scoring…" / "Not scored"), then the part tiles. Level, skills and biggest fix stay
+  hidden until an answer is scored (`dashboardView` in `progress.ts`).
 - **Current level and Skills by level:** per skill, the **middle value** of the last 3 scored answers (of 2, the mean
   of the two rounded as the scorer rounds: an exact .5 goes down; an answer that did not assess a skill, e.g.
   pronunciation without audio, is left out for that skill only; never assessed = "Not assessed" on the radar). The
@@ -84,10 +90,12 @@ scored, not failed.
   → "Finish your goal": that retry again; (2) the latest scored answer is a retry whose goal is "Not yet" (or partly
   there) → "Your goal isn't met yet": that retry again, with the same goal (`?retry=<the original attempt>`), the goal
   shown on the card; (3) otherwise the task practised least recently ("Not practised yet" first, else "Last practised
-  04.11.26"). The mocked "A skill you learned" task and its `/dashboard/task/…` route are gone.
+  04.11.26"). The mocked "A skill you learned" task and its `/dashboard/task/…` route are gone. A retry's goal is shown
+  in full on every screen size (no line clamp).
 - **Exam parts:** the latest scored band per part with its label, "Practise"; a part with nothing scored: "No band",
   "Not tried yet", "Start". A part with tasks opens its section of the task list (Part 2: `/#part-2`, where the
-  student picks one of the 7 tasks); parts without a task yet (1.1, 1.2, 3) link to the top of the task list.
+  student picks one of the 7 tasks). A part without a task yet (1.1, 1.2, 3) has **no link**: its tile says "Coming
+  soon", each behind its own flag (`examPart1_1`, `examPart1_2`, `examPart3`; off: the tile is not rendered).
 - **Recent attempts:** the History rows (latest 4); the flagged row menu is hidden on phones, where it squeezed the
   task name onto two lines.
 - **Phone order:** Practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
@@ -100,14 +108,17 @@ scored, not failed.
 ### Exam date
 
 - Stored per user: `users.exam_date` ("YYYY-MM-DD", a day in Uzbekistan) and `users.exam_date_skipped_at`
-  (migration `0005_exam_date`, two nullable columns). Saved through `PUT /api/account/exam-date` (`{ date }` or
-  `{ skip: true }`), always for the caller (signed-in account or the browser's anonymous identity). A date must be today
+  (migration `0005_exam_date`, two nullable columns). Saved through `PUT /api/account/exam-date` (`{ date }`,
+  `{ skip: true }` or `{ remove: true }`), always for the caller (signed-in account or the browser's anonymous identity). A date must be today
   or later, within two years; anything else is a 400 with a plain message. An anonymous visitor's date (or Skip) moves
   to their account when they sign up, unless the account already has one.
 - **No date:** "When is your exam?" with a date picker, the grey "Save" and "Skip" (on the first visit inside the
   welcome card; on the returning dashboard in the countdown's place). Skip is remembered: the question is not asked
   again; saving a date later clears it.
-- **Date set:** "Your exam · in 23 days · 28.11.26" ("in 1 day", "today") with "Edit" (the same picker, with Cancel).
+- **After Skip (or Remove date):** "Your exam · Not set" and a small secondary **"Add exam date"** in the countdown's
+  place. It opens the same picker, with Cancel instead of Skip.
+- **Date set:** "Your exam · in 23 days · 28.11.26" ("in 1 day", "today") with "Edit" (the same picker, with Cancel and,
+  on its own line, **"Remove date"**: the date is cleared and the card goes back to "Add exam date").
 - **Past date:** the countdown is hidden and the student is asked "When is your next exam?" ("Your exam date,
   01.11.26, has passed.").
 - Days are counted in Uzbekistan's calendar, so the countdown is the same wherever the device is.
@@ -116,14 +127,19 @@ scored, not failed.
 ### Checks and screenshots
 
 - `features/dashboard/progress.test.ts` (middle value, the scorer's rounding, last 3 only, what counts as scored,
-  "x of 4", "Up from", stats, biggest fix and "Still in", every Practise next case, part tiles), `domain/exam-date.test.ts`,
-  `app/api/cross-user.test.ts` (exam date per user, validation, Skip, carried over on sign-up),
-  `server/db/migrations.test.ts` (0005 is additive), `e2e/dashboard.spec.ts` (new student, Skip, date saved and edited,
-  1 then 3 answers, another browser sees nothing, no horizontal scroll at 390 px).
-- Screenshots (1440 px and 390 px, seeded data; Part 1.1 / 1.2 rows are relabelled Part 2 results, as Part 1 has no
-  evaluator yet): `docs/design-system/dashboard-{first-visit,one-answer,normal,exam-date,exam-passed,flags-off}-{desktop,phone}.png`.
-  `normal` = many answers, no exam date yet; `exam-date` = the same with a date set. Audited in the browser: no
-  horizontal scroll, smallest text 11 px, exactly one black button on each.
+  "x of 4", "Up from", stats, biggest fix and "Still in", every Practise next case, part tiles and their flags, which
+  dashboard), `features/dashboard/sections.test.ts` (Add exam date, Remove date only on Edit, 36 px text actions, the
+  full goal, "Start practice", Coming soon tiles without a link), `domain/exam-date.test.ts`,
+  `app/api/cross-user.test.ts` (exam date per user, validation, Skip, Remove date, carried over on sign-up),
+  `server/db/migrations.test.ts` (0005 is additive), `e2e/dashboard.spec.ts` (new student; Skip → Add exam date →
+  Edit → Remove date; a passed date asks "When is your next exam?"; attempts not scored yet; 1 then 3 answers with
+  "Still in"; another browser sees nothing; at 390 px on each: no horizontal scroll, no text under 11 px, one black
+  button). The passed date and the failed attempt are set in the run's database (`e2e/db.ts`): the app never saves them.
+- Screenshots (1440 px and 390 px), taken from the real app (mock providers, a fresh database): `docs/design-system/dashboard-{first-visit,not-scored-yet,one-answer,normal,exam-date,exam-skipped,exam-passed,flags-off}-{desktop,phone}.png`.
+  `not-scored-yet` = one failed attempt; `normal` = five answers on four tasks with a retry, no exam date yet;
+  `exam-date` = the same with a date set; `exam-skipped` = after Remove date; `exam-passed` = a date that has passed.
+  Part 1.1, 1.2 and 3 show "Coming soon". Audited in the browser: no horizontal scroll, smallest text 11 px, exactly
+  one black button on each.
 
 ## Levels and bands
 

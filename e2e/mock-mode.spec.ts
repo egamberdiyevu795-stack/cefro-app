@@ -178,12 +178,38 @@ test("mock mode lessons: Biggest fix → Learn how → lesson (why, explanation,
   await expectMockLinks(page);
   await auditPhone(page);
 
-  // The self-check drill: record a prompt (fake microphone), listen back, tick the checklist. Nothing is sent.
-  await page.getByRole("button", { name: "Record", exact: true }).first().click();
-  await expect(page.getByRole("timer")).toContainText("/ 0:20");
-  await page.waitForTimeout(1500);
-  await page.getByRole("button", { name: "Stop" }).click();
-  await expect(page.getByRole("button", { name: "Record again" })).toBeVisible();
+  // Only one black control on screen (the retry); Lessons is the current tab, in grey.
+  await expect(page.locator(BLACK)).toHaveCount(1);
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("img", { name: "Lessons (current section)" })).toHaveAttribute("aria-current", "page");
+
+  // The self-check drill: record each prompt (fake microphone), listen back, answer the self-check. Nothing is sent.
+  const prompts = page.getByTestId("drill-prompt");
+  await expect(prompts).toHaveCount(3);
+  await expect(prompts.nth(0)).toContainText("Q1");
+  await expect(prompts.nth(2)).toContainText("Q1–Q3");
+  await expect(page.getByTestId("ready-for-retry")).toHaveCount(0);
+  for (let i = 0; i < 3; i++) {
+    const prompt = prompts.nth(i);
+    await prompt.getByRole("button", { name: "Record", exact: true }).click();
+    await expect(prompt.getByRole("timer")).toBeVisible();
+    await page.waitForTimeout(1200);
+    await prompt.getByRole("button", { name: "Stop" }).click();
+    await expect(prompt.getByTestId("self-check")).toContainText("Listen back. Did you:");
+    if (i === 0) {
+      await expect(prompt.getByTestId("self-check")).toContainText("Did you: answer, then add one detail (when, who with or why)?");
+      // Not yet: "Try once more", and Record again stays.
+      await prompt.getByRole("button", { name: "Not yet" }).click();
+      await expect(prompt.getByText("Try once more")).toBeVisible();
+      await expect(prompt.getByRole("button", { name: "Record again" })).toBeVisible();
+    }
+    await prompt.getByRole("button", { name: "Yes" }).click();
+    await expect(prompt.getByTestId("prompt-done")).toBeVisible();
+    await expect(prompt.getByTestId("self-check")).toHaveCount(0);
+    if (i < 2) await expect(page.getByTestId("ready-for-retry")).toHaveCount(0);
+  }
+  await expect(page.getByTestId("ready-for-retry")).toHaveText("Ready for your retry");
+  await expect(page.locator(BLACK)).toHaveCount(1);
+  await auditPhone(page);
   await page.getByRole("checkbox", { name: "My plan had a note for every question." }).check();
 
   // Retry with this goal: the retry of the same attempt, with its goal on the brief.

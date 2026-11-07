@@ -2,13 +2,25 @@ import Link from "next/link";
 import { ComingSoonButton } from "./ComingSoon";
 import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
-import { NAV_ITEM, NAV_ITEM_ACTIVE, NAV_ITEM_IDLE, TEXT_ACTION } from "./styles";
+import { NAV_ITEM, NAV_ITEM_ACTIVE, NAV_ITEM_ACTIVE_QUIET, NAV_ITEM_IDLE, TEXT_ACTION } from "./styles";
 
 /** `soon`: a future item (feature flag on): same look, tapping it says "Coming soon". */
 export type NavItem = { href: string; label: string; icon: IconName; soon?: boolean };
 
-/** One navigation icon. Active = near-black rounded square with a white glyph; inactive = grey glyph. */
-export function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
+/**
+ * One navigation icon. Active = near-black rounded square with a white glyph (`quiet`: a grey square with a dark glyph,
+ * on pages whose one black button is their own action); inactive = grey glyph. A section with no page of its own yet
+ * (a "Coming soon" item) that is current shows as current, not as a button.
+ */
+export function SidebarItem({ item, active, quiet = false }: { item: NavItem; active: boolean; quiet?: boolean }) {
+  const activeClass = quiet ? NAV_ITEM_ACTIVE_QUIET : NAV_ITEM_ACTIVE;
+  if (item.soon && active) {
+    return (
+      <span role="img" aria-label={`${item.label} (current section)`} aria-current="page" title={item.label} className={cx(NAV_ITEM, activeClass)}>
+        <Icon name={item.icon} size={20} />
+      </span>
+    );
+  }
   if (item.soon) {
     return (
       <ComingSoonButton label={item.label} className={cx(NAV_ITEM, NAV_ITEM_IDLE)}>
@@ -22,7 +34,7 @@ export function SidebarItem({ item, active }: { item: NavItem; active: boolean }
       aria-label={item.label}
       aria-current={active ? "page" : undefined}
       title={item.label}
-      className={cx(NAV_ITEM, active ? NAV_ITEM_ACTIVE : NAV_ITEM_IDLE)}
+      className={cx(NAV_ITEM, active ? activeClass : NAV_ITEM_IDLE)}
     >
       <Icon name={item.icon} size={20} />
     </Link>
@@ -30,7 +42,18 @@ export function SidebarItem({ item, active }: { item: NavItem; active: boolean }
 }
 
 /** Left icon rail on desktop; a fixed bottom bar on phones. Same items, same active square. `last` = an extra item at the end (account). */
-export function Sidebar({ items, activeHref, last }: { items: readonly NavItem[]; activeHref: string; last?: React.ReactNode }) {
+export function Sidebar({
+  items,
+  activeHref,
+  last,
+  quietActive = false,
+}: {
+  items: readonly NavItem[];
+  activeHref: string;
+  last?: React.ReactNode;
+  /** The current item in grey instead of black (a page whose own black button must be the only one). */
+  quietActive?: boolean;
+}) {
   return (
     <nav
       aria-label="Main"
@@ -43,7 +66,7 @@ export function Sidebar({ items, activeHref, last }: { items: readonly NavItem[]
         {items.map((item) => (
           <li key={item.label}>
             {/* The path decides (mock mode adds ?mock=1 to every link). */}
-            <SidebarItem item={item} active={item.href.split(/[?#]/)[0] === activeHref} />
+            <SidebarItem item={item} active={item.href.split(/[?#]/)[0] === activeHref} quiet={quietActive} />
           </li>
         ))}
         {last && <li>{last}</li>}

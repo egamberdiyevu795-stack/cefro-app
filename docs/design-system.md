@@ -531,6 +531,14 @@ Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks t
   listen-back, kept in the browser, never uploaded or scored; then the checklist) → Retry the same task (the goal the
   retry carries, the lesson's reminder, and the one black button **"Retry with this goal"**, the same retry link as the
   result page's, so the goal is carried over).
+- **Drill self-check:** each prompt is labelled with the drill-topic question it practises ("Q1", "Q3", "Q1–Q3"). After a
+  recording stops: "Listen back. Did you: <the prompt's own approved instruction>?" with grey **Yes** / **Not yet** (no
+  new teaching wording; a test checks every piece is in the prompt). Yes marks the prompt done (small tick); Not yet
+  shows "Try once more" and keeps "Record again"; a new recording asks again. When every prompt is Yes, "Ready for your
+  retry" shows just above "Retry with this goal". Nothing is saved or uploaded; it resets when the page closes.
+- **Navigation on a lesson:** the Lessons (book) tab is the current section, shown as a **grey** square
+  (`NAV_ITEM_ACTIVE_QUIET`, `AppShell quietNav`), not a link (there is no lesson library yet), so "Retry with this goal"
+  is the only black control on screen, the bottom bar included.
 - **Drill topic:** each lesson's drill has its own made-up topic (a place you like to visit, a skill learned outside
   school, a book or film), none of the 7 Part 2 tasks, so the **same drill is shown for every retry task**. From
   `docs/lessons/drill-drafts.md`, approved by Asadbek on 2026-11-07 (lesson version 2); the first drills, written for

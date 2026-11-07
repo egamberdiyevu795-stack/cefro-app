@@ -96,9 +96,24 @@ export const lessonT4B2: Lesson = {
       ],
     },
     items: [
-      { prompt: "What was the book or film, and when did you read or watch it? Answer in one sentence, then add one detail.", seconds: 20 },
-      { prompt: "Is reading books still important for young people today? Answer, give a reason, then start \"For example, …\".", seconds: 30 },
-      { prompt: "Make this bare answer full: \"Yes, I enjoyed it.\" Add a reason and one detail from the story.", seconds: 20 },
+      {
+        prompt: "What was the book or film, and when did you read or watch it? Answer in one sentence, then add one detail.",
+        seconds: 20,
+        practises: [1],
+        check: ["Answer in one sentence, then add one detail"],
+      },
+      {
+        prompt: "Is reading books still important for young people today? Answer, give a reason, then start \"For example, …\".",
+        seconds: 30,
+        practises: [3],
+        check: ["Answer, give a reason, then start \"For example, …\""],
+      },
+      {
+        prompt: "Make this bare answer full: \"Yes, I enjoyed it.\" Add a reason and one detail from the story.",
+        seconds: 20,
+        practises: [2],
+        check: ["Add a reason and one detail from the story"],
+      },
     ],
     checklist: [
       "My first sentence answered the question directly.",

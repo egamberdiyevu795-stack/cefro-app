@@ -60,7 +60,8 @@ export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">
   const focus = result.retry_focus[0];
 
   return (
-    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"}>
+    // The Lessons tab is the current section, in grey: "Retry with this goal" is the only black button on screen.
+    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/lessons" quietNav>
       <LessonView
         lesson={lesson}
         why={lessonWhy(lesson, result, task.prompts)}

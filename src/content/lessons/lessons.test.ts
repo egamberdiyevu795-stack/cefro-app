@@ -74,6 +74,13 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
     expect(lesson.drill.items).toHaveLength(3);
     expect(lesson.version).toBe(2);
     for (const item of lesson.drill.items) expect(item.prompt).not.toMatch(/advice|advise/i);
+    // Each prompt's self-check and label: only pieces of the prompt's own approved text, and a real drill-topic question.
+    for (const item of lesson.drill.items) {
+      expect(item.check.length).toBeGreaterThan(0);
+      for (const piece of item.check) expect(item.prompt, piece).toContain(piece);
+      expect(item.practises.length).toBeGreaterThan(0);
+      for (const q of item.practises) expect([1, 2, 3]).toContain(q);
+    }
     // The checklist goes with the neutral drill too: no line about advice.
     for (const line of lesson.drill.checklist) expect(line).not.toMatch(/advice|advise/i);
     if (lesson.id === "L-T1") expect(lesson.drill.checklist[2]).toBe("When a question had two parts, I answered both.");

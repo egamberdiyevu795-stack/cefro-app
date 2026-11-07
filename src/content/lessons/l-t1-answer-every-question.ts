@@ -84,9 +84,24 @@ export const lessonT1: Lesson = {
       ],
     },
     items: [
-      { prompt: "Where is the place, and how often do you go there? Answer, then add one detail (when, who with or why).", seconds: 20 },
-      { prompt: "What do you do there, and why do you like it? Answer, then add one reason or what happened last time you went.", seconds: 20 },
-      { prompt: "**Planning drill.** You have 60 seconds, as in the preparation minute. Say your three notes aloud, one for each question (place + how often / what you do + why / opinion + reason).", seconds: 60 },
+      {
+        prompt: "Where is the place, and how often do you go there? Answer, then add one detail (when, who with or why).",
+        seconds: 20,
+        practises: [1],
+        check: ["Answer, then add one detail (when, who with or why)"],
+      },
+      {
+        prompt: "What do you do there, and why do you like it? Answer, then add one reason or what happened last time you went.",
+        seconds: 20,
+        practises: [2],
+        check: ["Answer, then add one reason or what happened last time you went"],
+      },
+      {
+        prompt: "**Planning drill.** You have 60 seconds, as in the preparation minute. Say your three notes aloud, one for each question (place + how often / what you do + why / opinion + reason).",
+        seconds: 60,
+        practises: [1, 2, 3],
+        check: ["Say your three notes aloud, one for each question (place + how often / what you do + why / opinion + reason)"],
+      },
     ],
     checklist: [
       "My plan had a note for every question.",

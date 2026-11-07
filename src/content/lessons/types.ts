@@ -22,6 +22,13 @@ export interface LessonExample {
 export interface LessonDrillItem {
   prompt: string;
   seconds: number;
+  /** Which question(s) of the drill topic it practises, shown as its label ("Q3", "Q1–Q3"). */
+  practises: (1 | 2 | 3)[];
+  /**
+   * The self-check after a recording ("Listen back. Did you: …?"): the prompt's own instruction, as exact pieces of
+   * the approved prompt (a test checks each is in it). No new teaching wording.
+   */
+  check: string[];
 }
 
 /** A block of the explanation: a paragraph or a numbered list. */

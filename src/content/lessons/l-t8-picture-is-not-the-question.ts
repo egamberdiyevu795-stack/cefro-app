@@ -85,9 +85,24 @@ export const lessonT8: Lesson = {
       picture: "Drill picture (made up): a boy learning to ride a bicycle in a park while his older sister holds the seat.",
     },
     items: [
-      { prompt: "Without looking at the picture, say what skill you learned and who taught you.", seconds: 20 },
-      { prompt: "Give your opinion: is it better to learn new skills from a person or from videos online? Give one reason.", seconds: 30 },
-      { prompt: "Start with \"This picture reminds me of…\" and move into your own story within one sentence.", seconds: 20 },
+      {
+        prompt: "Without looking at the picture, say what skill you learned and who taught you.",
+        seconds: 20,
+        practises: [1],
+        check: ["Without looking at the picture, say what skill you learned and who taught you"],
+      },
+      {
+        prompt: "Give your opinion: is it better to learn new skills from a person or from videos online? Give one reason.",
+        seconds: 30,
+        practises: [3],
+        check: ["Give your opinion", "Give one reason"],
+      },
+      {
+        prompt: "Start with \"This picture reminds me of…\" and move into your own story within one sentence.",
+        seconds: 20,
+        practises: [1],
+        check: ["Start with \"This picture reminds me of…\" and move into your own story within one sentence"],
+      },
     ],
     checklist: [
       "I talked about my own experience, not the people in the picture.",

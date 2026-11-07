@@ -8,6 +8,8 @@ export const ICON_BUTTON = `inline-flex shrink-0 items-center justify-center rou
 /** Sidebar / bottom-bar item. */
 export const NAV_ITEM = `flex size-11 items-center justify-center rounded-icon transition-colors ${FOCUS_RING}`;
 export const NAV_ITEM_ACTIVE = "bg-primary text-on-primary";
+/** The current item on a page whose one black button is its own main action (a lesson): grey square, dark glyph. */
+export const NAV_ITEM_ACTIVE_QUIET = "bg-well text-fg";
 export const NAV_ITEM_IDLE = "text-fg-subtle hover:text-fg";
 
 /** Quiet text action with a small grey glyph (top bar). */

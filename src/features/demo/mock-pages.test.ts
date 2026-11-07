@@ -190,6 +190,13 @@ describe("lessons in mock mode", () => {
     const blackHref = /<a\b[^>]*class="[^"]*\bbg-primary text-on-primary[^"]*"[^>]*href="([^"]*)"/.exec(main)?.[1].replaceAll("&amp;", "&");
     expect(blackHref).toBe(retryHref);
     expect(main).toContain("Retry with this goal");
+    // On the whole screen (navigation included) the retry is the only black control; Lessons is the current tab, in grey.
+    expect(markup.match(/bg-primary text-on-primary/g)).toHaveLength(1);
+    expect(markup).toContain('aria-label="Lessons (current section)" aria-current="page"');
+    expect(markup).not.toMatch(/aria-label="Practice"[^>]*aria-current="page"/);
+    // Each drill prompt is labelled with the drill-topic question it practises.
+    expect((markup.match(/data-testid="drill-prompt"/g) ?? []).length).toBe(3);
+    expect(markup).toMatch(/<span class="sr-only">Practises <\/span>Q[123]/);
     expect(markup).not.toMatch(SMALL);
     expectMockLinksOnly(markup);
   });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PillAction } from "@/components/ds";
+import { Icon, PillAction } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
 import { useAudioRecorder, type RecorderErrorKind } from "@/features/speaking-practice/hooks/useAudioRecorder";
@@ -15,11 +15,35 @@ const ERROR_TEXT: Record<RecorderErrorKind, string> = {
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
+/** "Answer, then add…" → "answer, then add…": the approved instruction, read after "Did you:". */
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+/** The self-check question for a prompt, from its own approved instruction only. */
+export function selfCheckText(check: readonly string[]): string {
+  return `Listen back. Did you: ${check.map(lowerFirst).join("; ")}?`;
+}
+
+export type SelfCheck = "none" | "yes" | "not_yet";
+
 /**
- * Record one drill prompt and listen back (self-check only: the recording stays in this browser, it is never uploaded
- * or scored). Stops by itself at the prompt's time. Quiet buttons only: the screen's one black button is the retry.
+ * Record one drill prompt, listen back, then the self-check: "Listen back. Did you: …?" with Yes / Not yet. Yes marks
+ * the prompt done; Not yet says "Try once more" and keeps "Record again". The recording and the answers stay in this
+ * page (never saved or uploaded) and are gone when it closes. Quiet buttons only: the screen's one black button is
+ * the retry. A new recording asks again.
  */
-export function DrillRecorder({ seconds, label }: { seconds: number; label: string }) {
+export function DrillRecorder({
+  seconds,
+  label,
+  check,
+  answer,
+  onAnswer,
+}: {
+  seconds: number;
+  label: string;
+  check: readonly string[];
+  answer: SelfCheck;
+  onAnswer: (answer: SelfCheck) => void;
+}) {
   const hydrated = useHydrated();
   const recorder = useAudioRecorder();
   const [elapsed, setElapsed] = useState(0);
@@ -42,6 +66,7 @@ export function DrillRecorder({ seconds, label }: { seconds: number; label: stri
   const startRecording = async () => {
     recorder.discard();
     setElapsed(0);
+    onAnswer("none");
     if (await recorder.requestMicrophone()) recorder.start();
   };
 
@@ -61,6 +86,30 @@ export function DrillRecorder({ seconds, label }: { seconds: number; label: stri
   return (
     <div className="flex flex-col gap-2">
       {recording && <RecordingPlayer src={recording.url} durationMs={recording.durationMs} label={`Your recording: ${label}`} />}
+      {recording && answer !== "yes" && (
+        <div className="rounded-tile bg-well p-3" data-testid="self-check">
+          <p className="text-body text-fg">{selfCheckText(check)}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <PillAction onClick={() => onAnswer("yes")} variant="light" size="sm" icon="check">
+              Yes
+            </PillAction>
+            <PillAction onClick={() => onAnswer("not_yet")} variant="light" size="sm">
+              Not yet
+            </PillAction>
+          </div>
+          {answer === "not_yet" && (
+            <p role="status" className="mt-2 text-label text-fg">
+              Try once more
+            </p>
+          )}
+        </div>
+      )}
+      {answer === "yes" && (
+        <p role="status" className="inline-flex items-center gap-1.5 text-label font-medium text-fg" data-testid="prompt-done">
+          <Icon name="check" size={14} className="text-fg-subtle" />
+          Done
+        </p>
+      )}
       <div>
         <PillAction onClick={() => void startRecording()} variant="quiet" size="sm" icon="mic" disabled={!hydrated || status === "requesting"}>
           {recording ? "Record again" : "Record"}

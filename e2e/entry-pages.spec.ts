@@ -1,9 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
+import { PART_LIVE } from "../src/config/features";
 
 /*
  * The signed-out pages (home, sign in, Create account) at 390 px: one black control, no text under 11 px, WCAG AA text
- * contrast, no horizontal scroll, no header menu and no navigation tabs. "Try the demo" opens the demo dashboard
- * (?mock=1). A signed-in visitor on home goes to the dashboard.
+ * contrast, no horizontal scroll, no header menu and no navigation tabs. "See a demo result" opens a real demo result
+ * (?mock=1). The exam-parts list follows the release switches (PART_LIVE). A signed-in visitor on home goes to the
+ * dashboard.
  *
  * Also run on a production build set up like a Preview with no variables (playwright.preview.config.ts): there only the
  * mock versions (?mock=1) answer, so the real-page tests are skipped.
@@ -14,9 +16,9 @@ const PASSWORD = "correct horse battery staple";
 const run = Date.now();
 
 const PAGES = [
-  { url: "/", heading: "Practise the multilevel speaking exam", black: "Create account" },
-  { url: "/login", heading: "Sign in", black: "Sign in" },
-  { url: "/register", heading: "Create account", black: "Create account" },
+  { url: "/", heading: "Know exactly what to fix before your speaking exam", black: "Start practising" },
+  { url: "/login", heading: "Welcome back", black: "Sign in" },
+  { url: "/register", heading: "Save your results", black: "Create account" },
 ] as const;
 
 /** Visible text nodes: the smallest computed font size, and every text whose contrast with its background is below AA. */
@@ -103,23 +105,54 @@ for (const mock of [false, true]) {
   }
 }
 
-test("Try the demo keeps ?mock=1 and opens the demo dashboard", async ({ page }) => {
-  await page.goto(PREVIEW ? "/?mock=1" : "/");
-  const demo = page.getByRole("link", { name: "Try the demo" });
-  await expect(demo).toHaveAttribute("href", "/dashboard?mock=1");
-  await demo.click();
-  await expect(page).toHaveURL(/\/dashboard\?mock=1$/);
+test("See a demo result keeps ?mock=1 and opens the real demo result page", async ({ page }) => {
+  for (const mock of PREVIEW ? [true] : [false, true]) {
+    await page.goto(mock ? "/?mock=1" : "/");
+    const demo = page.getByRole("link", { name: "See a demo result" });
+    await expect(demo).toHaveAttribute("href", "/result?demo=demo-5&mock=1");
+  }
+  await page.getByRole("link", { name: "See a demo result" }).click();
+  await expect(page).toHaveURL(/\/result\?demo=demo-5&mock=1$/);
   await expect(page.getByTestId("demo-label")).toBeVisible();
 });
 
-test("home links: Create account and Sign in (mock mode keeps ?mock=1)", async ({ page }) => {
+test("home links: Start practising and Sign in (mock mode keeps ?mock=1)", async ({ page }) => {
   for (const mock of PREVIEW ? [true] : [false, true]) {
     await page.goto(mock ? "/?mock=1" : "/");
     const q = mock ? "?mock=1" : "";
+    await expect(page.getByRole("link", { name: "Start practising" })).toHaveAttribute("href", `/register${q}`);
+    const signIn = page.getByRole("banner").getByRole("link", { name: "Sign in" });
+    await expect(signIn).toHaveAttribute("href", `/login${q}`);
+    await signIn.click();
+    await expect(page.getByRole("heading", { level: 1, name: "Welcome back" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Create account" })).toHaveAttribute("href", `/register${q}`);
-    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", `/login${q}`);
-    await page.getByRole("link", { name: "Sign in" }).click();
-    await expect(page.getByRole("link", { name: "Create account" })).toHaveAttribute("href", `/register${q}`);
+  }
+});
+
+test("the exam-parts list follows the release switches (PART_LIVE), and no page text says Part 2 elsewhere", async ({ page }) => {
+  await page.goto("/?mock=1");
+  const status = page.getByTestId("exam-status");
+  const open = [PART_LIVE["1.1"] && PART_LIVE["1.2"], PART_LIVE["2"], PART_LIVE["3"]];
+  if (open.every(Boolean)) {
+    await expect(status).toHaveText("Exam partsAll three parts are open.");
+    await expect(page.getByText("Coming soon")).toHaveCount(0);
+  } else {
+    const labels = ["Part 1 · A1–B1", "Part 2 · B2", "Part 3 · C1"];
+    await expect(status.locator("dt")).toHaveText(labels);
+    await expect(status.locator("dd")).toHaveText(open.map((o) => (o ? "Open" : "Coming soon")));
+  }
+  // The page's words (header and main) without the status list.
+  const pageText = () =>
+    page.evaluate(() => {
+      const main = document.querySelector("main")!.cloneNode(true) as HTMLElement;
+      main.querySelector("[data-testid=exam-status]")?.remove();
+      return `${document.querySelector("header")!.textContent} ${main.textContent}`;
+    });
+  expect(await pageText()).toContain("Know exactly what to fix");
+  expect(await pageText()).not.toMatch(/Part\s*\d/);
+  for (const url of ["/login?mock=1", "/register?mock=1"]) {
+    await page.goto(url);
+    expect(await pageText()).not.toMatch(/Part\s*\d/);
   }
 });
 
@@ -137,37 +170,31 @@ test("mock mode: the sign-in form sends nothing", async ({ page }) => {
   expect(apiCalls).toEqual([]);
 });
 
-test("a signed-in visitor who opens home goes to the dashboard; the name typed at sign-up is the account's", async ({ page }) => {
+test("a signed-in visitor who opens home goes to the dashboard; the account starts with no name, set later on the Account page", async ({ page }) => {
   test.skip(PREVIEW, "no accounts on a Preview with no variables");
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.88.${run % 250}.7` });
   await page.goto("/register");
-  await page.getByLabel("Name").fill("  Dilnoza   Karimova ");
+  await expect(page.getByLabel("Name")).toHaveCount(0);
   await page.getByLabel("Email").fill(`entry-${run}@example.com`);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByTestId("account-status")).toHaveAttribute("data-state", "authenticated");
+  expect((await (await page.request.get("/api/account/me")).json()).name).toBeNull();
   await page.goto("/");
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto("/profile");
-  await expect(page.getByTestId("profile-name")).toHaveText("Dilnoza Karimova");
+  await expect(page.getByTestId("profile-name")).toHaveText("Not set");
 });
 
-test("Create account refuses an email address as the name, and stores no name when Name is left empty", async ({ page }) => {
+test("the server's name rules still hold for a sign-up request that sends a name", async ({ page }) => {
   test.skip(PREVIEW, "no accounts on a Preview with no variables");
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.89.${run % 250}.9` });
-  await page.goto("/register");
-  await page.getByLabel("Name").fill("someone@example.com");
-  await page.getByLabel("Email").fill(`noname-${run}@example.com`);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.locator("form").getByRole("alert")).toHaveText("Use your name, not an email address.");
+  const headers = { "x-forwarded-for": `10.89.${run % 250}.9` };
+  const refused = await page.request.post("/api/auth/sign-up/email", {
+    headers,
+    data: { email: `noname-${run}@example.com`, password: PASSWORD, name: "someone@example.com" },
+  });
+  expect(refused.status()).toBe(400);
+  expect((await refused.json()).error).toMatchObject({ code: "invalid_name", message: "Use your name, not an email address." });
   expect((await (await page.request.get("/api/account/me")).json()).state).toBe("anonymous");
-
-  await page.getByLabel("Name").fill("   ");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-  expect((await (await page.request.get("/api/account/me")).json()).name).toBeNull();
-  await page.goto("/profile");
-  await expect(page.getByTestId("profile-name")).toHaveText("Not set");
 });

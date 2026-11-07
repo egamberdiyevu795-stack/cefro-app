@@ -88,6 +88,13 @@ const PATHS = {
   retry: (
     <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
   ),
+  /** Signed-out home: "See your own words quoted". */
+  quote: (
+    <path
+      d="M4 11.5C4 8 6 5.6 9.2 5l.6 1.6C8 7.3 7.2 8.5 7 10h2.5a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9.5 17h-4A1.5 1.5 0 0 1 4 15.5v-4ZM13 11.5C13 8 15 5.6 18.2 5l.6 1.6C17 7.3 16.2 8.5 16 10h2.5a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4Z"
+      fill="currentColor"
+    />
+  ),
   play: <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor" />,
   /** Status glyphs (result page questions): a full check, a half-filled circle, a cross. */
   info: (

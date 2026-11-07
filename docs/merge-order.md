@@ -361,6 +361,30 @@ Contains (docs/design-system.md, "Signed-out pages"):
   keeps `?mock=1`); `e2e/entry-pages.spec.ts` (email as name refused, empty name stored as none). `test/auth-helpers.ts`
   `signUp` now sends the name as the form does (empty unless given).
 
+## Right after `claude/entry-pages`: `claude/landing` (signed-out pages redesign, no migration)
+
+Cut from `claude/entry-pages` (`96395d2`), so it comes **after it**, merge commit, no squash. Branch name:
+`claude/landing` (7 characters after `claude/`). No database migration, no new environment variable.
+Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-landing-crm-b915.vercel.app/?mock=1`.
+
+Contains (docs/design-system.md, "Signed-out pages"; docs/growth-plan.md, phase 1):
+
+- **Home redesign, for the whole exam:** top row with a small grey "Sign in"; "UZBMB multilevel speaking", "Know
+  exactly what to fix before your speaking exam", the black "Start practising" (`/register`), the grey "See a demo
+  result" (`/result?demo=demo-5&mock=1`); three steps with icons; the "Example feedback" card is gone. A small
+  exam-parts list read from `PART_LIVE` ("Part 1 · A1–B1", "Part 2 · B2", "Part 3 · C1": Open / Coming soon; "All
+  three parts are open." when all are live).
+- **Create account:** "Save your results", email and password only (the name field is gone; the name is set on the
+  Account page). **Sign in:** "Welcome back".
+- **Unchanged:** POST forms disabled until the page is ready, the API's rate limits and trusted-IP rule, `?next=`,
+  mock mode, the "account deleted" message, the server's sign-up name rules.
+- **Shared code touched:** `AuthForm` (no name field; sends an empty name), `EntryFrame` (`headerEnd`,
+  `EntryHeaderLink`), `Icon` (new `quote` glyph).
+- **New doc:** `docs/growth-plan.md` (phases 1–4).
+- **Tests:** `src/features/entry/entry-pages.test.ts` (rewritten for the new pages; the exam-parts list with the
+  switches in each state), `mock-pages.test.ts` (home's demo link), `e2e/entry-pages.spec.ts` (390 px audits, demo
+  link, the list follows `PART_LIVE`, no name at sign-up, the server's name rule).
+
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 
 claude/entry-pages-jgh558: duplicate, never merge. (It holds the first two commits of `claude/entry-pages` and is

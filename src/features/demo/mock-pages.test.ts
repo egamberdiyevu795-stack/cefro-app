@@ -91,11 +91,11 @@ describe("mock pages on a Preview with no configuration", () => {
     expectMockLinksOnly(markup);
   });
 
-  it("signed-out home (/?mock=1): nobody is looked up, one black button, Try the demo opens the demo dashboard", async () => {
+  it("signed-out home (/?mock=1): nobody is looked up, one black button, See a demo result opens a demo result", async () => {
     touched.mockHeader = true;
     const markup = await html(EntryLayout({ children: await HomePage(props({ mock: "1" })) }));
     expect(mainOf(markup).match(BLACK)).toHaveLength(1);
-    expect(markup).toContain('href="/dashboard?mock=1"');
+    expect(markup).toContain('href="/result?demo=demo-5&amp;mock=1"');
     expect(markup).toContain('href="/register?mock=1"');
     expect(markup).toContain('href="/login?mock=1"');
     expect(markup).not.toMatch(SMALL);

@@ -41,7 +41,7 @@ in mock mode at 390 px. Every other action uses the grey `quiet` pill (or `light
 welcome card's "Start your first practice" (it goes to the recommended part, Part 2); attempts but none scored = the
 same card's "Start practice". All part tiles use the white tile pill. The exam date's Save is grey; Edit, Add exam
 date, Skip, Cancel and Remove date are small text actions with a 36 px tap area. Practice brief: "Start
-preparation"; "Check microphone" above it is grey. Signed-out home: "Create account" ("Try the demo" is grey); sign in: "Sign in"; Create account: "Create account".
+preparation"; "Check microphone" above it is grey. Signed-out home: "Start practising" ("See a demo result" is grey); sign in: "Sign in"; Create account: "Create account".
 Account page: "Go to Part 2" / "Practise Part 2"; Change password,
 Sign out and Delete my account are grey (a destructive action is never black).
 
@@ -52,19 +52,31 @@ above (`src/app/(entry)/`, `src/features/entry/`), so a theme change restyles th
 navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `bg-page`, the CEFRO wordmark on top
 (`EntryFrame`). The `(entry)` layout runs the configuration check (as the `(site)` one did), except in mock mode.
 
-- **Home:** the heading "Practise the multilevel speaking exam" (`text-heading`), the line "Speak, see your own words
-  quoted, fix one thing, and try again." (`text-lead`, muted), a card "Example feedback" (a fixed example in the shape
-  of the result page's Biggest fix, with the accent quote rule: "Biggest fix: answer every question" / "You answered 2
-  of 3 questions. Question 3 asked for your opinion."), then a card with the black **"Create account"**, the grey "Try
-  the demo" (`/dashboard?mock=1`) and "Have an account? Sign in". The actions sit on a card because the grey pill
-  would vanish on the grey page. `?deleted=1` (after Delete my account): "Your account and all your data were
+- **Home** (redesigned on `claude/landing`, `docs/growth-plan.md` phase 1; it speaks about the whole exam, never only
+  one part): top row with the wordmark left and a small grey "Sign in" right (`EntryHeaderLink`: `fg-muted`, 5.26:1
+  on the page, underlined, 44 px tap height); the small line "UZBMB multilevel speaking" (`text-label`, muted); the
+  heading "Know exactly what to fix before your speaking exam"; the line "Answer exam-style questions out loud, see
+  your own words quoted, fix one thing and try again." (`text-lead`, muted); a card with the black **"Start
+  practising"** (`/register`) and the grey "See a demo result" (`/result?demo=demo-5&mock=1`: the real result page
+  with a demo result from the existing mock evaluator, always in mock mode); a card with three steps, each with an
+  icon in a `well` circle ("Speak like in the exam" / "Exam-style questions, pictures and timing."; "See your own
+  words quoted" / "What worked and what to improve."; "Fix one thing, then retry" / "See whether it worked."; icons
+  `mic`, `quote` (new), `retry`); then which exam parts are open (`examStatus` in `features/entry/content.ts`).
+  The actions sit on a card because the grey pill would vanish on the grey page. No numbers, ratings, testimonials,
+  "free", Passed/Failed or age claims. `?deleted=1` (after Delete my account): "Your account and all your data were
   deleted." on top. A **signed-in** visitor is sent to `/dashboard` (`isSignedIn`: no session cookie = signed out,
   without touching the database).
-- **Sign in:** "Sign in", email, password, the black **"Sign in"**, "New here? Create account".
-- **Create account:** "Create account", name, email, password with "At least 8 characters.", the black **"Create
-  account"**, "Have an account? Sign in". The name is optional: left empty, the account has **no name** (never one
-  made from the email); a typed name follows the Account page's rules, checked on the server too (1–50 characters
-  after trimming, not an email address).
+- **Exam parts on home:** read from `PART_LIVE` (`src/config/features.ts`, the dashboard's switches), so it can never
+  be wrong. A small `StatRow` list: "Part 1 · A1–B1", "Part 2 · B2", "Part 3 · C1", each "Open" or "Coming soon"
+  (word, never colour). Part 1 is "Open" only when both 1.1 and 1.2 are live. When all are live: the single line
+  "All three parts are open." and no "Coming soon" anywhere. Today: Part 2 Open, Parts 1 and 3 Coming soon. This list
+  is the only place on these three pages that names a part.
+- **Sign in:** "Welcome back", email, password, the black **"Sign in"**, "New here? Create account".
+- **Create account:** "Save your results", the line "Your answers, feedback and progress stay in your account, so you
+  can see if you improve.", **email and password only** (no name field: the account starts with **no name**, never
+  one made from the email, and the student sets it on the Account page), "At least 8 characters.", the black
+  **"Create account"**, "Have an account? Sign in". The server's name rules still hold for any sign-up request that
+  sends a name (1–50 characters after trimming, not an email address).
 - **Unchanged behaviour:** the forms are `method="post"`, the submit stays disabled until the page is ready, the
   sign-in / sign-up limits and the trusted-IP rule are the API's (untouched), `?next=` (a path on this site only) is
   where the student goes after signing in, and the switch links keep it.
@@ -73,10 +85,11 @@ navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `b
   forms show `DemoLabel variant="entry"` ("Demo mode. Nothing you enter here is sent.") and submitting sends nothing.
   These are the addresses to look at on a Preview with no variables.
 - **Checks:** `src/features/entry/entry-pages.test.ts` (wording, one black button, no text under 11 px, no old tokens,
-  no menu or tabs, the signed-in redirect, `?next=`), `mock-pages.test.ts` (the three in mock mode touch no cookie,
+  no menu or tabs, the signed-in redirect, `?next=`, the exam-parts list with the switches only Part 2 / all / none
+  live and every combination, no part named outside it), `mock-pages.test.ts` (the three in mock mode touch no cookie,
   identity or database), `e2e/entry-pages.spec.ts` (at 390 px, real and mock: one black control, no text under 11 px,
-  AA contrast of every visible text, no horizontal scroll; "Try the demo" keeps `?mock=1`; the name typed at sign-up;
-  signed in → dashboard), `e2e/auth.spec.ts` (unchanged journeys; the sign-in pages have no Account menu now, so their
+  AA contrast of every visible text, no horizontal scroll; "See a demo result" keeps `?mock=1`; the list follows
+  `PART_LIVE`; no name at sign-up and the server's name rule; signed in → dashboard), `e2e/auth.spec.ts` (unchanged journeys; the sign-in pages have no Account menu now, so their
   state is read from `/api/account/me`).
 
 ## Navigation: five tabs
@@ -282,7 +295,7 @@ One family: Inter (`font-ui`, loaded with `next/font/google` in `src/app/layout.
 | `--text-body` | 13 / 20 px | `text-body` | List names (semibold), buttons (medium), search, quotes. |
 | `--text-lead` | 15 / 20 px | `text-lead` | The words beside the big number ("· target B2"), medium. |
 | `--text-title` | 17 / 24 px | `text-title` | Card titles, medium weight, slight negative tracking. Quiet: never bold. |
-| `--text-heading` | 28 / 36 px | `text-heading` | The one page heading of the signed-out pages ("Practise the multilevel speaking exam", "Sign in"), medium weight, tight tracking. |
+| `--text-heading` | 28 / 36 px | `text-heading` | The one page heading of the signed-out pages ("Know exactly what to fix before your speaking exam", "Welcome back"), medium weight, tight tracking. |
 | `--text-stat` | 36 px / 1 | `text-stat` | The one big figure per card (the level, "B1"), **light** (300), tight tracking. |
 
 Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for values and list names.

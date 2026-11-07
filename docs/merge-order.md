@@ -211,11 +211,40 @@ too, unchanged. Contains:
 - **Drills:** the neutral drill sets in `docs/lessons/drill-drafts.md` (approved by Asadbek, 2026-11-07) replace the
   advice-based drills in all three lesson files and in the app (lesson version 2); the same drill for every retry task.
 
+## After that: `claude/profile-settings` (Profile and Settings, no migration)
+
+Cut from `claude/lessons`, so it comes after it, merge commit. **No database migration** (no `0006`): the name,
+email, sign-up date and exam date columns already exist, and deletion only removes rows. Contains:
+
+- **Profile** (`/profile`, from the person tab's new "Profile" menu item; the person tab is the grey current tab
+  there): name (editable, `PUT /api/account/name`), email (shown only), the dashboard's exam-date editor and rules
+  ("Not set · Add exam date", Edit, "Remove date"), the current level from the latest scored Part 2 answer ("No level
+  yet" and "Go to Part 2" when there is none), member since, number of practice attempts.
+- **Settings** (`/settings`, the gear tab, now a real link): Test your microphone (3 s, played back, never uploaded;
+  a clear message when the microphone is blocked), Change password (`POST /api/account/password`: current password
+  needed, other devices signed out, wrong passwords count like failed sign-ins; a POST form, disabled until the page
+  is ready), Sign out, Delete my account (`POST /api/account/delete` with `DELETE` typed: attempts, results,
+  recordings and their audio, transcripts, exam date, sessions, analytics events, the account and its merged anonymous
+  identities; this browser is signed out).
+- **Where audio is stored:** `recording_blobs` in the database on the hosted setup (Turso), files under
+  `AUDIO_STORAGE_DIR` otherwise; deletion removes both kinds.
+- **Mock mode:** `/profile?mock=1`, `/settings?mock=1`: the demo student, "Demo mode. Changes are not saved.", nothing
+  sent; Change password and Delete my account show their screens and say nothing was changed.
+- **Shared code touched:** the Account menu (a "Profile" item first in every state, `active` prop), `Menu`
+  (`current`), the nav's Settings item (`built: true`), `DemoLabel` (`changes`), `isCrossSite` moved from the auth
+  route to `server/http.ts` (same code), `e2e/db.ts` (`querySql`), `playwright.preview.config.ts` (also runs the new
+  spec's mock tests).
+- **Tests:** `src/app/api/account/account-routes.test.ts` (name, password, deletion table by table with audio on
+  disk and in `recording_blobs`, another account untouched, pages show only the caller's data),
+  `src/features/profile/view-model.test.ts`, `src/domain/account.test.ts`, more in `mock-pages.test.ts` and
+  `features.test.ts`; `e2e/profile-settings.spec.ts`; `e2e/mock-mode.spec.ts` (390 px audit and Preview lists).
+- `docs/privacy-todo.md`: what the under-18 consent work will need from these pages.
+
 ## Docs branch: `claude/teacher-plan-v7fp7j` (one new doc, no code)
 
-Cut from `claude/lessons`, so it comes after it; any merge method. Contains `docs/teacher-plan.md` (the Teacher
-view v1 plan: flows, screens, data model, access rules, leave and deletion, mock mode, under-18 risks, tests, open
-questions) and this entry. Plan only: no app code, no migration (the plan proposes `0006_teachers` for later).
+Cut from `claude/lessons`, then `claude/profile-settings` merged in, so it comes **after `profile-settings`**, merge
+commit. Its own changes are docs only: `docs/teacher-plan.md` (Teacher view v1 plan) and this entry. No app code, no
+migration (the plan proposes `0006_teachers` for later).
 
 ## Duplicate: `claude/lessons-adi79w` (never merge)
 

@@ -35,3 +35,13 @@ export async function runSql(sql: string, args: Array<string | number | null> = 
     client.close();
   }
 }
+
+/** Read rows from the run's throwaway database (same guard as `runSql`). */
+export async function querySql(sql: string, args: Array<string | number | null> = []): Promise<Array<Record<string, unknown>>> {
+  const client = createClient({ url: `file:${throwawayDatabasePath(process.env.E2E_RUN_ID)}` });
+  try {
+    return (await client.execute({ sql, args })).rows.map((row) => ({ ...row }));
+  } finally {
+    client.close();
+  }
+}

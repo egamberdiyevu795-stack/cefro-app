@@ -1,8 +1,7 @@
 import { getAuth } from "@/server/auth/auth";
 import { authLimiters, clientIp } from "@/server/auth/auth-limits";
-import { getEnv } from "@/server/config/env";
 import { HttpError } from "@/server/errors";
-import { errorResponse, readBodyWithLimit, withErrorHandling } from "@/server/http";
+import { errorResponse, isCrossSite, readBodyWithLimit, withErrorHandling } from "@/server/http";
 
 /**
  * The only authentication endpoints CEFRO exposes, served by the auth library (see server/auth/auth.ts):
@@ -32,20 +31,6 @@ export async function GET() {
 
 /** Credentials are tiny; anything larger is refused before it is buffered or parsed (Content-Length may be missing or false). */
 const MAX_AUTH_BODY_BYTES = 8 * 1024;
-
-/**
- * Login CSRF / forced sign-out: a browser always sends `Origin` on a cross-site POST, so a request whose origin is
- * not ours is refused, and so is one the browser marks cross-site without an Origin. Requests with neither header
- * (curl, server-to-server) are not browser-driven and are allowed. The library's own origin check only runs for
- * requests that already carry cookies, which is why this does not rely on it.
- */
-function isCrossSite(request: Request): boolean {
-  const ownOrigin = getEnv().APP_URL ? new URL(getEnv().APP_URL!).origin : new URL(request.url).origin;
-  const origin = request.headers.get("origin");
-  if (origin !== null) return origin !== ownOrigin;
-  const site = request.headers.get("sec-fetch-site");
-  return site !== null && site !== "same-origin" && site !== "none";
-}
 
 async function handlePost(original: Request) {
   const path = allowedPath(original);

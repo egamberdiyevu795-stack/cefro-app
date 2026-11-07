@@ -16,6 +16,7 @@ export function Menu({
   panelClassName = "right-0 top-full mt-1",
   header,
   items,
+  current = false,
 }: {
   label: string;
   trigger: React.ReactNode;
@@ -23,6 +24,8 @@ export function Menu({
   panelClassName?: string;
   header?: React.ReactNode;
   items: readonly MenuItem[];
+  /** The trigger stands for the current page (the Account item on Profile): `aria-current="page"`. */
+  current?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -50,6 +53,7 @@ export function Menu({
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-current={current ? "page" : undefined}
         className={triggerClassName}
         onClick={() => setOpen((o) => !o)}
       >

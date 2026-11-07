@@ -1,5 +1,6 @@
 import "server-only";
 import { assertServerConfigured } from "./config/boot-check";
+import { getEnv } from "./config/env";
 import { HttpError } from "./errors";
 import { isDatabaseUnavailable, safeDatabaseMessage } from "./db/errors";
 import { logger } from "./logging/logger";
@@ -84,4 +85,18 @@ export async function parseFormData(body: Buffer, contentType: string | null): P
   } catch {
     throw new HttpError(400, "invalid_form", "The upload was incomplete. Please try again.");
   }
+}
+
+/**
+ * Login CSRF / forced sign-out / cross-site account changes: a browser always sends `Origin` on a cross-site POST, so a
+ * request whose origin is not ours is refused, and so is one the browser marks cross-site without an Origin. Requests
+ * with neither header (curl, server-to-server) are not browser-driven and are allowed. Used by the auth endpoints and
+ * the account changes (password, delete).
+ */
+export function isCrossSite(request: Request): boolean {
+  const ownOrigin = getEnv().APP_URL ? new URL(getEnv().APP_URL!).origin : new URL(request.url).origin;
+  const origin = request.headers.get("origin");
+  if (origin !== null) return origin !== ownOrigin;
+  const site = request.headers.get("sec-fetch-site");
+  return site !== null && site !== "same-origin" && site !== "none";
 }

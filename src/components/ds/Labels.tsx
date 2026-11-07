@@ -28,15 +28,18 @@ export const DEMO_RESULT_TEXT = "Demo result. Your answer was not scored.";
 export const DEMO_MODE_TEXT = "Demo mode. Your answer won't be scored.";
 /** On pages that list the demo student's attempts in mock mode (dashboard, History). */
 export const DEMO_DATA_TEXT = "Demo mode. These are example attempts, not yours.";
+/** On Profile and Settings in mock mode: the demo student's account, where nothing is ever changed. */
+export const DEMO_CHANGES_TEXT = "Demo mode. Changes are not saved.";
 
 /**
  * Marks a screen that shows mock data, so a tester never mistakes a saved demo score for their own. `result` (default)
  * on the result prototype's screens; `mode` on the practice page and the task list in mock mode, where nothing has been
- * scored yet; `data` on the dashboard and History in mock mode, which show the demo student's attempts.
+ * scored yet; `data` on the dashboard and History in mock mode, which show the demo student's attempts; `changes` on
+ * Profile and Settings in mock mode, where nothing the tester does is saved.
  * A grey `well` pill with an info glyph and dark words: not a button, no colour. Off a card (on the page background)
  * pass `className="bg-card"` so the pill still shows. Never shown on a real result.
  */
-export function DemoLabel({ variant = "result", className }: { variant?: "result" | "mode" | "data"; className?: string }) {
+export function DemoLabel({ variant = "result", className }: { variant?: "result" | "mode" | "data" | "changes"; className?: string }) {
   return (
     <p
       role="note"
@@ -44,7 +47,7 @@ export function DemoLabel({ variant = "result", className }: { variant?: "result
       className={cx("inline-flex items-center gap-1.5 rounded-full bg-well px-2.5 py-1 text-label font-medium text-fg", className)}
     >
       <Icon name="info" size={14} className="shrink-0 text-fg-subtle" />
-      {variant === "mode" ? DEMO_MODE_TEXT : variant === "data" ? DEMO_DATA_TEXT : DEMO_RESULT_TEXT}
+      {variant === "mode" ? DEMO_MODE_TEXT : variant === "data" ? DEMO_DATA_TEXT : variant === "changes" ? DEMO_CHANGES_TEXT : DEMO_RESULT_TEXT}
     </p>
   );
 }

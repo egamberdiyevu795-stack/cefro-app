@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEMO_DATA_TEXT, DEMO_MODE_TEXT, DEMO_RESULT_TEXT } from "@/components/ds";
+import { DEMO_CHANGES_TEXT, DEMO_DATA_TEXT, DEMO_MODE_TEXT, DEMO_RESULT_TEXT } from "@/components/ds";
 
 /*
  * Mock mode (`?mock=1`) on a server configured like a Vercel Preview with no variables: every mock page renders, with
@@ -30,6 +30,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
 }));
 vi.mock("@/server/db/client", () => ({ getDb: forbidden("db"), openDatabase: forbidden("db"), createDatabase: forbidden("db") }));
 vi.mock("@/server/identity/current-user", () => ({ findCurrentUserId: forbidden("identity"), getCurrentUserId: forbidden("identity") }));
+vi.mock("@/server/account/account-store", () => ({ readAccount: forbidden("db"), saveName: forbidden("db") }));
 
 import SiteLayout from "@/app/(site)/layout";
 import HomePage from "@/app/(site)/page";
@@ -38,6 +39,8 @@ import HistoryPage from "@/app/history/page";
 import LessonPage from "@/app/lessons/[lessonId]/page";
 import PracticePage from "@/app/practice/speaking/[taskId]/page";
 import ResultPage from "@/app/result/page";
+import ProfilePage from "@/app/profile/page";
+import SettingsPage from "@/app/settings/page";
 
 type Query = Record<string, string | undefined>;
 const props = (query: Query, params: Record<string, string> = {}) =>
@@ -160,10 +163,66 @@ describe("one black control per screen, the navigation included (grey active tab
     ["result", () => ResultPage(props({ mock: "1", demo: "demo-5" }))],
     ["history", () => HistoryPage(props({ mock: "1" }))],
     ["lesson", () => LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))],
+    ["profile", () => ProfilePage(props({ mock: "1" }))],
+    ["settings", () => SettingsPage(props({ mock: "1" }))],
   ] as const)("%s: at most one black control on the whole page; the current tab is grey", async (_name, page) => {
     const markup = await html(page());
     expect((markup.match(BLACK) ?? []).length).toBeLessThanOrEqual(1);
     expect(markup).not.toMatch(/aria-current="page"[^>]*bg-primary|bg-primary[^"]*"[^>]*aria-current="page"/);
+  });
+});
+
+describe("Profile and Settings in mock mode", () => {
+  it("Profile: the demo student's name, email, exam date, level, member since and attempts; demo label; one black button; mock links", async () => {
+    const markup = await html(ProfilePage(props({ mock: "1" })));
+    expect(markup).toContain(DEMO_CHANGES_TEXT);
+    expect(markup).toMatch(/data-testid="profile-name"[^>]*>Student</);
+    expect(markup).toMatch(/data-testid="profile-email"[^>]*>student@example.com</);
+    expect(markup).toContain('data-testid="exam-countdown"');
+    expect(markup).toMatch(/data-testid="profile-member-since"[^>]*>Member since \d\d\.\d\d\.\d\d</);
+    expect(markup).toMatch(/data-testid="profile-attempts"[^>]*>6 practice attempts</);
+    // The demo student's latest scored Part 2 answer is the "A tradition" retry: a real level, not "No level yet".
+    expect(markup).toMatch(/data-testid="profile-level"[^>]*>(Below B1|B1|B2|Above B2)</);
+    expect(markup).toContain('href="/?mock=1#part-2"');
+    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
+    expect(markup).not.toMatch(SMALL);
+    expect(markup).not.toMatch(/Coming soon|Target level|Change email|Language|Notifications/i);
+    expectMockLinksOnly(markup);
+  });
+
+  it("Profile: the Account item is the current tab (grey, aria-current), the gear is not", async () => {
+    const markup = await html(ProfilePage(props({ mock: "1" })));
+    const current = [...markup.matchAll(/<(a|button|span)\b[^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
+    expect(current).toHaveLength(1);
+    expect(current[0]).toContain('aria-label="Account"');
+    expect(current[0]).toContain("bg-well");
+    expect(current[0]).not.toContain("bg-primary");
+  });
+
+  it("Settings: microphone test, change password (POST, disabled until ready), sign out, delete; demo label; one black button; the gear is current", async () => {
+    const markup = await html(SettingsPage(props({ mock: "1" })));
+    expect(markup).toContain(DEMO_CHANGES_TEXT);
+    for (const title of ["Test your microphone", "Change password", "Sign out", "Delete my account"]) expect(markup).toContain(title);
+    expect(markup).toContain("Nothing is saved or uploaded.");
+    const forms = [...markup.matchAll(/<form\b[^>]*>/g)].map((m) => m[0]);
+    expect(forms.length).toBeGreaterThan(0);
+    for (const form of forms) {
+      expect(form).toMatch(/\bmethod="post"/);
+      expect(form).not.toMatch(/\baction=/);
+    }
+    const submits = [...markup.matchAll(/<button\b[^>]*type="submit"[^>]*>/g)].map((m) => m[0]);
+    expect(submits.length).toBeGreaterThan(0);
+    for (const submit of submits) expect(submit).toContain('disabled=""');
+    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
+    expect(mainOf(markup).match(BLACK)![0]).toContain("disabled"); // the microphone test waits for the page too
+    const gear = markup.match(/<a\b[^>]*aria-label="Settings"[^>]*>/)![0];
+    expect(gear).toContain('href="/settings?mock=1"');
+    expect(gear).toContain('aria-current="page"');
+    expect(gear).toMatch(/class="[^"]*\bbg-well\b/);
+    expect(gear).not.toContain("bg-primary");
+    expect(markup).not.toMatch(SMALL);
+    expect(markup).not.toMatch(/Coming soon|Target level|Change email|Language|Notifications/i);
+    expectMockLinksOnly(markup);
   });
 });
 

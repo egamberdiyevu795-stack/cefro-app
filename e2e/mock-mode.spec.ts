@@ -245,6 +245,8 @@ test("mock mode at 390 px: every main page has at most one black control, naviga
     "/result?demo=demo-5&mock=1",
     "/history?mock=1",
     "/lessons/l-t1?demo=demo-5&mock=1",
+    "/profile?mock=1",
+    "/settings?mock=1",
   ]) {
     await page.goto(url);
     await expect(page.locator("main").first()).toBeVisible();
@@ -257,12 +259,12 @@ test("mock mode at 390 px: every main page has at most one black control, naviga
   }
 });
 
-test("mock mode: the demo account has no sign-in or Log out (no API, no real page)", async ({ page }) => {
+test("mock mode: the demo account has no sign-in or Log out, only Profile (no API, no real page)", async ({ page }) => {
   const seen = watch(page);
   await page.goto("/dashboard?mock=1");
   await page.getByTestId("account-status").getByRole("button", { name: "Account" }).click();
   await expect(page.getByText("Demo account. Sign-in is off in demo mode.")).toBeVisible();
-  await expect(page.getByRole("menuitem")).toHaveCount(0);
+  await expect(page.getByRole("menuitem")).toHaveText(["Profile"]);
   expect(seen.apiCalls).toEqual([]);
 });
 
@@ -277,7 +279,7 @@ test("real pages show no demo label", async ({ page }) => {
 
 test("Preview with no variables: the real pages and the API keep refusing", async ({ page, request }) => {
   test.skip(!PREVIEW, "only on the production build set up like a Preview (npm run test:e2e:preview)");
-  for (const url of ["/", "/?mock=0", "/login", "/register", "/dashboard", "/history", "/practice/speaking/b2-part2-advice-from-someone", "/result/00000000-0000-4000-8000-000000000000"]) {
+  for (const url of ["/", "/?mock=0", "/login", "/register", "/dashboard", "/history", "/profile", "/settings", "/practice/speaking/b2-part2-advice-from-someone", "/result/00000000-0000-4000-8000-000000000000"]) {
     expect((await request.get(url)).status(), url).toBe(500);
   }
   for (const url of ["/api/health", "/api/account/me"]) expect((await request.get(url)).status(), url).toBe(503);
@@ -285,7 +287,7 @@ test("Preview with no variables: the real pages and the API keep refusing", asyn
   await expect(page.getByRole("heading", { name: "CEFRO isn’t available right now" })).toBeVisible();
   await expect(page.getByTestId("demo-label")).toHaveCount(0);
   // The mock pages answer 200.
-  for (const url of ["/?mock=1", "/dashboard?mock=1", "/history?mock=1", "/history?part=2&mock=1", "/practice/speaking/b2-part2-a-tradition?mock=1", "/result?mock=1", "/result?state=retry&mock=1", "/result?demo=demo-1&mock=1", "/result?demo=demo-6&mock=1", "/result?demo=answer.b2-part2-happy-day&mock=1"]) {
+  for (const url of ["/?mock=1", "/dashboard?mock=1", "/history?mock=1", "/profile?mock=1", "/settings?mock=1", "/history?part=2&mock=1", "/practice/speaking/b2-part2-a-tradition?mock=1", "/result?mock=1", "/result?state=retry&mock=1", "/result?demo=demo-1&mock=1", "/result?demo=demo-6&mock=1", "/result?demo=answer.b2-part2-happy-day&mock=1"]) {
     expect((await request.get(url)).status(), url).toBe(200);
   }
 });

@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, Menu, cx, styles, type MenuItem } from "@/components/ds";
+import { mockLink } from "@/features/demo/demo-mode";
 import { ACCOUNT } from "./mock-data";
 
 type AccountState = { state: "loading" } | { state: "anonymous" } | { state: "authenticated"; email: string; name: string | null };
@@ -21,11 +22,23 @@ const PANEL = {
  *   and email, then Log out (the real sign-out endpoint, then the sign-in page). Not signed in: "Practising without an
  *   account", then Sign in and Create account.
  * - `source="mock"` (mock mode `?mock=1`, and the design prototypes): the demo account's name and email, and that
- *   sign-in is off. No menu item: mock mode calls no API, sign-out included, and never leads to a real page.
+ *   sign-in is off. Only "Profile" (with ?mock=1): mock mode calls no API, sign-out included, and never leads to a real page.
+ *
+ * Every state has "Profile" first (`/profile`; `/profile?mock=1` in mock mode). On Profile the icon is the current
+ * section: the grey active square (`NAV_ITEM_ACTIVE`, never black) and `aria-current="page"` (`active`).
  *
  * `data-testid="account-status"` and `data-state` say which state it is in (anonymous / authenticated), for tests.
  */
-export function AccountMenu({ source = "mock", placement = "rail" }: { source?: "mock" | "real"; placement?: "rail" | "header" }) {
+export function AccountMenu({
+  source = "mock",
+  placement = "rail",
+  active = false,
+}: {
+  source?: "mock" | "real";
+  placement?: "rail" | "header";
+  /** On the Profile page: the Account item is the current section. */
+  active?: boolean;
+}) {
   const router = useRouter();
   // A layout keeps this menu mounted across pages (e.g. login → home): ask again after every navigation, so signing
   // in or out on one page shows on the next.
@@ -62,17 +75,19 @@ export function AccountMenu({ source = "mock", placement = "rail" }: { source?: 
     router.refresh();
   }
 
+  const profile: MenuItem = { label: "Profile", onSelect: () => router.push(mockLink("/profile", source === "mock")) };
   const items: MenuItem[] =
-    source === "mock"
+    account.state === "loading"
       ? []
+      : source === "mock"
+      ? [profile]
       : account.state === "authenticated"
-      ? [{ label: "Log out", onSelect: () => void logOut() }]
-      : account.state === "anonymous"
-        ? [
-            { label: "Sign in", onSelect: () => router.push("/login") },
-            { label: "Create account", onSelect: () => router.push("/register") },
-          ]
-        : [];
+      ? [profile, { label: "Log out", onSelect: () => void logOut() }]
+      : [
+          profile,
+          { label: "Sign in", onSelect: () => router.push("/login") },
+          { label: "Create account", onSelect: () => router.push("/register") },
+        ];
 
   const header =
     account.state === "authenticated" ? (
@@ -95,7 +110,8 @@ export function AccountMenu({ source = "mock", placement = "rail" }: { source?: 
       <Menu
         label="Account"
         trigger={<Icon name="user" size={20} />}
-        triggerClassName={cx(styles.NAV_ITEM, styles.NAV_ITEM_IDLE)}
+        triggerClassName={cx(styles.NAV_ITEM, active ? styles.NAV_ITEM_ACTIVE : styles.NAV_ITEM_IDLE)}
+        current={active}
         panelClassName={PANEL[placement]}
         header={header}
         items={items}

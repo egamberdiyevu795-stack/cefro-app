@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
 const DEMO_TEXT = "Demo result. Your answer was not scored.";
+const DEMO_MODE_TEXT = "Demo mode. Your answer won't be scored.";
 
 /** Brief → preparation → recording → Finish. A short test answer opens the early-finish warning: "Finish anyway". */
 async function recordAndSubmit(page: Page, speakMs = 2500) {
@@ -281,7 +282,7 @@ test("mock mode: the whole loop without API calls, and a retry's goal on every s
   });
   const demo = page.getByTestId("demo-label");
   await page.goto(`${TASK_URL}?mock=1`);
-  await expect(demo).toHaveText(DEMO_TEXT); // the mock brief
+  await expect(demo).toHaveText(DEMO_MODE_TEXT); // the mock brief
   await recordAndSubmit(page, 1000);
   await expect(page).toHaveURL(/\/result\?state=scoring/);
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
@@ -298,8 +299,10 @@ test("mock mode: the whole loop without API calls, and a retry's goal on every s
   await page.getByRole("link", { name: "Retry with this goal" }).click();
   const goal = page.getByTestId("goal-card");
   await expect(goal).toContainText("Your goal:");
+  await expect(demo).toHaveText(DEMO_MODE_TEXT); // the mock retry brief
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(goal).toBeVisible();
+  await expect(demo).toHaveText(DEMO_MODE_TEXT); // mock preparation
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(goal).toBeVisible();
   await page.waitForTimeout(1000);
@@ -486,4 +489,87 @@ test("a retry opened by its link offers Start preparation only once its goal has
   await page.waitForTimeout(1000); // nothing may reset the screen after preparation has started
   await expect(page.getByText("to prepare")).toBeVisible();
   await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible();
+});
+
+/** A real scored attempt to retry; returns its id. */
+async function scoredAttempt(page: Page): Promise<string> {
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page);
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  return page.url().split("/result/")[1];
+}
+
+const blacksInMain = (page: Page) => page.getByRole("main").locator(":is(a, button).bg-primary.text-on-primary");
+
+test("retry goal fails to load: a message with Try again (which can load it) and Start without the goal", async ({ page }) => {
+  const id = await scoredAttempt(page);
+  let failNext = true;
+  await page.route(`**/api/speaking/attempts/${id}`, async (route) => {
+    if (failNext) return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "internal", message: "x" } }) });
+    return route.continue();
+  });
+
+  // Failed load → the message, one black button, no Start preparation.
+  await page.goto(`${TASK_URL}?retry=${id}`);
+  const unavailable = page.getByTestId("retry-goal-unavailable");
+  await expect(unavailable).toContainText("We couldn’t load your goal.");
+  await expect(page.getByRole("button", { name: "Start preparation" })).toHaveCount(0);
+  await expect(blacksInMain(page)).toHaveCount(1);
+  await expect(blacksInMain(page)).toHaveText("Try again");
+
+  // Try again, this time it loads: the retry brief with its goal.
+  failNext = false;
+  await unavailable.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
+  await expect(unavailable).toHaveCount(0);
+
+  // Fails again → Start without the goal: preparation starts at once, without a goal.
+  failNext = true;
+  await page.goto(`${TASK_URL}?retry=${id}`);
+  await expect(unavailable).toBeVisible();
+  await unavailable.getByRole("button", { name: "Start without the goal" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByTestId("goal-card")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible();
+});
+
+test("retry goal loads slowly: after 10 s a message; a late answer is still used, unless the student started without it", async ({ page }) => {
+  const id = await scoredAttempt(page);
+  const held: Array<() => Promise<void>> = [];
+  await page.route(`**/api/speaking/attempts/${id}`, (route) => {
+    held.push(() => route.continue());
+  });
+  await page.clock.install();
+
+  // Still loading before 10 s, then the slow message (one black button).
+  await page.goto(`${TASK_URL}?retry=${id}`);
+  await expect(page.getByTestId("retry-goal-loading")).toBeVisible();
+  await page.clock.fastForward(9_000);
+  await expect(page.getByTestId("retry-goal-loading")).toBeVisible();
+  await page.clock.fastForward(1_500);
+  const unavailable = page.getByTestId("retry-goal-unavailable");
+  await expect(unavailable).toContainText("Your goal is taking too long to load.");
+  await expect(blacksInMain(page)).toHaveCount(1);
+
+  // The slow answer arrives after all: the goal is shown. (In development React runs effects twice, so there can be
+  // more than one held request: release them all.)
+  const releaseAll = async () => {
+    for (const release of held.splice(0)) await release();
+  };
+  await expect.poll(() => held.length).toBeGreaterThan(0);
+  await releaseAll();
+  await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
+  await expect(unavailable).toHaveCount(0);
+
+  // Slow again → Start without the goal; the late answer is then ignored.
+  await page.goto(`${TASK_URL}?retry=${id}`);
+  await page.clock.fastForward(10_500);
+  await expect(unavailable).toBeVisible();
+  await unavailable.getByRole("button", { name: "Start without the goal" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect.poll(() => held.length).toBeGreaterThan(0);
+  await releaseAll();
+  await page.waitForTimeout(500);
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByTestId("goal-card")).toHaveCount(0);
 });

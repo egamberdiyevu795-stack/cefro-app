@@ -3,7 +3,7 @@ import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { DEMO_RESULT_TEXT } from "@/components/ds";
+import { DEMO_MODE_TEXT, DEMO_RESULT_TEXT, DemoLabel } from "@/components/ds";
 import { FEATURE_FLAGS } from "@/config/features";
 import { getSpeakingTask } from "@/content/speaking";
 import type { AttemptView } from "@/domain/speaking/attempt";
@@ -97,5 +97,24 @@ describe("no demo label on real results", () => {
     if (state.kind === "scored") expect(renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS }))).not.toMatch(LABEL);
     const real = fs.readFileSync(path.join(process.cwd(), "src", "features", "result", "AttemptResult.tsx"), "utf8");
     expect(real).not.toMatch(/\bdemo\b|DemoLabel/);
+  });
+});
+
+describe("demo label wording", () => {
+  it("results say 'Demo result'; the practice page in mock mode says 'Demo mode'", () => {
+    expect(renderToStaticMarkup(createElement(DemoLabel))).toContain("Demo result. Your answer was not scored.");
+    const mode = renderToStaticMarkup(createElement(DemoLabel, { variant: "mode" }));
+    expect(DEMO_MODE_TEXT).toBe("Demo mode. Your answer won't be scored.");
+    expect(mode).toContain("Demo mode. Your answer won&#x27;t be scored.");
+    expect(mode).not.toContain("Demo result");
+    for (const html of [mode, renderToStaticMarkup(createElement(DemoLabel))]) {
+      expect(html).toMatch(/role="note"/);
+      expect(html).not.toMatch(SMALL);
+      expect(html).not.toMatch(BLACK);
+    }
+    // The practice page uses the mode wording (only in mock mode); the result prototype the result wording.
+    const practice = fs.readFileSync(path.join(process.cwd(), "src", "features", "speaking-practice", "components", "PracticeExperience.tsx"), "utf8");
+    expect(practice).toMatch(/\{isMock && <DemoLabel variant="mode"/);
+    expect(practice.match(/<DemoLabel/g)).toHaveLength(1);
   });
 });

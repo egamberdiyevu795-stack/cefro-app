@@ -14,6 +14,7 @@ import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, fetchTaskAttempts, startSession, submitRecording } from "../lib/api-client";
 import { initialPracticeState, practiceReducer, type PracticeState } from "../lib/practice-machine";
 import { playChime, primeChime } from "../lib/chime";
+import { initialRetryGoalLoad, pendingRequest, RETRY_GOAL_TIMEOUT_MS, retryGoalLoadReducer } from "../lib/retry-goal-load";
 import { isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
 import {
   AttemptsCard,
@@ -26,6 +27,7 @@ import {
   PreparationCard,
   RecordingCard,
   RetryGoalLoading,
+  RetryGoalUnavailable,
   TaskCard,
   UploadFailedCard,
 } from "./screens";
@@ -87,7 +89,9 @@ export function PracticeExperience({
   // A retry opened by id (?retry=<id>) has no goal until its attempt has loaded. Until then the brief offers no
   // "Start preparation": starting early would begin a practice without the goal, and the late load used to reset the
   // screen back to the brief in the middle of preparation.
-  const [retryLoading, setRetryLoading] = useState(Boolean(retryAttemptId) && !initialRetryOf);
+  // It must never stay loading: a failed or slow load offers "Try again" and "Start without the goal" (retry-goal-load.ts).
+  const [goalLoad, dispatchGoalLoad] = useReducer(retryGoalLoadReducer, Boolean(retryAttemptId) && !initialRetryOf, initialRetryGoalLoad);
+  const goalRequest = pendingRequest(goalLoad);
 
   const taskId = task.id;
   const retryOfId = state.retryOf?.id ?? null;
@@ -137,20 +141,26 @@ export function PracticeExperience({
     };
   }, [taskId, isMock, track]);
 
-  // Opened from "Retry with this goal" (?retry=<id>): load that attempt, then show the brief with its goal.
+  // Opened from "Retry with this goal" (?retry=<id>): load that attempt, then show the brief with its goal. Each
+  // request has a number; when the student tries again or starts without the goal, the older request is ignored
+  // (this effect's cleanup). A slow request keeps the same number, so it is not cancelled when the message shows.
   useEffect(() => {
-    if (!retryAttemptId) return;
+    if (!retryAttemptId || goalRequest === null) return;
     let cancelled = false;
+    const timer = setTimeout(() => dispatchGoalLoad({ type: "timedOut", request: goalRequest }), RETRY_GOAL_TIMEOUT_MS);
     fetchAttempt(retryAttemptId)
       .then(({ attempt }) => {
-        if (!cancelled && attempt.evaluation) dispatch({ type: "retryRequested", attempt });
+        if (cancelled) return;
+        if (attempt.evaluation) dispatch({ type: "retryRequested", attempt });
+        dispatchGoalLoad({ type: "loaded", request: goalRequest });
       })
-      .catch(() => !cancelled && setPageError("We couldn't load the attempt to retry. You can still practise the task."))
-      .finally(() => !cancelled && setRetryLoading(false));
+      .catch(() => !cancelled && dispatchGoalLoad({ type: "failed", request: goalRequest }))
+      .finally(() => clearTimeout(timer));
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [retryAttemptId]);
+  }, [retryAttemptId, goalRequest]);
 
   // ── Preparation & recording ──────────────────────────────────────
   const startPreparation = useCallback(async () => {
@@ -341,9 +351,19 @@ export function PracticeExperience({
     case "brief":
     case "retryBrief": {
       const isRetry = phase.kind === "retryBrief" && state.retryOf !== null;
-      const microphone = retryLoading ? (
-        <RetryGoalLoading />
-      ) : recorder.status === "requesting" ? (
+      const microphone =
+        goalLoad.kind === "loading" ? (
+          <RetryGoalLoading />
+        ) : goalLoad.kind === "failed" || goalLoad.kind === "slow" ? (
+          <RetryGoalUnavailable
+            reason={goalLoad.kind}
+            onTryAgain={() => dispatchGoalLoad({ type: "tryAgain" })}
+            onStartWithoutGoal={() => {
+              dispatchGoalLoad({ type: "startWithoutGoal" });
+              void startPreparation();
+            }}
+          />
+        ) : recorder.status === "requesting" ? (
           <MicrophoneState kind="asking" onRetry={retryMicrophone} />
         ) : micError ? (
           <MicrophoneState kind={micError} onRetry={retryMicrophone} />
@@ -421,7 +441,7 @@ export function PracticeExperience({
   return (
     <div className="space-y-4">
       {/* Mock mode scores nothing (Finish opens the demo result); a mock retry's goal comes from a saved demo run. */}
-      {isMock && <DemoLabel className="bg-card" />}
+      {isMock && <DemoLabel variant="mode" className="bg-card" />}
       {pageError && <InlineNotice title="Something went wrong.">{pageError}</InlineNotice>}
       {content}
     </div>

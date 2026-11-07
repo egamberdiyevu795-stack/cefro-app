@@ -23,16 +23,17 @@ export function DeltaLabel({ children, label }: { children: React.ReactNode; lab
   );
 }
 
-/** The words of the demo label, shared with the tests. */
+/** The demo label's words, shared with the tests: on a result built from mock data, and on a page in mock mode. */
 export const DEMO_RESULT_TEXT = "Demo result. Your answer was not scored.";
+export const DEMO_MODE_TEXT = "Demo mode. Your answer won't be scored.";
 
 /**
- * Marks a screen that shows mock data (the result prototype and the practice page's mock mode), so a tester never
- * mistakes a saved demo score for their own. A grey `well` pill with an info glyph and dark words: not a button, no
- * colour. Off a card (on the page background) pass `className="bg-card"` so the pill still shows. Never shown on a
- * real result.
+ * Marks a screen that shows mock data, so a tester never mistakes a saved demo score for their own. `result` (default)
+ * on the result prototype's screens; `mode` on the practice page in mock mode, where nothing has been scored yet.
+ * A grey `well` pill with an info glyph and dark words: not a button, no colour. Off a card (on the page background)
+ * pass `className="bg-card"` so the pill still shows. Never shown on a real result.
  */
-export function DemoLabel({ className }: { className?: string }) {
+export function DemoLabel({ variant = "result", className }: { variant?: "result" | "mode"; className?: string }) {
   return (
     <p
       role="note"
@@ -40,7 +41,7 @@ export function DemoLabel({ className }: { className?: string }) {
       className={cx("inline-flex items-center gap-1.5 rounded-full bg-well px-2.5 py-1 text-label font-medium text-fg", className)}
     >
       <Icon name="info" size={14} className="shrink-0 text-fg-subtle" />
-      {DEMO_RESULT_TEXT}
+      {variant === "mode" ? DEMO_MODE_TEXT : DEMO_RESULT_TEXT}
     </p>
   );
 }

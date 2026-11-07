@@ -116,3 +116,21 @@ describe("retry goal loading", () => {
     expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
   });
 });
+
+describe("retry goal unavailable (failed or slow load)", () => {
+  it.each(["failed", "slow"] as const)("%s: a short message, black Try again, quiet Start without the goal, no text under 11 px", async (reason) => {
+    const { BriefCard, RetryGoalUnavailable } = await import("./screens");
+    const task = toPublicTask(getSpeakingTask("b2-part2-advice-from-someone")!);
+    const action = createElement(RetryGoalUnavailable, { reason, onTryAgain: () => {}, onStartWithoutGoal: () => {} });
+    const html = renderToStaticMarkup(createElement(BriefCard, { task, goal: null, onStart: () => {}, microphone: action }));
+    expect(html).toContain(reason === "failed" ? "We couldn’t load your goal." : "Your goal is taking too long to load.");
+    expect(html).toContain("Try again, or practise this task without the goal.");
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain("Start preparation"); // the message replaces it
+    const blacks = html.match(/<button[^>]*class="[^"]*\bbg-primary text-on-primary\b[^"]*"[^>]*>(.*?)<\/button>/g) ?? [];
+    expect(blacks).toHaveLength(1);
+    expect(blacks[0]).toContain("Try again");
+    expect(html).toMatch(/<button[^>]*class="[^"]*\bbg-well\b[^"]*"[^>]*>.*?Start without the goal<\/button>/);
+    expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
+  });
+});

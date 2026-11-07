@@ -311,6 +311,38 @@ export function RetryGoalLoading() {
   );
 }
 
+/**
+ * In the brief's action area when a retry's goal could not be loaded (`failed`) or is taking more than about 10
+ * seconds (`slow`). Black "Try again" (loads it again); quiet "Start without the goal" (practises the same task
+ * without it, starting preparation at once). Never a dead end.
+ */
+export function RetryGoalUnavailable({
+  reason,
+  onTryAgain,
+  onStartWithoutGoal,
+}: {
+  reason: "failed" | "slow";
+  onTryAgain: () => void;
+  onStartWithoutGoal: () => void;
+}) {
+  return (
+    <div role="alert" data-testid="retry-goal-unavailable" data-reason={reason}>
+      <p className="text-body font-semibold text-fg">
+        {reason === "failed" ? "We couldn\u2019t load your goal." : "Your goal is taking too long to load."}
+      </p>
+      <p className="mt-1 text-body text-fg">Try again, or practise this task without the goal.</p>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <PillAction size="lg" icon="retry" onClick={onTryAgain} className="w-full sm:w-auto">
+          Try again
+        </PillAction>
+        <PillAction size="lg" variant="quiet" icon="mic" onClick={onStartWithoutGoal} className="w-full sm:w-auto">
+          Start without the goal
+        </PillAction>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------------------------------------------ microphone */
 
 export type MicrophoneStateKind = "asking" | RecorderErrorKind;

@@ -194,13 +194,13 @@ the band for each run. If it is band 0 every time, close the issue. If it splits
 
 ## Known flaky tests
 
-Browser tests that have failed once and then passed on rerun with no code change. Not fixed yet; listed so a single
-red run is not mistaken for a regression. Rerun the one test before investigating; if it fails twice in a row, treat
-it as a real failure.
+Browser tests that failed once and then passed on rerun with no code change. List one here when it is seen, so a single
+red run is not mistaken for a regression; remove it (or mark it fixed) once its cause is fixed.
 
-| Test | Seen | What happened | Reruns |
+**None open.**
+
+### Fixed
+
+| Test | Seen | Cause | Fix |
 | --- | --- | --- | --- |
-| `e2e/history.spec.ts` › "History: empty state, then the student's attempts newest first, retries, the part filter, the chart from 3 scored attempts, and the dashboard's Recent attempts" | 2026-11-06, branch `claude/cefro-part-2-tasks-yfr6x5`, in a full run of the four specs | Timed out (90 s) on the retry's `recordAnswer`: clicking "Start speaking now" kept retrying with "element is not stable" / "element was detached from the DOM". The preparation screen seems to re-render under the click (likely the retry page still loading its goal or earlier attempts). | 2026-11-06: passed 2 of 2 alone on the same branch, passed on the base branch, passed in the next full run (27 of 27). 2026-11-07: failed again at the same click in 1 of 2 full runs, then 1 of 2 runs alone. Not seen to fail on the base branch (1 run only), so the extra tasks may make it more likely; not investigated. |
-
-Likely fix, for later: in `recordAnswer`, wait for the preparation countdown to be visible (or for the retry goal card)
-before clicking "Start speaking now", instead of clicking as soon as the button exists.
+| `e2e/history.spec.ts` › "History: empty state, then the student's attempts newest first, retries, the part filter, the chart from 3 scored attempts, and the dashboard's Recent attempts" | 2026-11-06 and 2026-11-07 (2 of 4 full runs, 1 of 3 runs alone). It timed out on the retry's "Start speaking now" ("element is not stable", then "detached from the DOM"). | **An app race, not only a test race.** A retry opened by its link (`?retry=<id>`) showed the plain brief, with "Start preparation", before the attempt being retried had loaded. Clicking early started preparation; when the attempt arrived, `retryRequested` reset the screen to the retry brief, throwing the student out of preparation. The test clicked as soon as the button existed; `practice-flow.spec.ts` did not fail because it waits for "Your goal:" first. Proven with a probe that delays that request by 3 s: preparation was lost on the old code, kept on the new. | 2026-11-07. The brief shows "Loading your goal…" (no button) until the retried attempt has loaded; the reducer ignores a late `retryRequested` outside a brief. The test now waits for "Your goal:" and for preparation to start, as the student sees them (no retries, no longer timeouts). New regression test in `practice-flow.spec.ts` (delays the load by 3 s). Result: **10 of 10** runs of the History test alone (`--repeat-each=10`). |

@@ -21,6 +21,15 @@ const attempt = (id: string, status: AttemptView["status"] = "processing"): Atte
 });
 
 describe("practiceReducer", () => {
+  it("a retry that finishes loading late never pulls the student out of preparation or recording", () => {
+    const preparing = practiceReducer(initialPracticeState, { type: "preparationStarted", now: 1000, preparationMs: 60_000 });
+    expect(practiceReducer(preparing, { type: "retryRequested", attempt: attempt("a", "completed") })).toBe(preparing);
+    const recording = practiceReducer(preparing, { type: "recordingStarted", now: 5000, speakingMs: 120_000 });
+    expect(practiceReducer(recording, { type: "retryRequested", attempt: attempt("a", "completed") })).toBe(recording);
+    // From the brief it still opens the retry brief.
+    expect(practiceReducer(initialPracticeState, { type: "retryRequested", attempt: attempt("a", "completed") }).phase).toEqual({ kind: "retryBrief" });
+  });
+
   it("stores absolute deadlines for preparation and recording", () => {
     let state = practiceReducer(initialPracticeState, { type: "preparationStarted", now: 1000, preparationMs: 60_000 });
     expect(state.phase).toEqual({ kind: "preparing", endsAt: 61_000 });

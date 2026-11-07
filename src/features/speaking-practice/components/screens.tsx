@@ -299,6 +299,18 @@ function LevelMeter({ level }: { level: number }) {
   );
 }
 
+/**
+ * In the brief's action area while a retry (?retry=<id>) loads its goal: no button yet, so preparation can't start
+ * without the goal.
+ */
+export function RetryGoalLoading() {
+  return (
+    <p role="status" data-testid="retry-goal-loading" className="text-body text-fg-muted">
+      Loading your goal&hellip;
+    </p>
+  );
+}
+
 /* ------------------------------------------------------------------------------------------------------ microphone */
 
 export type MicrophoneStateKind = "asking" | RecorderErrorKind;

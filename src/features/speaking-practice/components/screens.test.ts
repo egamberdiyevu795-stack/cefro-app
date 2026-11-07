@@ -103,3 +103,16 @@ describe("retry goal hand-off (mock mode)", () => {
     expect(state).toMatchObject({ kind: "scoring", goal: null });
   });
 });
+
+describe("retry goal loading", () => {
+  it("the brief offers no Start preparation (no black button) while a retry loads its goal", async () => {
+    const { BriefCard, RetryGoalLoading } = await import("./screens");
+    const task = toPublicTask(getSpeakingTask("b2-part2-advice-from-someone")!);
+    const html = renderToStaticMarkup(createElement(BriefCard, { task, goal: null, onStart: () => {}, microphone: createElement(RetryGoalLoading) }));
+    expect(html).toContain("Loading your goal");
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain("Start preparation");
+    expect(html.match(/class="[^"]*\bbg-primary text-on-primary\b/g) ?? []).toHaveLength(0);
+    expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
+  });
+});

@@ -96,6 +96,9 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
     case "attemptCached":
       return { ...state, attempts: { ...state.attempts, [action.attempt.id]: action.attempt } };
     case "retryRequested":
+      // Only from a brief: a retry that finishes loading late must never pull the student out of preparation,
+      // recording or a result.
+      if (state.phase.kind !== "brief" && state.phase.kind !== "retryBrief") return state;
       return { ...state, retryOf: action.attempt, phase: { kind: "retryBrief" } };
     case "comparisonRequested":
       return {

@@ -24,6 +24,7 @@ import {
   PracticeLayout,
   PreparationCard,
   RecordingCard,
+  RetryGoalLoading,
   TaskCard,
   UploadFailedCard,
 } from "./screens";
@@ -82,6 +83,10 @@ export function PracticeExperience({
   const [historyLoading, setHistoryLoading] = useState(!mock);
   const [pageError, setPageError] = useState<string | null>(null);
   const [earlyWarning, setEarlyWarning] = useState(false);
+  // A retry opened by id (?retry=<id>) has no goal until its attempt has loaded. Until then the brief offers no
+  // "Start preparation": starting early would begin a practice without the goal, and the late load used to reset the
+  // screen back to the brief in the middle of preparation.
+  const [retryLoading, setRetryLoading] = useState(Boolean(retryAttemptId) && !initialRetryOf);
 
   const taskId = task.id;
   const retryOfId = state.retryOf?.id ?? null;
@@ -139,7 +144,8 @@ export function PracticeExperience({
       .then(({ attempt }) => {
         if (!cancelled && attempt.evaluation) dispatch({ type: "retryRequested", attempt });
       })
-      .catch(() => !cancelled && setPageError("We couldn't load the attempt to retry. You can still practise the task."));
+      .catch(() => !cancelled && setPageError("We couldn't load the attempt to retry. You can still practise the task."))
+      .finally(() => !cancelled && setRetryLoading(false));
     return () => {
       cancelled = true;
     };
@@ -334,8 +340,9 @@ export function PracticeExperience({
     case "brief":
     case "retryBrief": {
       const isRetry = phase.kind === "retryBrief" && state.retryOf !== null;
-      const microphone =
-        recorder.status === "requesting" ? (
+      const microphone = retryLoading ? (
+        <RetryGoalLoading />
+      ) : recorder.status === "requesting" ? (
           <MicrophoneState kind="asking" onRetry={retryMicrophone} />
         ) : micError ? (
           <MicrophoneState kind={micError} onRetry={retryMicrophone} />

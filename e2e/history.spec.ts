@@ -7,6 +7,7 @@ const resultHeading = (page: Page) => page.getByRole("heading", { name: /^Part 2
 /** Brief → preparation → recording → Finish anyway → the attempt's result page (mock providers). Returns its id. */
 async function recordAnswer(page: Page): Promise<string> {
   await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible(); // preparation has started
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await page.waitForTimeout(2500);
@@ -35,6 +36,8 @@ test("History: empty state, then the student's attempts newest first, retries, t
   await page.goto(TASK_URL);
   const first = await recordAnswer(page);
   await page.getByRole("button", { name: "Retry with this goal" }).click();
+  // The retry brief is ready once its goal is shown (before that it offers no Start preparation).
+  await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
   const retry = await recordAnswer(page);
 
   await page.goto("/history");

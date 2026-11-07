@@ -450,3 +450,27 @@ test("a missed question: the new result page shows it as not answered, with the 
   await expect(page.getByText("You did not say whether young people should always follow advice.")).toBeVisible();
   await page.screenshot({ path: "test-results/missed-question-result.png", fullPage: true });
 });
+
+test("a retry opened by its link offers Start preparation only once its goal has loaded, and a late load never resets preparation", async ({ page }) => {
+  await page.goto(TASK_URL);
+  await recordAndSubmit(page);
+  await expect(resultHeading(page)).toBeVisible({ timeout: 60_000 });
+  const attemptId = page.url().split("/result/")[1];
+
+  // Slow down only the request that loads the attempt being retried (the old race: the plain brief was clickable
+  // before it, and its late arrival threw the student from preparation back to the brief).
+  await page.route(`**/api/speaking/attempts/${attemptId}`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await route.continue();
+  });
+  await page.goto(`${TASK_URL}?retry=${attemptId}`);
+  await expect(page.getByTestId("retry-goal-loading")).toHaveText("Loading your goal…");
+  await expect(page.getByRole("button", { name: "Start preparation" })).toHaveCount(0);
+
+  await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await page.waitForTimeout(1000); // nothing may reset the screen after preparation has started
+  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible();
+});

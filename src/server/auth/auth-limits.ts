@@ -6,10 +6,14 @@ import { FixedWindowLimiter } from "@/server/limits/fixed-window";
  * Abuse limits for the sign-in and sign-up endpoints. In-memory and per process (like the other cheap limiters),
  * which matches the single-host deployment; they reset on restart and are NOT shared between instances.
  *
- *  - Sign-in counts FAILURES, per email and per client IP, so a user who types the right password is never
- *    blocked by their own earlier successes. (An attacker can still lock out a victim's email for the window by
+ *  - Sign-in counts FAILURES, per account (email) and per client IP, so a user who types the right password is never
+ *    blocked by their own earlier successes. The per-account limit (5 per 15 minutes) is what keeps guessing one
+ *    person's password slow, from any number of addresses; wrong passwords on Change password and Delete my account
+ *    count against the same account (`accountKey`). The per-IP limit (100 per 15 minutes) only stops one address
+ *    trying many accounts, and is high because a classroom shares one address (school Wi-Fi, a mobile network): one
+ *    student's typos never lock out the class. (An attacker can still lock out a victim's email for the window by
  *    failing on purpose; the window is short for that reason.)
- *  - Sign-up counts every attempt per IP and in total.
+ *  - Sign-up counts every attempt per IP (30 per hour, so a class of 30 can sign up together) and in total (300).
  * The client IP comes only from a header a trusted proxy sets (`clientIp`: Vercel's `x-real-ip`); a visitor's own
  * `X-Forwarded-For` is ignored outside test runs. The per-email limit and the global registration ceiling do not rely
  * on the IP at all.
@@ -36,6 +40,11 @@ export function authLimiters(): Limiters {
     };
   }
   return limiters;
+}
+
+/** The per-account key of the failed-password limit: the same for sign-in, Change password and Delete my account. */
+export function accountKey(email: string): string {
+  return `email:${email.trim().toLowerCase().slice(0, 254)}`;
 }
 
 /** Test seam: forget all counters. */

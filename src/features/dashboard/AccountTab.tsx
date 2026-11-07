@@ -10,12 +10,12 @@ type State = "loading" | "anonymous" | "authenticated";
 
 /**
  * The Account tab, last in the navigation: a plain link to the Account page (`/profile`; `/profile?mock=1` in mock
- * mode), no menu. On the Account page it is the current tab (grey square, `aria-current="page"`, never black).
+ * mode; the demo teacher's: `href`), no menu. On the Account page it is the current tab (grey square, `aria-current="page"`, never black).
  *
  * `data-testid="account-status"` and `data-state` say whether the browser is signed in (anonymous / authenticated):
  * real pages ask `/api/account/me` again after every navigation; mock mode is the demo account and asks nothing.
  */
-export function AccountTab({ source, active = false }: { source: "mock" | "real"; active?: boolean }) {
+export function AccountTab({ source, active = false, href }: { source: "mock" | "real"; active?: boolean; href?: string }) {
   const pathname = usePathname();
   const [state, setState] = useState<State>(source === "mock" ? "authenticated" : "loading");
 
@@ -34,7 +34,7 @@ export function AccountTab({ source, active = false }: { source: "mock" | "real"
   return (
     <div data-testid="account-status" data-state={state}>
       <Link
-        href={mockLink("/profile", source === "mock")}
+        href={href ?? mockLink("/profile", source === "mock")}
         aria-label="Account"
         aria-current={active ? "page" : undefined}
         title="Account"

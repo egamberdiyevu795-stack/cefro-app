@@ -108,7 +108,7 @@ export function demoTranscript(key: string): string {
 }
 
 /** A demo answer's length: about 2.2 words a second, as a calm B1–B2 speaker talks. */
-function durationOf(transcript: string): number {
+export function durationOf(transcript: string): number {
   return transcript ? Math.round((transcript.split(/\s+/).length / 2.2) * 1000) : 12_000;
 }
 
@@ -130,24 +130,41 @@ export function demoEvaluation(key: string): Promise<SpeakingEvaluation | null> 
 async function evaluate(key: string): Promise<SpeakingEvaluation | null> {
   const spec = demoResultSpec(key);
   if (!spec?.answer) return null;
-  const transcript = demoTranscript(key);
-  const durationMs = durationOf(transcript);
   const previous = spec.previous ? await demoEvaluation(spec.previous) : null;
+  return evaluateDemoAnswer({
+    key,
+    task: spec.task,
+    transcript: demoTranscript(key),
+    previous: spec.previous && previous ? { transcript: demoTranscript(spec.previous), evaluation: previous } : null,
+  });
+}
+
+/**
+ * One made-up answer through the real evaluation with the mock evaluator (no delay, no model call): a real
+ * `SpeakingEvaluation` for that task. Also used by the demo teacher's class (`demo-teacher.ts`).
+ */
+export function evaluateDemoAnswer(input: {
+  key: string;
+  task: SpeakingTask;
+  transcript: string;
+  previous: { transcript: string; evaluation: SpeakingEvaluation } | null;
+}): Promise<SpeakingEvaluation> {
+  const { key, task, transcript, previous } = input;
+  const durationMs = durationOf(transcript);
   return evaluateSpeaking(
     {
-      task: spec.task,
-      rubric: getSpeakingRubric(spec.task),
+      task,
+      rubric: getSpeakingRubric(task),
       transcript,
-      metrics: computeSpeechMetrics(transcript, durationMs, spec.task.speakingSeconds),
+      metrics: computeSpeechMetrics(transcript, durationMs, task.speakingSeconds),
       audio: { storageProvider: "demo", storageKey: key, mimeType: "audio/webm", durationMs },
-      previousAttempt:
-        spec.previous && previous
-          ? {
-              attemptNumber: 1,
-              transcript: demoTranscript(spec.previous),
-              retryFocus: previous.result.retry_focus.map(({ objective, success_check }) => ({ objective, success_check })),
-            }
-          : null,
+      previousAttempt: previous
+        ? {
+            attemptNumber: 1,
+            transcript: previous.transcript,
+            retryFocus: previous.evaluation.result.retry_focus.map(({ objective, success_check }) => ({ objective, success_check })),
+          }
+        : null,
     },
     new MockEvaluationModel({ delayMs: 0 }),
   );

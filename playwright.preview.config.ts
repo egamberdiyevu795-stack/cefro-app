@@ -17,7 +17,7 @@ const NO_DISK = "/dev/null/cefro-preview-has-no-disk";
 
 export default defineConfig({
   testDir: "e2e",
-  testMatch: ["mock-mode.spec.ts", "profile-settings.spec.ts"],
+  testMatch: ["mock-mode.spec.ts", "profile-settings.spec.ts", "teacher-view.spec.ts"],
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

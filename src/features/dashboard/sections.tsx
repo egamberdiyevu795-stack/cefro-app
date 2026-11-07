@@ -28,7 +28,7 @@ import { radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Prog
  */
 
 /** The recommended next task, with the screen's one black button. A retry shows its goal. */
-export function PractiseNextCard({ next, className }: { next: PractiseNext; className?: string }) {
+export function PractiseNextCard({ next, quiet = false, className }: { next: PractiseNext; quiet?: boolean; className?: string }) {
   return (
     <Card aria-labelledby="next-title" className={cx("flex items-center justify-between gap-4", className)}>
       <div className="min-w-0">
@@ -42,7 +42,7 @@ export function PractiseNextCard({ next, className }: { next: PractiseNext; clas
         {/* The whole goal, on every screen size: it is what the retry is for. */}
         {next.goal && <p className="mt-1 break-words text-label text-fg" data-testid="next-goal">Your goal: {next.goal}</p>}
       </div>
-      <PillButton href={next.href} label={`Start ${next.goal ? "retry of " : ""}${next.title}`} className="shrink-0">
+      <PillButton href={next.href} variant={quiet ? "quiet" : "primary"} label={`Start ${next.goal ? "retry of " : ""}${next.title}`} className="shrink-0">
         Start
       </PillButton>
     </Card>
@@ -58,9 +58,12 @@ export function FindYourLevelCard({
   exam,
   hasAttempts = false,
   mock = false,
+  quiet = false,
   className,
 }: {
   exam: React.ReactNode;
+  /** A teacher's Home: the page's black button is "Create class", so this one is grey. */
+  quiet?: boolean;
   /** The student has attempts, none scored yet: "Welcome back" and "Start practice" (not their first). */
   hasAttempts?: boolean;
   /** Mock mode: the link keeps ?mock=1. */
@@ -76,7 +79,7 @@ export function FindYourLevelCard({
       </h2>
       <p className="mt-3 max-w-md text-body text-fg-muted">{copy.text}</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PillButton href={mockLink(FIRST_VISIT.href, mock)}>{hasAttempts ? "Start practice" : "Start your first practice"}</PillButton>
+        <PillButton href={mockLink(FIRST_VISIT.href, mock)} variant={quiet ? "quiet" : "primary"}>{hasAttempts ? "Start practice" : "Start your first practice"}</PillButton>
         <span className="text-label text-fg-muted">About {FIRST_VISIT.minutes} min</span>
       </div>
       {exam && <div className="mt-6 border-t border-line pt-4">{exam}</div>}
@@ -311,9 +314,9 @@ export function BiggestFixCard({ fix, className }: { fix: DashboardFix; classNam
   );
 }
 
-export function Wordmark({ className = "flex", mock = false }: { className?: string; mock?: boolean }) {
+export function Wordmark({ className = "flex", mock = false, href }: { className?: string; mock?: boolean; href?: string }) {
   return (
-    <Link href={mockLink("/dashboard", mock)} className={cx("items-center text-body font-semibold tracking-[0.08em] text-fg", className)}>
+    <Link href={href ?? mockLink("/dashboard", mock)} className={cx("items-center text-body font-semibold tracking-[0.08em] text-fg", className)}>
       CEFRO
     </Link>
   );

@@ -1,6 +1,7 @@
 # Teacher view (v1): plan
 
-Status: **Final, approved by Asadbek 2026-11-07.** No code yet. Built on `claude/profile-settings` (the Account page
+Status: **Final, approved by Asadbek 2026-11-07.** Built (mock mode only, release switch off) on
+`claude/teacher-view-kd6wdk`; see docs/merge-order.md for what was not followed exactly. Built on `claude/profile-settings` (the Account page
 at `/profile`, Delete my account). All decisions are in this plan; section 9 lists them.
 **Not in v1:** audio playback, messages, editing scores, mocks or deadlines (v2), public teacher sign-up (teachers are
 approved by the owner by hand). Teachers see the name the student chose for them, never emails.

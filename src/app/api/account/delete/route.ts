@@ -3,7 +3,7 @@ import { APIError } from "better-auth/api";
 import { isDeleteConfirmed } from "@/domain/account";
 import { deleteAccount } from "@/server/account/delete-account";
 import { getAuth } from "@/server/auth/auth";
-import { authLimiters } from "@/server/auth/auth-limits";
+import { accountKey, authLimiters } from "@/server/auth/auth-limits";
 import { HttpError } from "@/server/errors";
 import { errorResponse, isCrossSite, withErrorHandling } from "@/server/http";
 import { requireAuthenticated } from "@/server/identity/current-user";
@@ -25,7 +25,7 @@ export const POST = withErrorHandling(async (request: Request) => {
   if (!password) throw new HttpError(400, "password_required", "Enter your password.");
 
   const limiter = authLimiters().loginByEmail;
-  const blocked = limiter.isBlocked(user.email);
+  const blocked = limiter.isBlocked(accountKey(user.email));
   if (blocked.blocked) {
     return errorResponse(429, "password_rate_limited", "Too many wrong passwords. Please wait a few minutes and try again.", blocked.retryAfterSeconds);
   }
@@ -33,7 +33,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     await (await getAuth()).api.verifyPassword({ body: { password }, headers: await headers() });
   } catch (error) {
     if (error instanceof APIError) {
-      limiter.hit(user.email);
+      limiter.hit(accountKey(user.email));
       throw new HttpError(400, "wrong_password", "Your password is not right.");
     }
     throw error;

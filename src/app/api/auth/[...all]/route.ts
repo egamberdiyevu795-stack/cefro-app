@@ -1,5 +1,5 @@
 import { getAuth } from "@/server/auth/auth";
-import { authLimiters, clientIp } from "@/server/auth/auth-limits";
+import { accountKey, authLimiters, clientIp } from "@/server/auth/auth-limits";
 import { HttpError } from "@/server/errors";
 import { errorResponse, isCrossSite, readBodyWithLimit, withErrorHandling } from "@/server/http";
 
@@ -81,7 +81,7 @@ export const POST = withErrorHandling(handlePost);
 async function emailOf(request: Request): Promise<string> {
   try {
     const body = (await request.clone().json()) as { email?: unknown };
-    return typeof body.email === "string" ? `email:${body.email.trim().toLowerCase().slice(0, 254)}` : "email:(none)";
+    return typeof body.email === "string" ? accountKey(body.email) : "email:(none)";
   } catch {
     return "email:(unreadable)";
   }

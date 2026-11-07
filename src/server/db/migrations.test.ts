@@ -98,12 +98,16 @@ describe("fresh database", () => {
       "auth_accounts",
       "auth_sessions",
       "auth_verifications",
+      "class_members",
+      "classes",
       "evaluations",
       "practice_sessions",
+      "rating_pairs",
       "recording_blobs",
       "recordings",
       "speaking_attempts",
       "speaking_tasks",
+      "teacher_ratings",
       "transcripts",
       "users",
     ]);
@@ -156,6 +160,38 @@ describe("exam date migration (0005)", () => {
     expect(sql).toContain("ALTER TABLE `users` ADD `exam_date` text;");
     expect(sql).toContain("ALTER TABLE `users` ADD `exam_date_skipped_at` text;");
     expect(sql).not.toMatch(/DROP|DELETE|UPDATE|NOT NULL|CREATE/i);
+  });
+});
+
+describe("teacher migration (0006)", () => {
+  it("is additive: four new tables and one users column with a default; nothing dropped, deleted or rewritten", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0006_teachers.sql"), "utf8");
+    for (const table of ["classes", "class_members", "teacher_ratings", "rating_pairs"]) expect(sql).toContain(`CREATE TABLE \`${table}\``);
+    expect(sql).toContain("ALTER TABLE `users` ADD `role` text DEFAULT 'student' NOT NULL;");
+    expect(sql).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME/i);
+  });
+
+  it("upgrades a 0005 database: every existing user becomes a student, and the anonymous pairs hold no id", async () => {
+    const dir = tempDir();
+    const file = path.join(dir, "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(6));
+    await old.client.execute("INSERT INTO users (id, kind) VALUES ('u1', 'anonymous')");
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT role FROM users")).toEqual([{ role: "student" }]);
+    const pairColumns = names(await pragma(client, "table_info(rating_pairs)"));
+    expect(pairColumns).toEqual(["app_band", "evaluator_version", "month", "part", "rubric_version", "teacher_band"]);
+    // One open membership per class and student: a second open row is refused, an ended one is fine.
+    await client.execute("UPDATE users SET kind = 'registered' WHERE id = 'u1'");
+    await client.execute("INSERT INTO classes (id, teacher_user_id, name, join_code) VALUES ('c1', 'u1', 'B', 'K7M4QD')");
+    const member = (id: string, ended: string | null) =>
+      client.execute({ sql: "INSERT INTO class_members (id, class_id, student_user_id, shown_name, shared_at, share_text_version, ended_at) VALUES (?, 'c1', 'u1', 'A', 'x', 'v', ?)", args: [id, ended] });
+    await member("m1", "2026-11-01");
+    await member("m2", null);
+    await expect(member("m3", null)).rejects.toThrow();
+    client.close();
   });
 });
 

@@ -7,11 +7,14 @@ import {
   authAccounts,
   authSessions,
   authVerifications,
+  classMembers,
+  classes,
   evaluations,
   practiceSessions,
   recordingBlobs,
   recordings,
   speakingAttempts,
+  teacherRatings,
   transcripts,
   users,
 } from "@/server/db/schema";
@@ -27,6 +30,12 @@ export interface DeletionSummary {
   audioFiles: number;
   /** Recording bytes removed from the database (`database` audio storage, table `recording_blobs`). */
   audioBlobs: number;
+  /** Class links removed (`class_members`): the student's own, and those of a teacher's classes. */
+  classMemberships: number;
+  /** Teacher ratings removed (`teacher_ratings`): on the student's attempts, or given by the teacher. No pair is kept. */
+  teacherRatings: number;
+  /** A teacher's classes removed (`classes`). */
+  classes: number;
 }
 
 /**
@@ -39,6 +48,10 @@ export interface DeletionSummary {
  * - The recorded audio itself, wherever it is stored (see `server/storage`): files under AUDIO_STORAGE_DIR for the
  *   `local` provider, rows of `recording_blobs` for the `database` provider (the hosted setup).
  * - The anonymous identities that were merged into the account when the student signed up (their tombstones).
+ * - Teacher view (docs/teacher-plan.md, section 5): a student's class links (`class_members`) and every teacher rating
+ *   on their attempts (`teacher_ratings`), with no anonymous pair made; a teacher's classes, the memberships in them
+ *   and every rating they gave. Anonymous `rating_pairs` made at an earlier Leave / Remove / Close can't be linked to
+ *   anyone and stay.
  *
  * Order: audio files on disk first (deleting a missing file is not an error), then one database transaction for the
  * rest, `recording_blobs` included. If anything fails, the account still exists and the student can try again; the
@@ -81,6 +94,18 @@ export async function deleteAccount(userId: string): Promise<DeletionSummary> {
     let transcriptCount = 0;
     let recordingCount = 0;
     let attemptCount = 0;
+
+    // Teacher view first (its rows point at attempts, users and classes). As a teacher: their classes, the
+    // memberships in them and every rating given in them or by them. As a student: their memberships and every
+    // rating on their attempts. No anonymous pair is made on deletion.
+    const ownClassIds = (await tx.select({ id: classes.id }).from(classes).where(inArray(classes.teacherUserId, userIds)).all()).map((row) => row.id);
+    let ratingCount = (await tx.delete(teacherRatings).where(inArray(teacherRatings.teacherUserId, userIds)).run()).rowsAffected;
+    if (ownClassIds.length) ratingCount += (await tx.delete(teacherRatings).where(inArray(teacherRatings.classId, ownClassIds)).run()).rowsAffected;
+    if (attemptIds.length) ratingCount += (await tx.delete(teacherRatings).where(inArray(teacherRatings.attemptId, attemptIds)).run()).rowsAffected;
+    let memberCount = (await tx.delete(classMembers).where(inArray(classMembers.studentUserId, userIds)).run()).rowsAffected;
+    if (ownClassIds.length) memberCount += (await tx.delete(classMembers).where(inArray(classMembers.classId, ownClassIds)).run()).rowsAffected;
+    const classCount = ownClassIds.length ? (await tx.delete(classes).where(inArray(classes.id, ownClassIds)).run()).rowsAffected : 0;
+
     if (attemptIds.length) {
       evaluationCount = (await tx.delete(evaluations).where(inArray(evaluations.attemptId, attemptIds)).run()).rowsAffected;
       transcriptCount = (await tx.delete(transcripts).where(inArray(transcripts.attemptId, attemptIds)).run()).rowsAffected;
@@ -103,6 +128,9 @@ export async function deleteAccount(userId: string): Promise<DeletionSummary> {
       evaluations: evaluationCount,
       audioFiles: localKeys.length,
       audioBlobs,
+      classMemberships: memberCount,
+      teacherRatings: ratingCount,
+      classes: classCount,
     };
   });
 }

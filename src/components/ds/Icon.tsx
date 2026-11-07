@@ -104,6 +104,8 @@ const PATHS = {
     </>
   ),
   cross: <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />,
+  /** Teacher view: Create class, Join a class. */
+  plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />,
   /** Practice: "Finish" (stop recording), and a microphone that is blocked or missing. */
   stop: <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" />,
   micOff: (

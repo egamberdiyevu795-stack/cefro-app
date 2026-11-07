@@ -36,6 +36,13 @@ import { getAttemptViewForUser, listAttemptHistory } from "@/server/attempts/att
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
 import { findCurrentUserId } from "@/server/identity/current-user";
+import { asDemoTeacher, isDemoTeacherQuery, teacherLinks } from "@/features/teacher/links";
+import { YourClassesCard } from "@/features/teacher/sections";
+import { classSummary, type ClassSummary } from "@/features/teacher/view-model";
+import { DEMO_CLASS, demoClassStudents } from "@/server/demo/demo-teacher";
+import { teacherLive } from "@/server/teacher/release";
+import { classWithStudents } from "@/server/teacher/teacher-service";
+import { listOwnClasses, userRole } from "@/server/teacher/teacher-store";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -64,6 +71,11 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  * `?mock=1` (mock mode): the demo student (server/demo/demo-data.ts) instead of the caller's own data, through the
  * same code. No database, no cookie read, no API call (the exam date changes only on the page); works with no
  * configuration at all (a Vercel Preview with no variables). Every link keeps ?mock=1, and the demo label is shown.
+ *
+ * Teacher view (docs/teacher-plan.md, T1): a teacher's Home starts with "Your classes", whose "Create class" is the
+ * page's one black button (Practise next / Start practice are grey for a teacher). Real teachers only once the Teacher
+ * view is on (parent consent); `?mock=1&as=teacher` is the demo teacher (Demo class, six made-up students, no
+ * practice of their own).
  */
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const query = await props.searchParams;
@@ -72,10 +84,18 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const now = new Date();
 
   const mock = isMockQuery(query);
+  const demoTeacher = mock && isDemoTeacherQuery(query);
   // Mock mode reads nothing: no cookie, no database.
   const userId = mock ? null : await findCurrentUserId();
-  const attempts: HistoryAttempt[] = mock ? await demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
-  const stored = mock ? demoExamDate(now) : userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+  const isTeacher = demoTeacher || (userId !== null && teacherLive() && (await userRole(userId)) === "teacher");
+  const classes: ClassSummary[] | null = !isTeacher
+    ? null
+    : demoTeacher
+      ? [classSummary(DEMO_CLASS, await demoClassStudents(now))]
+      : await Promise.all((await listOwnClasses(userId!)).map(async (c) => classSummary(c, (await classWithStudents(userId!, c.id)).students)));
+  const teacherHref = (path: string) => (demoTeacher ? asDemoTeacher(path) : path);
+  const attempts: HistoryAttempt[] = demoTeacher ? [] : mock ? await demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
+  const stored = demoTeacher ? { examDate: null, examDateSkippedAt: null } : mock ? demoExamDate(now) : userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
   // Links built from the attempts: in mock mode they open the demo's own pages, with ?mock=1.
   const link = mock ? demoHref : (href: string) => href;
 
@@ -112,14 +132,18 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
     <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
       <div className="mx-auto flex max-w-[1280px] px-4 pt-4 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
         <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
-          <Wordmark className="hidden lg:flex lg:h-12" mock={mock} />
-          <Sidebar items={navItemsFor(flags, mock)} activeHref="/dashboard" last={<AccountTab source={mock ? "mock" : "real"} />} />
+          <Wordmark className="hidden lg:flex lg:h-12" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
+          <Sidebar
+            items={navItemsFor(flags, mock).map((item) => (demoTeacher && item.href.startsWith("/dashboard") ? { ...item, href: asDemoTeacher("/dashboard") } : item))}
+            activeHref="/dashboard"
+            last={<AccountTab source={mock ? "mock" : "real"} href={demoTeacher ? asDemoTeacher("/profile") : undefined} />}
+          />
         </aside>
 
         <div className="min-w-0 flex-1">
           <header className="mb-4 flex flex-col gap-2 lg:mb-5">
             <div className="flex h-11 items-center justify-between lg:hidden">
-              <Wordmark mock={mock} />
+              <Wordmark mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
               {flags.notifications && <Bell />}
             </div>
             <div className={cx(!flags.search && "hidden sm:block")}>
@@ -147,13 +171,21 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 }
               />
             </div>
-            {mock && <DemoLabel variant="data" className="self-start bg-card" />}
+            {mock && <DemoLabel variant={demoTeacher ? "class" : "data"} className="self-start bg-card" />}
           </header>
 
           <main id="main" className="grid grid-cols-1 gap-4 pb-28 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:pb-0">
+            {classes && (
+              <YourClassesCard
+                classes={classes}
+                newClassHref={teacherHref(teacherLinks.newClass)}
+                classHref={(id) => teacherHref(teacherLinks.cls(id))}
+                className="order-first lg:col-span-2"
+              />
+            )}
             {view === "returning" && summary && fix && next ? (
               <>
-                <PractiseNextCard next={next} className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
+                <PractiseNextCard next={next} quiet={isTeacher} className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
                 {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
                 <ProgressCard
                   progress={summary}
@@ -168,7 +200,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               </>
             ) : (
               <>
-                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} className="lg:col-span-2" />
+                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={isTeacher} className="lg:col-span-2" />
                 {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}

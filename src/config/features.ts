@@ -48,3 +48,10 @@ export const PART_LIVE: Record<ExamPartId, boolean> = {
   "2": true,
   "3": false,
 };
+
+/**
+ * Release switch for the Teacher view (docs/teacher-plan.md). Off until parent consent for under-18s exists (plan
+ * section 7): every real teacher page and API, and the student's Join / Share / Leave, answer 404. Mock mode
+ * (`?mock=1`, the demo teacher and class DEMO42) works either way. Not a preview flag: `?flags=off` leaves it alone.
+ */
+export const TEACHER_LIVE = false;

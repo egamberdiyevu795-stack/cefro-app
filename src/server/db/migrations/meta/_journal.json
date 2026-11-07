@@ -43,6 +43,13 @@
       "when": 1793981215273,
       "tag": "0005_exam_date",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794064462909,
+      "tag": "0006_teachers",
+      "breakpoints": true
     }
   ]
 }

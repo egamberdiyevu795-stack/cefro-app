@@ -6,6 +6,12 @@ import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn, type ExamDateState } f
 import { ExamDate } from "@/features/dashboard/ExamDate";
 import { isMockQuery } from "@/features/demo/demo-mode";
 import { AccountCard, DeleteCard, SignInCard } from "@/features/profile/sections";
+import { asDemoTeacher, isDemoTeacherQuery, studentLinks } from "@/features/teacher/links";
+import { MyClassesCard, TeacherLinkCard, type MembershipView } from "@/features/teacher/sections";
+import { mockLink } from "@/features/demo/demo-mode";
+import { DEMO_CLASS, DEMO_TEACHER } from "@/server/demo/demo-teacher";
+import { teacherLive } from "@/server/teacher/release";
+import { listMemberships, userRole } from "@/server/teacher/teacher-store";
 import { currentLevel } from "@/features/profile/view-model";
 import { AppShell } from "@/features/shell/AppShell";
 import { readAccount, type AccountInfo } from "@/server/account/account-store";
@@ -30,6 +36,10 @@ export const metadata: Metadata = { title: "Account" };
  *
  * `?mock=1`: the demo student (server/demo/demo-data.ts) through the same code. No configuration check, no cookie, no
  * database, no API call: nothing is saved or changed. "Demo mode. Changes are not saved."
+ *
+ * Teacher view (docs/teacher-plan.md): a student's "Your classes" (S3, grey "Join a class"); a teacher's quiet link to
+ * Your classes on Home. Real accounts only once the Teacher view is on (parent consent); in mock mode always:
+ * `&joined=DEMO42` shows the demo class after Share, `&as=teacher` is the demo teacher.
  */
 export default async function AccountPage(props: PageProps<"/profile">) {
   const query = await props.searchParams;
@@ -40,27 +50,49 @@ export default async function AccountPage(props: PageProps<"/profile">) {
   let account: AccountInfo;
   let attempts;
   let stored;
+  // Teacher view: null = not shown (the Teacher view is off for real accounts until parent consent exists).
+  let classes: { role: "teacher" } | { role: "student"; memberships: MembershipView[] } | null = null;
+  const demoTeacher = mock && isDemoTeacherQuery(query);
   if (mock) {
-    account = demoAccount(now);
-    attempts = await demoAttempts(now);
+    account = demoTeacher ? { ...demoAccount(now), name: DEMO_TEACHER.name, email: "teacher@example.com" } : demoAccount(now);
+    attempts = demoTeacher ? [] : await demoAttempts(now);
     stored = demoExamDate(now);
+    classes = demoTeacher
+      ? { role: "teacher" }
+      : {
+          role: "student",
+          memberships:
+            query.joined === DEMO_CLASS.joinCode
+              ? [{ id: "demo-member", className: DEMO_CLASS.name, teacherName: DEMO_TEACHER.name, shownName: "Student", sharedAt: now.toISOString(), ended: false }]
+              : [],
+        };
   } else {
     assertServerConfigured();
     const userId = await findCurrentUserId();
     account = await readAccount(userId);
     attempts = userId ? await listAttemptHistory(userId) : [];
     stored = userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+    if (userId && account.kind === "registered" && teacherLive()) {
+      classes =
+        (await userRole(userId)) === "teacher"
+          ? { role: "teacher" }
+          : { role: "student", memberships: (await listMemberships(userId)).map((m) => ({ ...m, ended: m.endedBy !== null })) };
+    }
   }
 
   const today = todayIn(now);
   const signedIn = account.kind === "registered";
   return (
-    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/profile">
+    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/profile" demoTeacher={demoTeacher}>
       {mock && <DemoLabel variant="changes" className="mb-4 bg-card" />}
       <h1 className="mb-4 text-title font-medium tracking-[-0.01em] text-fg">Account</h1>
       <div className="mx-auto flex max-w-2xl flex-col gap-4 lg:mx-0">
         <AccountCard account={account} attempts={attempts.length} level={currentLevel(attempts)} mock={mock} />
         <ExamDate state={accountExamState(examDateState(stored, now))} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant="card" demo={mock} />
+        {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} />}
+        {classes?.role === "student" && (
+          <MyClassesCard memberships={classes.memberships} joinHref={mockLink(studentLinks.join, mock)} accountHref={mockLink(studentLinks.account, mock)} demo={mock} />
+        )}
         <SignInCard signedIn={signedIn} mock={mock} />
         {signedIn && <DeleteCard mock={mock} />}
       </div>

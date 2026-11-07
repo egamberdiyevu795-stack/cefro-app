@@ -70,8 +70,16 @@ export function ScoredResult({
   audio,
   lesson = null,
   demo = false,
+  teacher = null,
+  children,
 }: {
   view: ResultView;
+  /**
+   * A teacher's read-only view of a student's shared attempt (Teacher view T5): the student's name instead of "Your",
+   * no player, no Retry, no Learn how, no comparison. `children` goes under the result card ("Your view").
+   */
+  teacher?: { studentName: string } | null;
+  children?: React.ReactNode;
   task: Task;
   flags: FeatureFlags;
   /** The approved lesson for the biggest fix ("Learn how"); null when no approved lesson matches (then no link). */
@@ -87,10 +95,18 @@ export function ScoredResult({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.62fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-        <ResultCard view={view} onCompare={onCompare ?? null} demo={demo} className="order-1 lg:order-none" />
-        <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} lesson={lesson} className="order-3 lg:order-none" />
+        <ResultCard view={view} onCompare={teacher ? null : (onCompare ?? null)} demo={demo} teacher={teacher} className="order-1 lg:order-none" />
+        {children && <div className="order-1 lg:order-none">{children}</div>}
+        <BiggestFixCard view={view} retryHref={teacher ? null : (retryHref ?? practiceHref(task))} lesson={teacher ? null : lesson} className="order-3 lg:order-none" />
         {view.patterns.length > 0 && <PatternsCard patterns={view.patterns} className="order-4 lg:order-none" />}
-        <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} audio={audio} className="order-6 lg:order-none" />
+        <AnswerCard
+          title={teacher ? "Answer" : undefined}
+          transcript={view.transcript}
+          durationMs={view.durationMs}
+          flags={teacher ? { ...flags, recordingPlayback: false } : flags}
+          audio={teacher ? null : audio}
+          className="order-6 lg:order-none"
+        />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <QuestionsCard view={view} className="order-2 lg:order-none" />
@@ -106,13 +122,27 @@ const ZERO_TEXT: Partial<Record<NonNullable<ResultView["zeroReason"]>, string>> 
   no_question_on_topic: "Band 0 because no question was answered.",
 };
 
-function ResultCard({ view, onCompare, demo, className }: { view: ResultView; onCompare: ActionTarget | null; demo: boolean; className?: string }) {
+function ResultCard({
+  view,
+  onCompare,
+  demo,
+  teacher = null,
+  className,
+}: {
+  view: ResultView;
+  onCompare: ActionTarget | null;
+  demo: boolean;
+  teacher?: { studentName: string } | null;
+  className?: string;
+}) {
   const retry = view.retry;
   const change = retry ? retry.band - retry.previousBand : 0;
   return (
     <Card aria-labelledby="result-title" className={className}>
       {demo && <DemoLabel className="mb-3" />}
-      <p className="text-caption text-fg-muted">Your result · {view.taskTitle}</p>
+      <p className="text-caption text-fg-muted">
+        {teacher ? teacher.studentName : "Your result"} · {view.taskTitle}
+      </p>
       {retry && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-label font-semibold text-fg">
@@ -152,7 +182,7 @@ function ResultCard({ view, onCompare, demo, className }: { view: ResultView; on
       {view.provisional && <p className="mt-1 text-label text-fg-muted">Pronunciation wasn&rsquo;t checked in this attempt.</p>}
       {retry?.goalText && (
         <p className="mt-4 border-t border-line pt-3 text-label text-fg-muted">
-          Your goal: <span className="text-fg">{retry.goalText}</span>
+          {teacher ? "Goal" : "Your goal"}: <span className="text-fg">{retry.goalText}</span>
         </p>
       )}
       {retry && onCompare && (
@@ -228,7 +258,7 @@ export type FixLesson = { href: string; title: string };
  * "Retry with this goal" opens the practice page as a retry of this attempt (`retryHref`), which carries the goal.
  * "Learn how" (quiet) opens the approved lesson for this fix, when there is one.
  */
-function BiggestFixCard({ view, retryHref, lesson, className }: { view: ResultView; retryHref: ActionTarget; lesson: FixLesson | null; className?: string }) {
+function BiggestFixCard({ view, retryHref, lesson, className }: { view: ResultView; retryHref: ActionTarget | null; lesson: FixLesson | null; className?: string }) {
   const { fix } = view;
   return (
     <Card aria-labelledby="fix-title" className={className}>
@@ -246,23 +276,25 @@ function BiggestFixCard({ view, retryHref, lesson, className }: { view: ResultVi
         <div className="mt-5 rounded-tile bg-well p-3">
           {fix.goal && (
             <>
-              <p className="text-caption font-semibold text-fg">Goal for your retry</p>
+              <p className="text-caption font-semibold text-fg">{retryHref ? "Goal for your retry" : "Goal for the retry"}</p>
               <p className="mt-1 text-body text-fg">{fix.goal}</p>
             </>
           )}
           {fix.check && <p className={cx("text-label text-fg-muted", fix.goal && "mt-2")}>You&rsquo;ll know it worked: {fix.check}</p>}
         </div>
       )}
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <Action target={retryHref} icon="retry" className="w-full sm:w-auto">
-          Retry with this goal
-        </Action>
-        {lesson && (
-          <PillButton href={lesson.href} variant="quiet" icon="book" className="w-full sm:w-auto" label={`Learn how: ${lesson.title}`}>
-            Learn how
-          </PillButton>
-        )}
-      </div>
+      {retryHref && (
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <Action target={retryHref} icon="retry" className="w-full sm:w-auto">
+            Retry with this goal
+          </Action>
+          {lesson && (
+            <PillButton href={lesson.href} variant="quiet" icon="book" className="w-full sm:w-auto" label={`Learn how: ${lesson.title}`}>
+              Learn how
+            </PillButton>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -340,6 +372,7 @@ function SkillsCard({ view, className }: { view: ResultView; className?: string 
 }
 
 function AnswerCard({
+  title = "Your answer",
   transcript,
   durationMs,
   flags,
@@ -347,6 +380,7 @@ function AnswerCard({
   audio,
   className,
 }: {
+  title?: string;
   transcript: string | null;
   durationMs: number;
   flags: FeatureFlags;
@@ -360,7 +394,7 @@ function AnswerCard({
     <Card aria-labelledby="answer-title" className={className}>
       <CardHeader
         id="answer-title"
-        title="Your answer"
+        title={title}
         action={
           <span className="inline-flex items-center gap-1.5 text-label text-fg-muted">
             <Icon name="clock" size={14} className="text-fg-subtle" />
@@ -565,11 +599,11 @@ export function FailedResult({
   );
 }
 
-export function BackLink({ mock = false }: { mock?: boolean }) {
+export function BackLink({ mock = false, href, label = "Dashboard" }: { mock?: boolean; href?: string; label?: string }) {
   return (
-    <Link href={mockLink("/dashboard", mock)} className={cx("inline-flex min-h-11 items-center gap-1 text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
+    <Link href={href ?? mockLink("/dashboard", mock)} className={cx("inline-flex min-h-11 items-center gap-1 text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
       <Icon name="chevronDown" size={14} className="rotate-90" />
-      Dashboard
+      {label}
     </Link>
   );
 }

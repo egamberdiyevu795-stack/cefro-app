@@ -48,6 +48,17 @@ export function LessonView({ lesson, why, task, goal, retryHref, resultHref, dem
         </p>
       </Card>
 
+      <LessonBody lesson={lesson} />
+
+      <LessonPractice drill={lesson.drill} retry={{ intro: lesson.retry.intro, reminder: lesson.retry.reminder }} goal={goal} retryHref={retryHref} />
+    </div>
+  );
+}
+
+/** How it works and the examples: the lesson itself, the same for students and (read-only) teachers. */
+function LessonBody({ lesson }: { lesson: Lesson }) {
+  return (
+    <>
       <Card aria-labelledby="explanation-title">
         <CardHeader id="explanation-title" title="How it works" />
         <div className="space-y-3 text-body text-fg">
@@ -108,8 +119,31 @@ export function LessonView({ lesson, why, task, goal, retryHref, resultHref, dem
           ))}
         </ol>
       </Card>
+    </>
+  );
+}
 
-      <LessonPractice drill={lesson.drill} retry={{ intro: lesson.retry.intro, reminder: lesson.retry.reminder }} goal={goal} retryHref={retryHref} />
+/**
+ * The same lesson, read-only, for a teacher (Teacher view: a class's common problem links here): the title, how it
+ * works and the examples. No "why" (it is filled from one student's result), no drill recorder and no Retry, so no
+ * black button.
+ */
+export function TeacherLessonView({ lesson, backHref, demo }: { lesson: Lesson; backHref: string; demo: boolean }) {
+  return (
+    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="lesson">
+      <Link href={backHref} className={cx("inline-flex min-h-11 items-center gap-1 justify-self-start text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
+        <Icon name="chevronDown" size={14} className="rotate-90" />
+        Class
+      </Link>
+      <Card aria-labelledby="lesson-title">
+        {demo && <DemoLabel variant="class" className="mb-3" />}
+        <p className="text-caption text-fg-muted">Lesson · read-only</p>
+        <h1 id="lesson-title" className="mt-2 text-title font-medium tracking-[-0.01em] text-fg">
+          {lesson.title}
+        </h1>
+        <p className="mt-2 text-body text-fg-muted">Students open this lesson from their result, practise its drill and retry with their goal.</p>
+      </Card>
+      <LessonBody lesson={lesson} />
     </div>
   );
 }

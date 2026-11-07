@@ -667,3 +667,24 @@ browser's settings (the icon next to the address), then try again." Disabled unt
   Start preparation), `e2e/profile-settings.spec.ts` (at 390 px: exactly one black control, the grey current tab, no
   horizontal scroll, no text under 11 px, every text at WCAG AA contrast; the real flows; the audio file gone from disk
   after deletion; the microphone check and a blocked microphone).
+
+## Teacher view (mock mode only until parent consent)
+
+Built from docs/teacher-plan.md. Real pages and APIs are a 404 while `TEACHER_LIVE` is off (`src/config/features.ts`).
+
+- **Mock addresses:** demo teacher Home `/dashboard?mock=1&as=teacher`; class `/teacher/classes/demo-class?mock=1&as=teacher`;
+  a student `/teacher/classes/demo-class/students/s1?mock=1&as=teacher`; an attempt
+  `/teacher/classes/demo-class/attempts/aziza-2?mock=1&as=teacher`; Create class `/teacher/classes/new?mock=1&as=teacher`;
+  student Join `/profile/classes/join?mock=1`, Share `/profile/classes/join?mock=1&code=DEMO42`, after joining
+  `/profile?mock=1&joined=DEMO42`.
+- **One black button:** Home (teacher) "Create class" (Practise next / Start practice turn grey); Create class "Create
+  class", then "Copy code"; class "Copy join code"; student "Open latest attempt"; attempt **none** ("Agree" and
+  "Choose level" are the same grey pill, side by side); Join "Continue"; Share "Share with this teacher". Close class,
+  Remove from class and Leave class are quiet text actions opening a confirm card with two grey buttons.
+- **Components:** `features/teacher/` (`sections.tsx`, `actions.tsx`, `JoinClass.tsx`, `view-model.ts`, `links.ts`);
+  the attempt page is `ScoredResult` with `teacher` (student's name, no player, Retry, Learn how or comparison) and
+  "Your view" under the result card. `DemoLabel variant="class"`: "Demo mode. Made-up class and students; changes are
+  not saved." New icon `plus`.
+- **Checks:** `src/features/teacher/teacher-pages.test.ts` (each screen: black buttons, no text under 11 px, only
+  `?mock=1` links, nothing read from the database, cookies or identity; real pages 404) and `e2e/teacher-view.spec.ts`
+  (the whole loop at 390 px with a WCAG AA contrast check on every text).

@@ -62,13 +62,15 @@ function createAuth(db: Db) {
     },
     // Defence in depth next to the (tighter, failure-based) per-email/per-IP limits in api/auth/[...all]/route.ts.
     // The library's stricter built-in rules for these two paths (3 per 10 s) are replaced so they cannot be
-    // confused with, or hide, our limits' stable error codes.
+    // confused with, or hide, our limits' stable error codes. Per address and per minute, and a classroom shares one
+    // address: 30 students signing in at once, each with a typo or two, must fit (sign-up is held to 30 an hour by
+    // our own limit anyway).
     rateLimit: {
       enabled: true,
       window: 60,
       max: 60,
       storage: "memory",
-      customRules: { "/sign-in/email": { window: 60, max: 30 }, "/sign-up/email": { window: 60, max: 30 } },
+      customRules: { "/sign-in/email": { window: 60, max: 120 }, "/sign-up/email": { window: 60, max: 60 } },
     },
     hooks: {
       after: createAuthMiddleware(async (ctx) => {

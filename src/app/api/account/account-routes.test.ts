@@ -28,6 +28,10 @@ import { DELETED_ITEMS } from "@/domain/account";
 import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import {
+  classMembers,
+  classes,
+  ratingPairs,
+  teacherRatings,
   analyticsEvents,
   authAccounts,
   authSessions,
@@ -53,6 +57,11 @@ import { GET as getMe } from "./me/route";
 import { POST as postDelete } from "./delete/route";
 import { PUT as putName } from "./name/route";
 import { POST as postPassword } from "./password/route";
+import { setTeacherLiveForTesting } from "@/server/teacher/release";
+import { POST as postClass } from "../teacher/classes/route";
+import { PUT as putRating } from "../teacher/classes/[classId]/attempts/[attemptId]/rating/route";
+import { GET as getMyClasses, POST as postShare } from "../classes/route";
+import { POST as postLeave } from "../classes/[memberId]/leave/route";
 
 /*
  * Profile and Settings through the real route handlers and pages: the name, Change password and Delete my account.
@@ -349,5 +358,69 @@ describe("Account page (real data, the caller's own only)", () => {
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     expect(markup).not.toContain("Demo mode");
+  });
+});
+
+describe("Delete my account: the Teacher view's rows (class links and ratings), table by table", () => {
+  setUp(() => new LocalAudioStorage(dir));
+  beforeEach(() => setTeacherLiveForTesting(true));
+  afterEach(() => setTeacherLiveForTesting(undefined));
+  const ctx = (params: Record<string, string>) => ({ params: Promise.resolve(params) }) as never;
+
+  /** Bob teaches Group B; Alice and Carol share with it and practise; Bob rates both answers. */
+  async function classroom() {
+    const bob = await register("bob");
+    await db.update(users).set({ role: "teacher" }).where(eq(users.email, "bob@example.com")).run();
+    const { class: cls } = (await (await postClass(req("/x", json({ name: "Group B" })), ctx({}))).json()) as { class: { id: string; joinCode: string } };
+    const shareAndPractise = async (name: string) => {
+      await register(name);
+      expect((await postShare(req("/x", json({ code: cls.joinCode, shownName: name })), ctx({}))).status).toBe(201);
+      const attempt = await practise();
+      return { browser: snapshot(), attempt };
+    };
+    const alice = await shareAndPractise("alice");
+    const carol = await shareAndPractise("carol");
+    jar.clear();
+    for (const [k, v] of bob) jar.set(k, v);
+    for (const { attempt } of [alice, carol]) {
+      expect((await putRating(req("/x", { ...json({ agrees: false, band: 2 }), method: "PUT" }), ctx({ classId: cls.id, attemptId: attempt }))).status).toBe(200);
+    }
+    return { bob: snapshot(), alice, carol, classId: cls.id };
+  }
+
+  it("a student: their class links and every rating on their attempts go; no anonymous pair is made; the class and Carol stay", async () => {
+    const { alice, carol, classId } = await classroom();
+    const aliceId = await userIdOf("alice@example.com");
+    expect(await db.select().from(classMembers).where(eq(classMembers.studentUserId, aliceId)).all()).toHaveLength(1);
+    use(alice.browser);
+    expect((await postDelete(req("/x", json({ password: PASSWORD, confirm: "DELETE" })))).status).toBe(204);
+
+    expect(await db.select().from(classMembers).where(eq(classMembers.studentUserId, aliceId)).all()).toEqual([]);
+    expect(await db.select().from(teacherRatings).where(eq(teacherRatings.attemptId, alice.attempt)).all()).toEqual([]);
+    expect(await db.select().from(ratingPairs).all()).toEqual([]);
+    expect(await db.select().from(classes).where(eq(classes.id, classId)).all()).toHaveLength(1);
+    expect(await db.select().from(classMembers).all()).toHaveLength(1); // Carol's
+    expect(await db.select().from(teacherRatings).where(eq(teacherRatings.attemptId, carol.attempt)).all()).toHaveLength(1);
+  });
+
+  it("a teacher: their classes, the memberships in them and their ratings go; students' attempts and accounts stay; earlier pairs stay", async () => {
+    const { bob, alice, carol } = await classroom();
+    // Carol leaves first: her rating becomes an anonymous pair, which can't be linked to anyone and stays.
+    use(carol.browser);
+    const carolMember = ((await (await getMyClasses(req("/x", { method: "GET" }), ctx({}))).json()) as { classes: { id: string }[] }).classes[0].id;
+    expect((await postLeave(req("/x", json({})), ctx({ memberId: carolMember }))).status).toBe(204);
+    expect(await db.select().from(ratingPairs).all()).toHaveLength(1);
+
+    use(bob);
+    expect((await postDelete(req("/x", json({ password: PASSWORD, confirm: "DELETE" })))).status).toBe(204);
+    expect(await db.select().from(classes).all()).toEqual([]);
+    expect(await db.select().from(classMembers).all()).toEqual([]);
+    expect(await db.select().from(teacherRatings).all()).toEqual([]);
+    expect(await db.select().from(ratingPairs).all()).toHaveLength(1);
+    expect(await db.select().from(speakingAttempts).where(inArray(speakingAttempts.id, [alice.attempt, carol.attempt])).all()).toHaveLength(2);
+    expect(await db.select().from(users).where(inArray(users.email, ["alice@example.com", "carol@example.com"])).all()).toHaveLength(2);
+    // Alice's Account page no longer lists the class.
+    use(alice.browser);
+    expect(await (await getMyClasses(req("/x", { method: "GET" }), ctx({}))).json()).toEqual({ classes: [] });
   });
 });

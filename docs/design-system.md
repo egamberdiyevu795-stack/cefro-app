@@ -516,8 +516,8 @@ through end to end.
 
 The lesson for a result's biggest fix (`docs/teaching-plan.md`). Content in `src/content/lessons/`, copied word for word
 from `docs/lessons/drafts/` (a test compares every string with its file). Only **approved** lessons are ever shown
-(`getShownLesson`, `lessonForResult`); a draft never gets a link or a page. Today: L-T1, L-T8, L-T4 (B2), approved by the
-owner on 2026-11-07.
+(`getShownLesson`, `lessonForResult`); a draft never gets a link or a page. Today: L-T1, L-T8, L-T4 (B2), approved by
+Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks they match).
 
 - **Which lesson:** `features/lessons/choose.ts`, by code from the evaluator's `biggest_fix` and question statuses
   (teaching plan, section 4): a missing question → L-T1; every question off topic with picture words → L-T8; a
@@ -532,13 +532,14 @@ owner on 2026-11-07.
   retry carries, the lesson's reminder, and the one black button **"Retry with this goal"**, the same retry link as the
   result page's, so the goal is carried over).
 - **Drill topic:** the wave 1 drills were written for "Advice from someone". When the retry is another task, a line says
-  so ("These prompts are about …").
+  so ("These prompts are about …"). Neutral drill sets are proposed in `docs/lessons/drill-drafts.md` (draft, not shown).
 - **Addresses:** `?demo=<demo key>` and `?anchor=<fixture>&run=n` (mock data, every link keeps `?mock=1`), or
   `?attempt=<id>` (a real attempt, its owner only, like `/result/[attemptId]`). Anything else, or a lesson the result
   does not lead to, is the not-found screen (v1 has no lesson library).
 - **Mock mode:** the demo result of "A tradition" (`demo-5`, question 3 missing) leads to L-T1. Two demo results exist
   only for the lessons: `picture.b2-part2-advice-from-someone` (L-T8) and `bare.b2-part2-advice-from-someone` (L-T4),
-  produced by the mock evaluator, which now marks an answer whose every sentence talks about the picture as off topic,
+  produced by the mock evaluator, whose mock-only rules (`server/evaluation/mock-answer-rules.ts`, imported by nothing
+  else; tested) mark an answer whose every sentence talks about the picture as off topic,
   and a question answered in one sentence of at most 6 words as `minimal`. The `/result` prototype strip links to all
   three ("With a lesson").
 - **No mascot yet.** The title card can take one on the right later.

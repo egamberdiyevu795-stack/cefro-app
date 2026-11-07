@@ -5,15 +5,15 @@
 | Id | `L-T8` |
 | Variant | Part 2 (B2) |
 | Version | 1 |
-| Status | **draft** |
+| Status | **approved** |
 | Target level | B2 (Part 2 target) |
 | Parts | 2 |
 | Problem codes covered | `P-Q-PICTURE` |
 | Task used | `b2-part2-advice-from-someone` (Advice from someone; picture: an older man on a park bench giving advice to a teenage girl) |
 | Drafted by | AI |
 | Written at | 2026-11-05 |
-| Reviewed by | |
-| Reviewed at | |
+| Reviewed by | Asadbek |
+| Reviewed at | 2026-11-07 |
 
 All examples in this lesson are **made up** for teaching. None comes from a real student.
 

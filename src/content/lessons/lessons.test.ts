@@ -48,6 +48,15 @@ describe.each(ALL_LESSONS.map((lesson) => [`${lesson.id}${lesson.variant ? ` (${
     for (const code of lesson.problems) expect(file).toContain(`\`${code}\``);
   });
 
+  it("the app and the lesson file agree on the status, the reviewer and the review date", () => {
+    const field = (name: string) => new RegExp(`\\| ${name} \\| ([^|]*) \\|`).exec(file)?.[1].replaceAll("*", "").trim() ?? null;
+    expect(field("Status")).toBe(lesson.status);
+    expect(field("Reviewed by") || undefined).toBe(lesson.reviewedBy);
+    expect(field("Reviewed at") || undefined).toBe(lesson.reviewedAt);
+    expect(field("Drafted by")?.toLowerCase()).toBe(lesson.draftedBy);
+    expect(field("Written at")).toBe(lesson.writtenAt);
+  });
+
   it("has every example and drill row of the file, in order, with its time; nothing added", () => {
     const exampleRows = [...file.matchAll(/\| (\d) \| [^|]+ \| "([^|]+)" \| "([^|]+)" \| [^|]+ \| yes \|/g)];
     expect(exampleRows.map((m) => [m[2], m[3]])).toEqual(lesson.examples.map((e) => [e.weaker, e.better]));

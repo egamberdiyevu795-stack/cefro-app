@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ALL_LESSONS, type Lesson } from "@/content/lessons";
 import { listSpeakingTasks } from "@/content/speaking";
@@ -128,5 +130,27 @@ describe("lesson examples never use the retry task's topic", () => {
     // No example sentence repeats four words in a row of the task's title, introduction or questions.
     const taskGrams = new Set([task.title, task.question, ...task.prompts].flatMap((t) => ngrams(t, 4)));
     for (const sentence of sentences) for (const gram of ngrams(sentence, 4)) expect(taskGrams.has(gram), `"${gram}" in "${sentence}"`).toBe(false);
+  });
+});
+
+describe("drill drafts (docs/lessons/drill-drafts.md): proposals only", () => {
+  const file = readFileSync(join(process.cwd(), "docs/lessons/drill-drafts.md"), "utf8");
+  const prompts = [...file.matchAll(/^\| \d \| (.+?) \| \d+ s \|$/gm)].map((m) => m[1]);
+  const topics = [...file.matchAll(/^Drill (?:topic|picture) \(made up\): (.+)$/gm)].map((m) => m[1]);
+
+  it("stay marked draft, and nothing in the app reads them", () => {
+    expect(file).toContain("| Status | **draft** |");
+    expect(file).toContain("| Reviewed by | |");
+    const sources = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? sources(join(dir, e.name)) : /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [join(dir, e.name)] : []));
+    for (const f of sources(join(process.cwd(), "src"))) expect(readFileSync(f, "utf8"), f).not.toMatch(/drill-drafts/);
+  });
+
+  it("3 prompts per lesson, none using any of the 7 Part 2 tasks' topics", () => {
+    expect(prompts).toHaveLength(9);
+    expect(topics.length).toBeGreaterThanOrEqual(3);
+    for (const task of part2Tasks) {
+      for (const text of [...prompts, ...topics]) for (const word of TOPIC_WORDS[task.id]) expect(hasPhrase(text, word), `"${word}" in "${text}"`).toBe(false);
+    }
   });
 });

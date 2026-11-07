@@ -2,6 +2,7 @@ import "server-only";
 import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { mockIsMinimal, mockIsPictureOnly } from "./mock-answer-rules";
 import { MOCK_QUESTION_KEYWORDS } from "./mock-question-keywords";
 import type { EvaluationInput, EvaluationModel, ModelEvaluationOutput } from "./types";
 
@@ -39,12 +40,6 @@ function mockModelAnswer(questionId: number, prompt: string): string {
 
 const LINKERS_B2 = ["however", "although", "on the other hand", "as a result", "whereas", "overall", "since"];
 
-/** A sentence that talks about the picture itself. */
-const PICTURE_WORDS = /\b(picture|photo|image)\b|\bi can see\b/i;
-
-/** A question answered only in one sentence this short (in words) is "minimal": a bare answer that does not count. */
-const MINIMAL_MAX_WORDS = 6;
-
 function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
   const { metrics, transcript, previousAttempt, task } = input;
   const sentences = transcript.split(/(?<=[.!?])\s+/).filter((s) => evidenceTokens(s).length >= 3);
@@ -69,7 +64,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
   });
 
   // Every sentence talks about the picture ("In the picture I can see…"): the answer describes it and answers no question.
-  const pictureOnly = sentences.length > 0 && sentences.every((s) => PICTURE_WORDS.test(s));
+  const pictureOnly = mockIsPictureOnly(sentences);
 
   const questions = task.prompts.map((prompt, index) => {
     const keywords = questionKeywords(task, index);
@@ -78,7 +73,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
     const shared = new Set(keywords.filter((k) => evidenceTokens(transcript).includes(k))).size;
     let status: QuestionStatus = shared >= 2 ? "on_topic" : shared === 1 ? "partial" : "missing";
     // Answered in one bare sentence and nowhere else: "minimal" (it does not count).
-    if (status === "on_topic" && hits.length === 1 && evidenceTokens(hits[0]).length <= MINIMAL_MAX_WORDS) status = "minimal";
+    if (status === "on_topic" && mockIsMinimal(hits)) status = "minimal";
     if (pictureOnly) {
       return {
         id: index + 1,

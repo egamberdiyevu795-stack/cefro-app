@@ -1,6 +1,6 @@
 import type { Lesson } from "./types";
 
-/** docs/lessons/drafts/L-T4-answer-reason-example-B2.md, word for word. Approved by the owner on 2026-11-07. */
+/** docs/lessons/drafts/L-T4-answer-reason-example-B2.md, word for word. Approved by Asadbek on 2026-11-07. */
 export const lessonT4B2: Lesson = {
   id: "L-T4",
   slug: "l-t4-b2",
@@ -14,7 +14,7 @@ export const lessonT4B2: Lesson = {
   status: "approved",
   draftedBy: "ai",
   writtenAt: "2026-11-05",
-  reviewedBy: "owner",
+  reviewedBy: "Asadbek",
   reviewedAt: "2026-11-07",
   source: "docs/lessons/drafts/L-T4-answer-reason-example-B2.md",
   madeUpNote: "All examples in this lesson are **made up** for teaching. None comes from a real student.",

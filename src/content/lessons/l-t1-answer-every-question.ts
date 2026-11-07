@@ -1,6 +1,6 @@
 import type { Lesson } from "./types";
 
-/** docs/lessons/drafts/L-T1-answer-every-question.md, word for word. Approved by the owner on 2026-11-07. */
+/** docs/lessons/drafts/L-T1-answer-every-question.md, word for word. Approved by Asadbek on 2026-11-07. */
 export const lessonT1: Lesson = {
   id: "L-T1",
   slug: "l-t1",
@@ -13,7 +13,7 @@ export const lessonT1: Lesson = {
   status: "approved",
   draftedBy: "ai",
   writtenAt: "2026-11-05",
-  reviewedBy: "owner",
+  reviewedBy: "Asadbek",
   reviewedAt: "2026-11-07",
   source: "docs/lessons/drafts/L-T1-answer-every-question.md",
   madeUpNote: "All examples in this lesson are **made up** for teaching. None comes from a real student.",

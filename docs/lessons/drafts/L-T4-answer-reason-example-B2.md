@@ -5,15 +5,15 @@
 | Id | `L-T4` |
 | Variant | B2 (Part 2) |
 | Version | 1 |
-| Status | **draft** |
+| Status | **approved** |
 | Target level | B2 |
 | Parts | 2 |
 | Problem codes covered | `P-Q-MINIMAL`, `P-Q-PARTIAL` |
 | Task used | `b2-part2-advice-from-someone` (Advice from someone) |
 | Drafted by | AI |
 | Written at | 2026-11-05 |
-| Reviewed by | |
-| Reviewed at | |
+| Reviewed by | Asadbek |
+| Reviewed at | 2026-11-07 |
 
 All examples in this lesson are **made up** for teaching. None comes from a real student.
 

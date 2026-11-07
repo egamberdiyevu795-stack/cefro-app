@@ -187,6 +187,19 @@ Cut from `review-dashboard-real-data-4jikaa`, so it comes after it, merge commit
   counts 3 of 3 answered on every task ("Working in a team" used to score questions 1 and 2 as missing). Test:
   `src/server/evaluation/mock-evaluation-model.test.ts`.
 
+## Preview alias: `claude/mock` (never merge)
+
+`claude/mock` is **only a short alias** for a Vercel Preview of `claude/mock-mode-vercel-preview-8uzlim`, created at
+commit `6b77509` (no commits of its own), so Vercel gives it a short, predictable Preview URL (Vercel shortens long
+branch names). **Never merge it, never base work on it, never open a PR from it.** Merge
+`claude/mock-mode-vercel-preview-8uzlim` instead. It is not moved automatically: commits after `6b77509` (such as the
+one adding this note) are not on it. Delete it once the Preview is no longer needed.
+
+## Rule: short branch names
+
+New branch names must be short: **at most 20 characters after `claude/`** (e.g. `claude/history-page` is 12), so
+Vercel does not shorten them and Preview links stay predictable. Branches that already exist keep their names.
+
 ## Corrections to earlier notes
 
 - `docs/design-system.md` called `friendly-darwin-l73xx9` "PR #5's branch". **PR #5 is

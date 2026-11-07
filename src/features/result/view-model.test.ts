@@ -173,11 +173,21 @@ describe("result page markup", () => {
     }
   });
 
-  it("flags off: no lesson link and no play button", () => {
+  it("flags off: no play button", () => {
     const html = render(stateFor({}), allFlags(false));
-    expect(html).not.toContain("Lesson for this fix");
     expect(html).not.toContain("Play recording");
-    expect(render(stateFor({}))).toContain("Lesson for this fix");
+  });
+
+  it("Learn how: a quiet link to the lesson when one is given, none otherwise (never a black button)", () => {
+    const state = stateFor({});
+    if (state.kind !== "scored") throw new Error(state.kind);
+    expect(render(state)).not.toContain("Learn how");
+    const html = renderToStaticMarkup(
+      createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS, lesson: { href: "/lessons/l-t1?demo=demo-5&mock=1", title: "Answer every question" } }),
+    );
+    expect(html).toContain('href="/lessons/l-t1?demo=demo-5&amp;mock=1"');
+    expect(html).toContain('aria-label="Learn how: Answer every question"');
+    expect((html.match(BLACK) ?? []).length).toBe(1);
   });
 
   it("the page source shape is what the pipeline stores (type check)", () => {

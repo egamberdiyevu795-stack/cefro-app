@@ -159,6 +159,58 @@ test("mock mode: task list → brief → practice → result → retry → dashb
   expect(seen.realPages).toEqual([]);
 });
 
+test("mock mode lessons: Biggest fix → Learn how → lesson (why, explanation, examples, drill) → Retry with this goal, all ?mock=1", async ({ page }) => {
+  const seen = watch(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  // The demo result of "A tradition" (question 3 missing) links its Biggest fix to "Answer every question".
+  await page.goto("/result?demo=demo-5&mock=1");
+  await expect(page.getByText("Your result · A tradition")).toBeVisible();
+  await page.getByRole("link", { name: "Learn how: Answer every question" }).click();
+  await expect(page).toHaveURL(/\/lessons\/l-t1\?demo=demo-5&mock=1$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Answer every question" })).toBeVisible();
+  await expect(page.getByTestId("lesson-why")).toContainText('You did not answer Question 3: "Should young people keep old traditions in the modern world? Why?".');
+  for (const name of ["How it works", "Examples", "Self-check drill", "Retry the same task"]) await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expect(page.getByTestId("lesson-example")).toHaveCount(4);
+  await expect(page.getByTestId("lesson-goal")).toContainText('Answer question 3: "Should young people keep old traditions in the modern world? Why?"');
+  await expect(page.getByRole("main").locator(BLACK)).toHaveCount(1);
+  await expect(page.getByTestId("demo-label")).toHaveText(DEMO_MODE);
+  await expectMockLinks(page);
+  await auditPhone(page);
+
+  // The self-check drill: record a prompt (fake microphone), listen back, tick the checklist. Nothing is sent.
+  await page.getByRole("button", { name: "Record", exact: true }).first().click();
+  await expect(page.getByRole("timer")).toContainText("/ 0:20");
+  await page.waitForTimeout(1500);
+  await page.getByRole("button", { name: "Stop" }).click();
+  await expect(page.getByRole("button", { name: "Record again" })).toBeVisible();
+  await page.getByRole("checkbox", { name: "My plan had a note for every question." }).check();
+
+  // Retry with this goal: the retry of the same attempt, with its goal on the brief.
+  await page.getByRole("link", { name: "Retry with this goal" }).click();
+  await expect(page).toHaveURL(/\/practice\/speaking\/b2-part2-a-tradition\?mock=1&retry=demo-5$/);
+  await expect(page.getByTestId("goal-card")).toContainText('Answer question 3: "Should young people keep old traditions in the modern world? Why?"');
+
+  // The other two lessons, from their demo results; a result with no approved lesson has no link.
+  for (const [demo, name, title] of [
+    ["picture.b2-part2-advice-from-someone", "Learn how: The picture is not the question", "The picture is not the question"],
+    ["bare.b2-part2-advice-from-someone", "Learn how: Answer, reason, example", "Answer, reason, example"],
+  ]) {
+    await page.goto(`/result?demo=${demo}&mock=1`);
+    await page.getByRole("link", { name }).click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page.getByRole("main").locator(BLACK)).toHaveCount(1);
+    await expectMockLinks(page);
+    await auditPhone(page);
+  }
+  await page.goto("/result?demo=demo-6&mock=1");
+  await expect(page.getByRole("heading", { name: "Biggest fix" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Learn how/ })).toHaveCount(0);
+
+  expect(seen.apiCalls).toEqual([]);
+  expect(seen.realPages).toEqual([]);
+});
+
 test("mock mode: the demo account has no sign-in or Log out (no API, no real page)", async ({ page }) => {
   const seen = watch(page);
   await page.goto("/dashboard?mock=1");

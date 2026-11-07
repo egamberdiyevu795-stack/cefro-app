@@ -1,0 +1,140 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { FEATURE_FLAGS } from "@/config/features";
+import { getShownLesson, type Lesson } from "@/content/lessons";
+import { getSpeakingTask } from "@/content/speaking";
+import { isMultilevel } from "@/domain/evaluation/stored";
+import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
+import type { AttemptView } from "@/domain/speaking/attempt";
+import type { SpeakingTask } from "@/domain/speaking/task";
+import { withMock } from "@/features/demo/demo-mode";
+import { lessonForResult, lessonWhy } from "@/features/lessons/choose";
+import { LessonView } from "@/features/lessons/LessonView";
+import { evaluationOf, mockAttemptKey } from "@/features/result/mock-data";
+import { AppShell } from "@/features/shell/AppShell";
+import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
+import { getAttemptViewForUser } from "@/server/attempts/attempt-service";
+import { assertServerConfigured } from "@/server/config/boot-check";
+import { demoEvaluation, demoResultHref, demoResultSpec } from "@/server/demo/demo-data";
+import { HttpError } from "@/server/errors";
+import { findCurrentUserId } from "@/server/identity/current-user";
+
+export async function generateMetadata(props: PageProps<"/lessons/[lessonId]">): Promise<Metadata> {
+  const { lessonId } = await props.params;
+  return { title: getShownLesson(lessonId)?.title ?? "Lesson" };
+}
+
+/** The result a lesson is opened from, with where its links go. */
+interface LessonContext {
+  result: MultilevelResult;
+  task: SpeakingTask;
+  retryHref: string;
+  resultHref: string;
+  mock: boolean;
+}
+
+type Query = Record<string, string | string[] | undefined>;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+/*
+ * The lesson for a result's biggest fix (docs/teaching-plan.md). v1 has no lesson library: a lesson is opened only
+ * from a result whose biggest fix leads to it, so the address names that result:
+ *
+ *   ?demo=<demo key>              a demo result of mock mode (server/demo/demo-data.ts)
+ *   ?anchor=<fixture id>&run=1..3 a saved live run (the /result prototype)
+ *   ?attempt=<attempt id>         a real attempt: its owner only, exactly as /result/[attemptId] (404 for anyone else)
+ *
+ * The first two are mock data (no database, no configuration, every link keeps ?mock=1). Only an approved lesson is
+ * ever shown, and only the one the result leads to: anything else is the not-found screen.
+ * "Retry with this goal" opens the same retry as the result page's button, so the goal is carried over.
+ */
+export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">) {
+  const [{ lessonId }, query] = await Promise.all([props.params, props.searchParams]);
+  const lesson = getShownLesson(lessonId);
+  if (!lesson) notFound();
+
+  const context = await lessonContext(query);
+  if (!context || lessonForResult(context.result)?.slug !== lesson.slug) notFound();
+  const { result, task, mock } = context;
+  const focus = result.retry_focus[0];
+
+  return (
+    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"}>
+      <LessonView
+        lesson={lesson}
+        why={lessonWhy(lesson, result, task.prompts)}
+        task={{ title: task.title }}
+        drillTask={drillTaskOf(lesson, task)}
+        goal={focus ? { objective: focus.objective, check: focus.success_check || null } : null}
+        retryHref={context.retryHref}
+        resultHref={context.resultHref}
+        demo={mock}
+      />
+    </AppShell>
+  );
+}
+
+function drillTaskOf(lesson: Lesson, task: SpeakingTask): { title: string } | null {
+  if (lesson.drill.taskId === task.id) return null;
+  const drillTask = getSpeakingTask(lesson.drill.taskId);
+  return drillTask ? { title: drillTask.title } : null;
+}
+
+async function lessonContext(query: Query): Promise<LessonContext | null> {
+  const demo = one(query.demo);
+  if (demo) {
+    const spec = demoResultSpec(demo);
+    const evaluation = spec ? await demoEvaluation(demo) : null;
+    if (!spec || !evaluation) return null;
+    return {
+      result: evaluation.result,
+      task: spec.task,
+      retryHref: practiceHref(spec.task.id, { mock: true, retry: demo }),
+      resultHref: demoResultHref(demo),
+      mock: true,
+    };
+  }
+
+  const fixture = mockAttemptKey(one(query.anchor), one(query.run));
+  if (fixture) {
+    // The saved live runs all answer "Advice from someone".
+    const task = getSpeakingTask("b2-part2-advice-from-someone");
+    if (!task) return null;
+    return {
+      result: evaluationOf(fixture.anchor, fixture.run).result,
+      task,
+      retryHref: practiceHref(task.id, { mock: true, retry: fixture.anchor, run: fixture.run }),
+      resultHref: withMock(`/result?${new URLSearchParams({ anchor: fixture.anchor, run: String(fixture.run) })}`),
+      mock: true,
+    };
+  }
+
+  const attemptId = one(query.attempt);
+  if (!attemptId) return null;
+  // A real attempt: the full server configuration and its owner, as on /result/[attemptId].
+  await connection();
+  assertServerConfigured();
+  const userId = await findCurrentUserId();
+  const attempt = userId ? await ownAttempt(userId, attemptId) : null;
+  const task = attempt ? getSpeakingTask(attempt.taskId) : undefined;
+  const result = attempt?.evaluation?.result;
+  if (!attempt || !task || !result || !isMultilevel(result)) return null;
+  return {
+    result,
+    task,
+    retryHref: practiceHref(task.id, { retry: attempt.id }),
+    resultHref: `/result/${encodeURIComponent(attempt.id)}`,
+    mock: false,
+  };
+}
+
+/** The caller's own attempt, or null: missing, malformed and other people's attempts all look the same (404). */
+async function ownAttempt(userId: string, attemptId: string): Promise<AttemptView | null> {
+  try {
+    return await getAttemptViewForUser(userId, attemptId);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) return null;
+    throw error;
+  }
+}

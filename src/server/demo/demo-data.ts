@@ -13,6 +13,9 @@ import "server-only";
  *   demo-1 … demo-6        the demo student's attempts
  *   answer.<task id>       the result of a mock practice of that task ("first" answer: question 3 left out)
  *   retry.<task id>.<key>  a mock retry of that task, as a retry of <key> ("full" answer, judged against its goal)
+ *   picture.<task id>      lesson demo: an answer that only describes the picture (leads to lesson L-T8)
+ *   bare.<task id>         lesson demo: question 3 answered in one bare sentence (leads to lesson L-T4)
+ * The two lesson demos exist only for tasks whose demo answer has that text ("Advice from someone").
  */
 import { getSpeakingTask } from "@/content/speaking";
 import { addDays, todayIn } from "@/domain/exam-date";
@@ -80,6 +83,12 @@ export function demoResultSpec(key: string): DemoResultSpec | null {
   if (answer) {
     const task = getSpeakingTask(answer[1]);
     return task && demoAnswerText(task.id, "first") ? { task, answer: "first", previous: null } : null;
+  }
+  const lessonDemo = /^(picture|bare)\.([a-z0-9-]+)$/.exec(key);
+  if (lessonDemo) {
+    const variant = lessonDemo[1] as "picture" | "bare";
+    const task = getSpeakingTask(lessonDemo[2]);
+    return task && demoAnswerText(task.id, variant) ? { task, answer: variant, previous: null } : null;
   }
   const retry = /^retry\.([a-z0-9-]+)\.(.+)$/.exec(key);
   if (retry) {

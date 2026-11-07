@@ -39,6 +39,12 @@ function mockModelAnswer(questionId: number, prompt: string): string {
 
 const LINKERS_B2 = ["however", "although", "on the other hand", "as a result", "whereas", "overall", "since"];
 
+/** A sentence that talks about the picture itself. */
+const PICTURE_WORDS = /\b(picture|photo|image)\b|\bi can see\b/i;
+
+/** A question answered only in one sentence this short (in words) is "minimal": a bare answer that does not count. */
+const MINIMAL_MAX_WORDS = 6;
+
 function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
   const { metrics, transcript, previousAttempt, task } = input;
   const sentences = transcript.split(/(?<=[.!?])\s+/).filter((s) => evidenceTokens(s).length >= 3);
@@ -62,16 +68,34 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
     how_to_check,
   });
 
+  // Every sentence talks about the picture ("In the picture I can see…"): the answer describes it and answers no question.
+  const pictureOnly = sentences.length > 0 && sentences.every((s) => PICTURE_WORDS.test(s));
+
   const questions = task.prompts.map((prompt, index) => {
     const keywords = questionKeywords(task, index);
-    const hit = sentences.find((s) => keywords.some((k) => evidenceTokens(s).includes(k)));
+    const hits = sentences.filter((s) => keywords.some((k) => evidenceTokens(s).includes(k)));
+    const hit = hits[0];
     const shared = new Set(keywords.filter((k) => evidenceTokens(transcript).includes(k))).size;
-    const status: QuestionStatus = shared >= 2 ? "on_topic" : shared === 1 ? "partial" : "missing";
+    let status: QuestionStatus = shared >= 2 ? "on_topic" : shared === 1 ? "partial" : "missing";
+    // Answered in one bare sentence and nowhere else: "minimal" (it does not count).
+    if (status === "on_topic" && hits.length === 1 && evidenceTokens(hits[0]).length <= MINIMAL_MAX_WORDS) status = "minimal";
+    if (pictureOnly) {
+      return {
+        id: index + 1,
+        status: "off_topic" as const,
+        evidence: sentences[0],
+        note: "Development estimate: your answer describes the picture instead of answering this question.",
+        model_answer: mockModelAnswer(index + 1, prompt),
+      };
+    }
     return {
       id: index + 1,
       status,
       evidence: status === "missing" ? "" : (hit ?? ""),
-      note: `Development estimate: ${shared} key word(s) from question ${index + 1} appear in your answer.`,
+      note:
+        status === "minimal"
+          ? `Development estimate: question ${index + 1} is answered in one short sentence only.`
+          : `Development estimate: ${shared} key word(s) from question ${index + 1} appear in your answer.`,
       model_answer: status === "on_topic" ? "" : mockModelAnswer(index + 1, prompt),
     };
   });

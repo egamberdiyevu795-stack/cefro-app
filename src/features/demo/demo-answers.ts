@@ -9,9 +9,16 @@ export interface DemoAnswer {
   story: [string, string];
   /** Question 3: the general opinion. */
   opinion: string;
+  /**
+   * Optional, for the lesson demos: an answer that only describes the picture (lesson L-T8), and the story with a bare
+   * one-sentence question 3 (lesson L-T4).
+   */
+  picture?: string;
+  bareOpinion?: string;
 }
 
-export type DemoAnswerVariant = "first" | "full";
+/** "first": question 3 left out; "full": all three; "picture": only the picture described; "bare": question 3 in one bare sentence. */
+export type DemoAnswerVariant = "first" | "full" | "picture" | "bare";
 
 export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   "b2-part2-advice-from-someone": {
@@ -21,6 +28,9 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
     ],
     opinion:
       "However, I don't think young people should always follow advice from older people. Older people have experience, but the world changes fast, so young people should listen and then decide for themselves.",
+    picture:
+      "In the picture I can see an old man and a teenage girl. In the picture they are sitting on a bench in a park. I can see that the man is giving advice to the girl, and she is listening to him. In the picture the trees are green, so I think it is summer.",
+    bareOpinion: "Older people are not always right.",
   },
   "b2-part2-important-decision": {
     story: [
@@ -72,9 +82,14 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   },
 };
 
-/** The transcript of a demo answer: the story only ("first"), or the story and the opinion ("full"). */
+/**
+ * The transcript of a demo answer: the story only ("first"), the story and the opinion ("full"), the picture only
+ * ("picture"), or the story and a bare opinion ("bare"). Null when the task has no such answer.
+ */
 export function demoAnswerText(taskId: string, variant: DemoAnswerVariant): string | null {
   const answer = DEMO_ANSWERS[taskId];
   if (!answer) return null;
+  if (variant === "picture") return answer.picture ?? null;
+  if (variant === "bare") return answer.bareOpinion ? [...answer.story, answer.bareOpinion].join(" ") : null;
   return [...answer.story, ...(variant === "full" ? [answer.opinion] : [])].join(" ");
 }

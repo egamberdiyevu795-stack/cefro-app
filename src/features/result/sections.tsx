@@ -68,11 +68,14 @@ export function ScoredResult({
   retryHref,
   onCompare,
   audio,
+  lesson = null,
   demo = false,
 }: {
   view: ResultView;
   task: Task;
   flags: FeatureFlags;
+  /** The approved lesson for the biggest fix ("Learn how"); null when no approved lesson matches (then no link). */
+  lesson?: FixLesson | null;
   /** Mock data (the /result prototype): the "Demo result" label at the top of the result card. Never for a real attempt. */
   demo?: boolean;
   /** "Retry with this goal": a link (default: the practice page) or a callback. */
@@ -85,7 +88,7 @@ export function ScoredResult({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.62fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <ResultCard view={view} onCompare={onCompare ?? null} demo={demo} className="order-1 lg:order-none" />
-        <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} flags={flags} className="order-3 lg:order-none" />
+        <BiggestFixCard view={view} retryHref={retryHref ?? practiceHref(task)} lesson={lesson} className="order-3 lg:order-none" />
         {view.patterns.length > 0 && <PatternsCard patterns={view.patterns} className="order-4 lg:order-none" />}
         <AnswerCard transcript={view.transcript} durationMs={view.durationMs} flags={flags} audio={audio} className="order-6 lg:order-none" />
       </div>
@@ -218,8 +221,14 @@ function QuestionsCard({ view, className }: { view: ResultView; className?: stri
   );
 }
 
-/** "Retry with this goal" opens the practice page as a retry of this attempt (`retryHref`), which carries the goal. */
-function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultView; retryHref: ActionTarget; flags: FeatureFlags; className?: string }) {
+/** A lesson link on the Biggest fix card: the lesson page for this result, and the lesson's title. */
+export type FixLesson = { href: string; title: string };
+
+/**
+ * "Retry with this goal" opens the practice page as a retry of this attempt (`retryHref`), which carries the goal.
+ * "Learn how" (quiet) opens the approved lesson for this fix, when there is one.
+ */
+function BiggestFixCard({ view, retryHref, lesson, className }: { view: ResultView; retryHref: ActionTarget; lesson: FixLesson | null; className?: string }) {
   const { fix } = view;
   return (
     <Card aria-labelledby="fix-title" className={className}>
@@ -248,11 +257,10 @@ function BiggestFixCard({ view, retryHref, flags, className }: { view: ResultVie
         <Action target={retryHref} icon="retry" className="w-full sm:w-auto">
           Retry with this goal
         </Action>
-        {flags.fixLesson && (
-          <ComingSoonButton label="Lesson for this fix" className={cx(styles.PILL_QUIET, "w-full sm:w-auto")}>
-            <Icon name="book" size={16} />
-            Lesson for this fix
-          </ComingSoonButton>
+        {lesson && (
+          <PillButton href={lesson.href} variant="quiet" icon="book" className="w-full sm:w-auto" label={`Learn how: ${lesson.title}`}>
+            Learn how
+          </PillButton>
         )}
       </div>
     </Card>

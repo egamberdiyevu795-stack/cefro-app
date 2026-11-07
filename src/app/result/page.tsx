@@ -7,12 +7,13 @@ import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { toPublicTask } from "@/domain/speaking/task";
 import { demoResultHref, demoResultSource, demoResultSpec } from "@/server/demo/demo-data";
 import { withMock } from "@/features/demo/demo-mode";
+import { lessonForResult, lessonHref, type LessonSource } from "@/features/lessons/choose";
 import { AutoAdvance } from "@/features/result/AutoAdvance";
 import { DEFAULT_ANCHOR, FIXTURE_ANCHORS, RESULT_STATES, describeMock, mockResultHref, mockResultSource, selectMock, shownAttempt, type MockSelection } from "@/features/result/mock-data";
-import { FailedResult, NotScoredResult, ScoredResult, ScoringResult } from "@/features/result/sections";
+import { FailedResult, NotScoredResult, ScoredResult, ScoringResult, type FixLesson } from "@/features/result/sections";
 import { AppShell } from "@/features/shell/AppShell";
 import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
-import { resultPageState } from "@/features/result/view-model";
+import { resultPageState, type ResultSource } from "@/features/result/view-model";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 
 export const metadata: Metadata = { title: "Your result" };
@@ -43,16 +44,18 @@ export default async function ResultPage(props: PageProps<"/result">) {
   const speakingTask = getSpeakingTask("b2-part2-advice-from-someone");
   if (!speakingTask) notFound();
   const task = toPublicTask(speakingTask);
-  const state = resultPageState(mockResultSource(selection, task, getSpeakingRubric(speakingTask).config));
+  const source = mockResultSource(selection, task, getSpeakingRubric(speakingTask).config);
+  const state = resultPageState(source);
 
   const shown = shownAttempt(selection);
+  const lesson = fixLesson(source, { anchor: shown.anchor, run: shown.run });
   const retryHref = practiceHref(task.id, { mock: true, retry: shown.anchor, run: shown.run });
   const recordHref = practiceHref(task.id, { mock: true, ...(selection.from ? { retry: selection.from.anchor, run: selection.from.run } : {}) });
 
   return (
     <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} demo />
+        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} lesson={lesson} demo />
       ) : state.kind === "scoring" ? (
         <ScoringResult state={state} flags={flags} demo />
       ) : state.kind === "not_scored" ? (
@@ -73,13 +76,14 @@ async function demoResult({ demoKey, scoring, next, flags }: { demoKey: string; 
   if (!spec || !source) notFound();
   const state = resultPageState(source);
   const task = toPublicTask(spec.task);
+  const lesson = fixLesson(source, { demo: demoKey });
   // "Retry with this goal": a retry of this result. "Record again": the same practice again (a retry stays a retry).
   const retryHref = practiceHref(task.id, { mock: true, retry: demoKey });
   const recordHref = practiceHref(task.id, { mock: true, ...(spec.previous ? { retry: spec.previous } : {}) });
   return (
     <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} demo />
+        <ScoredResult view={state.view} task={task} flags={flags} retryHref={retryHref} lesson={lesson} demo />
       ) : state.kind === "scoring" ? (
         <ScoringResult state={state} flags={flags} demo />
       ) : state.kind === "not_scored" ? (
@@ -91,6 +95,19 @@ async function demoResult({ demoKey, scoring, next, flags }: { demoKey: string; 
     </AppShell>
   );
 }
+
+/** "Learn how" on the Biggest fix: the approved lesson for this result, in mock mode; null when none matches. */
+function fixLesson(source: ResultSource, from: LessonSource): FixLesson | null {
+  const lesson = source.evaluation ? lessonForResult(source.evaluation.result) : null;
+  return lesson ? { href: lessonHref(lesson, from, { mock: true }), title: lesson.title } : null;
+}
+
+/** Demo results whose biggest fix has a lesson (one per approved lesson), for the strip under the prototype. */
+const LESSON_DEMOS: readonly [string, string][] = [
+  ["demo-5", "Missing question (A tradition)"],
+  ["bare.b2-part2-advice-from-someone", "Bare answer"],
+  ["picture.b2-part2-advice-from-someone", "Picture only"],
+];
 
 /** Quiet strip under the page: which mock is on screen, and links to the others. Not part of the design. */
 function PrototypeSwitches({ selection }: { selection: MockSelection }) {
@@ -114,6 +131,10 @@ function PrototypeSwitches({ selection }: { selection: MockSelection }) {
       </p>
       <p className="flex flex-wrap gap-x-3">
         {RESULT_STATES.filter((s) => s !== "scored").map((state) => link({ anchor: DEFAULT_ANCHOR, state }, state, selection.state === state))}
+      </p>
+      <p className="flex flex-wrap gap-x-3">
+        <span className="inline-flex min-h-6 items-center text-caption text-fg-muted">With a lesson:</span>
+        {LESSON_DEMOS.map(([demo, label]) => link({ demo }, label, false))}
       </p>
     </aside>
   );

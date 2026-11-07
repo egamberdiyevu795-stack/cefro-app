@@ -35,6 +35,7 @@ import SiteLayout from "@/app/(site)/layout";
 import HomePage from "@/app/(site)/page";
 import DashboardPage from "@/app/dashboard/page";
 import HistoryPage from "@/app/history/page";
+import LessonPage from "@/app/lessons/[lessonId]/page";
 import PracticePage from "@/app/practice/speaking/[taskId]/page";
 import ResultPage from "@/app/result/page";
 
@@ -152,7 +153,74 @@ describe("mock pages on a Preview with no configuration", () => {
   });
 });
 
+describe("lessons in mock mode", () => {
+  const ADVICE = "b2-part2-advice-from-someone";
+
+  it("the demo result of 'A tradition' links its Biggest fix to its lesson; a result with no approved lesson has no link", async () => {
+    const tradition = await html(ResultPage(props({ mock: "1", demo: "demo-5" })));
+    expect(tradition).toContain("A tradition");
+    expect(tradition).toContain('href="/lessons/l-t1?demo=demo-5&amp;mock=1"');
+    expect(tradition).toContain("Learn how");
+    expect(mainOf(tradition).match(BLACK)).toHaveLength(1);
+    expectMockLinksOnly(tradition);
+    for (const query of [{ demo: "demo-6" }, { demo: "demo-4" }, { anchor: "A2-b1-all-three" }]) {
+      expect(await html(ResultPage(props({ mock: "1", ...query }))), JSON.stringify(query)).not.toContain("Learn how");
+    }
+    expect(await html(ResultPage(props({ mock: "1", anchor: "A1-b1-only-q3", run: "2" })))).toContain('href="/lessons/l-t1?anchor=A1-b1-only-q3&amp;run=2&amp;mock=1"');
+    expect(await html(ResultPage(props({ mock: "1", demo: `picture.${ADVICE}` })))).toContain(`href="/lessons/l-t8?demo=picture.${ADVICE}&amp;mock=1"`);
+    expect(await html(ResultPage(props({ mock: "1", demo: `bare.${ADVICE}` })))).toContain(`href="/lessons/l-t4-b2?demo=bare.${ADVICE}&amp;mock=1"`);
+  });
+
+  it.each([
+    ["l-t1", { demo: "demo-5" }, "A tradition", 'You did not answer Question 3: "Should young people keep old traditions in the modern world? Why?".', `/practice/speaking/b2-part2-a-tradition?mock=1&retry=demo-5`],
+    ["l-t1", { anchor: "A1-b1-only-q3", run: "1" }, "Advice from someone", "You did not answer Question 1", `/practice/speaking/${ADVICE}?mock=1&retry=A1-b1-only-q3&run=1`],
+    ["l-t8", { demo: `picture.${ADVICE}` }, "Advice from someone", "Your answer described the picture, but it did not answer the three questions.", `/practice/speaking/${ADVICE}?mock=1&retry=picture.${ADVICE}`],
+    ["l-t4-b2", { demo: `bare.${ADVICE}` }, "Advice from someone", "Your answer to Question 3 was too short to count:", `/practice/speaking/${ADVICE}?mock=1&retry=bare.${ADVICE}`],
+  ] as const)("%s from %j: why, explanation, examples, drill, one black button that starts the retry with its goal", async (slug, query, taskTitle, why, retryHref) => {
+    const markup = await html(LessonPage(props({ mock: "1", ...query }, { lessonId: slug })));
+    const main = mainOf(markup);
+    expect(markup).toContain(escaped(DEMO_MODE_TEXT));
+    expect(markup).toContain(escaped(taskTitle));
+    expect(markup).toContain(escaped(why));
+    for (const section of ["Why this lesson", "How it works", "Examples", "Self-check drill", "Checklist", "Goal for your retry"]) expect(markup).toContain(section);
+    expect((markup.match(/data-testid="lesson-example"/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    // Exactly one black button: "Retry with this goal", to the same retry as the result page's.
+    const black = main.match(BLACK) ?? [];
+    expect(black).toHaveLength(1);
+    const blackHref = /<a\b[^>]*class="[^"]*\bbg-primary text-on-primary[^"]*"[^>]*href="([^"]*)"/.exec(main)?.[1].replaceAll("&amp;", "&");
+    expect(blackHref).toBe(retryHref);
+    expect(main).toContain("Retry with this goal");
+    expect(markup).not.toMatch(SMALL);
+    expectMockLinksOnly(markup);
+  });
+
+  it("the drill prompts name their task when the retry is another task", async () => {
+    const tradition = await html(LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" })));
+    expect(tradition).toContain("These prompts are about “Advice from someone”");
+    const advice = await html(LessonPage(props({ mock: "1", demo: "demo-1" }, { lessonId: "l-t1" })));
+    expect(advice).not.toContain("These prompts are about");
+  });
+
+  it("not found: an unknown lesson, a lesson the result does not lead to, a result with no lesson, no result at all", async () => {
+    for (const [lessonId, query] of [
+      ["nope", { demo: "demo-5" }],
+      ["l-t8", { demo: "demo-5" }],
+      ["l-t4-b2", { demo: "demo-5" }],
+      ["l-t1", { demo: "demo-6" }],
+      ["l-t1", { demo: "nope" }],
+      ["l-t1", { anchor: "A2-b1-all-three" }],
+      ["l-t1", {}],
+    ] as const) {
+      await expect(LessonPage(props({ mock: "1", ...query }, { lessonId })), `${lessonId} ${JSON.stringify(query)}`).rejects.toThrow();
+    }
+  });
+});
+
 describe("real pages on the same Preview keep refusing", () => {
+  it("a lesson for a real attempt fails the configuration check, never touching the database", async () => {
+    await expect(LessonPage(props({ attempt: "some-attempt" }, { lessonId: "l-t1" }))).rejects.toMatchObject({ status: 503 });
+  });
+
   it("History, the practice page and the (site) pages fail the configuration check; no demo label anywhere", async () => {
     await expect(HistoryPage(props({}))).rejects.toMatchObject({ status: 503, code: "service_not_configured" });
     await expect(PracticePage(props({}, { taskId: "b2-part2-happy-day" }))).rejects.toMatchObject({ status: 503 });

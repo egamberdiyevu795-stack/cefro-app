@@ -25,8 +25,6 @@ export const FEATURE_FLAGS = {
   attemptMenu: true,
   /** "Your exam: in N days" card. */
   examCountdown: true,
-  /** Result page: "Lesson" link under the biggest fix (the lesson for that fix). */
-  fixLesson: true,
   /** Result page: "Play recording" above the transcript. */
   recordingPlayback: true,
 } as const satisfies Record<string, boolean>;

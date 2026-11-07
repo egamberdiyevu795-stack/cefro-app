@@ -299,7 +299,8 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
 - **Phone, top to bottom:** Result ("Part 2 · Band 2 · Higher B1", a 0–5 band meter (band 0 exists) with the target named, the distance
   to the target, "Pronunciation wasn't checked in this attempt." when it was not assessed) → Questions (one row each: Answered / Partly
   answered / Not counted, with a check, half circle or cross glyph and the evaluator's one-line note) → Biggest fix
-  (the student's quote, "Try instead", the retry goal, the black "Retry with this goal", flagged "Lesson for this fix")
+  (the student's quote, "Try instead", the retry goal, the black "Retry with this goal", the quiet "Learn how" when an
+  approved lesson matches the fix: see [Lessons](#lessons-lessonsslug))
   → Skills (each feature folded in a `<details>`: level, then quote and why; Pronunciation "Not assessed" when the audio
   step didn't run) → Your answer (flagged "Play recording", transcript).
 - **Desktop:** [Result, Biggest fix, Your answer] | [Questions, Skills].
@@ -319,7 +320,7 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   band 0 run), `?state=scoring|too-short|no-speech|retry`, `?flags=off`, `&from=<fixture id>&fromRun=n` (the attempt
   a retry comes from: its goal on Scoring… and the one the retry result checks), `&next=1` (Scoring… opens the result
   after about 4 s: used by the practice page's mock mode).
-- **New flags:** `fixLesson`, `recordingPlayback`. **New icons:** `play`, `partly`, `cross`, `info`. **New style:** `PILL_QUIET`.
+- **New flags:** `recordingPlayback` (and `fixLesson`, removed once lessons were built). **New icons:** `play`, `partly`, `cross`, `info`. **New style:** `PILL_QUIET`.
 - **Demo label:** every prototype screen starts its result card with `DemoLabel` ("Demo result. Your answer was not
   scored."), so a tester can't mistake a saved demo score for their own. Real attempts (`/result/[attemptId]`) never
   show it.
@@ -510,6 +511,42 @@ through end to end.
   cookies and identity throwing: label, only `mock=1` links, one black button where there is one, no text under 11 px;
   real pages still refuse), `server/demo/demo-data.test.ts` (every demo attempt's result has the attempt's task id and questions), `e2e/mock-mode.spec.ts` (also on a production build:
   `npm run test:e2e:preview`).
+
+## Lessons (`/lessons/[slug]`)
+
+The lesson for a result's biggest fix (`docs/teaching-plan.md`). Content in `src/content/lessons/`, copied word for word
+from `docs/lessons/drafts/` (a test compares every string with its file). Only **approved** lessons are ever shown
+(`getShownLesson`, `lessonForResult`); a draft never gets a link or a page. Today: L-T1, L-T8, L-T4 (B2), approved by the
+owner on 2026-11-07.
+
+- **Which lesson:** `features/lessons/choose.ts`, by code from the evaluator's `biggest_fix` and question statuses
+  (teaching plan, section 4): a missing question → L-T1; every question off topic with picture words → L-T8; a
+  `minimal` / `partial` question in Part 2 → L-T4 (B2). Anything else (feature fixes, own words, other off-topic
+  answers) has no approved lesson yet, so **no link**.
+- **Result page:** a quiet "Learn how" pill (book icon, accessible name "Learn how: <lesson title>") next to the black
+  "Retry with this goal" on the Biggest fix card. None when no approved lesson matches.
+- **Lesson page, phone first, top to bottom:** back link to the result → title and "Why this lesson" (the lesson's line,
+  filled from the result) → How it works (the explanation, ≤ 120 words) → Examples (the made-up example topic, then 3–4
+  weaker → better pairs with their notes) → Self-check drill (each prompt with its time and a quiet Record / Stop /
+  listen-back, kept in the browser, never uploaded or scored; then the checklist) → Retry the same task (the goal the
+  retry carries, the lesson's reminder, and the one black button **"Retry with this goal"**, the same retry link as the
+  result page's, so the goal is carried over).
+- **Drill topic:** the wave 1 drills were written for "Advice from someone". When the retry is another task, a line says
+  so ("These prompts are about …").
+- **Addresses:** `?demo=<demo key>` and `?anchor=<fixture>&run=n` (mock data, every link keeps `?mock=1`), or
+  `?attempt=<id>` (a real attempt, its owner only, like `/result/[attemptId]`). Anything else, or a lesson the result
+  does not lead to, is the not-found screen (v1 has no lesson library).
+- **Mock mode:** the demo result of "A tradition" (`demo-5`, question 3 missing) leads to L-T1. Two demo results exist
+  only for the lessons: `picture.b2-part2-advice-from-someone` (L-T8) and `bare.b2-part2-advice-from-someone` (L-T4),
+  produced by the mock evaluator, which now marks an answer whose every sentence talks about the picture as off topic,
+  and a question answered in one sentence of at most 6 words as `minimal`. The `/result` prototype strip links to all
+  three ("With a lesson").
+- **No mascot yet.** The title card can take one on the right later.
+- **Tests:** `src/content/lessons/lessons.test.ts` (word for word, format, only approved shown),
+  `src/features/lessons/choose.test.ts` (which lesson; the goal carried; **examples never use the retry task's topic,
+  for every lesson × all 7 Part 2 tasks**), `src/features/demo/mock-pages.test.ts` (each lesson page in mock mode: one
+  black button, no text under 11 px, only `?mock=1` links, not-found cases), `e2e/mock-mode.spec.ts` (result → Learn
+  how → lesson → drill → Retry with this goal, at 390 px).
 
 ## Controls wait for the page (`useHydrated`)
 

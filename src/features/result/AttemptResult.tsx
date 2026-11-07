@@ -12,6 +12,7 @@ import { track } from "@/features/speaking-practice/lib/analytics";
 import { ApiError, restartProcessing } from "@/features/speaking-practice/lib/api-client";
 import { shouldAutoRestart } from "@/features/speaking-practice/lib/failure-messages";
 import { isEvaluated, practiceHref, type EvaluatedAttempt } from "@/features/speaking-practice/lib/practice-flow";
+import { lessonForResult, lessonHref } from "@/features/lessons/choose";
 import { ComparisonResult, type ComparedAttempt } from "./comparison";
 import { attemptAudioUrl, resultSourceFromAttempt } from "./from-attempt";
 import { FailedResult, NotScoredResult, ScoredResult, ScoringResult } from "./sections";
@@ -151,7 +152,8 @@ export function AttemptResult({
         />
       );
     }
-    case "scored":
+    case "scored": {
+      const lesson = source.evaluation ? lessonForResult(source.evaluation.result) : null;
       return (
         <ScoredResult
           view={view.view}
@@ -159,12 +161,14 @@ export function AttemptResult({
           flags={flags}
           audio={audio}
           retryHref={retryWithGoal}
+          lesson={lesson ? { href: lessonHref(lesson, { attempt: attempt.id }), title: lesson.title } : null}
           onCompare={view.view.retry && previous && isEvaluated(previous) ? () => {
             setComparing(true);
             track("comparison_viewed", { taskId: task.id, attemptId: attempt.id, properties: { previousAttemptId: previous.id } });
           } : null}
         />
       );
+    }
     case "not_scored":
       return <NotScoredResult state={view} flags={flags} audio={audio} recordHref={recordAgain} />;
     case "failed":

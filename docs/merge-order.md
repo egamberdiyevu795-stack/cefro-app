@@ -187,6 +187,27 @@ Cut from `review-dashboard-real-data-4jikaa`, so it comes after it, merge commit
   counts 3 of 3 answered on every task ("Working in a team" used to score questions 1 and 2 as missing). Test:
   `src/server/evaluation/mock-evaluation-model.test.ts`.
 
+## After that: `claude/lessons` (lessons in the app, no migration)
+
+Cut from `mock-mode-vercel-preview-8uzlim`, so it comes after it, merge commit. It **merges in
+`claude/wave1-lesson-drafts`** (step 11, and so step 10): merging it brings in the teaching plan and the lesson drafts
+too, unchanged. Contains:
+
+- **The three approved lessons** (L-T1, L-T8, L-T4 B2) in `src/content/lessons/`, word for word from
+  `docs/lessons/drafts/` (the drafts are unchanged; the approval is recorded in the code and in `docs/lessons/README.md`).
+  Only approved lessons are ever shown.
+- **Result page:** Biggest fix has a quiet "Learn how" to the matching lesson; no link when no approved lesson matches.
+  The `fixLesson` flag ("Lesson for this fix", Coming soon) is removed.
+- **Lesson page** `/lessons/[slug]`: why → explanation → examples → self-check drill (record and listen back in the
+  browser, checklist) → the black "Retry with this goal" (the same retry, goal carried over). Mock mode (`?demo=`,
+  `?anchor=`) and real attempts (`?attempt=`, owner only).
+- **Mock evaluator:** an answer whose every sentence talks about the picture is off topic; a question answered in one
+  sentence of at most 6 words is `minimal`. Two new demo keys for the lesson demos (`picture.<task>`, `bare.<task>`,
+  "Advice from someone" only). The demo student's attempts are unchanged.
+- **Tests:** `src/content/lessons/lessons.test.ts`, `src/features/lessons/choose.test.ts` (including: lesson examples
+  never use the retry task's topic, all 3 lessons × all 7 Part 2 tasks), more in `mock-pages.test.ts`,
+  `view-model.test.ts` and `e2e/mock-mode.spec.ts`.
+
 ## Preview alias: `claude/mock` (never merge)
 
 `claude/mock` is **only a short alias** for a Vercel Preview of `claude/mock-mode-vercel-preview-8uzlim`, created at

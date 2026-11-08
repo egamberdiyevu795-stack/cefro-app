@@ -182,7 +182,7 @@ test.describe("mock mode (?mock=1)", () => {
     await page.goto("/dashboard?mock=1");
     const nav = page.getByRole("navigation", { name: "Main" });
     await expect(nav.locator("a, button, [role=img]")).toHaveCount(5);
-    for (const name of ["Home", "Practice", "Lessons", "History", "Account"]) await expect(nav.getByRole(name === "Lessons" ? "button" : "link", { name })).toBeVisible();
+    for (const name of ["Home", "Practice", "Lessons", "History", "Account"]) await expect(nav.getByRole("link", { name })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
     await nav.getByRole("link", { name: "Account" }).click();
     await expect(page).toHaveURL(/\/profile\?mock=1$/);

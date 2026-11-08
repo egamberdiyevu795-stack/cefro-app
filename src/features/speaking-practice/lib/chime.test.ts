@@ -76,6 +76,27 @@ describe("start-of-speaking chime (Web Audio, no file)", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("a suspended output that never resumes does not block recording", async () => {
+    vi.useFakeTimers();
+    try {
+      class StuckContext extends audio.FakeContext {
+        state = "suspended";
+        resume() {
+          return new Promise<void>(() => undefined); // never settles
+        }
+      }
+      vi.stubGlobal("AudioContext", StuckContext);
+      const { playChime, primeChime } = await import("./chime");
+      primeChime();
+      let done = false;
+      void playChime().then(() => (done = true));
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("no Web Audio: nothing happens and it still resolves", async () => {
     vi.stubGlobal("AudioContext", undefined);
     const { playChime, primeChime } = await import("./chime");

@@ -21,6 +21,15 @@ const attempt = (id: string, status: AttemptView["status"] = "processing"): Atte
 });
 
 describe("practiceReducer", () => {
+  it("the spoken introduction comes between the brief and preparation, and only from a brief", () => {
+    const intro = practiceReducer(initialPracticeState, { type: "introStarted" });
+    expect(intro.phase).toEqual({ kind: "intro" });
+    expect(practiceReducer(intro, { type: "preparationStarted", now: 1_000, preparationMs: 60_000 }).phase).toEqual({ kind: "preparing", endsAt: 61_000 });
+    const preparing = practiceReducer(intro, { type: "preparationStarted", now: 0, preparationMs: 60_000 });
+    expect(practiceReducer(preparing, { type: "introStarted" })).toBe(preparing);
+    expect(practiceReducer(intro, { type: "backToBrief" }).phase).toEqual({ kind: "brief" });
+  });
+
   it("a retry that finishes loading late never pulls the student out of preparation or recording", () => {
     const preparing = practiceReducer(initialPracticeState, { type: "preparationStarted", now: 1000, preparationMs: 60_000 });
     expect(practiceReducer(preparing, { type: "retryRequested", attempt: attempt("a", "completed") })).toBe(preparing);

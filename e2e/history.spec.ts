@@ -1,4 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import { shortPartIntros } from "./short-intro";
+
+// The Part 2 / Part 3 spoken introductions are shortened (e2e/short-intro.ts).
+test.beforeEach(async ({ context }) => {
+  await shortPartIntros(context);
+});
 
 const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
 const BLACK = ".bg-primary.text-on-primary";

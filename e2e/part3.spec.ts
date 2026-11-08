@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { shortPartIntros } from "./short-intro";
 
 /*
  * Part 3 in mock mode (Part 3 is not live), at 390 px: topic list → brief → preparation, where the student ticks two
@@ -12,18 +13,6 @@ const BLACK = ":is(a, button).bg-primary.text-on-primary";
 const CARS = "c1-part3-cars-in-city-centres";
 
 test.use({ viewport: { width: 390, height: 844 } });
-
-/**
- * The spoken introduction is real-time audio (about 25 s). The main test serves a short Part 1 file in its place, so
- * the part starts after a few seconds; the introduction itself is checked by the unit tests and the "plays by itself"
- * test below.
- */
-async function shortIntro(page: Page) {
-  await page.route("**/audio/speaking/part3/**/intro.wav", async (route) => {
-    const url = new URL("/audio/speaking/part1/a2-part1-1-daily-life/v1/q1.wav", route.request().url()).toString();
-    await route.fulfill({ response: await route.fetch({ url }) });
-  });
-}
 
 function watch(page: Page) {
   const apiCalls: string[] = [];
@@ -82,7 +71,7 @@ async function audit(page: Page, blacks: number) {
 
 test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal goal, retry, Goal met", async ({ page }) => {
   const seen = watch(page);
-  await shortIntro(page);
+  await shortPartIntros(page);
 
   await page.goto("/practice/part3?mock=1");
   await expect(page.getByRole("heading", { name: "Balanced argument" })).toBeVisible();
@@ -96,9 +85,10 @@ test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal go
   await audit(page, 1);
   await start.click();
 
-  // The spoken introduction (its text on screen too), no button; preparation starts by itself after the chime.
+  // The spoken introduction on its own screen (its text too), no button; preparation starts by itself after the chime.
   await expect(page.getByTestId("part3-intro")).toBeVisible();
-  await expect(page.getByTestId("intro-text")).toContainText("The statement is: Cities should ban private cars from their centres.");
+  await expect(page.getByTestId("intro-text")).toContainText("Choose two points from each list");
+  await expect(page.getByText("Cities should ban private cars from their centres.")).toHaveCount(0);
   await audit(page, 0);
 
   // Preparation: tick two per side; a third on a side is not possible. No black button.
@@ -153,8 +143,8 @@ test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal go
 test("the real introduction plays, then preparation and recording start by themselves and end with the chime", async ({ page }) => {
   test.setTimeout(120_000);
   const seen = watch(page);
-  const intro = page.waitForResponse((r) => r.url().endsWith(`/audio/speaking/part3/${CARS}/v1/intro.wav`) && r.ok());
-  // 60 s / 120 s at 0.05: 3 s of preparation and 6 s of speaking. The introduction is the real file (about 25 s).
+  const intro = page.waitForResponse((r) => r.url().endsWith("/audio/speaking/part3/intro/v1/intro.wav") && r.ok());
+  // 60 s / 120 s at 0.05: 3 s of preparation and 6 s of speaking. The introduction is the real file (about 21 s).
   await page.goto(`/practice/part3/${CARS}?mock=1&timeScale=0.05`);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await intro;
@@ -163,6 +153,23 @@ test("the real introduction plays, then preparation and recording start by thems
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible({ timeout: 15_000 });
   // Time is up: recording stops by itself, the chime sounds, then the demo Scoring….
   await expect(page).toHaveURL(/\/result\/part3\?demo=p3\.c1-part3-cars-in-city-centres\.[^&]*&state=scoring&next=1&mock=1$/, { timeout: 20_000 });
+  expect(seen.apiCalls).toEqual([]);
+});
+
+test("Part 2 (mock mode): the real introduction plays on its own screen, then the chime and the minute of preparation", async ({ page }) => {
+  test.setTimeout(90_000);
+  const seen = watch(page);
+  const intro = page.waitForResponse((r) => r.url().endsWith("/audio/speaking/part2/intro/v1/intro.wav") && r.ok());
+  await page.goto("/practice/speaking/b2-part2-advice-from-someone?mock=1");
+  await page.getByRole("button", { name: "Start preparation" }).click();
+  await intro;
+  await expect(page.getByTestId("part2-intro")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Part 2", exact: true })).toBeVisible();
+  await expect(page.getByTestId("intro-text")).toContainText("a picture and three questions");
+  await audit(page, 0);
+  // About 15 s of speech, then the chime, then the task with the one-minute countdown.
+  await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByTestId("part2-intro")).toHaveCount(0);
   expect(seen.apiCalls).toEqual([]);
 });
 

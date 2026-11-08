@@ -1,7 +1,8 @@
 # Part 3 plan: official Question 8 (balanced argument, target C1, band 0–6)
 
-Status: **plan closed.** No code has been changed. All decisions are recorded in [section 5](#5-decisions).
-Implementation waits until Part 2 is merged and live-tested, the same as Part 1.
+Status: **plan closed; built in mock mode on `claude/part3`** (see [section 10](#10-built-on-claudepart3)). All
+decisions are recorded in [section 5](#5-decisions). Part 3 stays off (`PART_LIVE["3"] = false`) until the live
+anchor run.
 
 Part 3 reuses the Part 2 design ([`ARCHITECTURE.md` › AI evaluation](ARCHITECTURE.md#ai-evaluation)): **the model
 judges, with exact quotes; code computes the band.** What changes is *what* is judged. Part 2 counts answered
@@ -609,3 +610,60 @@ needs its overlap numbers measured and recorded as in section 6 before it is use
 | International events are expensive and last only weeks | Success at home inspires young people to take up sport |
 | Local clubs are where new talent is found | New stadiums, roads and hotels remain after the event |
 
+
+---
+
+## 10. Built on `claude/part3`
+
+Part 3 exists in **mock mode only** (`?mock=1`); `PART_LIVE["3"]` is off and the home page and dashboard say "Coming
+soon". See docs/design-system.md, "Part 3 (mock mode only)", and docs/merge-order.md.
+
+### Overlap measured on the topic 2 and 3 anchors (section 9 asks for it)
+
+From `prompt-overlap.ts` with the thresholds of section 6; anchors in `test/evaluation-samples/part3-anchors.ts`
+(made up, test-only). Every code level agrees with the expected model level, so no anchor raises a flag; on every A1
+the override condition holds (it agrees with the model).
+
+| Text | tokens | copied_ratio | points_read | novel words | named runs | code level |
+| --- | --- | --- | --- | --- | --- | --- |
+| T2 A0 | 42 | 0.00 | 0 | 16 | 0 | heavily_dependent |
+| T2 A1 | 81 | **0.81** | **6** | 3 | 0 | reads_prompts |
+| T2 A2 | 88 | **0.20** | 1 | 19 | 3 | heavily_dependent |
+| T2 A3 | 118 | 0.00 | 0 | 49 | 0 | own_development |
+| T2 A4 | 120 | 0.00 | 0 | 50 | 0 | own_development |
+| T2 A5 | 181 | 0.00 | 0 | 78 | 1 | own_development |
+| T2 R1 | 127 | 0.00 | 0 | 50 | 2 | own_development |
+| T3 A0 | 46 | 0.00 | 0 | 17 | 0 | heavily_dependent |
+| T3 A1 | 87 | **0.83** | **6** | 3 | 0 | reads_prompts |
+| T3 A2 | 95 | **0.38** | **3** | 15 | 1 | heavily_dependent |
+| T3 A3 | 113 | 0.00 | 0 | 48 | 0 | own_development |
+| T3 A4 | 132 | 0.00 | 0 | 49 | 0 | own_development |
+| T3 A5 | 172 | 0.00 | 0 | 71 | 1 | own_development |
+| T3 R1 | 125 | 0.00 | 0 | 41 | 2 | own_development |
+
+T2 A2 sits exactly on the 0.20 threshold (and below 25 novel words), so it is a borderline case for the threshold
+review (decision 6).
+
+### Part 3: what the plan says and this branch does not do yet
+
+1. **`SpeakingTask` is not a union yet** (section 1). Part 3 tasks are their own type (`BalancedArgumentTask`) in their
+   own registry, so no Part 2 code, stored snapshot or API changed while Part 3 is off. The union comes with the real
+   attempt flow.
+2. **The shared ladder refactor is not done** (decision 1, section 7). Part 3 has its own ladder and best-fit function
+   (`domain/evaluation/q8/levels.ts`, the same arithmetic); Part 2's `FEATURE_LEVELS`, scorer and stored results are
+   untouched. The Part 3 config is its own schema (`q8/rubric-config.ts`), not a union inside `rubric-config.ts`.
+3. **Band-6 gate:** the same rule as Part 2's `above_target_requires`, configured in `multilevel_q8.json`, but
+   applied by the Part 3 scorer (the Part 2 function is written for Part 2's caps).
+4. **A `rebutted` flag was added to the point judgement** (section 3's schema has none). Without it the scorer cannot
+   tell a side that was only rebutted from one that was only named, which section 4 (item 4) needs for "Before you
+   argue against a point, give one real reason that supports it."
+5. **Biggest fix for "no point addressed":** section 4 lists `section_coverage` before `feature` on ties, but anchor 0
+   expects the feature fix. Applied as: `section_coverage` when coverage is one side, or none with language at B1 or
+   above; below-B1 language with nothing addressed gets the feature fix (anchor 0).
+6. **No real model and no audio step for Part 3.** The Part 3 prompt is written but has never been sent to a model
+   (no Gemini calls on this branch); the Gemini and Anthropic providers are still hard-wired to Part 2's schema. The
+   audio step judges on Part 2's ladder, so Part 3 results have pronunciation "not assessed" and are provisional.
+7. **No real attempt flow:** no attempts API, storage, History, dashboard band or teacher view for Part 3, and no
+   prompt fingerprint fixture. The pages are mock-only and 404 without `?mock=1`.
+8. **The student chooses points in the app** (not in the plan): during the minute of preparation they tick two per
+   side. The choice is stored with the result (`chosen_points`) for feedback only; the evaluator judges what was said.

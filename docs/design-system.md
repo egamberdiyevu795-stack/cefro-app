@@ -741,3 +741,38 @@ Built from docs/teacher-plan.md. Real pages and APIs are a 404 while `TEACHER_LI
 - **Checks:** `src/features/teacher/teacher-pages.test.ts` (each screen: black buttons, no text under 11 px, only
   `?mock=1` links, nothing read from the database, cookies or identity; real pages 404) and `e2e/teacher-view.spec.ts`
   (the whole loop at 390 px with a WCAG AA contrast check on every text).
+
+## Part 3 (mock mode only)
+
+Part 3 (official Question 8, balanced argument, target C1, band 0–6; docs/part3-plan.md) is built **in mock mode
+only**. `PART_LIVE["3"]` stays off: the dashboard tile and the home page keep "Coming soon", and every Part 3 page is a
+404 without `?mock=1`.
+
+- **Addresses:** topics `/practice/part3?mock=1`; a topic `/practice/part3/<task id>?mock=1` (`&retry=<demo key>` for a
+  retry); a result `/result/part3?demo=<key>&mock=1` (`&state=scoring&next=1`: Scoring… first). Demo keys:
+  `p3.<task id>.<points>[.<points>…]`, one point list per attempt (`features/part3/links.ts`).
+- **Brief:** "Speaking · Part 3 · Practice" (or "Retry"), the topic, the four instructions, Prepare 1 min / Speak 2 min,
+  the goal of a retry, the grey "Check microphone", the black **"Start preparation"**. Beside it: the statement and both
+  lists (F1–F3, A1–A3).
+- **Preparation = choosing:** the 1-minute countdown, "Tick two points in each list…", "FOR n of 2 · AGAINST n of 2"
+  (a live status), the quiet "Start speaking now" (no black button). Each point is a native checkbox with a 44 px row;
+  a third tick on a side is disabled. Ticked rows are `well`, unticked `card` with a `line` ring.
+- **Recording:** as Part 2 (indicator, level meter, countdown, early-finish warning), the black **"Finish"**; the lists
+  show the chosen points with a tick and the word "Chosen" (never colour alone).
+- **Result (phone order):** Result (Part 3 · Band n · label, the statement, the 0–6 band meter with the target at 5,
+  the distance to C1, "Pronunciation wasn't checked") → **Your points** (FOR / AGAINST, each point with a glyph and a
+  word: Developed / Stated, no reason / Stated, then argued against / Not used / Misread; "You chose this point"; the
+  student's quote; "Choose two points from each list." as a `Notice` when a side has fewer than two; "Good extra
+  argument" for own points) → Biggest fix (one black **"Retry with this goal"**) → **Words from the list** (the
+  sentences copied from the lists, measured in code) → Skills (C1 ladder) → Your answer (copied runs marked with a
+  `well` background and a dotted underline, plus "(from the list)" for screen readers). Desktop: [result, biggest fix,
+  answer] | [points, words from the list, skills]. A retry shows "Band 4 → 5", lime "+1 band" and "Goal met" / "Not yet".
+- **Demo answers** follow the points ticked: a first answer develops the FOR points and only rebuts the AGAINST ones
+  (band 4, goal "Before you argue against a point, give one real reason that supports it."); the retry develops all of
+  them (band 5, "Goal met" when the goal's point is among them).
+- **Components:** `features/part3/` (`screens.tsx`, `Part3Practice.tsx`, `result-sections.tsx`, `view-model.ts`,
+  `links.ts`); reuses `PracticeLayout`, `GoalCard`, `MicCheck`, `Countdown`, `LevelMeter`, `MicrophoneState`,
+  `BandMeter`, `ScoringResult`, `AutoAdvance`. No new tokens or icons.
+- **Checks:** `src/features/part3/part3.test.ts` (every screen: black buttons, no text under 11 px; pages only in mock
+  mode, only `?mock=1` links, nothing real touched), `e2e/part3.spec.ts` (the loop at 390 px with AA contrast, no
+  horizontal scroll, no API call; 404 without `?mock=1`; "Coming soon" kept).

@@ -70,7 +70,7 @@ export const strengthSchema = z.object({
   note: z.string().min(1).describe("One short sentence: what is good about it."),
 });
 
-const retryReviewSchema = z.object({
+export const retryReviewSchema = z.object({
   objectives: z.array(
     z.object({
       objective: z.string().min(1),

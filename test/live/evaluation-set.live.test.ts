@@ -139,7 +139,7 @@ function inputFor(
 /** One line: band, per-feature levels, question statuses, zero reason and biggest fix. */
 function judgements(r: MultilevelResult): string {
   const s = r.scoring;
-  const features = FEATURES.filter((f) => f !== "pronunciation").map((f) => `${f}=${r.assessment.features[f].level}`).join(", ");
+  const features = FEATURES.filter((f) => f !== "pronunciation").map((f) => `${f}=${r.assessment.features[f]!.level}`).join(", ");
   const questions = r.assessment.questions.map((q) => `Q${q.id}=${q.status}`).join(", ");
   const fix = s.biggest_fix.kind === "feature" ? s.biggest_fix.feature : s.biggest_fix.kind === "question_coverage" ? `Q${s.biggest_fix.question_id}` : "own words";
   return `band ${s.band} · language ${s.language_level} (mean ${s.language_mean}; ${features}) · ${s.on_topic_count}/3 on topic (${questions})${s.zero_reason ? ` · zero: ${s.zero_reason}` : ""} · fix: ${fix}`;
@@ -178,11 +178,11 @@ function softMisses(sample: EvaluationSample, r: MultilevelResult): string[] {
   const band = r.scoring.band;
   if (band < e.band[0] || band > e.band[1]) misses.push(`band ${band} outside ${e.band[0]}–${e.band[1]}`);
   if (e.weakFeatures && !e.weakFeatures.some((f) => {
-    const l = r.assessment.features[f].level;
+    const l = r.assessment.features[f]!.level;
     return l !== "not_assessed" && levelValue(l) <= levelValue("B1");
   })) misses.push(`none of ${e.weakFeatures.join("/")} judged B1 or below`);
   for (const [f, level] of Object.entries(e.levels ?? {})) {
-    const actual = r.assessment.features[f as keyof typeof r.assessment.features].level;
+    const actual = r.assessment.features[f as keyof typeof r.assessment.features]!.level;
     if (actual !== level) misses.push(`${f} ${actual} ≠ ${level}`);
   }
   if (e.biggestFix && !(r.scoring.biggest_fix.kind === "feature" && r.scoring.biggest_fix.feature === e.biggestFix)) misses.push(`biggest fix is not ${e.biggestFix}`);
@@ -272,7 +272,7 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
     const knownCosts = all.map(costOf).filter((c): c is number => c !== null);
     const totalCost = knownCosts.reduce((a, c) => a + c, 0);
     const levelsOf = (e: SpeakingEvaluation) =>
-      FEATURES.filter((f) => f !== "pronunciation").map((f) => e.result.assessment.features[f].level).join(" / ");
+      FEATURES.filter((f) => f !== "pronunciation").map((f) => e.result.assessment.features[f]!.level).join(" / ");
     const questionsOf = (e: SpeakingEvaluation) => e.result.assessment.questions.map((q) => `Q${q.id} ${q.status}`).join(", ");
     const runRows = rows.flatMap((r) =>
       r.runs.map((e, i) => {
@@ -289,7 +289,7 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
     const fmt = (r: Row) => {
       const bands = bandsOf(r);
       const e = r.runs[0]?.result;
-      const levels = e ? FEATURES.filter((f) => f !== "pronunciation").map((f) => e.assessment.features[f].level).join(" / ") : "—";
+      const levels = e ? FEATURES.filter((f) => f !== "pronunciation").map((f) => e.assessment.features[f]!.level).join(" / ") : "—";
       const questions = e ? e.assessment.questions.map((q) => q.status).join(", ") : "—";
       return `| ${r.id} | ${r.expected} | ${bands.join(", ") || "—"}${r.errors.length ? ` (+${r.errors.length} failed)` : ""} | ${unstable(r) ? "**UNSTABLE**" : "stable"} | ${levels} | ${questions} | ${r.misses.length ? "✗" : "✓"} |`;
     };

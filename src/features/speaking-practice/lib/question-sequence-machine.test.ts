@@ -14,8 +14,8 @@ import {
   type SequenceState,
 } from "./question-sequence-machine";
 
-const part11: SequenceConfig = { questions: a2Part11DailyLife.questions, timeScale: 1 };
-const part12: SequenceConfig = { questions: b1Part12Shopping.questions, timeScale: 1 };
+const part11: SequenceConfig = { questions: a2Part11DailyLife.delivery!.questions, timeScale: 1 };
+const part12: SequenceConfig = { questions: b1Part12Shopping.delivery!.questions, timeScale: 1 };
 
 function run(state: SequenceState, ...actions: SequenceAction[]): SequenceState {
   return actions.reduce(sequenceReducer, state);

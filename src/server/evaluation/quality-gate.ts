@@ -1,5 +1,5 @@
 import { isQuoteInTranscript } from "@/domain/evaluation/evidence";
-import { levelValue, NOT_ASSESSED } from "@/domain/evaluation/multilevel/levels";
+import { FEATURES, FEATURE_LEVELS, levelValue, NOT_ASSESSED, QUESTION_STATUSES, type Feature, type LevelLadder, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
 
 /**
@@ -12,6 +12,8 @@ import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model
  *   internal field names, missing or generic advice) trigger one controlled regeneration, then a graceful failure;
  * - "warn" violations are repaired in place (an unverifiable quote is removed, a strength below B2 is dropped) and
  *   recorded in the stored quality report.
+ * - output outside the rubric's own shape (a level name not on its ladder, a question status it does not allow, a
+ *   feature it does not rate or a missing one) is rejected: e.g. "partial" or "minimal" in Part 1.1.
  *
  * Quotes are checked STRICTLY: word for word against the verbatim transcript (only case, punctuation and fillers are
  * ignored), so a "corrected" quote never passes as the student's words.
@@ -28,7 +30,11 @@ export type QualityCode =
   | "pronunciation_from_transcript"
   | "pronunciation_claim"
   | "internal_field_leak"
-  | "strength_below_b2"
+  | "strength_below_target"
+  | "status_not_allowed"
+  | "level_not_on_scale"
+  | "feature_not_rated"
+  | "feature_missing"
   | "model_answer_missing"
   | "model_answer_too_long"
   | "unknown_error_pattern"
@@ -59,9 +65,12 @@ export interface QualityContext {
   /** Number of questions in the task (ids must be exactly 1..questionCount). */
   questionCount: number;
   hasPreviousAttempt: boolean;
+  /** The rubric's own shape. Defaults to Part 2's (all five features and statuses, below_B1 … above_B2). */
+  rubric?: { levels: LevelLadder; features: readonly Feature[]; question_statuses: readonly QuestionStatus[] };
 }
 
-const TEXT_FEATURES = ["grammar", "vocabulary", "fluency", "cohesion"] as const;
+type TextFeature = "grammar" | "vocabulary" | "fluency" | "cohesion";
+const TEXT_FEATURES: readonly TextFeature[] = ["grammar", "vocabulary", "fluency", "cohesion"];
 /** A model answer is a short example, not a showcase (the v2 runs showed long "better versions" turning showy). */
 const MAX_MODEL_ANSWER_WORDS = 40;
 /** Features whose level must be backed by quotes (fluency may rest on the speech metrics alone). */
@@ -78,6 +87,30 @@ export function applyQualityGate(
 
   // Work on a deep copy; repairs never mutate the model output object.
   const result: MultilevelModelOutput = structuredClone(input);
+  const rubric = context.rubric ?? { levels: FEATURE_LEVELS, features: FEATURES, question_statuses: QUESTION_STATUSES };
+  const ladder = rubric.levels;
+  const onLadder = (level: string) => (ladder as readonly string[]).includes(level);
+  const textFeatures = TEXT_FEATURES.filter((f) => rubric.features.includes(f));
+
+  // ── The rubric's own shape: its statuses, its levels, its features ──
+  result.questions.forEach((q, i) => {
+    if (!rubric.question_statuses.includes(q.status)) {
+      add("reject", "status_not_allowed", `questions[${i}].status`, `Status "${q.status}" is not allowed by this rubric (${rubric.question_statuses.join(", ")}).`);
+    }
+  });
+  for (const feature of TEXT_FEATURES) {
+    const f = result.features[feature];
+    if (!rubric.features.includes(feature)) {
+      if (f) add("reject", "feature_not_rated", `features.${feature}`, `This rubric does not rate ${feature}.`);
+      delete result.features[feature as "cohesion"];
+      continue;
+    }
+    if (!f) add("reject", "feature_missing", `features.${feature}`, `No judgement for ${feature}.`);
+    else if (!onLadder(f.level)) add("reject", "level_not_on_scale", `features.${feature}.level`, `Level "${f.level}" is not on this rubric's scale (${ladder.join(", ")}).`);
+  }
+  if (violations.some((v) => v.severity === "reject")) {
+    return { result, report: { passed: false, violations } };
+  }
 
   // ── Questions: exactly 1..n, each once (one 1-based numbering everywhere) ──
   const ids = result.questions.map((q) => q.id).sort((a, b) => a - b);
@@ -102,8 +135,8 @@ export function applyQualityGate(
   });
 
   // ── Feature evidence ────────────────────────────────────────────────
-  for (const feature of TEXT_FEATURES) {
-    const f = result.features[feature];
+  for (const feature of textFeatures) {
+    const f = result.features[feature]!;
     const given = f.evidence.length;
     f.evidence = f.evidence.filter((quote, i) => {
       const ok = found(quote);
@@ -171,8 +204,9 @@ export function applyQualityGate(
       add("warn", "quote_not_found", `strengths[${i}].quote`, `Removed strength with unverifiable quote: "${truncate(strength.quote)}"`);
       return false;
     }
-    if (levelValue(result.features[strength.feature].level) < levelValue("B2")) {
-      add("warn", "strength_below_b2", `strengths[${i}]`, `Removed: ${strength.feature} was judged ${result.features[strength.feature].level}.`);
+    const judged = result.features[strength.feature];
+    if (!judged || levelValue(judged.level, ladder) < 2) {
+      add("warn", "strength_below_target", `strengths[${i}]`, `Removed: ${strength.feature} was judged ${judged?.level ?? "not rated"}, below ${ladder[2]}.`);
       return false;
     }
     return true;
@@ -212,6 +246,7 @@ function studentTexts(result: MultilevelModelOutput): [string, string][] {
   result.questions.forEach((q, i) => out.push([`questions[${i}].note`, `${q.note} ${q.model_answer}`]));
   for (const feature of TEXT_FEATURES) {
     const f = result.features[feature];
+    if (!f) continue;
     out.push([`features.${feature}.note`, f.note], [`features.${feature}.how_to_improve`, f.how_to_improve], [`features.${feature}.how_to_check`, f.how_to_check]);
   }
   result.strengths.forEach((s, i) => out.push([`strengths[${i}].note`, s.note]));
@@ -292,7 +327,7 @@ function hasSpecifics(text: string): boolean {
 
 /** Names of fields the evaluator is given as data (metrics, schema); they are not student vocabulary. */
 export const INTERNAL_FIELD_NAMES =
-  /\b(timeUsedRatio|wordsPerMinute|lexicalVariety|fillerCount|wordCount|speakingSeconds|repeatedPhrases|repeatedWords|speech_metrics?|memorized_or_irrelevant|how_to_improve|how_to_check|on_topic|off_topic|not_assessed|above_B2|below_B1)\b/;
+  /\b(timeUsedRatio|wordsPerMinute|lexicalVariety|fillerCount|wordCount|speakingSeconds|repeatedPhrases|repeatedWords|speech_metrics?|memorized_or_irrelevant|how_to_improve|how_to_check|on_topic|off_topic|not_assessed|above_B2|below_B1|above_B1|below_A2|above_A2|below_A1)\b/;
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;

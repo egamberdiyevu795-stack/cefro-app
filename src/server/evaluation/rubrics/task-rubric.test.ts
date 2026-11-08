@@ -25,9 +25,9 @@ describe("task type and rubric boundary", () => {
   it("loads the official Question 7 descriptors verbatim", () => {
     const { config } = getSpeakingRubric(task);
     expect(config.official_question).toBe(7);
-    expect(config.descriptors.B2.fluency).toBe("Some pausing while searching for vocabulary but this does not put a strain on the listener.");
-    expect(config.descriptors.B1.vocabulary).toBe("Limitations in vocabulary make it difficult to deal fully with the task.");
-    expect(config.descriptors.below_B1.cohesion).toBe("Cohesion between ideas is limited. Responses tend to be a list of points.");
+    expect(config.descriptors.B2!.fluency).toBe("Some pausing while searching for vocabulary but this does not put a strain on the listener.");
+    expect(config.descriptors.B1!.vocabulary).toBe("Limitations in vocabulary make it difficult to deal fully with the task.");
+    expect(config.descriptors.below_B1!.cohesion).toBe("Cohesion between ideas is limited. Responses tend to be a list of points.");
   });
 
   it("is the Q7 task: three numbered questions", () => {

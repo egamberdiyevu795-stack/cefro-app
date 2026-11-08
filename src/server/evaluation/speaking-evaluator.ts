@@ -1,9 +1,9 @@
 import "server-only";
 import { scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
-import { tokenizeWords } from "@/domain/speaking/metrics";
-import { FEATURES, type Feature } from "@/domain/evaluation/multilevel/levels";
+import { contentWords, tokenizeWords } from "@/domain/speaking/metrics";
+import { isOnTopic, type Feature } from "@/domain/evaluation/multilevel/levels";
 import { multilevelModelOutputSchema, type MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
-import { deriveRetryFocus, type FeatureSource, type MultilevelResult } from "@/domain/evaluation/multilevel/result";
+import { deriveRetryFocus, featureLevels, type FeatureSource, type MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { ProviderError } from "@/server/errors";
 import { logger } from "@/server/logging/logger";
 import { runAudioAssessment, type AudioOutcome } from "./audio-assessment";
@@ -71,11 +71,13 @@ export async function evaluateSpeaking(input: EvaluationInput, model: Evaluation
   const scoring = scoreBand(
     {
       questions: assessment.questions,
-      features: Object.fromEntries(FEATURES.map((f) => [f, assessment.features[f].level])) as Parameters<typeof scoreBand>[0]["features"],
+      features: featureLevels(assessment),
       memorizedOrIrrelevant: assessment.memorized_or_irrelevant,
       // Everything spoken counts towards the minimum, hesitation sounds included (owner decision: a hesitant but
       // real attempt is still a ratable sample; its fluency is judged separately).
       wordCount: tokenizeWords(input.transcript).length,
+      // Part 1.2's floor: counted by code from the verified evidence of the questions that count, not by the model.
+      relevantWordCount: relevantWordCount(assessment),
     },
     input.rubric.config,
   );
@@ -85,13 +87,16 @@ export async function evaluateSpeaking(input: EvaluationInput, model: Evaluation
     part: input.rubric.config.part,
     official_question: input.rubric.config.official_question,
     assessment,
-    feature_sources: sources,
+    feature_sources: Object.fromEntries(input.rubric.config.features.map((f) => [f, sources[f]])) as Partial<Record<Feature, FeatureSource>>,
     audio:
       audio.status === "assessed"
         ? { status: "assessed", reason: null, provider: audio.provider, model: audio.model }
         : { status: "not_assessed", reason: audio.reason, provider: audio.provider, model: audio.model },
     scoring,
-    retry_focus: deriveRetryFocus(assessment, scoring, input.task.prompts),
+    retry_focus: deriveRetryFocus(assessment, scoring, input.task.prompts, {
+      firstQuestionNumber: input.rubric.config.first_question_number,
+      partialHints: input.task.delivery?.questions.map((q) => q.partialHint),
+    }),
   };
 
   const audioTokens = audio.status === "assessed" ? { input: audio.inputTokens, output: audio.outputTokens } : { input: null, output: null };
@@ -165,6 +170,7 @@ async function evaluateTranscript(input: EvaluationInput, model: EvaluationModel
     const { result, report } = applyQualityGate(validated, {
       transcript: input.transcript,
       questionCount: input.rubric.config.question_count,
+      rubric: input.rubric.config,
       hasPreviousAttempt: input.previousAttempt !== null,
       metrics: { speakingSeconds: input.metrics.speakingSeconds, wordCount: input.metrics.wordCount },
     });
@@ -215,6 +221,14 @@ export function mergeAudio(output: MultilevelModelOutput, audio: AudioOutcome): 
       fluency: { ...output.features.fluency, level: fluency.level, note: fluency.note || output.features.fluency.note },
     },
   };
+}
+
+/**
+ * Relevant words: the words inside the (verified, exact) evidence quotes of the questions that count as on topic,
+ * hesitation sounds excluded (docs/part1-plan.md §2, Part 1.2's min_relevant_words).
+ */
+export function relevantWordCount(assessment: Pick<MultilevelModelOutput, "questions">): number {
+  return assessment.questions.filter((q) => isOnTopic(q.status)).reduce((sum, q) => sum + contentWords(q.evidence).length, 0);
 }
 
 function featureSources(audio: AudioOutcome): Record<Feature, FeatureSource> {

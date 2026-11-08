@@ -32,7 +32,7 @@ const TASKS: TaskInfo[] = [{ id: TASK, title: "Advice from someone", part: 2, le
 /** A saved live result (A2 run 1 = band 2, A3 = band 3, A4 = band 4), optionally with other skill levels. */
 function result(anchor = "A2-b1-all-three", levels?: Partial<Record<(typeof FEATURES)[number], PronunciationLevel>>): MultilevelResult {
   const r = structuredClone(LIVE_36_FLASH_FIXTURES[anchor].runs[0].evaluation.result as MultilevelResult);
-  for (const [feature, level] of Object.entries(levels ?? {})) r.assessment.features[feature as (typeof FEATURES)[number]].level = level as never;
+  for (const [feature, level] of Object.entries(levels ?? {})) r.assessment.features[feature as (typeof FEATURES)[number]]!.level = level as never;
   return r;
 }
 

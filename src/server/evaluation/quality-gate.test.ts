@@ -162,12 +162,12 @@ describe("quality gate (Multilevel)", () => {
     output.strengths = [{ feature: "grammar", quote: "I think phones are good", note: "Correct sentence." }];
     const { result, report } = gate(output);
     expect(result.strengths).toEqual([]);
-    expect(report.violations.map((v) => v.code)).toContain("strength_below_b2");
+    expect(report.violations.map((v) => v.code)).toContain("strength_below_target");
   });
 
   it("requires a concrete fix for every assessed feature", () => {
     const empty = makeModelOutput();
-    empty.features.cohesion.how_to_improve = " ";
+    empty.features.cohesion!.how_to_improve = " ";
     expect(codes(empty)).toContain("reject:missing_fix");
     const generic = makeModelOutput();
     generic.features.vocabulary.how_to_improve = "Use more advanced vocabulary.";

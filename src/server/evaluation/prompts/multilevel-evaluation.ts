@@ -2,6 +2,7 @@ import "server-only";
 import { FEATURE_LABELS } from "@/domain/evaluation/multilevel/levels";
 import type { QualityViolation } from "../quality-gate";
 import type { EvaluationInput, EvaluationPrompt } from "../types";
+import { buildPart1EvaluationPrompt } from "./multilevel-part1-evaluation";
 
 /**
  * CEFRO Multilevel evaluation prompt (evaluator 3.x), for any part described by a Multilevel rubric config.
@@ -15,6 +16,8 @@ import type { EvaluationInput, EvaluationPrompt } from "../types";
  * Changing either means bumping EVALUATOR_VERSION (see versions.ts).
  */
 export function buildMultilevelEvaluationPrompt(input: EvaluationInput): EvaluationPrompt {
+  // Part 1 has its own prompt, built only from its rubric; Part 2's below is unchanged.
+  if (input.rubric.config.part === 1) return buildPart1EvaluationPrompt(input);
   return { system: buildSystem(input), user: buildUser(input) };
 }
 
@@ -34,9 +37,9 @@ function descriptorBlock(input: EvaluationInput): string {
   const { descriptors } = input.rubric.config;
   return JUDGED_FEATURES.map(
     (f) => `${f} (${FEATURE_LABELS[f]})
-- B2: ${descriptors.B2[f]}
-- B1: ${descriptors.B1[f]}
-- below_B1 (reference): ${descriptors.below_B1[f]}`,
+- B2: ${descriptors.B2?.[f]}
+- B1: ${descriptors.B1?.[f]}
+- below_B1 (reference): ${descriptors.below_B1?.[f]}`,
   ).join("\n\n");
 }
 

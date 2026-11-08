@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { multilevelModelOutputSchema, providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
 
 function collectKeys(node: unknown, found = new Set<string>()): Set<string> {
@@ -16,7 +16,7 @@ function collectKeys(node: unknown, found = new Set<string>()): Set<string> {
 }
 
 describe("toGeminiJsonSchema", () => {
-  const schema = toGeminiJsonSchema(multilevelModelOutputSchema) as {
+  const schema = toGeminiJsonSchema(providerOutputSchema()) as {
     type: string;
     required: string[];
     properties: Record<string, { type?: string; description?: string; anyOf?: unknown[] }>;

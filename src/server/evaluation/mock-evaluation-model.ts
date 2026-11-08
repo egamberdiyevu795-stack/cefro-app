@@ -3,6 +3,7 @@ import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
 import { mockIsMinimal, mockIsPictureOnly } from "./mock-answer-rules";
+import { mockPart1Output } from "./mock-part1-rules";
 import { MOCK_QUESTION_KEYWORDS } from "./mock-question-keywords";
 import type { EvaluationInput, EvaluationModel, ModelEvaluationOutput } from "./types";
 
@@ -26,7 +27,9 @@ export class MockEvaluationModel implements EvaluationModel {
   async evaluate(_prompt: unknown, input: EvaluationInput): Promise<ModelEvaluationOutput> {
     const delayMs = this.options.delayMs ?? 1200;
     if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
-    return { output: buildHeuristicResult(input), provider: this.provider, model: this.model, inputTokens: null, outputTokens: null };
+    // Part 1 has rules of its own (mock-part1-rules.ts), on its own ladder.
+    const output = input.rubric.config.part === 1 ? mockPart1Output(input) : buildHeuristicResult(input);
+    return { output, provider: this.provider, model: this.model, inputTokens: null, outputTokens: null };
   }
 }
 

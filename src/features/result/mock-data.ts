@@ -12,7 +12,7 @@
  *   &next=1        on "Scoring…": open the result after a few seconds (mock mode of the practice page)
  */
 import { scoreBand } from "@/domain/evaluation/multilevel/band-scoring";
-import { FEATURES } from "@/domain/evaluation/multilevel/levels";
+import { featureLevels } from "@/domain/evaluation/multilevel/result";
 import type { BandScoringConfig } from "@/domain/evaluation/multilevel/rubric-config";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -174,7 +174,7 @@ export function mockResultSource(selection: MockSelection, task: PublicSpeakingT
       const scoring = scoreBand(
         {
           questions: assessment.questions,
-          features: Object.fromEntries(FEATURES.map((f) => [f, assessment.features[f].level])) as Parameters<typeof scoreBand>[0]["features"],
+          features: featureLevels(assessment),
           memorizedOrIrrelevant: assessment.memorized_or_irrelevant,
           wordCount: countWords(TOO_SHORT_TRANSCRIPT),
         },

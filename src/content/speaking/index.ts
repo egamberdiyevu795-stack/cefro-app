@@ -6,6 +6,7 @@ import { b2Part2HappyDay } from "./b2/part-2-happy-day";
 import { b2Part2ImportantDecision } from "./b2/part-2-important-decision";
 import { b2Part2TryingAndFailing } from "./b2/part-2-trying-and-failing";
 import { b2Part2WorkingInATeam } from "./b2/part-2-working-in-a-team";
+import { PART1_SPEAKING_TASKS } from "./part1";
 
 /**
  * Registry of available speaking tasks.
@@ -25,10 +26,19 @@ const TASKS: readonly SpeakingTask[] = [
   b2Part2HappyDay,
 ];
 
+/**
+ * The tasks of the parts on the task list (Part 2). Part 1 tasks are left out until their parts are live
+ * (`PART_LIVE`), so the task list, the dashboard's Practise next and the demo student never offer them.
+ */
 export function listSpeakingTasks(): readonly SpeakingTask[] {
   return TASKS;
 }
 
+/** Every task, Part 1 included (Part 1.1 and 1.2 open only in mock mode while their parts are not live). */
+export function listAllSpeakingTasks(): readonly SpeakingTask[] {
+  return [...PART1_SPEAKING_TASKS, ...TASKS];
+}
+
 export function getSpeakingTask(id: string): SpeakingTask | undefined {
-  return TASKS.find((task) => task.id === id);
+  return TASKS.find((task) => task.id === id) ?? PART1_SPEAKING_TASKS.find((task) => task.id === id);
 }

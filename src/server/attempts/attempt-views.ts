@@ -52,7 +52,8 @@ export function toAttemptView(
     transcript: transcript
       ? { text: transcript.text, provider: transcript.provider, model: transcript.model }
       : null,
-    metrics: (attempt.metrics as SpeechMetrics | null) ?? null,
+    // Before transcription a Part 1 attempt's metrics hold only its question offsets: not speech metrics yet.
+    metrics: typeof (attempt.metrics as SpeechMetrics | null)?.wordCount === "number" ? (attempt.metrics as SpeechMetrics) : null,
     evaluation:
       evaluation && attempt.status === "completed" && parsedEvaluation
         ? {

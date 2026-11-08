@@ -29,7 +29,7 @@ describe("live fixtures from gemini-3.6-flash (not the production model)", () =>
         const rescored = scoreBand(
           {
             questions: result.assessment.questions,
-            features: Object.fromEntries(FEATURES.map((feature) => [feature, result.assessment.features[feature].level])) as Parameters<typeof scoreBand>[0]["features"],
+            features: Object.fromEntries(FEATURES.map((feature) => [feature, result.assessment.features[feature]!.level])) as Parameters<typeof scoreBand>[0]["features"],
             memorizedOrIrrelevant: result.assessment.memorized_or_irrelevant,
             wordCount: tokenizeWords(anchor.transcript).length,
           },

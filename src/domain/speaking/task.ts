@@ -1,11 +1,48 @@
 import type { TargetLevel } from "@/domain/cefr";
+import type { CueSound, QuestionAudioSource, TimedQuestion } from "./question-sequence";
 
 /**
  * What kind of response a task asks for. It selects the evaluation approach together with `rubricId`.
- * Only "long_turn" (one topic, several questions, one extended answer: Multilevel Part 2 / official Question 7)
- * exists; new kinds are added here when their content, rubric and evaluator contract are designed, not before.
+ * - "long_turn": one topic, several questions, one extended answer (Multilevel Part 2 / official Question 7).
+ * - "short_answers": three familiar questions, read one after another, 30 s each (Part 1.1, Questions 1–3).
+ * - "picture_questions": two pictures on one topic and three questions about them (Part 1.2, Questions 4–6).
+ * A closed union: new kinds are added when their content, rubric and evaluator contract are designed, not before.
  */
-export type SpeakingTaskType = "long_turn";
+export type SpeakingTaskType = "long_turn" | "short_answers" | "picture_questions";
+
+/**
+ * A picture of a Part 1.2 task (docs/part1-plan.md §1, "Pictures"). Original or freely licensed only; every field
+ * is required (a unit test fails otherwise).
+ */
+export interface LicensedImage {
+  /** Path under /public. */
+  src: string;
+  /** What it shows, in plain words: the alt text, and what the evaluator is told the picture shows. */
+  alt: string;
+  width: number;
+  height: number;
+  author: string;
+  /** Where it comes from: the URL of a freely licensed image, or the path of CEFRO's own file. */
+  sourceUrl: string;
+  licence: string;
+  /** When it was taken from its source (YYYY-MM-DD). */
+  retrievedAt: string;
+}
+
+/**
+ * Part 1 delivery (docs/part1-plan.md §1): questions read aloud one after another inside one recording. Timings live
+ * here, never as literals in components or the evaluator.
+ */
+export interface QuestionDelivery {
+  /** One per question, in the same order as `prompts` (their `text` equals the prompt). */
+  questions: TimedQuestion[];
+  /** Official number of the first question ("Question 4" in Part 1.2). */
+  firstQuestionNumber: number;
+  /** The "start speaking" chime. */
+  chime: CueSound;
+  /** Where the question audio comes from (voice and generator settings). */
+  audioSource: QuestionAudioSource;
+}
 
 /**
  * A picture shown with the questions (official Part 2 shows one). It only sets the scene: the student answers the
@@ -31,7 +68,7 @@ export interface TaskPicture {
 }
 
 /** Identifies a rubric in the server's rubric registry (`server/evaluation/rubrics`). */
-export type RubricId = "multilevel-q7";
+export type RubricId = "multilevel-q7" | "multilevel-q1-3" | "multilevel-q4-6";
 
 /**
  * A speaking task as authored in the content layer (`src/content`).
@@ -64,6 +101,10 @@ export interface SpeakingTask {
   prompts: string[];
   /** Optional picture shown beside the questions on every screen (brief, preparation, recording, retry). */
   picture?: TaskPicture;
+  /** Part 1.2: the two pictures, on screen from Question 4 to the end of Question 6. */
+  images?: LicensedImage[];
+  /** Part 1: the questions are read aloud and timed one by one inside one recording. */
+  delivery?: QuestionDelivery;
   /** Student-facing instructions, shown before preparation. */
   instructions: string[];
   preparationSeconds: number;
@@ -83,4 +124,9 @@ export function toPublicTask(task: SpeakingTask): PublicSpeakingTask {
   const { evaluatorGuidance: _omit, ...publicTask } = task;
   void _omit;
   return publicTask;
+}
+
+/** The number a question is shown with ("Question 4" for the first question of Part 1.2). `index` is 0-based. */
+export function questionNumber(task: Pick<SpeakingTask, "delivery">, index: number): number {
+  return (task.delivery?.firstQuestionNumber ?? 1) + index;
 }

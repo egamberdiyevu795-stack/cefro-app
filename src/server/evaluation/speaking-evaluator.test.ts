@@ -121,7 +121,7 @@ describe("evaluateSpeaking", () => {
 
   it("names the missing question by its real number when coverage limits the band", async () => {
     const output = makeModelOutput();
-    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f].level = "B2";
+    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f]!.level = "B2";
     const { result } = await evaluateSpeaking(input, modelReturning([output]));
     expect(result.scoring).toMatchObject({ band: 3, topic_cap: 3, language_cap: 4, meets_target: true, biggest_fix: { kind: "question_coverage", question_id: 3 } });
     expect(result.retry_focus[0].objective).toBe('Answer question 3: "Do you think young people should always follow advice from older people? Why or why not?"');
@@ -129,7 +129,7 @@ describe("evaluateSpeaking", () => {
 
   it("makes fluency the biggest fix and the first retry focus when it is clearly the lowest feature", async () => {
     const output = makeModelOutput();
-    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f].level = "B1";
+    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f]!.level = "B1";
     output.features.fluency.level = "below_B1";
     const { result } = await evaluateSpeaking(input, modelReturning([output]));
     expect(result.scoring.biggest_fix).toEqual({ kind: "feature", feature: "fluency" });

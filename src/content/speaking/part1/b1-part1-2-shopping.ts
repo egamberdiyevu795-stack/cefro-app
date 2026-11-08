@@ -1,35 +1,83 @@
-import type { QuestionSequenceTask } from "@/domain/speaking/question-sequence";
+import type { SpeakingTask } from "@/domain/speaking/task";
 import { PART1_CHIME, PLACEHOLDER_AUDIO_SOURCE } from "./chime";
 
 const AUDIO = "/audio/speaking/part1/placeholder";
 
+const QUESTIONS = [
+  "Look at the two pictures. Describe them and say how they are different.",
+  "Why do many people like shopping at local markets?",
+  "Why do some people prefer big supermarkets?",
+];
+
+const CEFRO_PICTURE = {
+  width: 480,
+  height: 360,
+  author: "CEFRO (original illustration, 2026; not based on any existing image)",
+  licence: "© 2026 CEFRO. All rights reserved.",
+  retrievedAt: "2026-11-08",
+} as const;
+
 /**
- * Part 1.2 (Questions 4–6, two pictures on one topic). Official timings: 45 s + 30 s + 30 s, no preparation.
- * Our own topic and wording. The pictures (licensed, with source fields) come with the picture panel, not in this piece.
+ * Multilevel Part 1.2 (official Questions 4–6): two pictures on one topic, then three questions, target B1.
+ * Official timings (docs/part1-plan.md §1): 45 s + 30 s + 30 s, no preparation. Our own topic, wording and pictures.
  */
-export const b1Part12Shopping: QuestionSequenceTask = {
+export const b1Part12Shopping: SpeakingTask = {
   id: "b1-part1-2-shopping",
   version: 1,
-  part: "1.2",
+  level: "B1",
+  part: 1,
+  taskType: "picture_questions",
+  rubricId: "multilevel-q4-6",
   title: "Where people shop",
-  firstQuestionNumber: 4,
+  topic: "Shopping",
+  question: "Look at the two pictures and answer three questions about them.",
+  prompts: QUESTIONS,
+  images: [
+    {
+      ...CEFRO_PICTURE,
+      src: "/tasks/part1/local-market.svg",
+      sourceUrl: "public/tasks/part1/local-market.svg",
+      alt: "An open-air market: a seller in an apron stands behind a wooden stall with boxes of tomatoes, apples and green vegetables under a striped awning. A woman with a cloth bag points at the fruit.",
+    },
+    {
+      ...CEFRO_PICTURE,
+      src: "/tasks/part1/supermarket.svg",
+      sourceUrl: "public/tasks/part1/supermarket.svg",
+      alt: "Inside a large supermarket: long shelves full of packets and bottles under bright ceiling lights. A man pushes a full shopping trolley along the aisle towards the checkouts.",
+    },
+  ],
   instructions: [
     "You will see two pictures and hear three questions about them, one after another.",
     "After each question you hear a chime. Start speaking at the chime: 45 seconds for the first answer, 30 seconds for the others.",
     "There is no preparation time. The next question starts automatically.",
     "Headphones are recommended.",
   ],
-  questions: [
-    {
-      text: "Look at the two pictures. Describe them and say how they are different.",
-      audio: `${AUDIO}/part1-2-q4.wav`,
-      prepSeconds: 0,
-      speakingSeconds: 45,
-      partialHint: "Describes only one picture, or describes both without comparing them.",
-    },
-    { text: "Why do many people like shopping at local markets?", audio: `${AUDIO}/part1-2-q5.wav`, prepSeconds: 0, speakingSeconds: 30 },
-    { text: "Why do some people prefer big supermarkets?", audio: `${AUDIO}/part1-2-q6.wav`, prepSeconds: 0, speakingSeconds: 30 },
-  ],
-  chime: PART1_CHIME,
-  audioSource: PLACEHOLDER_AUDIO_SOURCE,
+  preparationSeconds: 0,
+  speakingSeconds: 105,
+  delivery: {
+    firstQuestionNumber: 4,
+    questions: [
+      {
+        text: QUESTIONS[0],
+        audio: `${AUDIO}/part1-2-q4.wav`,
+        prepSeconds: 0,
+        speakingSeconds: 45,
+        partialHint: "compare the two pictures",
+      },
+      { text: QUESTIONS[1], audio: `${AUDIO}/part1-2-q5.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[2], audio: `${AUDIO}/part1-2-q6.wav`, prepSeconds: 0, speakingSeconds: 30 },
+    ],
+    chime: PART1_CHIME,
+    audioSource: PLACEHOLDER_AUDIO_SOURCE,
+  },
+  evaluatorGuidance: [
+    "Picture A shows a small open-air market: a seller behind a wooden stall of fresh fruit and vegetables, a customer with a cloth bag, outdoors.",
+    "Picture B shows a large supermarket: long shelves of packaged goods and bottles, bright lights, a man pushing a full trolley indoors.",
+    "Question 4 (the student's first question) is on topic when the student describes BOTH pictures and compares them. Differences that count as a comparison: outdoors vs indoors, small vs big, fresh / loose food vs packets and bottles, talking to a seller vs serving yourself, a cloth bag vs a trolley, busy street vs quiet aisle.",
+    "Question 4 is partial when the student describes only one picture, or describes both without comparing them.",
+    "Question 5 asks why people like local markets (e.g. fresh food, lower prices, bargaining, knowing the seller, supporting local farmers).",
+    "Question 6 asks why some people prefer supermarkets (e.g. everything in one place, fixed prices, opening hours, parking, cards accepted, clean and cool inside).",
+    "A bare one-sentence answer with no reason or detail (e.g. 'Because it is cheap.') is partial in Part 1.2: it counts, but the feedback asks for a reason or detail.",
+    "Typical vocabulary at B1: fresh, price, cheap, expensive, choice, crowded, convenient, quality, stall, seller, trolley, checkout.",
+  ].join("\n"),
 };

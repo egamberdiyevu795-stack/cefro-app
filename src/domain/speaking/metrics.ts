@@ -21,6 +21,43 @@ export interface SpeechMetrics {
   repeatedWords?: { word: string; count: number }[];
   /** Share of the available speaking time that was used (0–1). */
   timeUsedRatio: number | null;
+  /**
+   * Part 1 (one recording per part): where each question's speaking window starts in the recording (ms, pauses
+   * removed: `[0, t2, t3]`), and the seconds used for each question, measured from those offsets.
+   */
+  questionOffsetsMs?: number[];
+  questionSeconds?: number[];
+}
+
+/**
+ * The start of each question's speaking window, as the browser sends it with a Part 1 upload: one per question,
+ * starting at 0, never decreasing, within the recording. Null for anything else.
+ */
+export function validQuestionOffsets(value: unknown, questionCount: number, durationMs: number): number[] | null {
+  if (!Array.isArray(value) || value.length !== questionCount) return null;
+  if (!value.every((n) => typeof n === "number" && Number.isInteger(n) && n >= 0)) return null;
+  const offsets = value as number[];
+  if (offsets[0] !== 0) return null;
+  for (let i = 1; i < offsets.length; i++) if (offsets[i] < offsets[i - 1]) return null;
+  // A little slack: the recorder's clock and the file's length are measured separately.
+  if (offsets.at(-1)! > durationMs + 2000) return null;
+  return offsets;
+}
+
+/** Seconds used for each question, from the offsets and the length of the whole recording. */
+export function questionSecondsFrom(offsetsMs: readonly number[], durationMs: number): number[] {
+  return offsetsMs.map((start, i) => Math.max(0, Math.round(((offsetsMs[i + 1] ?? durationMs) - start) / 1000)));
+}
+
+/** Adds a Part 1 recording's question offsets (and the time used per question) to its metrics. */
+export function withQuestionTimes(metrics: SpeechMetrics, offsetsMs: readonly number[] | null | undefined, durationMs: number): SpeechMetrics {
+  if (!offsetsMs?.length) return metrics;
+  return { ...metrics, questionOffsetsMs: [...offsetsMs], questionSeconds: questionSecondsFrom(offsetsMs, durationMs) };
+}
+
+/** Words of a text without hesitation sounds (um, uh …): what "relevant words" are counted in. */
+export function contentWords(text: string): string[] {
+  return tokenizeWords(text).filter((word) => !FILLERS.has(word));
 }
 
 const FILLERS = new Set(["um", "umm", "uh", "uhh", "er", "erm", "hmm", "ah", "eh"]);

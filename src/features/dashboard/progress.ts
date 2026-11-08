@@ -6,7 +6,8 @@
  * level, as on the result page), not an old-method result, not one still being scored.
  */
 import { bestFitLevel } from "@/domain/evaluation/multilevel/band-scoring";
-import { FEATURES, FEATURE_LABELS, FEATURE_LEVELS, LEVEL_LABELS, levelValue, type Feature, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
+import { FEATURES, FEATURE_LABELS, FEATURE_LEVELS, LEVEL_LABELS, ladderOf, levelValue, type Feature, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
+import { featureLevels } from "@/domain/evaluation/multilevel/result";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { EXAM_PART_IDS, examPartLabel, examPartListHref, examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt } from "@/domain/speaking/history";
@@ -44,13 +45,18 @@ export function middleLevel(levels: readonly FeatureLevel[]): FeatureLevel | nul
   return sorted.length % 2 === 1 ? sorted[mid] : bestFitLevel([sorted[mid - 1], sorted[mid]]).level;
 }
 
-/** Per skill, the middle value of the answers that assessed it (pronunciation is often not assessed: those are skipped). */
+/**
+ * Per skill, the middle value of the answers that assessed it (pronunciation is often not assessed: those are
+ * skipped). Only answers on Part 2's scale (below B1 … above B2) count: the dashboard's level is a B2-target level, and
+ * a Part 1 level (A1, A2 …) is on another ladder.
+ */
 export function skillLevels(results: readonly MultilevelResult[]): SkillLevels {
+  const onScale = results.filter((r) => ladderOf(Object.values(featureLevels(r.assessment))) === FEATURE_LEVELS);
   return Object.fromEntries(
     FEATURES.map((feature) => {
-      const assessed = results.flatMap((r) => {
-        const level = r.assessment.features[feature].level;
-        return level === "not_assessed" ? [] : [level as FeatureLevel];
+      const assessed = onScale.flatMap((r) => {
+        const level = r.assessment.features[feature]?.level;
+        return level === undefined || level === "not_assessed" ? [] : [level as FeatureLevel];
       });
       return [feature, middleLevel(assessed)];
     }),
@@ -134,7 +140,7 @@ export function radarAxes(skills: SkillLevels): RadarAxis[] {
   return RADAR_ORDER.map((feature) => ({
     label: FEATURE_LABELS[feature],
     short: SHORT_LABELS[feature],
-    value: skills[feature] === null ? null : FEATURE_LEVELS.indexOf(skills[feature]!),
+    value: skills[feature] === null ? null : levelValue(skills[feature]!),
   }));
 }
 
@@ -168,8 +174,12 @@ export function dashboardFix(
   const hasProblem = (a: ScoredAttempt): boolean => {
     const r = a.result;
     if (fix.kind === "feature") {
-      const level = r.assessment.features[fix.feature].level;
-      return level !== "not_assessed" && levelValue(level as FeatureLevel) < levelValue(context.target);
+      // Levels compare only on one scale: a Part 1 answer and a Part 2 answer never share "the same problem".
+      if (r.rubric_id !== latest.result.rubric_id) return false;
+      const ladder = ladderOf(Object.values(featureLevels(latest.result.assessment)));
+      const target = ladder === FEATURE_LEVELS ? context.target : ladder[2];
+      const level = r.assessment.features[fix.feature]?.level;
+      return level !== undefined && level !== "not_assessed" && levelValue(level as FeatureLevel, ladder) < levelValue(target, ladder);
     }
     if (fix.kind === "question_coverage") {
       if (a.taskId !== latest.taskId) return false;

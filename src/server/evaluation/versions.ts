@@ -75,6 +75,10 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   message gives the model what it shows (from its alt text), and the system prompt gains the picture rule: describing
  *   the picture does NOT answer any question, even when it uses the topic's words ("the man is giving advice to the
  *   girl"). New anchor A0-picture-only (band 0). Scoring, schema and gate unchanged; new prompt hash.
+ * - (no bump) Part 1.1 / 1.2 added (docs/part1-plan.md): per-rubric levels, features and question statuses, rubrics
+ *   multilevel-q1-3/1.0.0 and multilevel-q4-6/1.0.0, and a Part 1 prompt of its own. Part 2's prompt, provider schema,
+ *   scoring and gate results are byte-for-byte unchanged (tested: same prompt hash, same JSON schema), so stored Part 2
+ *   attempts keep their methodology; Part 1 results are told apart by their rubric version.
  */
 export const EVALUATOR_VERSION = "speaking-evaluator/3.5.0";
 

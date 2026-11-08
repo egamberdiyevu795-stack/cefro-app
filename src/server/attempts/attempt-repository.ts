@@ -42,6 +42,8 @@ export async function insertAttemptWithRecording(input: {
   task: SpeakingTask;
   previousAttemptId: string | null;
   retryFocus: RetryFocusItem[] | null;
+  /** Part 1: where each question's speaking window starts in the recording (kept in `metrics` until transcription). */
+  questionOffsetsMs?: number[] | null;
   recording: {
     storageProvider: string;
     storageKey: string;
@@ -71,6 +73,8 @@ export async function insertAttemptWithRecording(input: {
         attemptNumber: (current?.value ?? 0) + 1,
         previousAttemptId: input.previousAttemptId,
         retryFocus: input.retryFocus,
+        // No migration: the offsets wait in the metrics column, and transcription adds the speech metrics to them.
+        ...(input.questionOffsetsMs ? { metrics: { questionOffsetsMs: input.questionOffsetsMs } } : {}),
         status: "uploaded",
         createdAt: now,
         updatedAt: now,

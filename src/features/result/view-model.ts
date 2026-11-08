@@ -7,8 +7,9 @@
  *
  * The quality-gate report (`evaluation.quality`) is optional and never read: the page needs nothing from it.
  */
-import { FEATURES, FEATURE_LABELS, LEVEL_LABELS, levelValue, type Feature, type FeatureLevel, type PronunciationLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
-import type { MultilevelResult, MultilevelRetryFocus } from "@/domain/evaluation/multilevel/result";
+import { FEATURES, FEATURE_LABELS, LEVEL_LABELS, ladderOf, levelValue, type Feature, type FeatureLevel, type PronunciationLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
+import { featureLevels, type MultilevelResult, type MultilevelRetryFocus } from "@/domain/evaluation/multilevel/result";
+import { examPartLabel, examPartOfResult, firstQuestionNumberOfResult } from "@/domain/speaking/exam-part";
 import type { AttemptFailure, AttemptStatus } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import type { SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
@@ -21,7 +22,7 @@ export type BandLabel = { band: number; label: string };
 
 /** Everything the page needs about one attempt, in the shapes the pipeline already stores. */
 export interface ResultSource {
-  task: Pick<PublicSpeakingTask, "id" | "title" | "part" | "prompts">;
+  task: Pick<PublicSpeakingTask, "id" | "title" | "part" | "prompts"> & Partial<Pick<PublicSpeakingTask, "delivery">>;
   status: AttemptStatus;
   failure: AttemptFailure | null;
   recordingDurationMs: number;
@@ -97,12 +98,16 @@ export type QuestionVerdict = "answered" | "partly" | "not_counted";
 
 export interface QuestionRow {
   id: number;
+  /** The number the student saw ("Question 4" for the first question of Part 1.2). */
+  number: number;
   prompt: string;
   verdict: QuestionVerdict;
   /** "Answered", "Partly answered", "Not answered", "Off topic", "Too short to count". */
   verdictLabel: string;
   /** One line: the evaluator's note on what the student said. */
   reason: string;
+  /** A partly answered question's own hint, word for word from the task (Part 1.2 Question 4: "compare the two pictures"). */
+  hint: string | null;
 }
 
 export interface BiggestFixView {
@@ -157,6 +162,8 @@ export interface RetryComparison {
 export interface ResultView {
   taskTitle: string;
   part: number;
+  /** "Part 2", "Part 1.1", "Part 1.2". */
+  partLabel: string;
   band: number;
   bandMax: number;
   bandLabel: string;
@@ -198,7 +205,7 @@ const AUDIO_REASON: Record<NonNullable<MultilevelResult["audio"]["reason"]>, str
 export function buildResultView(
   result: MultilevelResult,
   ctx: {
-    task: Pick<PublicSpeakingTask, "title" | "prompts">;
+    task: Pick<PublicSpeakingTask, "title" | "prompts"> & Partial<Pick<PublicSpeakingTask, "delivery">>;
     transcript: string;
     durationMs: number;
     bandLabels: readonly BandLabel[];
@@ -210,14 +217,18 @@ export function buildResultView(
   const targetLabel = ctx.bandLabels.find((b) => b.band === s.target_band)?.label ?? `Band ${s.target_band}`;
   const distance = s.target_band - s.band;
   const prev = ctx.previous ?? null;
+  const examPart = examPartOfResult(result);
+  const partLabel = examPart ? examPartLabel(examPart) : `Part ${result.part}`;
+  const first = firstQuestionNumberOfResult(result);
 
   return {
     taskTitle: ctx.task.title,
     part: result.part,
+    partLabel,
     band: s.band,
     bandMax: s.band_max,
     bandLabel: s.label,
-    headline: `Part ${result.part} · Band ${s.band} · ${s.label}`,
+    headline: `${partLabel} · Band ${s.band} · ${s.label}`,
     target: {
       band: s.target_band,
       label: targetLabel,
@@ -227,16 +238,22 @@ export function buildResultView(
     },
     provisional: s.provisional,
     zeroReason: s.zero_reason,
-    questions: result.assessment.questions.map((q) => ({
-      id: q.id,
-      prompt: ctx.task.prompts[q.id - 1] ?? `Question ${q.id}`,
-      verdict: VERDICT[q.status].verdict,
-      verdictLabel: VERDICT[q.status].label,
-      reason: q.note,
-    })),
+    questions: result.assessment.questions.map((q) => {
+      const hint = q.status === "partial" ? ctx.task.delivery?.questions[q.id - 1]?.partialHint : undefined;
+      return {
+        id: q.id,
+        number: first + q.id - 1,
+        prompt: ctx.task.prompts[q.id - 1] ?? `Question ${first + q.id - 1}`,
+        verdict: VERDICT[q.status].verdict,
+        verdictLabel: VERDICT[q.status].label,
+        reason: q.note,
+        hint: hint ? `Next time, ${hint}.` : null,
+      };
+    }),
     fix: biggestFix(result, ctx.task.prompts, ctx.transcript),
     patterns: patternRows(result),
-    skills: FEATURES.map((feature) => skillRow(result, feature, prev)),
+    // Only the part's own skills (Part 1.1 has no cohesion).
+    skills: FEATURES.filter((feature) => result.assessment.features[feature]).map((feature) => skillRow(result, feature, prev)),
     pronunciationNote: result.audio.status === "not_assessed" ? AUDIO_REASON[result.audio.reason ?? "disabled"] : null,
     transcript: ctx.transcript,
     durationMs: ctx.durationMs,
@@ -274,7 +291,7 @@ function skillQuote(result: MultilevelResult, feature: Feature): { quote: string
   const a = result.assessment;
   const strengths = a.strengths.filter((s) => s.feature === feature);
   const errors = a.errors.filter((e) => e.type === feature);
-  const first = a.features[feature].evidence[0];
+  const first = a.features[feature]?.evidence[0];
   if (first) {
     const good = strengths.some((s) => sameWords(s.quote, first));
     const bad = errors.some((e) => sameWords(e.quote, first));
@@ -302,9 +319,10 @@ function patternRows(result: MultilevelResult): PatternRow[] {
 }
 
 function skillRow(result: MultilevelResult, feature: Feature, prev: MultilevelResult | null): SkillRow {
-  const f = result.assessment.features[feature];
+  const f = result.assessment.features[feature]!;
   const level = assessedLevel(f.level);
-  const prevLevel = prev ? assessedLevel(prev.assessment.features[feature].level) : null;
+  const prevFeature = prev?.assessment.features[feature];
+  const prevLevel = prevFeature ? assessedLevel(prevFeature.level) : null;
   return {
     feature,
     name: FEATURE_LABELS[feature],
@@ -342,8 +360,8 @@ export function biggestFix(result: MultilevelResult, prompts: readonly string[],
     check: focus?.success_check ?? null,
   });
 
-  if (fix.kind === "feature") {
-    const f = a.features[fix.feature];
+  if (fix.kind === "feature" && a.features[fix.feature]) {
+    const f = a.features[fix.feature]!;
     const level = assessedLevel(f.level);
     const label = `${FEATURE_LABELS[fix.feature]}${level ? ` · ${LEVEL_LABELS[level]}` : ""}`;
     const error = a.errors.find((e) => e.type === fix.feature);
@@ -372,8 +390,9 @@ export function biggestFix(result: MultilevelResult, prompts: readonly string[],
 
   if (fix.kind === "question_coverage") {
     const q = a.questions.find((x) => x.id === fix.question_id);
-    const prompt = prompts[fix.question_id - 1] ?? `Question ${fix.question_id}`;
-    const label = `Question ${fix.question_id} · ${q ? VERDICT[q.status].label : "Not answered"}`;
+    const shown = firstQuestionNumberOfResult(result) + fix.question_id - 1;
+    const prompt = prompts[fix.question_id - 1] ?? `Question ${shown}`;
+    const label = `Question ${shown} · ${q ? VERDICT[q.status].label : "Not answered"}`;
     const said = q?.evidence.trim();
     return withGoal({
       label,
@@ -392,7 +411,7 @@ export function biggestFix(result: MultilevelResult, prompts: readonly string[],
     quoteLabel: "You said",
     quote: firstSentence(transcript),
     adviceLabel: "Try instead",
-    tryInstead: example || "Start by answering question 1 directly, in your own words.",
+    tryInstead: example || `Start by answering question ${firstQuestionNumberOfResult(result)} directly, in your own words.`,
   });
 }
 
@@ -408,9 +427,12 @@ export function compareWithPrevious(prev: MultilevelResult, current: MultilevelR
   else if (focus) {
     const t = focus.target;
     if (t.kind === "feature") {
-      const before = assessedLevel(prev.assessment.features[t.feature].level);
-      const after = assessedLevel(current.assessment.features[t.feature].level);
-      goal = before && after ? (levelValue(after) > levelValue(before) ? "met" : "not_met") : null;
+      const beforeFeature = prev.assessment.features[t.feature];
+      const afterFeature = current.assessment.features[t.feature];
+      const before = beforeFeature ? assessedLevel(beforeFeature.level) : null;
+      const after = afterFeature ? assessedLevel(afterFeature.level) : null;
+      const ladder = ladderOf([...Object.values(featureLevels(prev.assessment)), ...Object.values(featureLevels(current.assessment))]);
+      goal = before && after ? (levelValue(after, ladder) > levelValue(before, ladder) ? "met" : "not_met") : null;
     } else if (t.kind === "question") {
       const status = current.assessment.questions.find((q) => q.id === t.question_id)?.status;
       goal = status === "on_topic" ? "met" : status === "partial" ? "partly" : "not_met";

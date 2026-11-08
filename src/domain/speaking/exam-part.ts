@@ -32,3 +32,23 @@ export function examPartAnchor(part: ExamPartId): string {
 export function examPartListHref(part: ExamPartId): string {
   return `/practice#${examPartAnchor(part)}`;
 }
+
+/** What a stored result's rubric says about where it belongs (results carry `part` 1 for both halves of Part 1). */
+const RUBRIC_PARTS: Record<string, { part: ExamPartId; firstQuestionNumber: number }> = {
+  "multilevel-q1-3": { part: "1.1", firstQuestionNumber: 1 },
+  "multilevel-q4-6": { part: "1.2", firstQuestionNumber: 4 },
+  "multilevel-q7": { part: "2", firstQuestionNumber: 1 },
+};
+
+/** The exam part of a stored result ("1.1", "1.2", "2" …), from its rubric id; falls back to its part number. */
+export function examPartOfResult(result: { rubric_id: string; part: number }): ExamPartId | null {
+  const known = RUBRIC_PARTS[result.rubric_id]?.part;
+  if (known) return known;
+  const id = String(result.part);
+  return isExamPartId(id) ? id : null;
+}
+
+/** The number the student saw for a result's first question (Part 1.2 starts at Question 4). */
+export function firstQuestionNumberOfResult(result: { rubric_id: string }): number {
+  return RUBRIC_PARTS[result.rubric_id]?.firstQuestionNumber ?? 1;
+}

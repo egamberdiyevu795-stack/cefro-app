@@ -96,7 +96,7 @@ export function makeMultilevelResult(output: MultilevelModelOutput = makeModelOu
   const scoring = scoreBand(
     {
       questions: output.questions,
-      features: Object.fromEntries(FEATURES.map((f) => [f, output.features[f].level])) as Parameters<typeof scoreBand>[0]["features"],
+      features: Object.fromEntries(FEATURES.map((f) => [f, output.features[f]!.level])) as Parameters<typeof scoreBand>[0]["features"],
       memorizedOrIrrelevant: output.memorized_or_irrelevant,
     },
     Q7_CONFIG,

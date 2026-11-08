@@ -7,7 +7,7 @@ import { compareAttempts } from "./comparison";
 /** Fixture output with some feature levels / question statuses changed (band is recomputed). */
 function attempt(levels: Partial<Record<"grammar" | "vocabulary" | "fluency" | "cohesion", FeatureLevel>> = {}, answered = 2, reviewed = false): MultilevelResult {
   const output = makeModelOutput();
-  for (const [f, level] of Object.entries(levels)) output.features[f as keyof typeof levels].level = level;
+  for (const [f, level] of Object.entries(levels)) output.features[f as keyof typeof levels]!.level = level;
   output.questions = output.questions.map((q) => ({ ...q, status: q.id <= answered ? "on_topic" : "missing" }));
   if (reviewed) {
     output.retry_review = {

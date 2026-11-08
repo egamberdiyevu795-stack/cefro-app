@@ -129,6 +129,28 @@ test("home links: Start practising and Sign in (mock mode keeps ?mock=1)", async
   }
 });
 
+test("the home page ends with the small grey 'Built by' line, under the status list", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?mock=1");
+  const line = page.getByTestId("built-by");
+  await expect(line).toHaveText("Built by a student in Tashkent for UZBMB candidates.");
+  const { size, below, last, color } = await line.evaluate((el) => {
+    const status = document.querySelector("[data-testid=exam-status]")!.getBoundingClientRect();
+    const main = document.querySelector("main")!;
+    const texts = [...main.querySelectorAll("*")].filter((n) => n.children.length === 0 && n.textContent?.trim());
+    return {
+      size: parseFloat(getComputedStyle(el).fontSize),
+      below: el.getBoundingClientRect().top >= status.bottom,
+      last: texts[texts.length - 1] === el,
+      color: getComputedStyle(el).color,
+    };
+  });
+  expect(size).toBeGreaterThanOrEqual(11);
+  expect(below).toBe(true);
+  expect(last).toBe(true);
+  expect(color).toBe("rgb(94, 95, 100)"); // fg-muted: 5.26:1 on the page, AA (the 390 px audit measures it too)
+});
+
 test("the exam-parts list follows the release switches (PART_LIVE), and no page text says Part 2 elsewhere", async ({ page }) => {
   await page.goto("/?mock=1");
   const status = page.getByTestId("exam-status");

@@ -8,9 +8,10 @@ import { isMultilevel } from "@/domain/evaluation/stored";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import type { SpeakingTask } from "@/domain/speaking/task";
-import { withMock } from "@/features/demo/demo-mode";
+import { isMockQuery, mockLink, withMock } from "@/features/demo/demo-mode";
 import { lessonForResult, lessonWhy } from "@/features/lessons/choose";
 import { LessonView } from "@/features/lessons/LessonView";
+import { PART2_HREF } from "@/features/profile/view-model";
 import { evaluationOf, mockAttemptKey } from "@/features/result/mock-data";
 import { AppShell } from "@/features/shell/AppShell";
 import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
@@ -38,21 +39,38 @@ type Query = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 /*
- * The lesson for a result's biggest fix (docs/teaching-plan.md). v1 has no lesson library: a lesson is opened only
- * from a result whose biggest fix leads to it, so the address names that result:
+ * A lesson (docs/teaching-plan.md). Opened from a result whose biggest fix leads to it, the address names that result:
  *
  *   ?demo=<demo key>              a demo result of mock mode (server/demo/demo-data.ts)
  *   ?anchor=<fixture id>&run=1..3 a saved live run (the /result prototype)
  *   ?attempt=<attempt id>         a real attempt: its owner only, exactly as /result/[attemptId] (404 for anyone else)
  *
  * The first two are mock data (no database, no configuration, every link keeps ?mock=1). Only an approved lesson is
- * ever shown, and only the one the result leads to: anything else is the not-found screen.
+ * ever shown, and from a result only the one the result leads to: anything else is the not-found screen.
  * "Retry with this goal" opens the same retry as the result page's button, so the goal is carried over.
+ *
+ * With none of the three (opened from the Lessons list, /lessons): the lesson without a result. No "Why this lesson",
+ * no goal and no retry; the back link goes to the list and the black button is "Go to Part 2" (the Part 2 task list).
+ * `?mock=1` keeps every link in mock mode; without it the page is a real page (configuration check, no database).
  */
 export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">) {
   const [{ lessonId }, query] = await Promise.all([props.params, props.searchParams]);
   const lesson = getShownLesson(lessonId);
   if (!lesson) notFound();
+
+  if (!namesResult(query)) {
+    // From the Lessons list: the lesson without a result.
+    const mock = isMockQuery(query);
+    if (!mock) {
+      await connection();
+      assertServerConfigured();
+    }
+    return (
+      <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/lessons">
+        <LessonView lesson={lesson} from={null} listHref={mockLink("/lessons", mock)} practiseHref={mockLink(PART2_HREF, mock)} demo={mock} />
+      </AppShell>
+    );
+  }
 
   const context = await lessonContext(query);
   if (!context || lessonForResult(context.result)?.slug !== lesson.slug) notFound();
@@ -64,15 +82,24 @@ export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">
     <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/lessons">
       <LessonView
         lesson={lesson}
-        why={lessonWhy(lesson, result, task.prompts)}
-        task={{ title: task.title }}
-        goal={focus ? { objective: focus.objective, check: focus.success_check || null } : null}
-        retryHref={context.retryHref}
-        resultHref={context.resultHref}
+        from={{
+          why: lessonWhy(lesson, result, task.prompts),
+          task: { title: task.title },
+          goal: focus ? { objective: focus.objective, check: focus.success_check || null } : null,
+          retryHref: context.retryHref,
+          resultHref: context.resultHref,
+        }}
+        listHref={mockLink("/lessons", mock)}
+        practiseHref={mockLink(PART2_HREF, mock)}
         demo={mock}
       />
     </AppShell>
   );
+}
+
+/** Does the address name a result (demo, saved run or real attempt)? A present but wrong one is still not found. */
+function namesResult(query: Query): boolean {
+  return ["demo", "anchor", "run", "attempt"].some((key) => query[key] !== undefined);
 }
 
 async function lessonContext(query: Query): Promise<LessonContext | null> {

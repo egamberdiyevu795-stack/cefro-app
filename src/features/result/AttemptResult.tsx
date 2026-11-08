@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FeatureFlags } from "@/config/features";
 import { isMultilevel } from "@/domain/evaluation/stored";
 import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -31,14 +30,12 @@ export function AttemptResult({
   previous,
   task,
   bandLabels,
-  flags,
 }: {
   initial: AttemptView;
   /** The attempt this one retries, when it is one (for "Band 2 → 3", the goal and the comparison). */
   previous: AttemptView | null;
   task: PublicSpeakingTask;
   bandLabels: readonly BandLabel[];
-  flags: FeatureFlags;
 }) {
   const router = useRouter();
   const [attempt, setAttempt] = useState(initial);
@@ -140,7 +137,6 @@ export function AttemptResult({
       const live = polling.attempt ?? attempt;
       return (
         <ScoringResult
-          flags={flags}
           notice={
             polling.connectionError
               ? "We're having trouble checking on your answer. We'll keep trying."
@@ -158,7 +154,6 @@ export function AttemptResult({
         <ScoredResult
           view={view.view}
           task={task}
-          flags={flags}
           audio={audio}
           retryHref={retryWithGoal}
           lesson={lesson ? { href: lessonHref(lesson, { attempt: attempt.id }), title: lesson.title } : null}
@@ -170,7 +165,7 @@ export function AttemptResult({
       );
     }
     case "not_scored":
-      return <NotScoredResult state={view} flags={flags} audio={audio} recordHref={recordAgain} />;
+      return <NotScoredResult state={view} audio={audio} recordHref={recordAgain} />;
     case "failed":
       return <FailedResult state={view} recordHref={recordAgain} onTryAgain={() => void restart()} isRetrying={isRestarting} retryError={restartError} />;
   }

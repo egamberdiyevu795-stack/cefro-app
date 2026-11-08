@@ -10,6 +10,12 @@ the one it depends on.
 | 3 | One-tap sign-in (Google or Telegram) | Phase 1 | Not started |
 | 4 | Full mock exam | All three parts live | Not started |
 
+## Pricing decision
+
+Pricing decision (Asadbek, 2026-11-08): pilot with about 10 students, free. Later a low price that covers server and AI
+costs plus a small profit, based on real cost per student. Early testers are treated fairly. No price or 'free' claim
+on any page until Asadbek confirms.
+
 ## Phase 1: signed-out pages redesign
 
 Home (`/`), sign in (`/login`) and Create account (`/register`) on the design system only

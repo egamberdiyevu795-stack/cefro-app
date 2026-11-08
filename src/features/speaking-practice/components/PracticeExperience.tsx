@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { DemoLabel } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
-import type { FeatureFlags } from "@/config/features";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import { ScoringResult } from "@/features/result/sections";
@@ -55,13 +54,11 @@ function newClientAttemptId(): string {
  */
 export function PracticeExperience({
   task,
-  flags,
   mock = null,
   initialRetryOf = null,
   retryAttemptId = null,
 }: {
   task: PublicSpeakingTask;
-  flags: FeatureFlags;
   /** Mock mode; `retry` is the saved run a mock retry comes from, `demoRetry` the demo result (features/demo). */
   mock?: { retry: MockAttemptKey | null; demoRetry?: string | null } | null;
   /** Open as a retry of this attempt (mock mode builds it from a saved run). */
@@ -342,7 +339,6 @@ export function PracticeExperience({
 
   const scoring = (status: AttemptView["status"] | null) => (
     <ScoringResult
-      flags={flags}
       state={{
         kind: "scoring",
         task,

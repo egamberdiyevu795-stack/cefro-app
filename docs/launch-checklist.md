@@ -1,6 +1,7 @@
 # Launch checklist: merging the chain into `main`
 
 Checked 2026-11-07 on `claude/integration-chgcwb`, cut from `claude/landing` at `b528b15`; `main` at `b597b4f`.
+**Updated 2026-11-08 on `claude/launch-cleanup`** (cut from `claude/integration-chgcwb`): sections 2, 3, 6, 9 and 10.
 **Nothing was merged, deployed or migrated on a hosted database, and no paid API was called** (mock providers only;
 no API key was present). Read with `docs/merge-order.md` (what each branch contains) and `docs/DEPLOY_VERCEL.md`
 (the pipeline).
@@ -23,15 +24,17 @@ is only proven by the `check` stage below.
 ## 2. Problems found
 
 1. **Three branches are not in `landing`** (above). Not a blocker: merge them separately, any time.
-2. **The six new Part 2 tasks' anchor answers are not wired into any live test.**
-   `test/evaluation-samples/part2-new-task-anchors.ts` is used only by its own unit test; `npm run eval:live` runs the
-   "Advice from someone" anchors only. So the new tasks cannot be live-checked until someone adds them to
-   `test/live/evaluation-set.live.test.ts` (or a sibling).
+2. ~~The six new Part 2 tasks' anchor answers are not wired into any live test.~~ **Fixed on `claude/launch-cleanup`:**
+   the 12 answers run in `test/live/evaluation-set.live.test.ts`, each with its own task, exact band on every run
+   (`npm run eval:live:new-tasks`). **Not run yet** (no model was called). See section 6.
 3. **The evaluator in this chain (3.5.0, rubric `multilevel-q7/2.1.0`) has never run on the production model
    `gemini-3.8-flash`.** The saved runs are `gemini-3.6-flash`, transcript only. See section 6.
-4. `docs/DEPLOY_VERCEL.md` "First rollout" still quotes "0 of 5 / 5 migrations"; with this chain it is 7.
-5. Old release on the new schema (needed for rollback) was **reasoned, not run**: both new migrations only add tables
-   and nullable / defaulted columns, and the old code names its columns explicitly, so it ignores the new ones.
+4. ~~`docs/DEPLOY_VERCEL.md` "First rollout" still quotes "0 of 5 / 5 migrations".~~ **Fixed:** it no longer
+   hard-codes a count ("N migrations", N = the entries in the migration journal; 7 with this chain).
+5. Old release on the new schema (needed for rollback): **run on 2026-11-08**, see section 9. `main`'s own unit and
+   browser tests pass on a database migrated to `0006`, except 4 tests that assert the old migration count / table
+   list. **New finding:** `main`'s `db:migrate --check` refuses a database that is ahead of it, so the old release
+   can be restored with Vercel Instant Rollback, but **not** by re-running the old commit through the pipeline.
 
 ## 3. Merge order and commands
 
@@ -63,8 +66,10 @@ Each step is a **merge commit, never squash or rebase-merge** (`merge-order.md`,
 | 19 | `claude/landing` | |
 | any | `claude/part1-plan`, `claude/lucid-euler-460531`, `claude/sleepy-hypatia-rp7db1` | docs / unused module |
 
-**Never merge:** `claude/entry-pages-jgh558`, `claude/lessons-adi79w`, `claude/mock`, `claude/integration-chgcwb`
-(this branch: one doc on top of `landing`; copy the doc instead, or merge it last).
+| 20 | `claude/integration-chgcwb` | docs only (this file) |
+| 21 | `claude/launch-cleanup` | no migration; see `merge-order.md` |
+
+**Never merge:** `claude/entry-pages-jgh558`, `claude/lessons-adi79w`, `claude/mock`.
 **Not now:** `claude/part1-player` (needs the `CountdownRing` fix, `merge-order.md`).
 
 Commands (from a clean clone; or the same order as GitHub PRs with "Create a merge commit"):
@@ -76,15 +81,15 @@ for b in compassionate-johnson-odu08r friendly-darwin-l73xx9 design-system-dashb
          part2-practice-flow real-result-page history-page dashboard-real-data cefro-part-2-tasks-yfr6x5 \
          review-dashboard-real-data-4jikaa mock-mode-vercel-preview-8uzlim upbeat-ride-2eymyu wave1-lesson-drafts \
          lessons profile-settings teacher-plan-v7fp7j teacher-view-kd6wdk entry-pages landing \
-         part1-plan lucid-euler-460531 sleepy-hypatia-rp7db1; do
+         integration-chgcwb launch-cleanup part1-plan lucid-euler-460531 sleepy-hypatia-rp7db1; do
   git merge --no-ff --no-edit "origin/claude/$b" || break   # stop on the first conflict (none expected)
 done
 npm ci && npm run check && npm run test:e2e -- --trace off   # all green before pushing
 git push origin main                                         # pipeline disarmed: runs nothing
 ```
 
-Since steps 1–18 are all inside `landing`, merging `claude/landing` alone gives the same tree; one by one keeps each
-review small.
+Since steps 1–20 are all inside `launch-cleanup`, merging `claude/launch-cleanup` alone gives the same tree; one by one
+keeps each review small.
 
 ## 4. Production environment variables (Vercel → Production)
 
@@ -121,19 +126,29 @@ The release still live keeps working on the migrated database (additive only).
 ## 6. Live Gemini check still to do (costs money)
 
 Run with the GitHub `live-evaluation` / `live-pipeline` workflows (manual, use the `GEMINI_API_KEY` secret) **after**
-the merge, before or right after the deploy:
+the merge, before or right after the deploy. **First run the same command with `-- --dry-run`**: it removes every
+provider key, calls no model, prints one row per evaluation with its prompt size and the estimated cost, and writes
+every prompt in full to `eval-reports/` (`scripts/eval-live.mjs`, `test/live/dry-run.ts`).
+Set `EVALUATION_PROVIDER=gemini` for the dry run too, e.g. `EVALUATION_PROVIDER=gemini npm run eval:live:new-tasks -- --dry-run`:
+without it the dry run assumes the default provider (Anthropic), has no price for it and prints "n/a".
 
-| Run | What | Calls | Estimated cost |
+| Run | What | Calls | Estimated cost (dry run) |
 | --- | --- | --- | --- |
-| `npm run eval:live:part2` (`EVAL_SAMPLES=A,S15`, ×3) | 8 Part 2 anchors + S15 on `gemini-3.8-flash`; every anchor must hit its band | 27 evaluations | ≈ $0.70 – $1.40 |
-| `EVAL_SAMPLES=A0-below-b1 EVAL_REPEAT=5` | `feedback-review.md` issue 5 | 5 | ≈ $0.15 – $0.25 |
+| `npm run eval:live:part2` (`EVAL_SAMPLES=A,S15`, ×3) | 8 Part 2 anchors + S15 on `gemini-3.8-flash`; every anchor must hit its band | 27 evaluations | ≈ $0.71 (up to $1.42 if every draft is regenerated) |
+| `npm run eval:live:new-tasks` (`EVAL_SAMPLES=NEW`, ×3) | **the 12 new-task anchors**, 2 for each of the 6 newer tasks, each with its own task; every run must hit its exact band | 36 evaluations | **≈ $0.95** (up to $1.90) |
+| `EVAL_SAMPLES=A0-below-b1 EVAL_REPEAT=5` | `feedback-review.md` issue 5 | 5 | ≈ $0.13 (up to $0.26) |
 | `live-pipeline` workflow | real audio → transcription → audio step → evaluation, end to end | a few answers | < $0.50 |
-| New-task anchors (after wiring them, problem 2) | 12 answers × 3 | 36 | ≈ $1 – $2 |
 
-Basis: the saved 3.6-flash runs average ~6,200 input / ~5,800 output tokens per evaluation; at the price table in
-`src/server/evaluation/pricing.ts` ($0.75 / $3.75 per million, **unverified**, introductory until 31 Dec 2026) that is
-≈ $0.026 per evaluation, plus the audio step. **Total ≈ $2 – $4; budget $5.** Check the current price at
-ai.google.dev before running. Then work through `docs/feedback-review.md` issues 1–5 on the saved outputs.
+The new-task anchors are selected with `EVAL_SAMPLES=NEW` (or their ids: `D4,D1` decision, `G4,G1` goal, `T4,T1` team,
+`F4,F1` trying and failing, `R4,R1` tradition, `H4,H1` happy day; use full ids, since `R` alone also matches `RETRY`).
+`npm run eval:live` with no `EVAL_SAMPLES` runs everything: 108 evaluations, ≈ $2.83 (dry run).
+
+Basis of the estimate: input tokens from the prompt each evaluation sends (≈ 0.365 tokens per character, measured on
+the 19 saved 3.6-flash runs), ≈ 5,800 output tokens per evaluation (thinking included, same runs), at the price table
+in `src/server/evaluation/pricing.ts` ($0.75 / $3.75 per million, **unverified**, introductory until 31 Dec 2026).
+"Up to" assumes every draft is rejected once and sent again. **Total for the runs above ≈ $2.30 – $4; budget $5.**
+Check the current price at ai.google.dev before running. Then work through `docs/feedback-review.md` issues 1–5 on the
+saved outputs.
 
 ## 7. Test on a Preview first
 
@@ -141,7 +156,7 @@ A Preview of this branch has no variables, so only mock mode works (no cost):
 
 - `/?mock=1` home, "See a demo result", "Start practising" → Create account page.
 - `/practice?mock=1` → a Part 2 task → brief, Check microphone, preparation, recording, Scoring… → result.
-- `/dashboard?mock=1`, `/history?mock=1`, `/profile?mock=1`, `/lessons/<slug>?mock=1`, `/dashboard?mock=1&as=teacher`.
+- `/dashboard?mock=1`, `/history?mock=1`, `/profile?mock=1`, `/lessons?mock=1` → a lesson, `/dashboard?mock=1&as=teacher`.
 - Every page at 390 px; demo labels shown; real pages (`/dashboard` without `?mock=1`) refuse cleanly.
 
 Real accounts on a Preview need their own Turso database (`CEFRO_ALLOW_PREVIEW_TURSO=true`, Preview-only `TURSO_*`,
@@ -158,10 +173,27 @@ Delete my account.
 ## 9. Rollback
 
 - **Bad release:** Vercel *Instant Rollback* (or `vercel rollback`) to the previous production deployment. The old
-  release runs on the new schema (additive migrations; see problem 5). Set `CEFRO_AUTO_DEPLOY=false` so the next push
-  does not redeploy the bad commit; fix forward on `main`.
+  release runs on the new schema (checked, below). Set `CEFRO_AUTO_DEPLOY=false` so the next push does not redeploy the
+  bad commit; fix forward on `main`.
+- **Not a rollback path: re-deploying the old commit through the pipeline.** `main`'s own `db:migrate --check` (the
+  pipeline's `check` / `deploy` stages) refuses a database that is ahead of it: "the database has 2 migration(s) this
+  code does not know … refusing to touch it" (exit 1). Use Instant Rollback, or fix forward.
 - **Bad code on `main`:** `git revert -m 1 <merge commit>` (never force-push `main`). Reverting the merge that brought
   in a migration does not remove the migration from the database; leave the migration file in place.
+- **Rollback check, run 2026-11-08** (local, no hosted database): `main` at `b597b4f` in its own worktree, same
+  dependencies.
+  - `main`'s unit tests (`npm test`) with the schema at `0006` (`main`'s code, this chain's migration files, so every
+    test database is built to `0006`): **691 of 695 pass.** The 4 failures only assert the old schema itself: 3 in
+    `test/migrate-script.test.ts` expect "5 migrations" (they get 7), 1 in `src/server/db/migrations.test.ts` expects
+    the old table list (it gets the 4 teacher tables too). Baseline on its own schema: 695 / 695.
+  - `main`'s browser tests (`npm run test:e2e`: sign-up, sign-in / out, anonymous → account, another user's attempt
+    refused, the full practice loop with retry and history, upload / evaluation failures) on the same `0006` schema:
+    **16 of 16 pass.**
+  - Hosted path (Hrana emulator, `test/hrana-emulator.ts`): this chain's `scripts/migrate.mjs` → "7 migrations applied,
+    foreign key check clean"; then `main`'s code opens it as a hosted database (its start-up check accepts 7 ≥ 5),
+    writes and reads users, tasks and attempts; a user row `main` inserts gets `role = 'student'`. `main`'s
+    `db:migrate --check --require-current` refuses it (above).
+  - Caveat: the emulator is SQLite, not Turso; and the old release was not run on Vercel.
 - **Database:** never roll a schema back automatically. If data is damaged, restore the Turso backup from step 5.1.
   Otherwise the extra tables and columns are harmless to the old release and can stay.
 - **Scoring wrong in production** (the live check finds a regression): set `EVALUATION_PROVIDER=anthropic` (needs
@@ -169,24 +201,34 @@ Delete my account.
 
 ## 10. "Coming soon" and demo-only things real users will see
 
+Updated on `claude/launch-cleanup`. **No page shows a control that does nothing**: no disabled control once the page is
+ready, every button does something when tapped, every link opens a page (browser test `e2e/no-dead-controls.spec.ts`,
+on every main page in mock and real mode, at desktop and 390 px; also on the Preview build).
+
 Real pages (signed in), after the merge:
 
-- **Exam parts 1.1, 1.2 and 3**: dashboard tiles and the home page's parts list say "Coming soon" (`PART_LIVE`). Only
-  Part 2 is open.
-- **Lessons tab** in the navigation: "Coming soon" (no lessons index page). The three lesson pages themselves work,
-  reached from the result page's "Learn how".
-- **Dashboard top bar:** Search ("Search tasks and lessons…"), "Mock exam", Notifications bell: all "Coming soon".
-- **Dashboard:** "Last 30 days" period filter, and the attempt row menu (Delete, Report a wrong score; hidden on phones):
-  "Coming soon".
+- **Exam parts 1.1, 1.2 and 3**: dashboard tiles and the home page's parts list say "Coming soon" (`PART_LIVE`), as
+  text with no link. Only Part 2 is open. **This is the only "Coming soon" left anywhere.**
+- **Removed** (in every mode, with their flags and the `ComingSoon` components): dashboard Search, "Mock exam", the
+  notifications bell, the "Last 30 days" filter, the attempt row menu (Delete, Report a wrong score), and the result
+  page's placeholder "Play recording" (a result with a stored recording still has the real player).
+- **Lessons tab:** a real link to `/lessons`, the list of approved lessons (title and the lesson file's Variant,
+  "Part 2 (B2)"; no lesson has an approved one-line summary, so none is shown). Each opens its lesson. Opened from the
+  list there is no result, so: no "Why this lesson", no goal, no "Retry with this goal"; the back link says "Lessons" and
+  the one black button is **"Go to Part 2"** (the Part 2 task list) under a card titled "Practise Part 2", with the
+  lesson's own "Remember:" line. That wording is reused from the Account page; **for the owner's review**
+  (`src/features/lessons/no-result.ts`). Opened from a result ("Learn how") the lesson is unchanged.
 - **Teacher view:** off (`TEACHER_LIVE = false`): real teacher pages and Join / Share / Leave are 404.
 - **Part 1 player:** not merged (`/dev/part1-player` is 404 in production anyway).
 - **Pronunciation:** "not assessed" and every band provisional if `GEMINI_API_KEY` is missing or `AUDIO_ASSESSMENT=off`.
+- **Start-of-speaking chime:** two soft sine tones (E5 then A5, 0.5 s) made with the Web Audio API in
+  `lib/chime.ts`; no sound file (the placeholder `.wav` is deleted). The audio context is created only by the
+  "Start preparation" click, so nothing can sound before the student presses a button (unit and browser tests).
 
 Mock / demo content reachable by anyone (always labelled):
 
 - **Home → "See a demo result"** (`/result?demo=demo-5&mock=1`) and any `?mock=1` page: demo student, results from the
   mock evaluator, "Demo mode…" / "Demo result…" labels, nothing saved or sent.
-- **`/result` without `?demo=`** is the design prototype: saved **gemini-3.6-flash** outputs for "Advice from someone",
-  not the production model. Always mock data, even without `?mock=1`; not linked from real pages.
+- **`/result` with no `?demo=` and no `?mock=1`** is now the not-found screen (it used to show the saved
+  gemini-3.6-flash runs). The saved-runs prototype stays reachable only in mock mode (`/result?mock=1`, labelled).
 - **Demo teacher** (`/dashboard?mock=1&as=teacher`), Demo class `DEMO42`.
-- **Placeholder chime** (Part 2 start-of-speaking beep uses Part 1's placeholder `.wav`).

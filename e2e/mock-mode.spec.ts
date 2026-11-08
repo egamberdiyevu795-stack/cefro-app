@@ -180,7 +180,9 @@ test("mock mode lessons: Biggest fix → Learn how → lesson (why, explanation,
 
   // Only one black control on screen (the retry); Lessons is the current tab, in grey.
   await expect(page.locator(BLACK)).toHaveCount(1);
-  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("img", { name: "Lessons (current section)" })).toHaveAttribute("aria-current", "page");
+  const lessonsTab = page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Lessons" });
+  await expect(lessonsTab).toHaveAttribute("aria-current", "page");
+  await expect(lessonsTab).toHaveAttribute("href", "/lessons?mock=1");
 
   // The self-check drill: record each prompt (fake microphone), listen back, answer the self-check. Nothing is sent.
   const prompts = page.getByTestId("drill-prompt");

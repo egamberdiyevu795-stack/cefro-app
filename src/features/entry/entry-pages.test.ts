@@ -56,6 +56,13 @@ describe("signed-out home", () => {
     }
     // One icon per step.
     expect(markup.match(/<li\b[^>]*>\s*<span[^>]*><svg\b/g)).toHaveLength(3);
+    // The last line of the page, after the status list: small (11 px caption) and grey (fg-muted, AA on the page).
+    expect(HOME.builtBy).toBe("Built by a student in Tashkent for UZBMB candidates.");
+    const last = /<p class="([^"]*)" data-testid="built-by">([^<]*)<\/p>/.exec(markup);
+    expect(last?.[2]).toBe(HOME.builtBy);
+    expect(last?.[1]).toBe("text-caption text-fg-muted");
+    expect(markup.indexOf('data-testid="exam-status"')).toBeLessThan(markup.indexOf('data-testid="built-by"'));
+    expect(page.trim().endsWith(HOME.builtBy)).toBe(true);
     // The example feedback card is gone; no claims.
     expect(page).not.toContain("Example feedback");
     expect(page).not.toMatch(/Passed|Failed|under 18|under-18|18 or older|\bfree\b|rating|review|testimonial|students|★/i);

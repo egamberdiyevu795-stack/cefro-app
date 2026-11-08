@@ -2,11 +2,8 @@ import Link from "next/link";
 import {
   Card,
   CardHeader,
-  ComingSoonButton,
-  ComingSoonMenu,
   DeltaLabel,
   GoalBar,
-  Icon,
   PillButton,
   ProgressBar,
   RadarChart,
@@ -19,7 +16,7 @@ import type { FeatureFlags } from "@/config/features";
 import { mockLink } from "@/features/demo/demo-mode";
 import { AttemptRow } from "@/features/history/sections";
 import type { HistoryRow } from "@/features/history/view-model";
-import { ATTEMPT_MENU_ITEMS, FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
+import { FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
 import { radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress } from "./progress";
 
 /*
@@ -97,18 +94,15 @@ const SPLIT_HALF = "rounded-card bg-card p-5 shadow-card lg:rounded-none lg:bg-t
  */
 export function ProgressCard({
   progress,
-  flags,
   className,
   progressClassName,
   radarClassName,
 }: {
   progress: Progress;
-  flags: FeatureFlags;
   className?: string;
   progressClassName?: string;
   radarClassName?: string;
 }) {
-  const filter = flags.periodFilter ? <PeriodFilter /> : undefined;
   return (
     <section
       aria-labelledby="progress-title"
@@ -117,10 +111,10 @@ export function ProgressCard({
         className,
       )}
     >
-      <CardHeader id="progress-title" title="Speaking progress" className="hidden lg:col-span-2 lg:flex" action={filter} />
+      <CardHeader id="progress-title" title="Speaking progress" className="hidden lg:col-span-2 lg:flex" />
 
       <div className={cx(SPLIT_HALF, progressClassName)}>
-        <CardHeader title="Speaking progress" className="lg:hidden" action={filter} />
+        <CardHeader title="Speaking progress" className="lg:hidden" />
         <div className="flex items-start justify-between gap-3">
           <p className="text-caption text-fg-muted">Current level</p>
           {progress.upFrom && (
@@ -154,15 +148,6 @@ export function ProgressCard({
         <p className="mt-2 text-center text-caption text-fg-muted lg:hidden">{progress.basis}</p>
       </div>
     </section>
-  );
-}
-
-function PeriodFilter() {
-  return (
-    <ComingSoonButton label="Last 30 days" className={styles.SMALL_ACTION}>
-      Last 30 days
-      <Icon name="chevronDown" size={14} />
-    </ComingSoonButton>
   );
 }
 
@@ -262,14 +247,6 @@ export function RecentAttemptsCard({
               key={row.id}
               row={row}
               tone={((i % 4) + 1) as 1 | 2 | 3 | 4}
-              menu={
-                flags.attemptMenu ? (
-                  // Hidden on phones, where it would squeeze the task name onto two lines (it only says "Coming soon").
-                  <span className="hidden sm:block">
-                    <ComingSoonMenu label={`Options for ${row.title}, ${row.date}`} items={ATTEMPT_MENU_ITEMS} />
-                  </span>
-                ) : undefined
-              }
             />
           ))}
         </ul>

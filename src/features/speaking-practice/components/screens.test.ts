@@ -6,7 +6,6 @@ import { toPublicTask } from "@/domain/speaking/task";
 import { mockRetryAttempt, mockResultHref, mockResultSource, selectMock } from "@/features/result/mock-data";
 import { ScoringResult } from "@/features/result/sections";
 import { GOAL_LABEL, resultPageState } from "@/features/result/view-model";
-import { FEATURE_FLAGS } from "@/config/features";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { isEarlyFinish, mockScoringHref, practiceHref, retryGoalOf } from "../lib/practice-flow";
 import { BriefCard, MicrophoneState, PracticeLayout, PreparationCard, RecordingCard, TaskCard, type MicrophoneStateKind } from "./screens";
@@ -86,7 +85,7 @@ describe("retry goal hand-off (mock mode)", () => {
     const state = resultPageState(mockResultSource(selection, task, config));
     if (state.kind !== "scoring") throw new Error(state.kind);
     expect(state.goal).toBe(goal!.objective);
-    expect(html(createElement(ScoringResult, { state, flags: FEATURE_FLAGS }))).toContain("Your goal:");
+    expect(html(createElement(ScoringResult, { state }))).toContain("Your goal:");
     expect(mockResultHref(selection)).toBe("/result?state=retry&from=A2-b1-all-three&fromRun=1&mock=1");
     expect(mockResultHref(selectMock({ state: "scoring", next: "1" }))).toBe("/result?anchor=A2-b1-all-three&mock=1");
 

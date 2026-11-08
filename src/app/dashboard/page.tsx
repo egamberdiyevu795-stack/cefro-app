@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { ComingSoonButton, ComingSoonToast, DemoLabel, Icon, Sidebar, SearchSoon, TopBar, TopBarLink, cx, styles } from "@/components/ds";
+import { DemoLabel, Sidebar, TopBar, TopBarLink, cx } from "@/components/ds";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
@@ -65,7 +65,9 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *
  * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
  *   small "Add exam date".
- * Exam part tiles: all four, always. A live part (`PART_LIVE`) says Start / Practise; the others "Coming soon".
+ * Exam part tiles: all four, always. A live part (`PART_LIVE`) says Start / Practise; the others "Coming soon" (text,
+ *   no link: the only "Coming soon" on any page). No control on this page does nothing (no search, bell, Mock exam,
+ *   period filter or attempt row menu: removed before launch).
  * `?flags=off` previews the page with every flag off.
  *
  * `?mock=1` (mock mode): the demo student (server/demo/demo-data.ts) instead of the caller's own data, through the
@@ -142,32 +144,15 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
 
         <div className="min-w-0 flex-1">
           <header className="mb-4 flex flex-col gap-2 lg:mb-5">
-            <div className="flex h-11 items-center justify-between lg:hidden">
+            <div className="flex h-11 items-center lg:hidden">
               <Wordmark mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
-              {flags.notifications && <Bell />}
             </div>
-            <div className={cx(!flags.search && "hidden sm:block")}>
+            <div className="hidden sm:block">
               <TopBar
-                search={flags.search ? <SearchSoon placeholder="Search tasks and lessons…" /> : undefined}
                 actions={
-                  <>
-                    <TopBarLink href={mockLink("/practice", mock)} icon="layers">
-                      All tasks
-                    </TopBarLink>
-                    {flags.mockExam && (
-                      <>
-                        <span aria-hidden="true" className="hidden h-4 w-px bg-line sm:block" />
-                        <TopBarLink href="/mock-exam" icon="calendar" soon>
-                          Mock exam
-                        </TopBarLink>
-                      </>
-                    )}
-                    {flags.notifications && (
-                      <span className="hidden lg:block">
-                        <Bell />
-                      </span>
-                    )}
-                  </>
+                  <TopBarLink href={mockLink("/practice", mock)} icon="layers">
+                    All tasks
+                  </TopBarLink>
                 }
               />
             </div>
@@ -189,7 +174,6 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
                 <ProgressCard
                   progress={summary}
-                  flags={flags}
                   className="lg:col-start-1 lg:row-start-2"
                   progressClassName="order-3 lg:order-none"
                   radarClassName="order-5 lg:order-none"
@@ -212,15 +196,6 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
           </main>
         </div>
       </div>
-      <ComingSoonToast />
     </div>
-  );
-}
-
-function Bell() {
-  return (
-    <ComingSoonButton label="Notifications" className={cx(styles.ICON_BUTTON, "size-8")}>
-      <Icon name="bell" size={18} />
-    </ComingSoonButton>
   );
 }

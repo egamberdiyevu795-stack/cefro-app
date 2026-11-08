@@ -1,7 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FEATURE_FLAGS } from "@/config/features";
 import { getSpeakingTask } from "@/content/speaking";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import { toPublicTask } from "@/domain/speaking/task";
@@ -48,7 +47,7 @@ describe("real attempts → the result page", () => {
     attempt.evaluation = { ...attempt.evaluation!, meta: { ...attempt.evaluation!.meta, isDevelopmentProvider: true } };
     const state = resultPageState(resultSourceFromAttempt(attempt, { task, bandLabels })!);
     if (state.kind !== "scored") throw new Error(state.kind);
-    const html = renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS, retryHref: noop, audio: { src: attemptAudioUrl(attempt.id), durationMs: 1000 } }));
+    const html = renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, retryHref: noop, audio: { src: attemptAudioUrl(attempt.id), durationMs: 1000 } }));
     expect(html).toContain("Development evaluator.");
     expect(html).toContain("<audio");
     expect(html).not.toContain("Play recording"); // the real player, not the flagged placeholder

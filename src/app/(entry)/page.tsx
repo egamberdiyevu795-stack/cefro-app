@@ -83,6 +83,10 @@ export default async function HomePage(props: PageProps<"/">) {
           </Card>
         )}
       </section>
+
+      <p className="text-caption text-fg-muted" data-testid="built-by">
+        {HOME.builtBy}
+      </p>
     </EntryFrame>
   );
 }

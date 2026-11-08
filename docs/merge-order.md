@@ -94,9 +94,10 @@ Also, once it is in:
 
 - **Where the dev page lives.** `docs/design-system.md` used to say to move it into `(site)`. That is no longer needed:
   the practice page itself left `(site)` in step 5, and a dev page needs no header. Keep it at `src/app/dev/part1-player/`.
-- **One chime.** Part 2 now plays Part 1's placeholder `.wav` (`history-page` added the same file, byte-identical, at
-  the same path, so `part1-player` merges without a conflict on it). Once both are in, `lib/chime.ts` can import the
-  path from `content/speaking/part1/chime.ts` instead of repeating it.
+- **One chime.** Part 2 no longer plays a file: since `claude/launch-cleanup` its chime is two tones made in code
+  (`lib/chime.ts`, Web Audio) and the copy of the placeholder `.wav` is deleted. `part1-player` still adds its own
+  `chime.wav` (a file the chain never had at its base, so it merges without a conflict). When Part 1 ships, play the
+  same code-made chime there (`playChime`) instead of the file, so both parts sound the same.
 - It still uses the older `components/ui` styles; restyle it with the design system when Part 1 ships.
 
 ## After step 6: `claude/history-page`
@@ -384,6 +385,19 @@ Contains (docs/design-system.md, "Signed-out pages"; docs/growth-plan.md, phase 
 - **Tests:** `src/features/entry/entry-pages.test.ts` (rewritten for the new pages; the exam-parts list with the
   switches in each state), `mock-pages.test.ts` (home's demo link), `e2e/entry-pages.spec.ts` (390 px audits, demo
   link, the list follows `PART_LIVE`, no name at sign-up, the server's name rule).
+
+## Right after `claude/landing`: `claude/integration-chgcwb` (docs only, no migration)
+
+Cut from `claude/landing` (`b528b15`), so it comes **after it**, merge commit, no squash. One commit, docs only:
+`docs/launch-checklist.md` (the checks run on the whole chain, the merge commands, migration, live-check, deploy and
+rollback steps). No app code, no migration, no new environment variable.
+
+## Right after `claude/integration-chgcwb`: `claude/launch-cleanup` (no migration)
+
+Cut from `claude/integration-chgcwb` (`ced5367`), so it comes **after it**, merge commit, no squash. Branch name:
+`claude/launch-cleanup` (14 characters after `claude/`). No database migration, no new environment variable.
+Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-launch-cleanup-crm-b915.vercel.app/dashboard?mock=1`.
+Contents: see the commits on the branch and `docs/launch-checklist.md` ("Coming soon / mock-only", live check).
 
 ## Right after `claude/landing`: `claude/part1` (Part 1.1 and 1.2, not live, no migration)
 

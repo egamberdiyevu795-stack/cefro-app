@@ -114,15 +114,22 @@ test("a result has its own address: a reload reopens it; another browser, or an 
   await stranger.close();
 });
 
-test("when the minute of preparation ends, the Part 1 chime plays, then recording starts by itself, with 'Speak now'", async ({ page }) => {
-  // Log the chime (a Web Audio buffer source playing a decoded file) and the recorder, in the order they happen.
+test("when the minute of preparation ends, the two-tone chime plays (made in code, no file), then recording starts by itself, with 'Speak now'", async ({ page }) => {
+  // Log the audio context, each chime tone (a Web Audio oscillator) and the recorder, in the order they happen.
   await page.addInitScript(() => {
     const w = window as unknown as { __events: string[] };
     w.__events = [];
-    const originalStart = AudioBufferSourceNode.prototype.start;
-    AudioBufferSourceNode.prototype.start = function (this: AudioBufferSourceNode, ...args: [number?, number?, number?]) {
-      w.__events.push(`chime:${this.buffer ? Math.round(this.buffer.duration * 1000) : 0}ms`);
-      this.addEventListener("ended", () => w.__events.push("chime-ended"));
+    const OriginalContext = window.AudioContext;
+    window.AudioContext = class extends OriginalContext {
+      constructor(...args: ConstructorParameters<typeof AudioContext>) {
+        super(...args);
+        w.__events.push("audio-context");
+      }
+    };
+    const originalStart = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (this: OscillatorNode, ...args: [number?]) {
+      w.__events.push(`tone:${Math.round(this.frequency.value)}Hz`);
+      this.addEventListener("ended", () => w.__events.push("tone-ended"));
       return originalStart.apply(this, args);
     };
     const originalRecord = MediaRecorder.prototype.start;
@@ -131,38 +138,45 @@ test("when the minute of preparation ends, the Part 1 chime plays, then recordin
       return originalRecord.apply(this, args);
     };
   });
-  const chimeRequests: string[] = [];
+  const audioRequests: string[] = [];
   page.on("request", (request) => {
-    if (request.url().endsWith(".wav")) chimeRequests.push(new URL(request.url()).pathname);
+    if (request.resourceType() === "media" || /\.(wav|mp3|ogg|m4a|webm)$/.test(new URL(request.url()).pathname)) audioRequests.push(request.url());
   });
   const events = () => page.evaluate(() => (window as unknown as { __events: string[] }).__events);
+  const tones = (log: string[]) => log.filter((e) => e.startsWith("tone:"));
 
   await page.clock.install();
   await page.goto(`${TASK_URL}?mock=1`);
+  // Nothing sounds, and no audio context exists, before the student presses a button.
+  await expect(page.getByRole("button", { name: "Start preparation" })).toBeEnabled();
+  await page.clock.fastForward(5_000);
+  expect(await events()).toEqual([]);
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare")).toBeVisible();
-  expect(await events()).toEqual([]);
-  // Loaded during the click, from the same file Part 1 uses.
-  await expect.poll(() => chimeRequests).toEqual(["/audio/speaking/part1/placeholder/chime.wav"]);
+  // The click only unlocks audio: no tone yet.
+  expect(await events()).toEqual(["audio-context"]);
 
   await page.clock.fastForward(59_000);
   await expect(page.getByRole("heading", { name: "Preparation" })).toBeVisible(); // not yet
+  expect(tones(await events())).toEqual([]);
   await page.clock.fastForward(1_500);
-  // The chime ends (or its 0.9 s watchdog fires on the fake clock), and only then does the recorder start.
-  await expect.poll(events).toContain("chime:400ms");
-  // While the chime plays, nothing is recorded yet.
+  // Two tones, low then high; only then does the recorder start (the chime's end, or its watchdog on the fake clock).
+  await expect.poll(async () => tones(await events())).toEqual(["tone:659Hz", "tone:880Hz"]);
   const during = await events();
-  if (!during.includes("chime-ended")) expect(during).not.toContain("recorder");
+  if (!during.includes("tone-ended")) expect(during).not.toContain("recorder");
   await page.clock.fastForward(1_000);
 
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await expect(page.getByTestId("speak-now")).toHaveText("Speak now");
   await expect(page.getByRole("status").filter({ hasText: "Recording started. Speak now." })).toHaveCount(1);
   const log = await events();
-  expect(log.filter((e) => e.startsWith("chime:"))).toEqual(["chime:400ms"]);
-  expect(log.indexOf("recorder")).toBeGreaterThan(log.indexOf("chime:400ms"));
-  // When the browser reports the chime's end, the recorder started after it (never during the chime).
-  if (log.includes("chime-ended")) expect(log.indexOf("recorder")).toBeGreaterThan(log.indexOf("chime-ended"));
+  expect(tones(log)).toEqual(["tone:659Hz", "tone:880Hz"]);
+  expect(log.indexOf("recorder")).toBeGreaterThan(log.indexOf("tone:880Hz"));
+  // When the browser reports the last tone's end, the recorder started after it (never during the chime).
+  const lastEnd = log.lastIndexOf("tone-ended");
+  if (log.filter((e) => e === "tone-ended").length === 2) expect(log.indexOf("recorder")).toBeGreaterThan(lastEnd);
+  // No sound file is ever fetched.
+  expect(audioRequests).toEqual([]);
   await page.clock.fastForward(5_000);
   await expect(page.getByTestId("speak-now")).toHaveCount(0);
 });

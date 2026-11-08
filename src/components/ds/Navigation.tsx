@@ -1,33 +1,16 @@
 import Link from "next/link";
-import { ComingSoonButton } from "./ComingSoon";
 import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
 import { NAV_ITEM, NAV_ITEM_ACTIVE, NAV_ITEM_IDLE, TEXT_ACTION } from "./styles";
 
-/** `soon`: a future item (feature flag on): same look, tapping it says "Coming soon". */
-export type NavItem = { href: string; label: string; icon: IconName; soon?: boolean };
+export type NavItem = { href: string; label: string; icon: IconName };
 
 /**
- * One navigation icon. Active = grey rounded square with a dark glyph (never black: the page's own black button is the
- * only black control on screen); inactive = grey glyph. A section with no page of its own yet (a "Coming soon" item)
- * that is current shows as current, not as a button.
+ * One navigation icon, always a real link. Active = grey rounded square with a dark glyph (never black: the page's own
+ * black button is the only black control on screen); inactive = grey glyph.
  */
 export function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
   const activeClass = NAV_ITEM_ACTIVE;
-  if (item.soon && active) {
-    return (
-      <span role="img" aria-label={`${item.label} (current section)`} aria-current="page" title={item.label} className={cx(NAV_ITEM, activeClass)}>
-        <Icon name={item.icon} size={20} />
-      </span>
-    );
-  }
-  if (item.soon) {
-    return (
-      <ComingSoonButton label={item.label} className={cx(NAV_ITEM, NAV_ITEM_IDLE)}>
-        <Icon name={item.icon} size={20} />
-      </ComingSoonButton>
-    );
-  }
   return (
     <Link
       href={item.href}
@@ -72,42 +55,17 @@ export function Sidebar({
   );
 }
 
-/** Top bar: optional search on the left, quiet text actions on the right. */
-export function TopBar({ search, actions }: { search?: React.ReactNode; actions: React.ReactNode }) {
-  return (
-    <div className="flex h-12 items-center gap-4">
-      <div className="min-w-0 flex-1">{search}</div>
-      <div className="flex items-center gap-4">{actions}</div>
-    </div>
-  );
+/** Top bar: quiet text actions on the right. */
+export function TopBar({ actions }: { actions: React.ReactNode }) {
+  return <div className="flex h-12 items-center justify-end gap-4">{actions}</div>;
 }
 
-/** Search entry point that is not built yet: looks like the search field, says "Coming soon" when tapped. */
-export function SearchSoon({ placeholder }: { placeholder: string }) {
+/** A quiet text action with a small grey glyph, for the top bar. */
+export function TopBarLink({ href, icon, children }: { href: string; icon: IconName; children: string }) {
   return (
-    <ComingSoonButton label="Search" className="flex w-full min-w-0 items-center gap-2 text-left text-body text-fg-muted hover:text-fg">
-      <Icon name="search" size={16} className="shrink-0" />
-      <span className="truncate">{placeholder}</span>
-    </ComingSoonButton>
-  );
-}
-
-/** A quiet text action with a small grey glyph, for the top bar. `soon` makes it a "Coming soon" button. */
-export function TopBarLink({ href, icon, soon, children }: { href: string; icon: IconName; soon?: boolean; children: string }) {
-  const inner = (
-    <>
+    <Link href={href} className={cx("hidden sm:inline-flex", TEXT_ACTION)}>
       <Icon name={icon} size={16} className="text-fg-subtle" />
       {children}
-    </>
-  );
-  const className = cx("hidden sm:inline-flex", TEXT_ACTION);
-  return soon ? (
-    <ComingSoonButton label={children} className={className}>
-      {inner}
-    </ComingSoonButton>
-  ) : (
-    <Link href={href} className={className}>
-      {inner}
     </Link>
   );
 }

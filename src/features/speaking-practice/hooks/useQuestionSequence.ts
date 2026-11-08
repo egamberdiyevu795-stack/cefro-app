@@ -32,7 +32,7 @@ function microphoneFailure(cause: unknown): SequenceFailure {
 
 /**
  * A Part 1 task question by question inside one recording (docs/part1-plan.md §1): question text + audio → chime →
- * countdown → next question, automatically, with the recorder PAUSED while the question audio and the chime play, so
+ * countdown → chime (time is up) → next question, automatically, with the recorder PAUSED while the question audio and the chime play, so
  * the one file holds only the student's speech.
  *
  * `start()` must run inside the student's tap: it creates and first plays the audio element (unlocking audio for the
@@ -51,7 +51,7 @@ export function useQuestionSequence({
   onFinished: (result: QuestionSequenceResult) => void;
   onAudioFailure?: (failure: AudioFailure) => void;
 }) {
-  const [state, dispatch] = useReducer(sequenceReducer, { questions: task.questions, timeScale }, createSequenceState);
+  const [state, dispatch] = useReducer(sequenceReducer, { questions: task.questions, timeScale, hasIntro: Boolean(task.intro) }, createSequenceState);
   const [recorderState, setRecorderState] = useState<RecorderState>("inactive");
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -128,6 +128,16 @@ export function useQuestionSequence({
       const player = cuePlayerRef.current;
       if (!player || playingKeyRef.current === key) return;
       playingKeyRef.current = key;
+      if (cue === "intro") {
+        // The spoken introduction, then the sample chime ("start speaking when you hear this sound"). Never recorded.
+        void player.play(task.intro!.audio).then(async (result) => {
+          if (!result.ok && result.reason === "superseded") return;
+          if (!result.ok) callbacksRef.current.onAudioFailure?.({ index: 0, cue: "intro", reason: result.reason });
+          await playChime();
+          if (!unmountedRef.current) dispatch({ type: "introEnded", failure: result.ok ? undefined : result.reason });
+        });
+        return;
+      }
       if (cue === "chime") {
         // The same two-tone chime as Part 2, made in code (no file). It never fails; it only settles.
         void playChime().then(() => handleCueEnded(index, cue, { ok: true }));
@@ -143,11 +153,11 @@ export function useQuestionSequence({
     cuePlayerRef.current = new CuePlayer(new Audio());
     primeChime();
     recorderRef.current = requestRecorder();
-    playCue(0, "question");
+    playCue(0, task.intro ? "intro" : "question");
     dispatch({ type: "start" });
-  }, [requestRecorder, playCue]);
+  }, [requestRecorder, playCue, task.intro]);
 
-  // Play the cue the current step needs (Question 1's audio was already started by the tap).
+  // Play the cue the current step needs (the first one was already started by the tap).
   useEffect(() => {
     const cue = cueFor(phase);
     if (cue) playCue(cue.index, cue.cue);
@@ -160,10 +170,12 @@ export function useQuestionSequence({
     const { index, step } = phase;
     const id = window.setTimeout(() => {
       if (step.kind === "speaking") {
-        void recorderRef.current?.then((recorder) => {
+        void recorderRef.current?.then(async (recorder) => {
           recorder?.pause();
           if (recorder) setRecorderState(recorder.state);
-          dispatch({ type: "speakingExpired", index });
+          // Time is up: the chime again (as in the exam), after the recorder paused, before the next question.
+          await playChime();
+          if (!unmountedRef.current) dispatch({ type: "speakingExpired", index });
         });
       } else {
         dispatch({ type: "preparationExpired", index });

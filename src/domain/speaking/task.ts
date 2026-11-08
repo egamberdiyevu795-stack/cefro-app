@@ -1,5 +1,5 @@
 import type { TargetLevel } from "@/domain/cefr";
-import type { QuestionAudioSource, TimedQuestion } from "./question-sequence";
+import type { PartIntro, QuestionAudioSource, TimedQuestion } from "./question-sequence";
 
 /**
  * What kind of response a task asks for. It selects the evaluation approach together with `rubricId`.
@@ -38,6 +38,8 @@ export interface QuestionDelivery {
   questions: TimedQuestion[];
   /** Official number of the first question ("Question 4" in Part 1.2). */
   firstQuestionNumber: number;
+  /** Spoken introduction before Question 1, ending with a sample of the chime. */
+  intro?: PartIntro;
   /** Where the question audio comes from (voice and generator settings). */
   audioSource: QuestionAudioSource;
 }

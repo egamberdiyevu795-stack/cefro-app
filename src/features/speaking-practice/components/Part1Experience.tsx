@@ -12,7 +12,7 @@ import { useQuestionSequence, type QuestionSequenceResult, type SequenceFailure 
 import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, startSession, submitRecording } from "../lib/api-client";
 import { demoScoringHref, retryGoalOf, type RetryGoal } from "../lib/practice-flow";
-import { Part1BriefCard, Part1QuestionCard, Part1SendingCard, PicturesCard } from "./part1-screens";
+import { Part1BriefCard, Part1IntroCard, Part1QuestionCard, Part1SendingCard, PicturesCard } from "./part1-screens";
 import { InlineNotice, MicrophoneState, RetryGoalLoading, UploadFailedCard, type MicrophoneStateKind } from "./screens";
 
 function newClientAttemptId(): string {
@@ -254,6 +254,8 @@ function Part1Run({
     }
     return <Part1SendingCard task={task} />;
   }
+
+  if (phase.kind === "intro") return <Part1IntroCard task={task} text={sequence.intro?.text ?? ""} />;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(19rem,0.8fr)_minmax(0,1fr)] lg:items-start">

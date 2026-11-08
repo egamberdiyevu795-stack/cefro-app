@@ -35,7 +35,10 @@ describe("Part 1 prompt: everything from the rubric (docs/part1-plan.md §3, Pro
     expect(system).not.toMatch(/\bB2\b/);
     expect(system).not.toMatch(/"minimal"|"partial"/);
     expect(system).toContain("do not include cohesion");
-    expect(user).toContain("Question 1 (id 1, 30 s to speak): What do you usually do at the weekend?");
+    expect(user).toContain("Question 1 (id 1, 5 s to get ready, 30 s to speak): What do you usually do at the weekend?");
+    expect(user).toContain("Preparation time: a few seconds before each answer (not recorded)");
+    expect(system).toContain("the student has a few seconds to get ready, a chime sounds");
+    expect(system).not.toContain("There is no preparation time.");
     expect(user).toContain('"questionOffsetsMs"');
     expect(user).toContain('"questionSeconds"');
   });
@@ -48,10 +51,10 @@ describe("Part 1 prompt: everything from the rubric (docs/part1-plan.md §3, Pro
     expect(system).toContain("Allowed statuses: on_topic, partial, missing, off_topic.");
     expect(system).toContain("(reference)");
     expect(system).not.toMatch(/"minimal"/);
-    expect(user).toContain("Question 4 (id 1, 45 s to speak)");
-    expect(user).toContain("Question 6 (id 3, 30 s to speak)");
+    expect(user).toContain("Question 4 (id 1, 10 s to get ready, 45 s to speak)");
+    expect(user).toContain("Question 6 (id 3, 5 s to get ready, 30 s to speak)");
     for (const image of part12.images!) expect(user).toContain(image.alt);
-    expect(user).toContain("Preparation time: none");
+    expect(user).toContain("Preparation time: a few seconds before each answer (not recorded)");
   });
 
   it("the audio step uses the part's own ladder", () => {

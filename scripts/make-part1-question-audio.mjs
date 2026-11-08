@@ -15,6 +15,8 @@
  * Then:
  *   PIPER_BIN=.venv-tts/bin/piper PIPER_MODEL=en-us-libritts-high.onnx node scripts/make-part1-question-audio.mjs
  *
+ * Add ONLY=b1-part1-2-shopping/v1/intro to remake only the files whose path contains that text.
+ *
  * Needs ffmpeg on the PATH. Output: 22,050 Hz mono 16-bit WAV, which every browser plays without a codec.
  */
 import { execFileSync } from "node:child_process";
@@ -30,7 +32,9 @@ if (!model) {
   process.exit(1);
 }
 const v = manifest.voice;
-for (const file of manifest.files) {
+// ONLY=<part of a path> regenerates just the matching files (Piper is not deterministic: unchanged files stay as they are).
+const only = process.env.ONLY;
+for (const file of manifest.files.filter((f) => !only || f.path.includes(only))) {
   const out = path.join(ROOT, "public", file.path);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   execFileSync(

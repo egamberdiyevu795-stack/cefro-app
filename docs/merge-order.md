@@ -424,6 +424,10 @@ Added on this branch, on top of `claude/part1`:
   regenerate with `scripts/make-part1-question-audio.mjs`. Files are versioned with the task
   (`/audio/speaking/part1/<task>/v<version>/q<n>.wav`). A unit test fails if a question's wording changes without new
   audio. **Owner: listen to the six files before launch** (nobody has listened to them yet).
+- **Exam timing (owner, 2026-11-08):** 5 s to get ready before each Part 1.1 answer; 10 s before Question 4 and 5 s
+  before Questions 5–6 in Part 1.2 (countdown "to get ready", not recorded). A spoken introduction per part (own
+  wording) with a sample chime; a chime at the end of each answer. The Part 1 prompt now says the student had a few
+  seconds to get ready (Part 1 prompt only; Part 2's prompt is unchanged).
 
 What `claude/part1` itself contains:
 

@@ -30,6 +30,11 @@ Source: official UZBMB `Speaking_format.pdf` (received 2026-11-04).
 | 1.1 | A1–A2 | 1, 2, 3 | **none** | 30 s · 30 s · 30 s | 1 min 30 s |
 | 1.2 | B1 | 4, 5, 6 | **none** | 45 s · 30 s · 30 s | 1 min 45 s |
 
+**Changed 2026-11-08 (owner checked the real exam):** Part 1.1 gives **5 s** to get ready after each question;
+Part 1.2 gives **10 s** before Question 4 and **5 s** before Questions 5 and 6. Each part opens with a short spoken
+introduction (our own wording) that ends with a sample of the chime, and a chime also marks the end of each answer.
+Order per question: question audio → get ready (countdown, not recorded) → chime → speak (recorded) → chime.
+
 The values live in each task's content file, never as literals in components or the evaluator:
 
 ```ts

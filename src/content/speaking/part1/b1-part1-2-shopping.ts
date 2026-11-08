@@ -3,6 +3,9 @@ import { PART1_QUESTION_AUDIO, part1AudioDir } from "./question-audio";
 
 const AUDIO = part1AudioDir("b1-part1-2-shopping", 1);
 
+/** Spoken before Question 4 (our own wording), then the sample chime. */
+const INTRO = "Part 1.2. Now you will compare two pictures, and then answer two more questions about them. Start speaking when you hear this sound.";
+
 const QUESTIONS = [
   "Look at the two pictures. Describe them and say how they are different.",
   "Why do many people like shopping at local markets?",
@@ -19,7 +22,7 @@ const CEFRO_PICTURE = {
 
 /**
  * Multilevel Part 1.2 (official Questions 4–6): two pictures on one topic, then three questions, target B1.
- * Official timings (docs/part1-plan.md §1): 45 s + 30 s + 30 s, no preparation. Our own topic, wording and pictures.
+ * Timings (owner checked the real exam, 2026-11-08): get ready 10 s + 5 s + 5 s, speak 45 s + 30 s + 30 s. Our own topic, wording and pictures.
  */
 export const b1Part12Shopping: SpeakingTask = {
   id: "b1-part1-2-shopping",
@@ -48,24 +51,26 @@ export const b1Part12Shopping: SpeakingTask = {
   ],
   instructions: [
     "You will see two pictures and hear three questions about them, one after another.",
-    "After each question you hear a chime. Start speaking at the chime: 45 seconds for the first answer, 30 seconds for the others.",
-    "There is no preparation time. The next question starts automatically.",
+    "After each question you have time to get ready: 10 seconds for the first, 5 seconds for the others.",
+    "Then you hear a chime: start speaking. You have 45 seconds for the first answer and 30 seconds for the others. A chime also tells you when the time is up.",
+    "The next question starts automatically.",
     "Headphones are recommended.",
   ],
   preparationSeconds: 0,
   speakingSeconds: 105,
   delivery: {
     firstQuestionNumber: 4,
+    intro: { text: INTRO, audio: `${AUDIO}/intro.wav` },
     questions: [
       {
         text: QUESTIONS[0],
         audio: `${AUDIO}/q4.wav`,
-        prepSeconds: 0,
+        prepSeconds: 10,
         speakingSeconds: 45,
         partialHint: "compare the two pictures",
       },
-      { text: QUESTIONS[1], audio: `${AUDIO}/q5.wav`, prepSeconds: 0, speakingSeconds: 30 },
-      { text: QUESTIONS[2], audio: `${AUDIO}/q6.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[1], audio: `${AUDIO}/q5.wav`, prepSeconds: 5, speakingSeconds: 30 },
+      { text: QUESTIONS[2], audio: `${AUDIO}/q6.wav`, prepSeconds: 5, speakingSeconds: 30 },
     ],
     audioSource: PART1_QUESTION_AUDIO,
   },

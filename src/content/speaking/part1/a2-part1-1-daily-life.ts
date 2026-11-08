@@ -3,6 +3,9 @@ import { PART1_QUESTION_AUDIO, part1AudioDir } from "./question-audio";
 
 const AUDIO = part1AudioDir("a2-part1-1-daily-life", 1);
 
+/** Spoken before Question 1 (our own wording), then the sample chime. */
+const INTRO = "Part 1.1. In this part, you will hear three short questions about yourself and your daily life. After each question, you have five seconds to get ready, and then thirty seconds to answer. Start speaking when you hear this sound.";
+
 const QUESTIONS = [
   "What do you usually do at the weekend?",
   "What is your favourite food? Why?",
@@ -11,7 +14,7 @@ const QUESTIONS = [
 
 /**
  * Multilevel Part 1.1 (official Questions 1–3): three questions about familiar personal topics, target A2.
- * Official timings (docs/part1-plan.md §1): 3 × 30 s, no preparation. Our own wording.
+ * Timings: 5 s to prepare and 30 s to speak, per question (owner checked the real exam, 2026-11-08). Our own wording.
  */
 export const a2Part11DailyLife: SpeakingTask = {
   id: "a2-part1-1-daily-life",
@@ -26,18 +29,19 @@ export const a2Part11DailyLife: SpeakingTask = {
   prompts: QUESTIONS,
   instructions: [
     "You will hear three questions, one after another. Each question is also shown on screen.",
-    "After each question you hear a chime. Start speaking at the chime: you have 30 seconds for each answer.",
-    "There is no preparation time. The next question starts automatically.",
+    "After each question you have 5 seconds to get ready. Then you hear a chime: start speaking. You have 30 seconds for each answer, and a chime tells you when the time is up.",
+    "The next question starts automatically.",
     "Headphones are recommended.",
   ],
   preparationSeconds: 0,
   speakingSeconds: 90,
   delivery: {
     firstQuestionNumber: 1,
+    intro: { text: INTRO, audio: `${AUDIO}/intro.wav` },
     questions: [
-      { text: QUESTIONS[0], audio: `${AUDIO}/q1.wav`, prepSeconds: 0, speakingSeconds: 30 },
-      { text: QUESTIONS[1], audio: `${AUDIO}/q2.wav`, prepSeconds: 0, speakingSeconds: 30 },
-      { text: QUESTIONS[2], audio: `${AUDIO}/q3.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[0], audio: `${AUDIO}/q1.wav`, prepSeconds: 5, speakingSeconds: 30 },
+      { text: QUESTIONS[1], audio: `${AUDIO}/q2.wav`, prepSeconds: 5, speakingSeconds: 30 },
+      { text: QUESTIONS[2], audio: `${AUDIO}/q3.wav`, prepSeconds: 5, speakingSeconds: 30 },
     ],
     audioSource: PART1_QUESTION_AUDIO,
   },

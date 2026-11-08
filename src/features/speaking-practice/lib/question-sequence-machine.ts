@@ -1,11 +1,14 @@
 /**
  * Question-by-question delivery inside one recording (Multilevel Part 1, docs/part1-plan.md §1).
  *
- *  idle ──start──▶ ┌─▶ prompt ──▶ [preparing] ──▶ chime ──▶ speaking ──┐
+ *  idle ──start──▶ intro ──introEnded──▶ ┌─▶ prompt ──▶ [preparing] ──▶ chime ──▶ speaking ──┐
  *                  │   (audio)     (prepSeconds > 0)  (sound)  (countdown) │
  *                  └───────────────── next question ◀──────────────────────┤
  *                                                     last question ──▶ finished
  *  any step ──fail──▶ failed (microphone or recorder problem)
+ *
+ * `intro` is the spoken introduction of the part, which ends with a sample of the chime ("start speaking when you
+ * hear this sound"); a task without one goes straight from `start` to the first question.
  *
  * The recorder runs only in `speaking`; it is paused during the question audio, preparation and the chime, so the
  * file holds only the student's speech. The start of each speaking window is stored in recording time (pauses
@@ -24,6 +27,8 @@ export interface SequenceQuestion {
 
 export interface SequenceConfig {
   questions: readonly SequenceQuestion[];
+  /** The part opens with a spoken introduction (and a sample chime) before Question 1. */
+  hasIntro?: boolean;
   /**
    * Multiplies every timing. 1 in the product; the dev page may shorten it for browser tests. Never above 1.
    */
@@ -38,11 +43,12 @@ export type QuestionStep =
 
 export type SequencePhase =
   | { kind: "idle" }
+  | { kind: "intro" }
   | { kind: "question"; index: number; step: QuestionStep }
   | { kind: "finished" }
   | { kind: "failed"; reason: string };
 
-export type AudioCue = "question" | "chime";
+export type AudioCue = "intro" | "question" | "chime";
 
 export interface AudioFailure {
   index: number;
@@ -60,6 +66,8 @@ export interface SequenceState {
 
 export type SequenceAction =
   | { type: "start" }
+  /** The introduction and its sample chime are over (or failed to play: `failure`). */
+  | { type: "introEnded"; failure?: string }
   /** The question audio ended (`ok`) or failed to load/play. */
   | { type: "promptEnded"; index: number; now: number; ok: true }
   | { type: "promptEnded"; index: number; now: number; ok: false; reason: string }
@@ -105,7 +113,16 @@ export function sequenceReducer(state: SequenceState, action: SequenceAction): S
   switch (action.type) {
     case "start":
       if (state.phase.kind !== "idle") return state;
+      if (state.config.hasIntro) return { ...state, phase: { kind: "intro" } };
       return { ...state, phase: { kind: "question", index: 0, step: { kind: "prompt" } } };
+
+    case "introEnded": {
+      if (state.phase.kind !== "intro") return state;
+      const audioFailures = action.failure
+        ? [...state.audioFailures, { index: 0, cue: "intro" as const, reason: action.failure }]
+        : state.audioFailures;
+      return { ...state, audioFailures, phase: { kind: "question", index: 0, step: { kind: "prompt" } } };
+    }
 
     case "promptEnded": {
       // Stale or duplicate events (an audio element firing both "error" and a watchdog timeout) are ignored.
@@ -155,6 +172,7 @@ export function sequenceReducer(state: SequenceState, action: SequenceAction): S
 export function recorderMode(phase: SequencePhase): "off" | "paused" | "recording" | "stopped" {
   switch (phase.kind) {
     case "idle":
+    case "intro":
       return "off";
     case "question":
       return phase.step.kind === "speaking" ? "recording" : "paused";
@@ -166,6 +184,7 @@ export function recorderMode(phase: SequencePhase): "off" | "paused" | "recordin
 
 /** The audio to play in a phase, if any. */
 export function cueFor(phase: SequencePhase): { index: number; cue: AudioCue } | null {
+  if (phase.kind === "intro") return { index: 0, cue: "intro" };
   if (phase.kind !== "question") return null;
   if (phase.step.kind === "prompt") return { index: phase.index, cue: "question" };
   if (phase.step.kind === "chime") return { index: phase.index, cue: "chime" };

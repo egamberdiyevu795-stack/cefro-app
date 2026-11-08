@@ -16,6 +16,8 @@ import {
 
 const part11: SequenceConfig = { questions: a2Part11DailyLife.delivery!.questions, timeScale: 1 };
 const part12: SequenceConfig = { questions: b1Part12Shopping.delivery!.questions, timeScale: 1 };
+/** Part 1.2's timings without preparation: the plain prompt → chime → speaking path. */
+const noPrep: SequenceConfig = { questions: part12.questions.map((q) => ({ ...q, prepSeconds: 0 })), timeScale: 1 };
 
 function run(state: SequenceState, ...actions: SequenceAction[]): SequenceState {
   return actions.reduce(sequenceReducer, state);
@@ -58,15 +60,24 @@ function playThrough(config: SequenceConfig, options: { promptMs?: number; chime
 }
 
 describe("timings come from the task content", () => {
-  it("Part 1.1: three 30 s speaking windows, no preparation", () => {
-    const { windows } = playThrough(part11);
+  it("Part 1.1: 5 s to get ready, then a 30 s speaking window, for each of the three questions", () => {
+    const { windows, stepsSeen } = playThrough(part11);
     expect(windows.map((w) => w.endsAt - w.startedAt)).toEqual([30_000, 30_000, 30_000]);
-    expect([0, 1, 2].map((i) => preparationMs(part11, i))).toEqual([0, 0, 0]);
+    expect([0, 1, 2].map((i) => preparationMs(part11, i))).toEqual([5_000, 5_000, 5_000]);
+    // Question audio → get ready (not recorded) → chime → speak.
+    expect(stepsSeen.slice(0, 4)).toEqual(["0:prompt:paused", "0:preparing:paused", "0:chime:paused", "0:speaking:recording"]);
   });
 
-  it("Part 1.2: 45 s + 30 s + 30 s, no preparation", () => {
+  it("the 5 s of preparation start when the question audio ends", () => {
+    const state = run(createSequenceState(part11), { type: "start" }, { type: "promptEnded", index: 0, now: 100, ok: true });
+    expect(state.phase).toEqual({ kind: "question", index: 0, step: { kind: "preparing", endsAt: 5_100, totalMs: 5_000 } });
+    expect(cueFor(state.phase)).toBeNull();
+  });
+
+  it("Part 1.2: get ready 10 s + 5 s + 5 s, speak 45 s + 30 s + 30 s", () => {
     const { windows } = playThrough(part12);
     expect(windows.map((w) => w.endsAt - w.startedAt)).toEqual([45_000, 30_000, 30_000]);
+    expect([0, 1, 2].map((i) => preparationMs(part12, i))).toEqual([10_000, 5_000, 5_000]);
   });
 
   it("a different content file gives different timings (nothing is hard-coded)", () => {
@@ -87,9 +98,26 @@ describe("timings come from the task content", () => {
   });
 });
 
+describe("spoken introduction", () => {
+  it("Start → introduction (nothing recorded) → Question 1; its failure is recorded and never blocks the part", () => {
+    let state = run(createSequenceState({ ...part11, hasIntro: true }), { type: "start" });
+    expect(state.phase).toEqual({ kind: "intro" });
+    expect(cueFor(state.phase)).toEqual({ index: 0, cue: "intro" });
+    expect(recorderMode(state.phase)).toBe("off");
+    expect(sequenceReducer(state, { type: "start" })).toBe(state);
+    const failed = sequenceReducer(state, { type: "introEnded", failure: "load_error" });
+    expect(failed.audioFailures).toEqual([{ index: 0, cue: "intro", reason: "load_error" }]);
+    state = sequenceReducer(state, { type: "introEnded" });
+    expect(state.phase).toEqual({ kind: "question", index: 0, step: { kind: "prompt" } });
+    expect(state.audioFailures).toEqual([]);
+    // A late duplicate is ignored.
+    expect(sequenceReducer(state, { type: "introEnded" })).toBe(state);
+  });
+});
+
 describe("sequencing", () => {
   it("each question goes prompt → chime → speaking, then the next starts automatically; then finished", () => {
-    const { state, stepsSeen } = playThrough(part11);
+    const { state, stepsSeen } = playThrough(noPrep);
     expect(stepsSeen).toEqual([
       "0:prompt:paused", "0:chime:paused", "0:speaking:recording",
       "1:prompt:paused", "1:chime:paused", "1:speaking:recording",
@@ -99,10 +127,10 @@ describe("sequencing", () => {
   });
 
   it("the countdown starts when the chime ends, not when the question audio ends", () => {
-    let state = run(createSequenceState(part11), { type: "start" }, { type: "promptEnded", index: 0, now: 100, ok: true });
+    let state = run(createSequenceState(noPrep), { type: "start" }, { type: "promptEnded", index: 0, now: 100, ok: true });
     expect(state.phase).toEqual({ kind: "question", index: 0, step: { kind: "chime" } });
     state = sequenceReducer(state, { type: "speakingStarted", index: 0, now: 700, recordingMs: 0, chime: { ok: true } });
-    expect(state.phase).toMatchObject({ step: { kind: "speaking", startedAt: 700, endsAt: 30_700, totalMs: 30_000 } });
+    expect(state.phase).toMatchObject({ step: { kind: "speaking", startedAt: 700, endsAt: 45_700, totalMs: 45_000 } });
   });
 
   it("is idle before Start, and Start only works once", () => {
@@ -116,7 +144,7 @@ describe("sequencing", () => {
   });
 
   it("asks for the right cue in each step", () => {
-    let state = run(createSequenceState(part11), { type: "start" });
+    let state = run(createSequenceState(noPrep), { type: "start" });
     expect(cueFor(state.phase)).toEqual({ index: 0, cue: "question" });
     state = sequenceReducer(state, { type: "promptEnded", index: 0, now: 0, ok: true });
     expect(cueFor(state.phase)).toEqual({ index: 0, cue: "chime" });
@@ -175,7 +203,7 @@ describe("one recording: offsets in recording time", () => {
 
 describe("audio failures never block the part", () => {
   it("a failed question audio: the chime still plays, the countdown still starts, the failure is recorded", () => {
-    let state = run(createSequenceState(part11), { type: "start" });
+    let state = run(createSequenceState(noPrep), { type: "start" });
     state = sequenceReducer(state, { type: "promptEnded", index: 0, now: 0, ok: false, reason: "load_error" });
     expect(state.phase).toEqual({ kind: "question", index: 0, step: { kind: "chime" } });
     expect(state.audioFailures).toEqual([{ index: 0, cue: "question", reason: "load_error" }]);

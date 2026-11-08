@@ -16,18 +16,24 @@ const part11 = PART1_SPEAKING_TASKS.filter((t) => examPartOf(t) === "1.1");
 const part12 = PART1_SPEAKING_TASKS.filter((t) => examPartOf(t) === "1.2");
 
 describe("Part 1 content: official timings (docs/part1-plan.md §1, decision 13)", () => {
-  it.each(PART1_TASKS.filter((t) => t.part === "1.1").map((t) => [t.id, t] as const))("%s: Part 1.1 is 3 × 30 s, no preparation", (_id, task) => {
+  it.each(PART1_TASKS.filter((t) => t.part === "1.1").map((t) => [t.id, t] as const))("%s: Part 1.1 is 3 × (5 s to prepare + 30 s to speak), as in the real exam", (_id, task) => {
     expect(task.questions.map((q) => q.speakingSeconds)).toEqual([30, 30, 30]);
-    expect(task.questions.map((q) => q.prepSeconds)).toEqual([0, 0, 0]);
+    expect(task.questions.map((q) => q.prepSeconds)).toEqual([5, 5, 5]);
     expect(task.firstQuestionNumber).toBe(1);
     expect(totalSpeakingSeconds(task)).toBe(90);
   });
 
-  it.each(PART1_TASKS.filter((t) => t.part === "1.2").map((t) => [t.id, t] as const))("%s: Part 1.2 is 45 + 30 + 30 s, no preparation", (_id, task) => {
+  it.each(PART1_TASKS.filter((t) => t.part === "1.2").map((t) => [t.id, t] as const))("%s: Part 1.2 is get ready 10 + 5 + 5 s, speak 45 + 30 + 30 s, as in the real exam", (_id, task) => {
     expect(task.questions.map((q) => q.speakingSeconds)).toEqual([45, 30, 30]);
-    expect(task.questions.map((q) => q.prepSeconds)).toEqual([0, 0, 0]);
+    expect(task.questions.map((q) => q.prepSeconds)).toEqual([10, 5, 5]);
     expect(task.firstQuestionNumber).toBe(4);
     expect(totalSpeakingSeconds(task)).toBe(105);
+  });
+
+  it.each(PART1_TASKS.map((t) => [t.id, t] as const))("%s: opens with a spoken introduction that ends with the chime sample", (_id, task) => {
+    expect(task.intro?.text).toMatch(/Start speaking when you hear this sound\.$/);
+    expect(task.intro?.audio).toBe(`/audio/speaking/part1/${task.id}/v${task.version}/intro.wav`);
+    expect(PART1_AUDIO_FILES.find((f) => f.path === task.intro!.audio)?.text).toBe(task.intro!.text);
   });
 
   it("there is at least one task for each part", () => {
@@ -122,11 +128,19 @@ describe("Part 1 content: audio files", () => {
         expect(q.audio.startsWith(`/audio/speaking/part1/${task.id}/v${task.version}/`)).toBe(true);
       }
     }
-    expect(made.size).toBe(PART1_TASKS.reduce((n, t) => n + t.questions.length, 0));
+    // Plus one introduction per task.
+    expect(made.size).toBe(PART1_TASKS.reduce((n, t) => n + t.questions.length + 1, 0));
   });
 
-  it("each audio file is real speech, not a placeholder: a WAV of 1.5–8 s", () => {
+  it("each audio file is real speech, not a placeholder: a WAV of 1.5–8 s (introductions up to 25 s)", () => {
+    const seconds = (src: string) => {
+      const buf = fs.readFileSync(path.join(PUBLIC_DIR, src));
+      expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");
+      return (buf.length - 44) / buf.readUInt32LE(28);
+    };
     for (const task of PART1_TASKS) {
+      expect(seconds(task.intro!.audio)).toBeGreaterThan(5);
+      expect(seconds(task.intro!.audio)).toBeLessThan(25);
       for (const q of task.questions) {
         const buf = fs.readFileSync(path.join(PUBLIC_DIR, q.audio));
         expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");

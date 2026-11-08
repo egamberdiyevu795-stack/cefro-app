@@ -7,6 +7,17 @@ import { expect, test, type Page } from "@playwright/test";
  */
 const SCALE = 0.05;
 
+/**
+ * The spoken introduction is real-time audio (about 17 s; timeScale doesn't shorten audio). Tests that are not about
+ * it serve Question 1's short file in its place, so the part starts after a few seconds.
+ */
+async function shortIntro(page: Page) {
+  await page.route("**/v1/intro.wav", async (route) => {
+    const url = route.request().url().replace("/intro.wav", "/q1.wav").replace("/b1-part1-2-shopping/v1/q1.wav", "/b1-part1-2-shopping/v1/q4.wav");
+    await route.fulfill({ response: await route.fetch({ url }) });
+  });
+}
+
 async function readOffsets(page: Page): Promise<number[]> {
   await expect(page.getByTestId("dev-result")).toBeVisible({ timeout: 30_000 });
   return JSON.parse((await page.getByTestId("offsets").textContent()) ?? "[]") as number[];
@@ -24,8 +35,9 @@ async function recordingSeconds(page: Page): Promise<number> {
 test("Part 1.1: three questions in one recording, paused during question audio and chime", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(String(error)));
+  await shortIntro(page);
   await page.goto(`/dev/part1-player?task=a2-part1-1-daily-life&timeScale=${SCALE}`);
-  await expect(page.getByTestId("content-timings")).toContainText("30 s · 30 s · 30 s (preparation 0 s · 0 s · 0 s)");
+  await expect(page.getByTestId("content-timings")).toContainText("30 s · 30 s · 30 s (preparation 5 s · 5 s · 5 s)");
 
   await page.getByRole("button", { name: "Start" }).click();
   const card = page.getByTestId("sequence-question");
@@ -36,7 +48,7 @@ test("Part 1.1: three questions in one recording, paused during question audio a
     await expect(page.getByTestId("question-text")).toHaveText(text);
     // Question audio: recorder not recording (not started yet for Q1, paused afterwards).
     if (i > 0) {
-      await expect(card).toHaveAttribute("data-step", /prompt|chime/);
+      await expect(card).toHaveAttribute("data-step", /prompt|preparing|chime/);
       await expect(card).toHaveAttribute("data-recorder-state", "paused");
     }
     // At the chime the countdown starts and the recorder runs.
@@ -65,6 +77,7 @@ test("Part 1.1: three questions in one recording, paused during question audio a
 
 test("a question audio that fails: the text stays, the countdown starts anyway, the failure is reported", async ({ page }) => {
   await page.route("**/a2-part1-1-daily-life/v1/q2.wav", (route) => route.abort());
+  await shortIntro(page);
   await page.goto(`/dev/part1-player?task=a2-part1-1-daily-life&timeScale=${SCALE}`);
   await page.getByRole("button", { name: "Start" }).click();
 
@@ -81,7 +94,7 @@ test("a question audio that fails: the text stays, the countdown starts anyway, 
   expect(offsets).toHaveLength(3);
 });
 
-test("the chime is the code-made two-tone chime (no file): three chimes, each before its question's countdown", async ({ page }) => {
+test("the chime is the code-made two-tone chime (no file): after the introduction, and at the start and end of each answer", async ({ page }) => {
   await page.addInitScript(() => {
     const w = window as unknown as { __tones: number[] };
     w.__tones = [];
@@ -96,19 +109,21 @@ test("the chime is the code-made two-tone chime (no file): three chimes, each be
     const file = new URL(request.url()).pathname;
     if (/\.(wav|mp3|ogg|m4a)$/.test(file)) audioFiles.push(file);
   });
+  await shortIntro(page);
   await page.goto(`/dev/part1-player?task=a2-part1-1-daily-life&timeScale=${SCALE}`);
   await page.getByRole("button", { name: "Start" }).click();
   const offsets = await readOffsets(page);
   expect(offsets).toHaveLength(3);
-  expect(await page.evaluate(() => (window as unknown as { __tones: number[] }).__tones)).toEqual([659, 880, 659, 880, 659, 880]);
-  // Only the three spoken questions are fetched; there is no chime file.
-  expect(new Set(audioFiles.map((f) => f.split("/").pop()))).toEqual(new Set(["q1.wav", "q2.wav", "q3.wav"]));
+  expect(await page.evaluate(() => (window as unknown as { __tones: number[] }).__tones)).toEqual(Array(7).fill([659, 880]).flat()); // 1 sample + 3 × (start, time up)
+  // Only the introduction and the three spoken questions are fetched; there is no chime file.
+  expect(new Set(audioFiles.map((f) => f.split("/").pop()))).toEqual(new Set(["intro.wav", "q1.wav", "q2.wav", "q3.wav"]));
   await expect(page.getByTestId("audio-failures").locator("li")).toHaveCount(0);
 });
 
 test("Part 1.2: 45 + 30 + 30 s from the content, offsets follow", async ({ page }) => {
+  await shortIntro(page);
   await page.goto(`/dev/part1-player?task=b1-part1-2-shopping&timeScale=${SCALE}`);
-  await expect(page.getByTestId("content-timings")).toContainText("45 s · 30 s · 30 s (preparation 0 s · 0 s · 0 s)");
+  await expect(page.getByTestId("content-timings")).toContainText("45 s · 30 s · 30 s (preparation 10 s · 5 s · 5 s)");
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page.getByTestId("question-text")).toHaveText("Look at the two pictures. Describe them and say how they are different.");
   const offsets = await readOffsets(page);

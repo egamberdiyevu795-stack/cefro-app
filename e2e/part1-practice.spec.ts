@@ -8,6 +8,19 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const SCALE = 0.05;
+
+/**
+ * The spoken introduction is real-time audio (about 17 s; timeScale doesn't shorten audio). Tests that are not about
+ * it serve Question 1's short file in its place, so the part starts after a few seconds.
+ */
+async function shortIntro(page: Page) {
+  await page.route("**/v1/intro.wav", async (route) => {
+    const url = route.request().url().replace("/intro.wav", "/q1.wav").replace("/b1-part1-2-shopping/v1/q1.wav", "/b1-part1-2-shopping/v1/q4.wav");
+    await route.fulfill({ response: await route.fetch({ url }) });
+  });
+}
+
+
 const DEMO_MODE = "Demo mode. Your answer won't be scored.";
 
 function watchApi(page: Page) {
@@ -90,7 +103,7 @@ async function runPart(page: Page, first: number, count = 3) {
     await expect(page.getByTestId("question-counter")).toHaveText(`Question ${first + i} · ${i + 1} of ${count}`);
     // The question plays first: nothing is being recorded.
     const step = await card.getAttribute("data-step");
-    if (step === "prompt" || step === "chime") expect(await card.getAttribute("data-recorder-state")).not.toBe("recording");
+    if (step === "prompt" || step === "preparing" || step === "chime") expect(await card.getAttribute("data-recorder-state")).not.toBe("recording");
     await expect(card).toHaveAttribute("data-step", "speaking", { timeout: 15_000 });
     await expect(card).toHaveAttribute("data-recorder-state", "recording");
   }
@@ -99,10 +112,12 @@ async function runPart(page: Page, first: number, count = 3) {
 
 test("Part 1.1 mock: brief → three questions in one recording → Scoring… → result (Part 1.1, A2 scale, no cohesion) → retry with the goal", async ({ page }) => {
   const api = watchApi(page);
+  await shortIntro(page);
   await page.goto(`/practice/speaking/a2-part1-1-daily-life?mock=1&timeScale=${SCALE}`);
   await expect(page.getByTestId("demo-label")).toHaveText(DEMO_MODE);
   await expect(page.getByText("Speaking · Part 1.1 · Practice")).toBeVisible();
   await expect(page.getByText("30 s each")).toBeVisible();
+  await expect(page.getByText("5 s each")).toBeVisible(); // Prepare: 5 s before each answer, as in the exam
   await expect(page.getByText(/Headphones are recommended/)).toBeVisible();
   // The questions are not shown before they are asked.
   await expect(page.getByText("What is your favourite food? Why?")).toHaveCount(0);
@@ -111,6 +126,7 @@ test("Part 1.1 mock: brief → three questions in one recording → Scoring… �
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.getByTestId("question-text")).toHaveText("What do you usually do at the weekend?");
   await auditPhone(page, []);
+  await shortIntro(page);
   await page.goto(`/practice/speaking/a2-part1-1-daily-life?mock=1&timeScale=${SCALE}`);
   await runPart(page, 1);
 
@@ -136,14 +152,17 @@ test("Part 1.1 mock: brief → three questions in one recording → Scoring… �
 
 test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two pictures' on the result", async ({ page }) => {
   const api = watchApi(page);
+  await shortIntro(page);
   await page.goto(`/practice/speaking/b1-part1-2-shopping?mock=1&timeScale=${SCALE}`);
   await expect(page.getByText("Speaking · Part 1.2 · Practice")).toBeVisible();
   await expect(page.getByText("45 · 30 · 30 s")).toBeVisible();
+  await expect(page.getByText("10 · 5 · 5 s")).toBeVisible(); // Prepare, as in the exam
   await expect(page.getByTestId("part1-pictures")).toHaveCount(0);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.getByTestId("part1-pictures")).toBeVisible();
   await expect(page.getByTestId("part1-pictures").getByRole("img")).toHaveCount(2);
   await auditPhone(page, []);
+  await shortIntro(page);
   await page.goto(`/practice/speaking/b1-part1-2-shopping?mock=1&timeScale=${SCALE}`);
   await runPart(page, 4);
   await expect(page.getByText("Part 1.2 ·", { exact: true })).toBeVisible({ timeout: 20_000 });
@@ -154,8 +173,40 @@ test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two
   expect(api).toEqual([]);
 });
 
+test("Part 1.1 starts with the spoken introduction and its sample chime, then each question gives 5 s to get ready (not recorded)", async ({ page }) => {
+  const tones: number[] = [];
+  await page.exposeFunction("__tone", (hz: number) => tones.push(hz));
+  await page.addInitScript(() => {
+    const originalStart = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (this: OscillatorNode, ...args: [number?]) {
+      (window as unknown as { __tone: (hz: number) => void }).__tone(Math.round(this.frequency.value));
+      return originalStart.apply(this, args);
+    };
+  });
+  await page.goto("/practice/speaking/a2-part1-1-daily-life?mock=1");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  const intro = page.getByTestId("part1-intro");
+  await expect(intro).toBeVisible();
+  await expect(intro.getByRole("heading", { name: "Part 1.1" })).toBeVisible();
+  await expect(page.getByTestId("intro-text")).toContainText("Start speaking when you hear this sound.");
+  expect(tones).toEqual([]);
+  await auditPhone(page, []);
+  // After the introduction (real length) the sample chime plays, then Question 1.
+  const card = page.getByTestId("part1-question");
+  await expect(card).toBeVisible({ timeout: 40_000 });
+  expect(tones.slice(0, 2)).toEqual([659, 880]);
+  await expect(card).toHaveAttribute("data-step", "preparing", { timeout: 15_000 });
+  await expect(card).toHaveAttribute("data-recorder-state", "inactive");
+  await expect(page.getByText("to get ready")).toBeVisible();
+  await auditPhone(page, []);
+  await expect(card).toHaveAttribute("data-step", "speaking", { timeout: 15_000 });
+  await expect(card).toHaveAttribute("data-recorder-state", "recording");
+  expect(tones.slice(0, 4)).toEqual([659, 880, 659, 880]);
+});
+
 test("a question audio that fails still plays the chime and starts the countdown", async ({ page }) => {
   await page.route("**/a2-part1-1-daily-life/v1/q2.wav", (route) => route.abort());
+  await shortIntro(page);
   await page.goto(`/practice/speaking/a2-part1-1-daily-life?mock=1&timeScale=${SCALE}`);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   const card = page.getByTestId("part1-question");

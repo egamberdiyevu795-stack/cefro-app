@@ -62,6 +62,15 @@ export function QuestionSequencePlayer({
     );
   }
 
+  if (phase.kind === "intro") {
+    return (
+      <Card className="p-6" data-testid="sequence-intro">
+        <p className="font-medium">Introduction</p>
+        <p className="mt-2">{task.intro?.text}</p>
+      </Card>
+    );
+  }
+
   const { index, step } = phase;
   const question = task.questions[index]!;
   const audioFailed = state.audioFailures.some((f) => f.index === index && f.cue === "question");

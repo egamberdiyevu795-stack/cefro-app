@@ -18,9 +18,13 @@ export function part1Label(task: Pick<PublicSpeakingTask, "level">): string {
   return task.level === "A2" ? "Part 1.1" : "Part 1.2";
 }
 
-function timingsText(task: PublicSpeakingTask): string {
-  const seconds = task.delivery?.questions.map((q) => q.speakingSeconds) ?? [];
+function timingsText(seconds: number[]): string {
   return seconds.every((s) => s === seconds[0]) ? `${seconds[0]} s each` : `${seconds.join(" · ")} s`;
+}
+
+function prepText(task: PublicSpeakingTask): string {
+  const seconds = task.delivery?.questions.map((q) => q.prepSeconds) ?? [];
+  return seconds.every((s) => s === 0) ? "None" : timingsText(seconds);
 }
 
 /** The introduction: what happens, the timings, headphones, the goal of a retry, the black "Start". */
@@ -54,8 +58,8 @@ export function Part1BriefCard({
 
       <dl className="mt-5 grid grid-cols-3 gap-2">
         <Tile label="Questions" value={`${first}–${first + count - 1}`} />
-        <Tile label="Prepare" value="None" />
-        <Tile label="Speak" value={timingsText(task)} />
+        <Tile label="Prepare" value={prepText(task)} />
+        <Tile label="Speak" value={timingsText(task.delivery?.questions.map((q) => q.speakingSeconds) ?? [])} />
       </dl>
       {goal && <GoalCard goal={goal} withCheck className="mt-2" />}
 
@@ -75,7 +79,7 @@ export function Part1BriefCard({
               Start
             </PillAction>
             <p className="mt-3 text-label text-fg-muted">
-              We&rsquo;ll ask to use your microphone. The first question plays straight away; recording starts at each chime.
+              We&rsquo;ll ask to use your microphone. A short spoken introduction plays first; recording starts at each chime.
             </p>
             {onDropGoal && (
               <button
@@ -126,6 +130,7 @@ export function Part1QuestionCard({
 }) {
   const count = task.prompts.length;
   const speaking = step.kind === "speaking";
+  const preparing = step.kind === "preparing";
   const totalMs = speaking ? step.totalMs : 1;
   const elapsedMs = speaking ? Math.max(0, step.totalMs - remainingMs) : 0;
   const status =
@@ -168,11 +173,35 @@ export function Part1QuestionCard({
           <Countdown remainingMs={remainingMs} label="left" />
           <ProgressBar value={elapsedMs / totalMs} label="Speaking time used" className="mt-3" />
         </>
+      ) : preparing ? (
+        <>
+          <Countdown remainingMs={remainingMs} label="to get ready" />
+          <p className="mt-2 text-label text-fg-muted">Think about your answer. Recording starts at the chime.</p>
+        </>
       ) : (
         <p className="mt-2 text-label text-fg-muted">Recording is paused while the question plays. It starts again at the chime.</p>
       )}
       {goal && <GoalCard goal={goal} className="mt-4" />}
       <p className="mt-4 text-label text-fg-muted">The next question starts by itself.</p>
+    </Card>
+  );
+}
+
+/** The spoken introduction (before the first question), then the sample chime. Nothing is recorded; no button. */
+export function Part1IntroCard({ task, text }: { task: PublicSpeakingTask; text: string }) {
+  return (
+    <Card aria-labelledby="intro-title" data-testid="part1-intro">
+      <p className="flex items-center gap-2 text-label font-semibold text-fg" aria-live="polite">
+        <Icon name="play" size={16} className="text-fg-subtle" />
+        Listen
+      </p>
+      <h1 id="intro-title" className="mt-3 text-stat font-light tracking-[-0.03em] text-fg">
+        {part1Label(task)}
+      </h1>
+      <p className="mt-3 text-body text-fg" data-testid="intro-text">
+        {text.replace(/^Part 1\.[12]\.\s*/, "")}
+      </p>
+      <p className="mt-4 text-label text-fg-muted">The first question starts by itself after the chime.</p>
     </Card>
   );
 }

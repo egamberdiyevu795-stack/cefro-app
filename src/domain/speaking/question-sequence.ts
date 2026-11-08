@@ -28,6 +28,14 @@ export interface QuestionAudioSource {
   description: string;
 }
 
+/** The spoken introduction of a part (our own wording), read before Question 1 and followed by a sample chime. */
+export interface PartIntro {
+  /** Shown on screen while it plays. */
+  text: string;
+  /** URL of its pre-generated audio. */
+  audio: string;
+}
+
 export interface QuestionSequenceTask {
   id: string;
   version: number;
@@ -38,6 +46,7 @@ export interface QuestionSequenceTask {
   firstQuestionNumber: number;
   instructions: string[];
   questions: TimedQuestion[];
+  intro?: PartIntro;
   audioSource: QuestionAudioSource;
 }
 

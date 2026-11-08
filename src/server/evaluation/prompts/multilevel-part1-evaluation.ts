@@ -80,7 +80,7 @@ function buildSystem(input: EvaluationInput): string {
 You do NOT give a band, a score or an overall level. You make the judgements below, each backed by exact quotes, and CEFRO computes the band from them.
 
 # How this part works
-The examiner reads each question aloud, a chime sounds, and the student has a fixed time to answer (see <task>). There is no preparation time. Everything the student says for all ${n} questions is ONE recording and ONE transcript, in question order. The examiner's voice and the chime are not recorded. <speech_metrics> gives "questionOffsetsMs" (where each question's answer starts in the recording, in milliseconds) and "questionSeconds" (how long each answer was): use them to tell which part of the transcript answers which question, and to talk about time in plain words ("you used 12 of your 30 seconds for Question ${first + 1}"). Answers are short by design: judge them as short answers, not as a long turn.
+The examiner reads each question aloud${input.task.delivery?.questions.some((q) => q.prepSeconds > 0) ? ", the student has a few seconds to get ready" : ""}, a chime sounds, and the student has a fixed time to answer (see <task>).${input.task.delivery?.questions.some((q) => q.prepSeconds > 0) ? "" : " There is no preparation time."} Everything the student says for all ${n} questions is ONE recording and ONE transcript, in question order. The examiner's voice and the chime are not recorded. <speech_metrics> gives "questionOffsetsMs" (where each question's answer starts in the recording, in milliseconds) and "questionSeconds" (how long each answer was): use them to tell which part of the transcript answers which question, and to talk about time in plain words ("you used 12 of your 30 seconds for Question ${first + 1}"). Answers are short by design: judge them as short answers, not as a long turn.
 
 # Official descriptors
 Judge each feature against these descriptors. The ${lower} and ${target} texts are copied from the official rating scale; the reference texts are given only so you can recognise language outside the scale. Choose the level whose text fits best:
@@ -133,8 +133,8 @@ function buildUser(input: EvaluationInput): string {
     `<task>
 Part: 1 (official Questions ${questionNumber(task, 0)}–${questionNumber(task, task.prompts.length - 1)})
 Topic: ${task.question}
-${task.prompts.map((p, i) => `Question ${questionNumber(task, i)} (id ${i + 1}, ${questions?.[i]?.speakingSeconds ?? "?"} s to speak): ${p}`).join("\n")}
-${(task.images ?? []).map((image, i) => `Picture ${String.fromCharCode(65 + i)} shown to the student: ${image.alt}\n`).join("")}Preparation time: none
+${task.prompts.map((p, i) => `Question ${questionNumber(task, i)} (id ${i + 1}, ${questions?.[i]?.prepSeconds ? `${questions[i]!.prepSeconds} s to get ready, ` : ""}${questions?.[i]?.speakingSeconds ?? "?"} s to speak): ${p}`).join("\n")}
+${(task.images ?? []).map((image, i) => `Picture ${String.fromCharCode(65 + i)} shown to the student: ${image.alt}\n`).join("")}Preparation time: ${questions?.some((q) => q.prepSeconds > 0) ? "a few seconds before each answer (not recorded)" : "none"}
 </task>`,
     `<task_guidance_for_examiner>
 ${task.evaluatorGuidance}

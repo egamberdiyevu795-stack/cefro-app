@@ -6,7 +6,7 @@ the one it depends on.
 | Phase | What | Depends on | Status |
 | --- | --- | --- | --- |
 | 1 | Signed-out pages redesign | — | Built (`claude/landing`) |
-| 2 | Guest tries one real answer, then "Save your result" | Under-18 consent work | Not started |
+| 2 | First real answer right after Create account (guests don't record) | Under-18 consent work | Not started |
 | 3 | One-tap sign-in (Google or Telegram) | Phase 1 | Not started |
 | 4 | Full mock exam | All three parts live | Not started |
 
@@ -24,14 +24,19 @@ Home (`/`), sign in (`/login`) and Create account (`/register`) on the design sy
 - **Sign in**: "Welcome back".
 - No numbers, ratings, testimonials, "free" claims, Passed/Failed or claims about age.
 
-## Phase 2: guest tries one real answer, then "Save your result"
+## Phase 2: first real answer right after Create account
 
-A visitor records one real answer without an account and sees the real result; the result page then offers "Save
-your result" (Create account), and the answer moves into the new account (the server already merges the anonymous
-identity into the account at sign-up).
+**Changed (Asadbek, 2026-11-08, `docs/consent-design.md` section 0): guests cannot record until consent exists.**
+A guest's recording is personal data of someone whose age we do not know, so the old phase 2 ("a guest records one
+real answer, then Save your result") is dropped. Before an account, a visitor sees only the demo result
+(`/result?demo=demo-5&mock=1`).
 
-**Blocked by the under-18 consent work** (`docs/privacy-todo.md`): a guest's recording is personal data of someone
-whose age we do not know, so it can only be stored once the consent flow for under-18s exists.
+Instead: Create account → the first real answer as soon as recording is allowed (18+: straight away once age is
+asked; under 18: once a parent has agreed; during the pilot: once the owner has recorded consent). The practice page
+for guests says "Create an account to record". Once the full consent flow exists, a guest who states 18+ could
+record before an account (consent-design section 3), but that is not part of this phase.
+
+**Blocked by the under-18 consent work** (`docs/consent-design.md`; pilot route in section 2b).
 
 ## Phase 3: one-tap sign-in (Google or Telegram)
 

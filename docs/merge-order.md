@@ -385,6 +385,15 @@ Contains (docs/design-system.md, "Signed-out pages"; docs/growth-plan.md, phase 
   switches in each state), `mock-pages.test.ts` (home's demo link), `e2e/entry-pages.spec.ts` (390 px audits, demo
   link, the list follows `PART_LIVE`, no name at sign-up, the server's name rule).
 
+## After `claude/integration-chgcwb`: `claude/consent-plan-j0ky8m` (docs only)
+
+Cut from `claude/integration-chgcwb` (`ced5367`), so it comes **after it** (or, like it, copy the docs instead of
+merging), merge commit, no squash. Branch name: 19 characters after `claude/`. **Documents only**: no app code, no
+migration, no environment variable. Contains: `docs/consent-design.md` (under-18 consent design, decisions of
+2026-11-08, pilot route), `docs/privacy-notice-draft.md` and `docs/terms-draft.md` (drafts for a lawyer, `[CHECK]`
+marks), `docs/lawyer-questions.md`, `docs/pilot-parent-message.md`, a change to `docs/growth-plan.md` phase 2
+(guests don't record), and this entry.
+
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 
 claude/entry-pages-jgh558: duplicate, never merge. (It holds the first two commits of `claude/entry-pages` and is

@@ -3,14 +3,15 @@
 **Draft, 2026-11-08. Not published. Not legal advice.** Written in plain English for students and parents. Every
 statement marked **[CHECK]** needs a lawyer's confirmation before use. Text in `[square brackets]` is to be filled in.
 It describes the app as designed in `docs/consent-design.md` (parent code, recording only after consent); where the
-app differs today, that is noted. Translations into Uzbek and Russian are expected [CHECK].
+app differs today, that is noted. Decided: the notice (and the parent page) will be in Uzbek and Russian; English later [CHECK: whether the Uzbek version must be the binding one].
 
 ---
 
 ## 1. Who we are
 
-CEFRO is an app for practising the speaking part of the UZBMB multilevel exam. It is run by **[controller: name,
-legal form, address, registration number]** ("we"). Contact: **[contact address]** [CHECK: whether a named person
+CEFRO is an app for practising the speaking part of the UZBMB multilevel exam. It is run by **[controller]** ("we"). For the pilot the
+controller is **Asadbek [surname], a private person, [address]** [CHECK: whether a private person may act as
+controller, and what changes after the pilot]. Contact: **[contact address]** [CHECK: whether a named person
 responsible for personal data must be appointed and named here].
 
 ## 2. What we collect
@@ -72,7 +73,8 @@ We do not sell your data and do not show ads.
 
 ## 6. How long we keep it
 
-- Account, recordings, results: until you delete your account [CHECK: whether a maximum period must be set].
+- **Voice recordings: deleted 30 days after the answer is scored** [CHECK: whether a shorter period is required].
+- Account, transcripts, feedback, results: until you delete your account [CHECK: whether a maximum period must be set].
 - Under-18 accounts waiting for a parent: 14 days.
 - Consent records: as long as the account exists [CHECK: whether proof must be kept after deletion, and for how long].
 - Server logs: [period set by the hosting provider] [CHECK].

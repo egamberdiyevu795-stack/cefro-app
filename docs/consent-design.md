@@ -1,9 +1,24 @@
 # Under-18 consent: design
 
-Status: **proposal, 2026-11-08. Nothing built.** Documents only: no app code, no migration. Replaces items 2–3 of
+Status: **proposal, 2026-11-08; decisions in section 0 (Asadbek, 2026-11-08). Nothing built.** Documents only: no app code, no migration. Replaces items 2–3 of
 `docs/privacy-todo.md` ("guardian email", "email sending") with ways that need **no email**. Every legal point is for
 the lawyer: see `docs/privacy-notice-draft.md` and `docs/terms-draft.md`, where each one is marked [CHECK].
 Nothing here says any law applies; the age limit 18 is the owner's decision (teacher plan §7), pending that check.
+
+## 0. Decisions (Asadbek, 2026-11-08)
+
+- **Recording is locked until consent** (for under-18s: a parent's; see the pilot route for now).
+- **Guests (no account) cannot record until consent exists.** Until the consent flow is built, nobody records
+  without an account. After it, a guest records only once their age is known and, if under 18, a parent has agreed,
+  which in practice means creating an account first. `docs/growth-plan.md` phase 2 follows this.
+- **Waiting accounts** (under 18, no parent yet) are **deleted after 14 days**.
+- **Audio is deleted 30 days after scoring**; the transcript and feedback are kept until the account is deleted. The
+  lawyer may shorten this.
+- **The parent page and the privacy notice in Uzbek and Russian** (English later); the rest of the app stays English
+  for now.
+- **Data controller for the pilot: Asadbek personally.** After the pilot: the lawyer's answer.
+- Plan with **age 18**; **nobody under 14 is invited** until the lawyer answers the minimum age.
+- Open for the lawyer, in this order: `docs/lawyer-questions.md`.
 
 ## 1. Options (no email sending)
 
@@ -18,12 +33,55 @@ Nothing here says any law applies; the age limit 18 is the owner's decision (tea
 ## 2. Recommendation
 
 **A (parent code) for every under-18 account, with B (paper via teacher) added later as an alternative route for
-classes.** Under-18s can't record until consent is given. Ask the age as **month and year of birth** (enough to know
+classes.** Under-18s can't record until consent is given. **For the pilot, neither is built**: consent is collected by
+hand (section 2b). Ask the age as **month and year of birth** (enough to know
 when someone turns 18, less than a full date). Whether A alone is enough evidence is the first question for the lawyer
 [CHECK]; if not, B (or D) becomes required, and A stays as the parent's way to manage consent.
 
 Why not wait for email: A needs no provider, and it gives the parent their own key, which email would not have solved
 for parents without email. Email (or SMS) can be added later as a second way to deliver the same code.
+
+### 2a. What a parent code does not prove
+
+A parent code is **parental confirmation, not verified consent**. A student can open the parent page on their own
+phone (or a friend's), enter the code and agree as their "parent". Age is also self-declared: a 15-year-old can type
+a birth year that makes them 18, and then no parent is asked at all. Nothing in option A detects either. What reduces
+the risk (none removes it):
+
+- **Wording and responsibility:** the parent page says "Only a parent or legal guardian may agree"; the terms say a
+  false age or a false parent leads to deletion.
+- **Soft device check:** the parent page refuses a browser that is signed in as the student or carries the student's
+  guest cookie ("Open this on your own phone"). Easy to get around, but it stops the casual case.
+- **Visible to the family:** the student's Account page shows "Your parent (Dilnoza, mother) agreed on 08.11.26";
+  the parent key is shown once and lets the real parent withdraw at any time.
+- **Timing flag:** consent given within a minute of the code being made, from the same IP address, is flagged for
+  the owner to look at (compared at the time; the IP address is not stored).
+- **Age once:** month/year of birth is asked once, not editable by the student; a change needs the owner.
+- **Stronger routes where it matters:** paper via a teacher (B) for classes, or a signed note collected by hand (the
+  pilot route); teacher sharing can require one of these even if A is enough for practice.
+- **Little to lose:** first name only for teachers, no phone number or address collected, audio deleted after 30 days.
+
+Whether this is enough is lawyer question 2.
+
+### 2b. Pilot route (about 10 known testers; not built)
+
+- **Who:** about 10 testers Asadbek knows personally. Nobody under 14. Adults and under-18s alike go through it.
+- **How consent is collected:** by hand. Asadbek sends the parent the message in `docs/pilot-parent-message.md`
+  (Uzbek, Russian, English) and keeps the parent's reply "yes" (a message or a signed paper note). Adult testers reply
+  for themselves. Where and how long the replies are kept: lawyer question 5.
+- **How it is recorded:** an owner script, like `scripts/set-role.mjs`:
+  `node scripts/set-consent.mjs <email> given [--teacher-sharing]` and `... <email> withdrawn` (which then runs Delete
+  my account). No page and no API can set it.
+- **Minimal change (one small additive migration, later):** on `users`, `consent_status` (null = none, `given`,
+  `withdrawn`), `consent_at`, `consent_notice_version`, `consent_teacher_sharing` (0/1). One server check,
+  `canRecord(user)` = `consent_status = 'given'`, on the recording and scoring routes; guests always fail it. Share
+  (S2) and `teacherCanSee` also need `consent_teacher_sharing = 1`. Delete my account clears the columns with the row.
+  The Account page shows "Waiting for consent. Asadbek will turn on recording once it is agreed." or "Consent recorded
+  on 08.11.26". No age question, no parent page, no codes in the pilot.
+- **Audio after 30 days:** the parent message promises it, so either the daily job (section 5) ships with the
+  pilot, or an owner script deletes pilot audio older than 30 days at least weekly.
+- **Later:** the full design (sections 3–5) replaces the script; `consent_status` values from the pilot become
+  `guardian_consents` rows with `method = 'by_hand'`.
 
 ## 3. Screens
 
@@ -32,9 +90,10 @@ Under 18: the account is created in **Waiting for a parent**, then a full screen
 large type, "Your parent opens **[parent page]** on their phone and enters this code. It works for 7 days.", Copy code,
 grey "Continue to the demo". Until consent: practice, recording, Join a class are locked; demo pages work.
 
-**Anonymous visitors**: before the **first recording** (not at page load), the same month/year question. Under 18:
-"Create an account so a parent can agree first", no recording. 18+: unchanged. The answer is stored on the anonymous
-row and carried into the account on sign-up.
+**Guests (no account)**: no recording (decision, section 0). Until the full flow exists the practice page shows
+"Create an account to record". After it: before the first recording, the same month/year question; under 18: "Create
+an account so a parent can agree first"; 18+: may record. The answer is stored on the anonymous row and carried into
+the account on sign-up.
 
 **Parent page** (`/parent`, no account needed, design system, phone first): enter code → "Your child wants to use
 CEFRO" → plain summary (what is recorded and scored, who sees it, the scoring providers, teacher sharing, how to
@@ -68,7 +127,8 @@ parent agreed to this on 08.11.26". Teachers never see age, birth month, parent 
 | Parent's phone number | **not collected** in A (no use for it without SMS) | — | — |
 | Paper form (B) | school / teacher | by the school, not CEFRO [CHECK] | school's rule |
 | Waiting accounts never agreed | under-18 | 14 days after sign-up [CHECK] | email, birth month, codes: whole account deleted |
-| Recordings, attempts, results | after consent only | until account deletion (today's rule) [CHECK a fixed period] | Delete my account or withdrawal |
+| Recordings (audio) | after consent only | **30 days after scoring** (decision; lawyer may shorten) | automatically, or earlier with the account / withdrawal |
+| Attempts, transcripts, feedback, results | after consent only | until account deletion | Delete my account or withdrawal |
 
 Nothing about age or consent is sent to the scoring providers or shown to teachers.
 
@@ -86,30 +146,26 @@ Nothing about age or consent is sent to the scoring providers or shown to teache
   turning teacher sharing off ends the share like Leave (teacher plan §5).
 - `delete-account.ts`: delete `guardian_consents`; withdrawal calls it; a parent-key deletion calls it without the
   student's password. Add to the table-by-table test.
-- A daily job (or check on read) deletes waiting accounts older than 14 days, and marks a minor `adult` on their 18th
-  birthday month.
+- A daily job deletes waiting accounts older than 14 days and audio (`recordings` audio + `recording_blobs` / files)
+  30 days after scoring, keeping the `recordings` row marked "audio deleted" so results still show; the result page's
+  player then says "Recording deleted after 30 days". It also marks a minor `adult` on their 18th birthday month.
 - `class_members.shown_name`: one word for under-18s (server check).
 
 Existing accounts: `birth_month` null → asked before their next recording; under-18 answers lock recording until
 consent. Their past recordings: see open question 6.
 
-## 6. Open questions for you
+## 6. Open questions: status
 
-1. **Is a parent code (A) enough evidence**, or must we have paper (B) or SMS (D)? (Lawyer.)
-2. **Age limits:** is 18 the right age for consent here, and is there a minimum age below which no one may use
-   CEFRO even with consent (e.g. under 14)? (Lawyer, then you.)
-3. **Locked until consent?** I recommend no recording before consent. Alternative: record and score, delete after 14
-   days without consent. Which?
-4. **Waiting accounts:** delete after 14 days? Another period?
-5. **Proof after deletion:** keep a minimal consent record (date, method, notice version, no name) after an account
-   is deleted, or delete everything? (Lawyer.)
-6. **Existing under-18 data** recorded before this ships: lock it until a parent agrees, or delete it?
-7. **Paper route (B):** build it in v1 for schools, or later? If yes, who keeps the signed forms?
-8. **Where data is stored:** the hosted database (Turso) and providers are outside Uzbekistan; the lawyer must say
-   whether data of citizens of Uzbekistan must be stored on servers in Uzbekistan [CHECK]. This may decide hosting
-   before launch.
-9. **Who is the data controller** (your name, a company, a school)? The drafts leave it blank.
-10. **Retention of recordings:** keep until the account is deleted (today), or delete audio after a fixed time
-    (e.g. 12 months) and keep only text results?
-11. **Languages:** the parent page and notice in Uzbek and Russian as well as English? (Probably required for
-    parents to understand it [CHECK].)
+| # | Question | Status (2026-11-08) |
+| --- | --- | --- |
+| 1 | Is a parent code enough? | Lawyer. Pilot: written parent reply collected by hand |
+| 2 | Age 18, minimum age? | Lawyer. Plan with 18; nobody under 14 invited meanwhile |
+| 3 | Lock recording until consent? | **Decided: yes** |
+| 4 | Delete waiting accounts after 14 days? | **Decided: yes** |
+| 5 | Minimal consent record after deletion? | Lawyer. Owner's lean: date and notice version only, nothing about the person |
+| 6 | Old under-18 recordings? | None exist (no real users yet) |
+| 7 | Paper route in v1? | By hand for the pilot; not built |
+| 8 | Data stored in Uzbekistan? | Lawyer, **asked first**: decides hosting, cost and timing |
+| 9 | Data controller? | Pilot: Asadbek personally. After: lawyer |
+| 10 | Audio retention? | **Decided: 30 days after scoring**, keep transcript and feedback |
+| 11 | Uzbek and Russian? | **Decided: yes** for the parent page and notice |

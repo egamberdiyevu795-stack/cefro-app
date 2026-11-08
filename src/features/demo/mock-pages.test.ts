@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { RECORDING_LOCKED_MESSAGE } from "@/domain/consent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_CHANGES_TEXT, DEMO_DATA_TEXT, DEMO_ENTRY_TEXT, DEMO_MODE_TEXT, DEMO_RESULT_TEXT } from "@/components/ds";
 
@@ -165,6 +166,26 @@ describe("mock pages on a Preview with no configuration", () => {
       expect(mainOf(markup).match(BLACK)).toHaveLength(1);
       expectMockLinksOnly(markup);
     }
+  });
+
+  it.each(["waiting", "withdrawn", "guest"] as const)("practice brief, locked preview (?consent=%s): the kind lock, no recording controls, one black button", async (lock) => {
+    const markup = await html(PracticePage(props({ mock: "1", consent: lock }, { taskId: "b2-part2-happy-day" })));
+    expect(markup).toContain(`data-lock="${lock}"`);
+    expect(markup).toContain(escaped(RECORDING_LOCKED_MESSAGE[lock]));
+    if (lock === "waiting") expect(markup).toContain("Ask your parent or guardian to confirm, then we will unlock recording.");
+    expect(markup).not.toContain("Start preparation");
+    expect(markup).not.toContain("Check microphone");
+    expect(markup).toContain("Answer all 3 questions"); // the task can still be read
+    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
+    expect(markup).not.toMatch(SMALL);
+    expectMockLinksOnly(markup);
+  });
+
+  it("practice brief in mock mode is never locked without ?consent= (CONSENT_REQUIRED does not apply to mock mode)", async () => {
+    vi.stubEnv("CONSENT_REQUIRED", "true");
+    const markup = await html(PracticePage(props({ mock: "1", consent: "nonsense" }, { taskId: "b2-part2-happy-day" })));
+    expect(markup).toContain("Start preparation");
+    expect(markup).not.toContain('data-testid="recording-locked"');
   });
 
   it("result (scored, retry, scoring): demo result label, mock links", async () => {

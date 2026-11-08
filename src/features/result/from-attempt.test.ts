@@ -55,6 +55,24 @@ describe("real attempts → the result page", () => {
     expect(blacks(html)).toBe(1);
   });
 
+  it("audio retention: the real deletion date beside the player; once deleted, no player and the date it went; still one black button", () => {
+    const attempt = stored("A2-b1-all-three");
+    const state = resultPageState(resultSourceFromAttempt(attempt, { task, bandLabels })!);
+    if (state.kind !== "scored") throw new Error(state.kind);
+    const render = (audio: { deletedAt: string | null; deletesAt: string | null }) =>
+      renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS, retryHref: noop, audio: { src: attemptAudioUrl(attempt.id), durationMs: 1000, ...audio } }));
+    const kept = render({ deletedAt: null, deletesAt: "2026-12-08T10:00:00.000Z" });
+    expect(kept).toContain("<audio");
+    expect(kept).toContain("Your recording will be deleted on 08.12.26, 30 days after scoring. The transcript and feedback are kept.");
+    expect(blacks(kept)).toBe(1);
+    const gone = render({ deletedAt: "2026-12-08T03:17:00.000Z", deletesAt: "2026-12-08T10:00:00.000Z" });
+    expect(gone).not.toContain("<audio");
+    expect(gone).toContain("Recording deleted on 08.12.26, 30 days after scoring. The transcript and feedback are kept.");
+    expect(gone).toContain(state.view.transcript!.slice(0, 20));
+    expect(blacks(gone)).toBe(1);
+    expect(gone).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
+  });
+
   it("in progress → scoring; failed → failed; no speech → couldn't score; stalled → failed (try again)", () => {
     const base = stored("A2-b1-all-three", { evaluation: null });
     expect(resultPageState(resultSourceFromAttempt({ ...base, status: "evaluating" }, { task, bandLabels })!).kind).toBe("scoring");

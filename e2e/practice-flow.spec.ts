@@ -13,7 +13,7 @@ const DEMO_MODE_TEXT = "Demo mode. Your answer won't be scored.";
 /** Brief → preparation → recording → Finish. A short test answer opens the early-finish warning: "Finish anyway". */
 async function recordAndSubmit(page: Page, speakMs = 2500) {
   await page.getByRole("button", { name: "Start preparation" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await page.waitForTimeout(speakMs);
@@ -120,7 +120,7 @@ test("a result has its own address: a reload reopens it; another browser, or an 
   await stranger.close();
 });
 
-test("when the minute of preparation ends, the two-tone chime plays (made in code, no file), then recording starts by itself, with 'Speak now'", async ({ page }) => {
+test("after the spoken introduction and its chime, the minute of preparation; when it ends, the two-tone chime plays (made in code), then recording starts by itself, with 'Speak now'", async ({ page }) => {
   // Log the audio context, each chime tone (a Web Audio oscillator) and the recorder, in the order they happen.
   await page.addInitScript(() => {
     const w = window as unknown as { __events: string[] };
@@ -158,31 +158,42 @@ test("when the minute of preparation ends, the two-tone chime plays (made in cod
   await page.clock.fastForward(5_000);
   expect(await events()).toEqual([]);
   await page.getByRole("button", { name: "Start preparation" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
-  // The click only unlocks audio: no tone yet.
-  expect(await events()).toEqual(["audio-context"]);
+  // The click unlocks audio and plays the spoken introduction (its own screen; a short silent file here), then the chime
+  // ("Start speaking when you hear this sound"), then the minute starts. The chime's watchdog runs on the fake clock.
+  await expect(page.getByTestId("part2-intro")).toBeVisible();
+  await expect
+    .poll(async () => {
+      await page.clock.fastForward(500);
+      return page.getByRole("heading", { name: "Preparation" }).isVisible();
+    })
+    .toBe(true);
+  const afterIntro = await events();
+  expect(afterIntro[0]).toBe("audio-context");
+  expect(tones(afterIntro)).toEqual(["tone:659Hz", "tone:880Hz"]);
+  expect(afterIntro).not.toContain("recorder");
+  const startTones = (log: string[]) => tones(log).slice(2);
 
-  await page.clock.fastForward(59_000);
+  await page.clock.fastForward(58_000);
   await expect(page.getByRole("heading", { name: "Preparation" })).toBeVisible(); // not yet
-  expect(tones(await events())).toEqual([]);
-  await page.clock.fastForward(1_500);
+  expect(startTones(await events())).toEqual([]);
+  await page.clock.fastForward(2_500);
   // Two tones, low then high; only then does the recorder start (the chime's end, or its watchdog on the fake clock).
-  await expect.poll(async () => tones(await events())).toEqual(["tone:659Hz", "tone:880Hz"]);
+  await expect.poll(async () => startTones(await events())).toEqual(["tone:659Hz", "tone:880Hz"]);
   const during = await events();
-  if (!during.includes("tone-ended")) expect(during).not.toContain("recorder");
+  if (during.filter((e) => e === "tone-ended").length < 4) expect(during).not.toContain("recorder");
   await page.clock.fastForward(1_000);
 
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await expect(page.getByTestId("speak-now")).toHaveText("Speak now");
   await expect(page.getByRole("status").filter({ hasText: "Recording started. Speak now." })).toHaveCount(1);
   const log = await events();
-  expect(tones(log)).toEqual(["tone:659Hz", "tone:880Hz"]);
-  expect(log.indexOf("recorder")).toBeGreaterThan(log.indexOf("tone:880Hz"));
+  expect(startTones(log)).toEqual(["tone:659Hz", "tone:880Hz"]);
+  expect(log.indexOf("recorder")).toBeGreaterThan(log.lastIndexOf("tone:880Hz"));
   // When the browser reports the last tone's end, the recorder started after it (never during the chime).
   const lastEnd = log.lastIndexOf("tone-ended");
-  if (log.filter((e) => e === "tone-ended").length === 2) expect(log.indexOf("recorder")).toBeGreaterThan(lastEnd);
-  // No sound file is ever fetched.
-  expect(audioRequests).toEqual([]);
+  if (log.filter((e) => e === "tone-ended").length === 4) expect(log.indexOf("recorder")).toBeGreaterThan(lastEnd);
+  // The only sound file is the spoken introduction; the chime is made in code.
+  expect(audioRequests.map((url) => new URL(url).pathname)).toEqual(["/audio/speaking/part2/intro/v1/intro.wav"]);
   await page.clock.fastForward(5_000);
   await expect(page.getByTestId("speak-now")).toHaveCount(0);
 });
@@ -220,7 +231,7 @@ test("the task picture loads beside the questions on every screen (desktop): bri
   expect(imageResponses).toContain(200);
 
   await page.getByRole("button", { name: "Start preparation" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expectPicture(page, "beside");
 
   await page.getByRole("button", { name: "Start speaking now" }).click();
@@ -238,11 +249,12 @@ test("the task picture loads beside the questions on every screen (desktop): bri
 
 test("on a phone the picture is above the questions on the brief, below them while preparing", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
+  await shortPartIntros(context);
   const page = await context.newPage();
   await page.goto(TASK_URL);
   await expectPicture(page, "above");
   await page.getByRole("button", { name: "Start preparation" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expectPicture(page, "below");
   await context.close();
 });
@@ -418,7 +430,7 @@ for (const [name, url] of [
     await expect(start).toBeEnabled({ timeout: 30_000 });
     await page.unroute("**/_next/static/chunks/**");
     await start.click();
-    await expect(page.getByText("to prepare")).toBeVisible();
+    await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   });
 }
 
@@ -538,9 +550,9 @@ test("a retry opened by its link offers Start preparation only once its goal has
 
   await expect(page.getByTestId("goal-card")).toContainText("Your goal:");
   await page.getByRole("button", { name: "Start preparation" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await page.waitForTimeout(1000); // nothing may reset the screen after preparation has started
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible();
 });
 
@@ -581,7 +593,7 @@ test("retry goal fails to load: a message with Try again (which can load it) and
   await page.goto(`${TASK_URL}?retry=${id}`);
   await expect(unavailable).toBeVisible();
   await unavailable.getByRole("button", { name: "Start without the goal" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expect(page.getByTestId("goal-card")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible();
 });
@@ -619,10 +631,10 @@ test("retry goal loads slowly: after 10 s a message; a late answer is still used
   await page.clock.fastForward(10_500);
   await expect(unavailable).toBeVisible();
   await unavailable.getByRole("button", { name: "Start without the goal" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expect.poll(() => held.length).toBeGreaterThan(0);
   await releaseAll();
   await page.waitForTimeout(500);
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expect(page.getByTestId("goal-card")).toHaveCount(0);
 });

@@ -32,7 +32,8 @@ jobs:
   validate:
     name: Lint, typecheck, test, build, browser tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20: the Part 1 browser tests (spoken questions in real time) added a few minutes to a ~13-minute run.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,15 +51,12 @@ jobs:
           path: ~/.cache/ffmpeg-static-nodejs
           key: ffmpeg-static-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: ffmpeg-static-${{ runner.os }}-
-      # Retry a failed install (network). If the binary still can't be downloaded, install without install scripts,
+      # If the binary can't be downloaded, install without install scripts,
       # run the others, and go on: the speech guard falls back to the system ffmpeg installed below, and only its
       # "bundled binary" tests skip (with a warning here), so the rest of the validation still runs.
       - name: npm ci
         run: |
-          for attempt in 1 2 3; do
-            npm ci && exit 0
-            echo "npm ci failed (attempt $attempt)"; sleep $((attempt * 15))
-          done
+          npm ci && exit 0
           echo "::warning::ffmpeg-static could not download its binary; installing without it (bundled-binary tests will skip)"
           npm ci --ignore-scripts
           npm rebuild esbuild @google/genai protobufjs unrs-resolver

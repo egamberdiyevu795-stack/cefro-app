@@ -6,9 +6,10 @@ import { formatClock, formatDuration } from "@/features/speaking-practice/lib/fo
 import type { RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
 
 /*
- * The Part 3 practice screens (official Question 8): brief → preparation, where the student chooses two points from
+ * The Part 3 practice screens (official Question 8): brief → spoken introduction → preparation, where the student chooses two points from
  * each list during the minute → recording. Presentational only; Part3Practice owns the recorder and timers.
- * One black button per screen: "Start preparation" (brief), none while preparing ("Start speaking now" is quiet),
+ * One black button per screen: "Start" (brief), none during the spoken introduction or while preparing ("Start speaking
+ * now" is quiet),
  * "Finish" (recording), "Keep speaking" while the early-finish warning is open.
  *
  * Phone: the step card first, then the statement and the lists. Desktop: [statement and lists] | [step card].
@@ -136,10 +137,11 @@ export function Part3BriefCard({
               <MicCheck ready={ready} />
             </div>
             <PillAction size="lg" icon="mic" onClick={onStart} disabled={!ready} className="w-full sm:w-auto disabled:cursor-wait">
-              Start preparation
+              Start
             </PillAction>
             <p className="mt-3 text-label text-fg-muted">
-              You choose your points during the minute of preparation. Recording starts by itself when it ends.
+              Turn your sound on. You will hear a short introduction and a chime, then the minute of preparation starts:
+              choose your points then. Recording starts by itself after the next chime.
             </p>
           </>
         )}
@@ -157,15 +159,39 @@ function Timing({ label, seconds }: { label: string; seconds: number }) {
   );
 }
 
+/**
+ * The spoken introduction (the statement and the timings), then the sample chime. Its text is on screen too, so a
+ * student without sound misses nothing. No button: preparation starts by itself after the chime.
+ */
+export function Part3IntroCard({ text, goal }: { text: string; goal: RetryGoal | null }) {
+  return (
+    <Card aria-labelledby="step-title" data-testid="part3-intro">
+      <p className="flex items-center gap-2 text-label font-semibold text-fg" aria-live="polite">
+        <Icon name="play" size={16} className="text-fg-subtle" />
+        Listen
+      </p>
+      <h1 id="step-title" className="mt-3 text-stat font-light tracking-[-0.03em] text-fg">
+        Part 3
+      </h1>
+      <p className="mt-3 text-body text-fg" data-testid="intro-text">
+        {text.replace(/^Part 3\.\s*/, "")}
+      </p>
+      <p className="mt-4 text-label text-fg-muted">The minute of preparation starts by itself after the chime.</p>
+      {goal && <GoalCard goal={goal} className="mt-4" />}
+    </Card>
+  );
+}
+
 /** Preparation: one minute to choose 2 + 2 points and plan. "Start speaking now" (quiet) skips the rest. No black button. */
 export function Part3PreparationCard({
-  task,
+  totalMs,
   remainingMs,
   chosen,
   goal,
   onSkip,
 }: {
-  task: PublicArgumentTask;
+  /** The whole preparation time. */
+  totalMs: number;
   remainingMs: number;
   chosen: readonly PointId[];
   goal: RetryGoal | null;
@@ -177,8 +203,10 @@ export function Part3PreparationCard({
         Preparation
       </h1>
       <Countdown remainingMs={remainingMs} label="to prepare" />
-      <ProgressBar value={1 - remainingMs / (task.preparationSeconds * 1000)} label="Preparation time used" className="mt-3" />
-      <p className="mt-4 text-body text-fg">Tick two points in each list and plan one reason or example for each. Recording starts by itself at 0:00.</p>
+      <ProgressBar value={1 - remainingMs / totalMs} label="Preparation time used" className="mt-3" />
+      <p className="mt-4 text-body text-fg">
+        Tick two points in each list and plan one reason or example for each. At 0:00 you hear the chime and recording starts by itself.
+      </p>
       <p role="status" data-testid="choice-summary" className="mt-2 text-label font-semibold text-fg">
         {choiceSummary(chosen)}
       </p>
@@ -194,7 +222,7 @@ export function Part3PreparationCard({
 
 /** Recording: two-minute countdown, the recording indicator, the chosen points (in the statement card), the black "Finish". */
 export function Part3RecordingCard({
-  task,
+  totalMs,
   remainingMs,
   level,
   chosen,
@@ -204,7 +232,8 @@ export function Part3RecordingCard({
   onKeepSpeaking,
   onFinishAnyway,
 }: {
-  task: PublicArgumentTask;
+  /** The whole speaking time. */
+  totalMs: number;
   remainingMs: number;
   level: number;
   chosen: readonly PointId[];
@@ -214,7 +243,6 @@ export function Part3RecordingCard({
   onKeepSpeaking: () => void;
   onFinishAnyway: () => void;
 }) {
-  const totalMs = task.speakingSeconds * 1000;
   const elapsedMs = Math.max(0, totalMs - remainingMs);
   return (
     <Card aria-labelledby="step-title">

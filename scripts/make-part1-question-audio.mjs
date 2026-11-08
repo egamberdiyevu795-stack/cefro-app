@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Makes the Part 1 question audio (docs/part1-plan.md §1, decision 16): pre-generated text-to-speech, one clear neutral
+ * Makes the Part 1 question audio and the Part 3 topic introductions (docs/part1-plan.md §1, decision 16): pre-generated text-to-speech, one clear neutral
  * English voice for every task, stored with the content. Nothing calls a speech API at practice time.
  *
- * The texts, file paths, voice and settings live in src/content/speaking/part1/question-audio.json. A unit test checks
+ * The texts, file paths, voice and settings live in src/content/speaking/part1/question-audio.json (and, for Part 3,
+ * src/content/speaking/c1/part3-intro-audio.json, which must use the same voice block). A unit test checks
  * that every Part 1 question's text and audio path match that file, so changing a question's wording fails the tests
  * until its audio is made again with this script (same voice, same settings).
  *
@@ -24,7 +25,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), "..");
-const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "src/content/speaking/part1/question-audio.json"), "utf8"));
+// Part 1 questions and introductions, then the Part 3 topic introductions: one voice and one set of settings for both.
+const MANIFESTS = ["src/content/speaking/part1/question-audio.json", "src/content/speaking/c1/part3-intro-audio.json"];
+const manifests = MANIFESTS.map((file) => JSON.parse(fs.readFileSync(path.join(ROOT, file), "utf8")));
+const manifest = manifests[0];
+for (const other of manifests.slice(1)) {
+  if (JSON.stringify(other.voice) !== JSON.stringify(manifest.voice)) {
+    console.error("Every manifest must use the same voice and settings as Part 1 (question-audio.json).");
+    process.exit(1);
+  }
+}
 const bin = process.env.PIPER_BIN ?? "piper";
 const model = process.env.PIPER_MODEL;
 if (!model) {
@@ -34,7 +44,7 @@ if (!model) {
 const v = manifest.voice;
 // ONLY=<part of a path> regenerates just the matching files (Piper is not deterministic: unchanged files stay as they are).
 const only = process.env.ONLY;
-for (const file of manifest.files.filter((f) => !only || f.path.includes(only))) {
+for (const file of manifests.flatMap((m) => m.files).filter((f) => !only || f.path.includes(only))) {
   const out = path.join(ROOT, "public", file.path);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   execFileSync(

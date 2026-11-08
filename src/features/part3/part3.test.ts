@@ -33,11 +33,14 @@ import Part3ResultPage from "@/app/result/part3/page";
 import { PART_LIVE } from "@/config/features";
 import { examStatus } from "@/features/entry/content";
 import { listArgumentTasks } from "@/content/speaking/part3";
+import { PART3_INTRO_AUDIO_FILES, PART3_INTRO_VOICE, part3Intro, part3IntroText } from "@/content/speaking/c1/part3-intro-audio";
+import { PART1_AUDIO_FILES } from "@/content/speaking/part1/question-audio";
+import part1AudioManifest from "@/content/speaking/part1/question-audio.json";
 import { listSpeakingTasks } from "@/content/speaking";
 import { argumentTaskProblems, toPublicArgumentTask, type PointId } from "@/domain/speaking/argument-task";
 import { part3DemoEvaluation, part3DemoSpec, part3DemoTranscriptFor } from "@/server/demo/part3-demo";
 import { decodePoints, encodePoints, nextPart3Key, parsePart3Key, part3PracticeHref, part3ResultHref, previousPart3Key } from "./links";
-import { Part3BriefCard, Part3PreparationCard, Part3RecordingCard, StatementCard, canToggle, choiceSummary } from "./screens";
+import { Part3BriefCard, Part3IntroCard, Part3PreparationCard, Part3RecordingCard, StatementCard, canToggle, choiceSummary } from "./screens";
 import { Part3ScoredResult } from "./result-sections";
 import { buildPart3View, markCopied } from "./view-model";
 import { PracticeLayout } from "@/features/speaking-practice/components/screens";
@@ -146,9 +149,10 @@ describe("screens", () => {
   const SCREENS: [string, string, number][] = [
     ["brief", screen(createElement(Part3BriefCard, { task, goal: null, onStart: noop })), 1],
     ["brief (retry)", screen(createElement(Part3BriefCard, { task, goal, onStart: noop })), 1],
-    ["preparation", screen(createElement(Part3PreparationCard, { task, remainingMs: 40_000, chosen: ["F1", "A1"], goal, onSkip: noop }), ["F1", "A1"], true), 0],
-    ["recording", screen(createElement(Part3RecordingCard, { task, remainingMs: 90_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: false, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
-    ["recording, early warning", screen(createElement(Part3RecordingCard, { task, remainingMs: 100_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: true, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
+    ["introduction (retry)", screen(createElement(Part3IntroCard, { text: part3IntroText(task), goal })), 0],
+    ["preparation", screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, chosen: ["F1", "A1"], goal, onSkip: noop }), ["F1", "A1"], true), 0],
+    ["recording", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 90_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: false, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
+    ["recording, early warning", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 100_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: true, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
   ];
 
   it.each(SCREENS)("%s: the screen has the right black buttons, no text under 11 px, the statement and all six points", (_name, markup, expected) => {
@@ -159,7 +163,7 @@ describe("screens", () => {
   });
 
   it("preparation: checkboxes, two per side, the third disabled", () => {
-    const markup = screen(createElement(Part3PreparationCard, { task, remainingMs: 40_000, chosen: ["F1", "F2"], goal: null, onSkip: noop }), ["F1", "F2"], true);
+    const markup = screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, chosen: ["F1", "F2"], goal: null, onSkip: noop }), ["F1", "F2"], true);
     expect((markup.match(/type="checkbox"/g) ?? []).length).toBe(6);
     expect(markup).toMatch(/<input type="checkbox" disabled=""/);
     expect(markup).toContain("2 of 2 chosen");
@@ -227,5 +231,40 @@ describe("mock-only files", () => {
     walk("src");
     const importers = files.filter((f) => !f.endsWith(".test.ts") && /mock-argument-rules/.test(readFileSync(f, "utf8")) && !f.endsWith("mock-argument-rules.ts"));
     expect(importers).toEqual([join("src", "server", "evaluation", "mock-argument-model.ts")]);
+  });
+});
+
+describe("spoken introduction (exam style, same offline voice as Part 1)", () => {
+  it.each(listArgumentTasks().map((t) => [t.id, t] as const))("%s: the introduction reads the statement and the timings and ends with the chime sample", (_id, task) => {
+    const intro = part3Intro(task);
+    expect(intro.text).toContain(task.statement);
+    expect(intro.text).toMatch(/one minute to prepare/);
+    expect(intro.text).toMatch(/two minutes to speak/);
+    expect(intro.text).toMatch(/Start speaking when you hear this sound\.$/);
+    expect(intro.audio).toBe(`/audio/speaking/part3/${task.id}/v${task.version}/intro.wav`);
+  });
+
+  it("every introduction's audio was made from its current text (changing a statement fails until the audio is remade)", () => {
+    const expected = listArgumentTasks().map((t) => part3Intro(t)).map(({ audio, text }) => ({ path: audio, text }));
+    expect(PART3_INTRO_AUDIO_FILES).toEqual(expected);
+  });
+
+  it("uses exactly the Part 1 voice and settings", () => {
+    expect(PART3_INTRO_VOICE).toEqual(part1AudioManifest.voice);
+    expect(PART1_AUDIO_FILES.length).toBeGreaterThan(0);
+  });
+
+  it.each(PART3_INTRO_AUDIO_FILES.map((f) => [f.path] as const))("%s exists as a WAV file in /public", (file) => {
+    const full = join(process.cwd(), "public", file);
+    expect(statSync(full).size).toBeGreaterThan(10_000);
+    expect(readFileSync(full).subarray(0, 4).toString("ascii")).toBe("RIFF");
+  });
+
+  it("the introduction screen has its text, the goal on a retry, and no black button", () => {
+    const task = listArgumentTasks()[0];
+    const markup = renderToStaticMarkup(createElement(Part3IntroCard, { text: part3IntroText(task), goal: null }));
+    expect(markup).toContain(task.statement);
+    expect(markup).toContain("Listen");
+    expect(blacks(markup)).toBe(0);
   });
 });

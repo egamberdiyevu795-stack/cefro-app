@@ -37,7 +37,6 @@ export default async function Part3ResultPage(props: PageProps<"/result/part3">)
       <AppShell flags={flags} account="mock">
         <ScoringResult
           demo
-          flags={flags}
           state={{
             kind: "scoring",
             task: { id: task.id, title: task.title, part: task.part, prompts: [] },

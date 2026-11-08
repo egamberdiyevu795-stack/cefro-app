@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A seller at an open-air market stall</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. An open-air market: a seller in an apron stands behind a wooden stall with boxes of tomatoes, apples and green vegetables under a striped awning. A woman with a cloth bag points at the fruit.</desc>
+  <!-- sky, street -->
+  <rect width="480" height="360" fill="#e8f1f8"/>
+  <circle cx="420" cy="58" r="28" fill="#fbe7a1"/>
+  <rect y="268" width="480" height="92" fill="#d9d2c5"/>
+  <path d="M0 268 H480" stroke="#bdb3a3" stroke-width="3"/>
+  <!-- building behind -->
+  <rect x="300" y="96" width="160" height="172" fill="#efe3cf"/>
+  <rect x="320" y="120" width="34" height="40" rx="3" fill="#b9d3e6"/>
+  <rect x="380" y="120" width="34" height="40" rx="3" fill="#b9d3e6"/>
+  <rect x="320" y="182" width="34" height="40" rx="3" fill="#b9d3e6"/>
+  <rect x="380" y="182" width="34" height="40" rx="3" fill="#b9d3e6"/>
+  <!-- awning -->
+  <path d="M40 92 H300 L286 128 H54 Z" fill="#e4572e"/>
+  <path d="M80 92 L74 128 H100 L106 92 Z M132 92 L128 128 H154 L158 92 Z M184 92 L182 128 H208 L210 92 Z M236 92 L236 128 H262 L262 92 Z" fill="#fff6ea"/>
+  <rect x="50" y="128" width="8" height="140" fill="#7a5a3c"/>
+  <rect x="282" y="128" width="8" height="140" fill="#7a5a3c"/>
+  <!-- seller (behind the stall) -->
+  <circle cx="170" cy="150" r="20" fill="#c98b5f"/>
+  <path d="M152 140 Q170 118 188 140 Q182 130 170 130 Q158 130 152 140Z" fill="#3b2a1f"/>
+  <path d="M138 214 Q140 176 170 172 Q200 176 202 214 Z" fill="#4f7cac"/>
+  <path d="M156 176 H184 V214 H156 Z" fill="#f2efe8"/>
+  <!-- stall -->
+  <rect x="60" y="206" width="222" height="62" rx="4" fill="#a8754a"/>
+  <rect x="60" y="206" width="222" height="8" fill="#8c5f3a"/>
+  <rect x="70" y="186" width="62" height="26" rx="3" fill="#c9965f"/>
+  <rect x="140" y="186" width="62" height="26" rx="3" fill="#c9965f"/>
+  <rect x="210" y="186" width="62" height="26" rx="3" fill="#c9965f"/>
+  <g fill="#d93b2b"><circle cx="82" cy="186" r="8"/><circle cx="98" cy="184" r="8"/><circle cx="114" cy="186" r="8"/><circle cx="90" cy="176" r="7"/><circle cx="106" cy="176" r="7"/></g>
+  <g fill="#8cbf3f"><circle cx="152" cy="186" r="8"/><circle cx="168" cy="184" r="8"/><circle cx="184" cy="186" r="8"/><circle cx="160" cy="176" r="7"/><circle cx="176" cy="176" r="7"/></g>
+  <g fill="#3f8f4a"><ellipse cx="226" cy="182" rx="12" ry="8"/><ellipse cx="246" cy="180" rx="12" ry="8"/><ellipse cx="262" cy="184" rx="10" ry="7"/><ellipse cx="236" cy="172" rx="10" ry="7"/></g>
+  <!-- customer with a cloth bag -->
+  <circle cx="356" cy="168" r="18" fill="#8d5b3e"/>
+  <path d="M338 162 Q356 136 374 162 L376 182 Q356 176 336 182 Z" fill="#6c3f73"/>
+  <path d="M334 270 L338 196 Q356 186 374 196 L378 270 Z" fill="#6c3f73"/>
+  <path d="M340 206 L292 196" stroke="#8d5b3e" stroke-width="9" stroke-linecap="round"/>
+  <path d="M372 212 Q392 222 388 246" stroke="#8d5b3e" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M378 240 H404 L400 278 H382 Z" fill="#e3d3a6"/>
+  <path d="M384 240 Q391 226 398 240" stroke="#b9a46d" stroke-width="3" fill="none"/>
+  <rect x="340" y="268" width="14" height="14" rx="3" fill="#2f2f2f"/>
+  <rect x="360" y="268" width="14" height="14" rx="3" fill="#2f2f2f"/>
+</svg>

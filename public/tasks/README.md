@@ -20,6 +20,16 @@ picture shows (the task's `alt` text) and that describing it answers no question
 | `a-tradition.svg` | `b2-part2-a-tradition` (v1) | Three generations of a family behind a long table with a shared dish, flat breads, a teapot and bowls, under a string of small coloured flags. | Original illustration made for CEFRO (2026). Not based on any existing image. | © 2026 CEFRO. All rights reserved. |
 | `happy-day.svg` | `b2-part2-happy-day` (v1) | Three smiling young friends on the grass by a lake on a sunny day; the one in the middle has both arms raised; birds over the water. | Original illustration made for CEFRO (2026). Not based on any existing image. | © 2026 CEFRO. All rights reserved. |
 
+### Part 1.2 pictures (`part1/`)
+
+Part 1.2 shows two pictures. Their fields are stored in the task's `images` (`src`, `alt`, `author`, `sourceUrl`,
+`licence`, `retrievedAt`; a test fails if one is missing) and listed here.
+
+| File | Task | What it shows | Source | Licence |
+|---|---|---|---|---|
+| `part1/local-market.svg` | `b1-part1-2-shopping` (v1) | An open-air market: a seller in an apron behind a wooden stall of tomatoes, apples and green vegetables under a striped awning; a woman with a cloth bag points at the fruit. | Original illustration made for CEFRO (2026). Not based on any existing image. | © 2026 CEFRO. All rights reserved. |
+| `part1/supermarket.svg` | `b1-part1-2-shopping` (v1) | Inside a large supermarket: long shelves of packets and bottles under bright ceiling lights; a man pushes a full trolley along the aisle towards the checkouts. | Original illustration made for CEFRO (2026). Not based on any existing image. | © 2026 CEFRO. All rights reserved. |
+
 ## Adding a picture
 
 1. Use an original drawing (licence `© 2026 CEFRO. All rights reserved.`, no `licenceUrl`) or a freely licensed image

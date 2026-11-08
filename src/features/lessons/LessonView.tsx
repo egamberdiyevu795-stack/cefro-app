@@ -2,17 +2,19 @@ import Link from "next/link";
 import { Card, CardHeader, DemoLabel, Icon, cx, styles } from "@/components/ds";
 import type { Lesson } from "@/content/lessons";
 import { LessonPractice } from "./LessonPractice";
+import { NO_RESULT_TEXT } from "./no-result";
 import { Rich } from "./Rich";
 
 /*
  * The lesson screen, phone first, top to bottom (docs/teaching-plan.md, section 3):
  * why this lesson → explanation → examples (weaker → better) → self-check drill → the retry with the goal carried over.
- * Built only from components/ds and the design-system tokens. One black button: "Retry with this goal".
+ * Built only from components/ds and the design-system tokens. One black button: "Retry with this goal" (opened from a
+ * result), or "Go to Part 2" (opened from the Lessons list: no result, so no why, no goal and no retry).
  * The lesson's own text is shown exactly as written (`Rich` only turns its **bold** / *italic* into emphasis).
  */
 
-export interface LessonViewProps {
-  lesson: Lesson;
+/** The result a lesson was opened from (its biggest fix leads to this lesson). */
+export interface LessonFromResult {
   /** "Why this lesson", filled from the result. */
   why: string;
   /** The task being retried. */
@@ -23,34 +25,55 @@ export interface LessonViewProps {
   retryHref: string;
   /** Back to the result the lesson came from. */
   resultHref: string;
+}
+
+export interface LessonViewProps {
+  lesson: Lesson;
+  /**
+   * The result the lesson was opened from, or null: opened from the Lessons list. Then there is no "Why this lesson"
+   * and no goal; the back link goes to the list, and the black button opens the part's task list (no retry exists).
+   */
+  from: LessonFromResult | null;
+  /** The Lessons list (back link when there is no result). */
+  listHref: string;
+  /** The task list of the lesson's part (the black button when there is no result). */
+  practiseHref: string;
   /** Mock data: the demo label. */
   demo: boolean;
 }
 
-export function LessonView({ lesson, why, task, goal, retryHref, resultHref, demo }: LessonViewProps) {
+export function LessonView({ lesson, from, listHref, practiseHref, demo }: LessonViewProps) {
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="lesson">
-      <Link href={resultHref} className={cx("inline-flex min-h-11 items-center gap-1 justify-self-start text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
+      <Link href={from ? from.resultHref : listHref} className={cx("inline-flex min-h-11 items-center gap-1 justify-self-start text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
         <Icon name="chevronDown" size={14} className="rotate-90" />
-        Your result
+        {from ? "Your result" : NO_RESULT_TEXT.back}
       </Link>
 
       {/* The header row leaves room on the right for the mascot, once there is one. */}
       <Card aria-labelledby="lesson-title">
         {demo && <DemoLabel variant="mode" className="mb-3" />}
-        <p className="text-caption text-fg-muted">Lesson for your biggest fix · {task.title}</p>
+        <p className="text-caption text-fg-muted">{from ? `Lesson for your biggest fix · ${from.task.title}` : `Lesson · ${lesson.variantLabel}`}</p>
         <h1 id="lesson-title" className="mt-2 text-title font-medium tracking-[-0.01em] text-fg">
           {lesson.title}
         </h1>
-        <h2 className="mt-5 text-caption font-semibold text-fg">Why this lesson</h2>
-        <p className="mt-1 rounded-tile bg-well p-3 text-body text-fg" data-testid="lesson-why">
-          {why}
-        </p>
+        {from && (
+          <>
+            <h2 className="mt-5 text-caption font-semibold text-fg">Why this lesson</h2>
+            <p className="mt-1 rounded-tile bg-well p-3 text-body text-fg" data-testid="lesson-why">
+              {from.why}
+            </p>
+          </>
+        )}
       </Card>
 
       <LessonBody lesson={lesson} />
 
-      <LessonPractice drill={lesson.drill} retry={{ intro: lesson.retry.intro, reminder: lesson.retry.reminder }} goal={goal} retryHref={retryHref} />
+      <LessonPractice
+        drill={lesson.drill}
+        retry={{ intro: lesson.retry.intro, reminder: lesson.retry.reminder }}
+        next={from ? { kind: "retry", goal: from.goal, href: from.retryHref } : { kind: "practise", href: practiseHref }}
+      />
     </div>
   );
 }

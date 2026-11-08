@@ -58,7 +58,7 @@ export default async function TeacherAttemptPage(props: PageProps<"/teacher/clas
     <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/dashboard" demoTeacher={page.mock} back={{ href: studentHref, label: attempt.studentName }}>
       {page.mock && <DemoLabel variant="class" className="mb-4 bg-card" />}
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} flags={FEATURE_FLAGS} teacher={{ studentName: attempt.studentName }}>
+        <ScoredResult view={state.view} task={task} teacher={{ studentName: attempt.studentName }}>
           <YourView
             verdict={appVerdictText(task.part, state.view.band, state.view.bandLabel)}
             bands={bandLabels}

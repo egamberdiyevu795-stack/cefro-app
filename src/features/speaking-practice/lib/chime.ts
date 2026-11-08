@@ -1,75 +1,74 @@
 /**
- * The start-of-speaking signal: the exam-style chime, then recording starts. Part 2 plays the same sound file as
- * Part 1 (`PART1_CHIME` in `content/speaking/part1/chime.ts` on the Part 1 branch: a placeholder tone made by
- * `scripts/make-part1-placeholder-audio.mjs`, an original work), so both parts sound the same. As in the Part 1 plan
- * (docs/part1-plan.md), the chime is not recorded: `playChime()` resolves when it has finished playing, and the
- * recorder starts after that.
+ * The start-of-speaking signal: a short, soft two-tone chime made in code with the Web Audio API (no sound file), then
+ * recording starts. As in the Part 1 plan (docs/part1-plan.md), the chime is not recorded: `playChime()` resolves when
+ * it has finished playing, and the recorder starts after that.
  *
- * Browsers only let a page play sound after the student has interacted with it, so `primeChime()` is called from the
- * "Start preparation" click: it unlocks audio and loads the file, and the chime a minute later (when preparation runs
- * out) is then allowed. Sound failures (no Web Audio, file missing, decode error) are ignored: `playChime()` resolves
- * at once and the visible "Speak now" and "Recording" indicators carry the same information.
+ * It never plays before the student presses a button. Browsers only allow sound after an interaction anyway, and the
+ * audio context is created only by `primeChime()`, which is called from the "Start preparation" click; `playChime()`
+ * without that does nothing. Sound failures (no Web Audio, a suspended output) are ignored: `playChime()` resolves and
+ * the visible "Speak now" and "Recording" indicators carry the same information.
  */
-export const CHIME_SRC = "/audio/speaking/part1/placeholder/chime.wav";
 
-/** Longest wait for the file when the student skips preparation before it has loaded. */
-const LOAD_TIMEOUT_MS = 3_000;
+/** The two tones, low then high (E5 then A5, a rising fourth): sine waves, so the sound is soft. */
+export const CHIME_TONES = [
+  { frequency: 659.25, start: 0 },
+  { frequency: 880, start: 0.16 },
+] as const;
+/** How long each tone rings (a quick fade-in, then a smooth fade-out). */
+export const CHIME_TONE_SECONDS = 0.34;
+/** The whole chime: the last tone's start plus its length (0.5 s). */
+export const CHIME_SECONDS = CHIME_TONES[CHIME_TONES.length - 1].start + CHIME_TONE_SECONDS;
+/** Peak loudness of each tone (0–1): quiet, a chime and not a beep. */
+const PEAK_GAIN = 0.18;
+/** Fade-in, so a tone never starts with a click. */
+const ATTACK_SECONDS = 0.015;
 /** Settles a chime whose "ended" never comes (a suspended audio output), a little after its own length. */
 const END_GRACE_MS = 500;
 
 let context: AudioContext | null = null;
-let chime: Promise<AudioBuffer | null> | null = null;
 
+/** Called from the "Start preparation" click: creates and unlocks the audio context, so the chime may play later. */
 export function primeChime(): void {
   try {
     if (typeof AudioContext === "undefined") return;
     context ??= new AudioContext();
     void context.resume();
-    chime ??= loadChime(context);
   } catch {
     context = null;
   }
 }
 
-async function loadChime(ctx: AudioContext): Promise<AudioBuffer | null> {
-  try {
-    const response = await fetch(CHIME_SRC);
-    if (!response.ok) return null;
-    return await ctx.decodeAudioData(await response.arrayBuffer());
-  } catch {
-    return null;
-  }
+/** One tone: a sine wave with a short fade-in and an exponential fade-out, scheduled at `at` (context time). */
+function tone(ctx: AudioContext, frequency: number, at: number): OscillatorNode {
+  const oscillator = ctx.createOscillator();
+  oscillator.type = "sine";
+  oscillator.frequency.value = frequency;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.linearRampToValueAtTime(PEAK_GAIN, at + ATTACK_SECONDS);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + CHIME_TONE_SECONDS);
+  oscillator.connect(gain).connect(ctx.destination);
+  oscillator.start(at);
+  oscillator.stop(at + CHIME_TONE_SECONDS);
+  return oscillator;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(fallback), ms);
-    void promise.then((value) => {
-      clearTimeout(timer);
-      resolve(value);
-    });
-  });
-}
-
-/** Plays the chime and resolves when it has finished (at once when sound is unavailable). */
+/** Plays the chime and resolves when it has finished (at once when sound is unavailable or was never primed). */
 export async function playChime(): Promise<void> {
   try {
-    if (!context) primeChime();
     const ctx = context;
-    if (!ctx || !chime) return;
-    const buffer = await withTimeout(chime, LOAD_TIMEOUT_MS, null);
-    if (!buffer) return;
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
+    if (!ctx) return; // never primed by a button press: no sound
+    if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
+    const now = ctx.currentTime + 0.01;
+    const oscillators = CHIME_TONES.map((t) => tone(ctx, t.frequency, now + t.start));
+    const last = oscillators[oscillators.length - 1];
     await new Promise<void>((resolve) => {
       const done = () => {
         clearTimeout(watchdog);
         resolve();
       };
-      const watchdog = setTimeout(done, buffer.duration * 1000 + END_GRACE_MS);
-      source.addEventListener("ended", done, { once: true });
-      source.start();
+      const watchdog = setTimeout(done, CHIME_SECONDS * 1000 + END_GRACE_MS);
+      last.addEventListener("ended", done, { once: true });
     });
   } catch {
     // No sound; the screen still shows that recording started.

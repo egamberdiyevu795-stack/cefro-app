@@ -49,7 +49,6 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
         previous={previous}
         task={toPublicTask(speakingTask)}
         bandLabels={getSpeakingRubric(speakingTask).config.bands.map(({ band, label }) => ({ band, label }))}
-        flags={FEATURE_FLAGS}
       />
     </AppShell>
   );

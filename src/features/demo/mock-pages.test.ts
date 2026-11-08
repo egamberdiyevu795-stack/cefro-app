@@ -41,6 +41,9 @@ import TaskListPage from "@/app/(site)/practice/page";
 import DashboardPage from "@/app/dashboard/page";
 import HistoryPage from "@/app/history/page";
 import LessonPage from "@/app/lessons/[lessonId]/page";
+import LessonsPage from "@/app/lessons/page";
+import { ALL_LESSONS, shownLessons } from "@/content/lessons";
+import { NO_RESULT_TEXT } from "@/features/lessons/no-result";
 import PracticePage from "@/app/practice/speaking/[taskId]/page";
 import ResultPage from "@/app/result/page";
 import ProfilePage from "@/app/profile/page";
@@ -172,7 +175,7 @@ describe("mock pages on a Preview with no configuration", () => {
       { mock: "1" },
       { mock: "1", state: "retry" },
       { mock: "1", state: "scoring", next: "1" },
-      {},
+      { demo: "demo-1" },
       { mock: "1", demo: "demo-1" },
       { mock: "1", demo: "demo-6" },
       { mock: "1", demo: "demo-3" },
@@ -181,6 +184,12 @@ describe("mock pages on a Preview with no configuration", () => {
       const markup = await html(ResultPage(props(query)));
       expect(markup).toContain(DEMO_RESULT_TEXT);
       expectMockLinksOnly(markup);
+    }
+  });
+
+  it("a bare /result (no demo key, no mock mode) is not found: never the saved demo results", async () => {
+    for (const query of [{}, { anchor: "A2-b1-all-three" }, { state: "retry" }, { mock: "0" }]) {
+      await expect(ResultPage(props(query)), JSON.stringify(query)).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
     }
   });
 });
@@ -347,7 +356,7 @@ describe("lessons in mock mode", () => {
     expect(main).toContain("Retry with this goal");
     // On the whole screen (navigation included) the retry is the only black control; Lessons is the current tab, in grey.
     expect(markup.match(/bg-primary text-on-primary/g)).toHaveLength(1);
-    expect(markup).toContain('aria-label="Lessons (current section)" aria-current="page"');
+    expect(markup).toMatch(/<a aria-label="Lessons" aria-current="page"[^>]*href="\/lessons\?mock=1"/);
     expect(markup).not.toMatch(/aria-label="Practice"[^>]*aria-current="page"/);
     // Each drill prompt is labelled with the drill-topic question it practises.
     expect((markup.match(/data-testid="drill-prompt"/g) ?? []).length).toBe(3);
@@ -370,7 +379,46 @@ describe("lessons in mock mode", () => {
     }
   });
 
-  it("not found: an unknown lesson, a lesson the result does not lead to, a result with no lesson, no result at all", async () => {
+  it("/lessons: every approved lesson (title and its Variant field only), each a link to its lesson; no black button", async () => {
+    const markup = await html(LessonsPage(props({ mock: "1" })));
+    const main = mainOf(markup);
+    const links = [...main.matchAll(/<a\b[^>]*data-testid="lesson-link"[^>]*href="([^"]*)"/g)].map((m) => m[1].replaceAll("&amp;", "&"));
+    expect(links).toEqual(shownLessons().map((l) => `/lessons/${l.slug}?mock=1`));
+    expect(links.length).toBe(3);
+    for (const lesson of shownLessons()) {
+      expect(main).toContain(escaped(lesson.title));
+      expect(main).toContain(escaped(lesson.variantLabel));
+    }
+    // Drafts never: a draft copy of a lesson is not listed.
+    expect(shownLessons([...ALL_LESSONS, { ...ALL_LESSONS[0], slug: "draft-x", title: "Draft only", status: "draft" }]).map((l) => l.slug)).not.toContain("draft-x");
+    expect(main.match(BLACK)).toBeNull();
+    expect(markup).toMatch(/<a aria-label="Lessons" aria-current="page"[^>]*href="\/lessons\?mock=1"/);
+    expect(markup).not.toMatch(SMALL);
+    expectMockLinksOnly(markup);
+  });
+
+  it.each(["l-t1", "l-t8", "l-t4-b2"])("%s opened from the list (no result): the lesson and drill, no why or goal, one black 'Go to Part 2'", async (slug) => {
+    const markup = await html(LessonPage(props({ mock: "1" }, { lessonId: slug })));
+    const main = mainOf(markup);
+    for (const section of ["How it works", "Examples", "Self-check drill", NO_RESULT_TEXT.practiseTitle]) expect(markup).toContain(section);
+    for (const absent of ["Why this lesson", "Goal for your retry", "Retry with this goal", "Your result", "Lesson for your biggest fix"]) expect(markup).not.toContain(absent);
+    expect(markup).not.toContain('data-testid="lesson-why"');
+    const black = main.match(BLACK) ?? [];
+    expect(black).toHaveLength(1);
+    expect(markup.match(/bg-primary text-on-primary/g)).toHaveLength(1);
+    const blackHref = /<a\b[^>]*class="[^"]*\bbg-primary text-on-primary[^"]*"[^>]*href="([^"]*)"/.exec(main)?.[1].replaceAll("&amp;", "&");
+    expect(blackHref).toBe("/practice?mock=1#part-2");
+    expect(main).toContain(NO_RESULT_TEXT.practiseButton);
+    expect(main).toContain('href="/lessons?mock=1"'); // back to the list
+    expect(markup).not.toMatch(SMALL);
+    expectMockLinksOnly(markup);
+  });
+
+  it("every approved lesson is a Part 2 lesson (the no-result wording says Part 2)", () => {
+    for (const lesson of shownLessons()) expect(lesson.parts, lesson.slug).toEqual([2]);
+  });
+
+  it("not found: an unknown lesson, a lesson the result does not lead to, a result with no lesson, a wrong result", async () => {
     for (const [lessonId, query] of [
       ["nope", { demo: "demo-5" }],
       ["l-t8", { demo: "demo-5" }],
@@ -378,7 +426,7 @@ describe("lessons in mock mode", () => {
       ["l-t1", { demo: "demo-6" }],
       ["l-t1", { demo: "nope" }],
       ["l-t1", { anchor: "A2-b1-all-three" }],
-      ["l-t1", {}],
+      ["l-t1", { attempt: "" }],
     ] as const) {
       await expect(LessonPage(props({ mock: "1", ...query }, { lessonId })), `${lessonId} ${JSON.stringify(query)}`).rejects.toThrow();
     }
@@ -388,6 +436,11 @@ describe("lessons in mock mode", () => {
 describe("real pages on the same Preview keep refusing", () => {
   it("a lesson for a real attempt fails the configuration check, never touching the database", async () => {
     await expect(LessonPage(props({ attempt: "some-attempt" }, { lessonId: "l-t1" }))).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("the real Lessons list and a real lesson without a result fail the configuration check", async () => {
+    await expect(LessonsPage(props({}))).rejects.toMatchObject({ status: 503 });
+    await expect(LessonPage(props({}, { lessonId: "l-t1" }))).rejects.toMatchObject({ status: 503 });
   });
 
   it("History, the practice page and the (site) pages fail the configuration check; no demo label anywhere", async () => {

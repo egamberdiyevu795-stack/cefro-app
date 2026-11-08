@@ -1,7 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { allFlags, FEATURE_FLAGS, type FeatureFlags } from "@/config/features";
 import { getSpeakingTask } from "@/content/speaking";
 import { toPublicTask } from "@/domain/speaking/task";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
@@ -24,10 +23,10 @@ function scored(query: Record<string, string>) {
   return state.view;
 }
 
-function render(state: ResultPageState, flags: FeatureFlags = FEATURE_FLAGS): string {
-  if (state.kind === "scored") return renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, flags }));
-  if (state.kind === "scoring") return renderToStaticMarkup(createElement(ScoringResult, { state, flags }));
-  if (state.kind === "not_scored") return renderToStaticMarkup(createElement(NotScoredResult, { state, flags }));
+function render(state: ResultPageState): string {
+  if (state.kind === "scored") return renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task }));
+  if (state.kind === "scoring") return renderToStaticMarkup(createElement(ScoringResult, { state }));
+  if (state.kind === "not_scored") return renderToStaticMarkup(createElement(NotScoredResult, { state }));
   throw new Error(state.kind);
 }
 
@@ -166,16 +165,13 @@ describe("result page markup", () => {
   ];
 
   it.each(all)("%s: at most one black button, no text under 11 px", (_name, query) => {
-    for (const flags of [FEATURE_FLAGS, allFlags(false)]) {
-      const html = render(stateFor(query), flags);
-      expect((html.match(BLACK) ?? []).length).toBe(query.state === "scoring" ? 0 : 1);
-      expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
-    }
+    const html = render(stateFor(query));
+    expect((html.match(BLACK) ?? []).length).toBe(query.state === "scoring" ? 0 : 1);
+    expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
   });
 
-  it("flags off: no play button", () => {
-    const html = render(stateFor({}), allFlags(false));
-    expect(html).not.toContain("Play recording");
+  it("no recording: no play button (never a placeholder that does nothing)", () => {
+    for (const query of [{}, { state: "too-short" }, { state: "scoring" }] as Record<string, string>[]) expect(render(stateFor(query))).not.toContain("Play recording");
   });
 
   it("Learn how: a quiet link to the lesson when one is given, none otherwise (never a black button)", () => {
@@ -183,7 +179,7 @@ describe("result page markup", () => {
     if (state.kind !== "scored") throw new Error(state.kind);
     expect(render(state)).not.toContain("Learn how");
     const html = renderToStaticMarkup(
-      createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS, lesson: { href: "/lessons/l-t1?demo=demo-5&mock=1", title: "Answer every question" } }),
+      createElement(ScoredResult, { view: state.view, task, lesson: { href: "/lessons/l-t1?demo=demo-5&mock=1", title: "Answer every question" } }),
     );
     expect(html).toContain('href="/lessons/l-t1?demo=demo-5&amp;mock=1"');
     expect(html).toContain('aria-label="Learn how: Answer every question"');

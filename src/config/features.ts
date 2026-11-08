@@ -1,31 +1,17 @@
 import type { ExamPartId } from "@/domain/speaking/exam-part";
 
 /**
- * Feature flags for elements that are designed but not built yet.
+ * Feature flags for built features that can be switched off. On: shown. Off: not rendered at all.
  *
- * On: the element is shown and tapping it says "Coming soon" (the prototype default, so the design stays visible).
- * Off: the element is not rendered at all. Turn a flag off before shipping a page that would show an unbuilt feature,
- * and delete it once the feature is real.
+ * No page shows a control that does nothing: the designed-but-unbuilt "Coming soon" controls (Search, Mock exam,
+ * notifications, "Last 30 days", the attempt row menu, "Play recording" without audio) were removed before launch.
+ * The only honest "Coming soon" left is an exam part that is not live (`PART_LIVE`, below), shown as text, not a control.
  */
 export const FEATURE_FLAGS = {
-  /** Bell in the top bar. */
-  notifications: true,
-  /** Search field in the top bar. */
-  search: true,
-  /** "Mock exam" link in the top bar. */
-  mockExam: true,
-  /** "Last 30 days" filter on the progress card. */
-  periodFilter: true,
-  /** Sidebar / bottom-bar items. */
-  lessons: true,
   /** History: the real page (`/history`) and its links (sidebar, "See all"). Off: no link, and the page is a 404. */
   history: true,
-  /** Row menu on attempts (Delete, Report a wrong score). */
-  attemptMenu: true,
   /** "Your exam: in N days" card. */
   examCountdown: true,
-  /** Result page: "Play recording" above the transcript. */
-  recordingPlayback: true,
 } as const satisfies Record<string, boolean>;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;

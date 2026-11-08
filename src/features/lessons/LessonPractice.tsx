@@ -4,7 +4,14 @@ import { useState } from "react";
 import { Card, CardHeader, PillButton } from "@/components/ds";
 import type { Lesson } from "@/content/lessons";
 import { DrillRecorder, type SelfCheck } from "./DrillRecorder";
+import { NO_RESULT_TEXT } from "./no-result";
 import { Rich } from "./Rich";
+
+/**
+ * What the last card offers. `retry`: the lesson was opened from a result, so "Retry with this goal" (the same retry
+ * as the result page's). `practise`: opened from the Lessons list, with no result and so no retry: "Go to Part 2".
+ */
+export type LessonNext = { kind: "retry"; goal: { objective: string; check: string | null } | null; href: string } | { kind: "practise"; href: string };
 
 /** "Q3", or "Q1–Q3" for a prompt that practises a run of questions. */
 export function practisesLabel(questions: readonly number[]): string {
@@ -14,18 +21,16 @@ export function practisesLabel(questions: readonly number[]): string {
 
 /**
  * The lesson's drill and its retry, together because the retry card shows "Ready for your retry" once every drill
- * prompt is marked Yes. The lesson's checklist is not shown: the per-prompt self-checks cover it. The answers live only in this page: nothing is saved or uploaded, and they reset when it closes.
+ * prompt is marked Yes (retry only). The lesson's checklist is not shown: the per-prompt self-checks cover it. The answers live only in this page: nothing is saved or uploaded, and they reset when it closes.
  */
 export function LessonPractice({
   drill,
   retry,
-  goal,
-  retryHref,
+  next,
 }: {
   drill: Lesson["drill"];
   retry: Pick<Lesson["retry"], "intro" | "reminder">;
-  goal: { objective: string; check: string | null } | null;
-  retryHref: string;
+  next: LessonNext;
 }) {
   const [answers, setAnswers] = useState<SelfCheck[]>(() => drill.items.map(() => "none"));
   const allDone = answers.every((a) => a === "yes");
@@ -71,30 +76,45 @@ export function LessonPractice({
         </ul>
       </Card>
 
-      <Card aria-labelledby="retry-title">
-        <CardHeader id="retry-title" title="Retry the same task" />
-        <p className="text-body text-fg">{retry.intro}</p>
-        {goal && (
-          <div className="mt-4 rounded-tile bg-well p-3" data-testid="lesson-goal">
-            <p className="text-caption font-semibold text-fg">Goal for your retry</p>
-            <p className="mt-1 text-body text-fg">{goal.objective}</p>
-            {goal.check && <p className="mt-2 text-label text-fg-muted">You&rsquo;ll know it worked: {goal.check}</p>}
-          </div>
-        )}
-        <p className="mt-3 text-body text-fg">
-          <span className="font-semibold">Remember:</span> {retry.reminder}
-        </p>
-        <div className="mt-5">
-          {allDone && (
-            <p role="status" className="mb-2 text-body font-semibold text-fg" data-testid="ready-for-retry">
-              Ready for your retry
-            </p>
+      {next.kind === "retry" ? (
+        <Card aria-labelledby="retry-title">
+          <CardHeader id="retry-title" title="Retry the same task" />
+          <p className="text-body text-fg">{retry.intro}</p>
+          {next.goal && (
+            <div className="mt-4 rounded-tile bg-well p-3" data-testid="lesson-goal">
+              <p className="text-caption font-semibold text-fg">Goal for your retry</p>
+              <p className="mt-1 text-body text-fg">{next.goal.objective}</p>
+              {next.goal.check && <p className="mt-2 text-label text-fg-muted">You&rsquo;ll know it worked: {next.goal.check}</p>}
+            </div>
           )}
-          <PillButton href={retryHref} icon="retry" size="lg" className="w-full sm:w-auto">
-            Retry with this goal
-          </PillButton>
-        </div>
-      </Card>
+          <p className="mt-3 text-body text-fg">
+            <span className="font-semibold">Remember:</span> {retry.reminder}
+          </p>
+          <div className="mt-5">
+            {allDone && (
+              <p role="status" className="mb-2 text-body font-semibold text-fg" data-testid="ready-for-retry">
+                Ready for your retry
+              </p>
+            )}
+            <PillButton href={next.href} icon="retry" size="lg" className="w-full sm:w-auto">
+              Retry with this goal
+            </PillButton>
+          </div>
+        </Card>
+      ) : (
+        // Opened from the Lessons list: no result, so no goal and no retry. The lesson's reminder, then the part's tasks.
+        <Card aria-labelledby="retry-title">
+          <CardHeader id="retry-title" title={NO_RESULT_TEXT.practiseTitle} />
+          <p className="text-body text-fg">
+            <span className="font-semibold">Remember:</span> {retry.reminder}
+          </p>
+          <div className="mt-5">
+            <PillButton href={next.href} size="lg" className="w-full sm:w-auto">
+              {NO_RESULT_TEXT.practiseButton}
+            </PillButton>
+          </div>
+        </Card>
+      )}
     </>
   );
 }

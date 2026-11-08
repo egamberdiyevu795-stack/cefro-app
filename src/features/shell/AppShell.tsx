@@ -1,4 +1,4 @@
-import { ComingSoonToast, Sidebar } from "@/components/ds";
+import { Sidebar } from "@/components/ds";
 import type { FeatureFlags } from "@/config/features";
 import { AccountTab } from "@/features/dashboard/AccountTab";
 import { navItemsFor } from "@/features/dashboard/mock-data";
@@ -55,7 +55,6 @@ export function AppShell({
           </main>
         </div>
       </div>
-      <ComingSoonToast />
     </div>
   );
 }

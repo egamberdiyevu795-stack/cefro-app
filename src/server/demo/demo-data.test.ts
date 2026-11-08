@@ -113,8 +113,7 @@ describe("demo results match their task", () => {
       expect(state.kind).toBe("scored");
       if (state.kind !== "scored") continue;
       const { ScoredResult } = await import("@/features/result/sections");
-      const { FEATURE_FLAGS } = await import("@/config/features");
-      const html = renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task: source.task, flags: FEATURE_FLAGS, retryHref: "/", demo: true }));
+      const html = renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task: source.task, retryHref: "/", demo: true }));
       expect(html).toContain(escape(task.title));
       for (const other of tasks.filter((t) => t.id !== task.id)) expect(html, `${attempt.id} shows ${other.title}`).not.toContain(escape(other.prompts[0]));
     }

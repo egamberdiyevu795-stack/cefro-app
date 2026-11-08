@@ -56,7 +56,6 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
     <AppShell flags={flags} account={mock ? "mock" : "real"}>
       <PracticeExperience
         task={task}
-        flags={flags}
         mock={mock ? { retry: mockRetry, demoRetry: demoRetry?.id ?? null } : null}
         initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : demoRetry}
         retryAttemptId={!mock && retry ? retry : null}

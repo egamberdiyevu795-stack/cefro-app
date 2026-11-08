@@ -1,5 +1,5 @@
 /**
- * The dashboard's fixed content: navigation, the first visit's wording, the row menu's future actions, and the
+ * The dashboard's fixed content: navigation, the first visit's wording, and the
  * mocked account the design prototypes show. Everything about the student (level, skills, bands, biggest fix,
  * practise next, attempts, exam date) is real now: see progress.ts.
  */
@@ -7,23 +7,20 @@ import type { NavItem } from "@/components/ds";
 import type { FeatureFlag, FeatureFlags } from "@/config/features";
 import { mockLink } from "@/features/demo/demo-mode";
 
-/**
- * Navigation. Items with a `flag` are shown only when the flag is on: as "Coming soon" while the feature is not built,
- * as a real link once it is (`built: true`, e.g. History).
- */
-export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag; built?: boolean }> = [
+/** Navigation: every item is a real link. Items with a `flag` are shown only when the flag is on (History). */
+export const NAV_ITEMS: ReadonlyArray<NavItem & { flag?: FeatureFlag }> = [
   { href: "/dashboard", label: "Home", icon: "dashboard" },
   { href: "/practice", label: "Practice", icon: "mic" },
-  { href: "/lessons", label: "Lessons", icon: "book", flag: "lessons" },
-  { href: "/history", label: "History", icon: "clock", flag: "history", built: true },
+  { href: "/lessons", label: "Lessons", icon: "book" },
+  { href: "/history", label: "History", icon: "clock", flag: "history" },
 ];
 // The fifth tab, Account, is `AccountTab` (always shown, whatever the flags): it also says whether the browser is signed in.
 
 export function navItemsFor(flags: FeatureFlags, mock = false): NavItem[] {
-  return NAV_ITEMS.flatMap(({ flag, built, ...item }) => {
-    // Mock mode: the real links keep ?mock=1 ("Coming soon" items link nowhere).
-    const shown = { ...item, href: mockLink(item.href, mock && (flag === undefined || Boolean(built))) };
-    return flag === undefined ? [shown] : flags[flag] ? [built ? shown : { ...shown, soon: true }] : [];
+  return NAV_ITEMS.flatMap(({ flag, ...item }) => {
+    // Mock mode: every link keeps ?mock=1.
+    const shown = { ...item, href: mockLink(item.href, mock) };
+    return flag === undefined || flags[flag] ? [shown] : [];
   });
 }
 

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Card, CardHeader, ComingSoonButton, DeltaLabel, DemoLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
-import type { FeatureFlags } from "@/config/features";
+import { Card, CardHeader, DeltaLabel, DemoLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
 import { mockLink } from "@/features/demo/demo-mode";
@@ -64,7 +63,6 @@ export type AnswerAudio = { src: string; durationMs: number | null };
 export function ScoredResult({
   view,
   task,
-  flags,
   retryHref,
   onCompare,
   audio,
@@ -81,7 +79,6 @@ export function ScoredResult({
   teacher?: { studentName: string } | null;
   children?: React.ReactNode;
   task: Task;
-  flags: FeatureFlags;
   /** The approved lesson for the biggest fix ("Learn how"); null when no approved lesson matches (then no link). */
   lesson?: FixLesson | null;
   /** Mock data (the /result prototype): the "Demo result" label at the top of the result card. Never for a real attempt. */
@@ -103,7 +100,6 @@ export function ScoredResult({
           title={teacher ? "Answer" : undefined}
           transcript={view.transcript}
           durationMs={view.durationMs}
-          flags={teacher ? { ...flags, recordingPlayback: false } : flags}
           audio={teacher ? null : audio}
           className="order-6 lg:order-none"
         />
@@ -375,7 +371,6 @@ function AnswerCard({
   title = "Your answer",
   transcript,
   durationMs,
-  flags,
   empty,
   audio,
   className,
@@ -383,10 +378,9 @@ function AnswerCard({
   title?: string;
   transcript: string | null;
   durationMs: number;
-  flags: FeatureFlags;
   /** Shown instead of the transcript when there is none. */
   empty?: string;
-  /** The stored recording: a real player. Without it, the flagged "Play recording" (prototype). */
+  /** The stored recording: a real player. Without it, no player (never a control that does nothing). */
   audio?: AnswerAudio | null;
   className?: string;
 }) {
@@ -406,12 +400,7 @@ function AnswerCard({
         <div className="mb-4">
           <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />
         </div>
-      ) : flags.recordingPlayback && (
-        <ComingSoonButton label="Play recording" className={cx(styles.PILL_QUIET, "mb-4")}>
-          <Icon name="play" size={16} />
-          Play recording
-        </ComingSoonButton>
-      )}
+      ) : null}
       <p className="text-caption text-fg-muted">Transcript</p>
       {transcript ? <p className="mt-1 text-body text-fg">{transcript}</p> : <p className="mt-1 text-body text-fg-muted">{empty}</p>}
     </Card>
@@ -432,12 +421,10 @@ const STEPS = [
  */
 export function ScoringResult({
   state,
-  flags,
   notice,
   demo = false,
 }: {
   state: Extract<ResultPageState, { kind: "scoring" }>;
-  flags: FeatureFlags;
   notice?: string | null;
   /** Mock data: the "Demo result" label. Never for a real attempt. */
   demo?: boolean;
@@ -480,7 +467,7 @@ export function ScoringResult({
           ))}
         </ol>
       </Card>
-      <AnswerCard transcript={state.transcript} durationMs={state.durationMs} flags={flags} empty="Your transcript will appear here in a moment." />
+      <AnswerCard transcript={state.transcript} durationMs={state.durationMs} empty="Your transcript will appear here in a moment." />
     </div>
   );
 }
@@ -488,13 +475,11 @@ export function ScoringResult({
 /** Couldn't score: too short to rate, or no speech found. "Record again" is the black button. */
 export function NotScoredResult({
   state,
-  flags,
   recordHref,
   audio,
   demo = false,
 }: {
   state: Extract<ResultPageState, { kind: "not_scored" }>;
-  flags: FeatureFlags;
   recordHref?: ActionTarget;
   audio?: AnswerAudio | null;
   /** Mock data: the "Demo result" label. Never for a real attempt. */
@@ -532,7 +517,6 @@ export function NotScoredResult({
       <AnswerCard
         transcript={state.transcript}
         durationMs={state.durationMs}
-        flags={flags}
         audio={audio}
         empty={tooShort ? "No transcript." : "No speech was found in the recording."}
       />

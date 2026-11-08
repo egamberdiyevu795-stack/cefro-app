@@ -5,8 +5,7 @@ export { ScoringLabel, DeltaLabel, DemoLabel, DEMO_RESULT_TEXT, DEMO_MODE_TEXT, 
 export { StatRow, ProgressBar, GoalBar } from "./Stats";
 export { RadarChart, type RadarAxis } from "./RadarChart";
 export { ListRow, Thumb } from "./ListRow";
-export { Sidebar, SidebarItem, TopBar, TopBarLink, SearchSoon, type NavItem } from "./Navigation";
-export { ComingSoonButton, ComingSoonMenu, ComingSoonToast, announceComingSoon } from "./ComingSoon";
+export { Sidebar, SidebarItem, TopBar, TopBarLink, type NavItem } from "./Navigation";
 export { Menu, type MenuItem } from "./Menu";
 export { Icon, type IconName } from "./Icon";
 export { cx } from "./cx";

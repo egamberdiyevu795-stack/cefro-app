@@ -4,7 +4,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { DEMO_MODE_TEXT, DEMO_RESULT_TEXT, DemoLabel } from "@/components/ds";
-import { FEATURE_FLAGS } from "@/config/features";
 import { getSpeakingTask } from "@/content/speaking";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import { toPublicTask } from "@/domain/speaking/task";
@@ -34,11 +33,11 @@ function renderMock(state: ResultPageState, demo: boolean): string {
   const noop = () => undefined;
   switch (state.kind) {
     case "scored":
-      return renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS, retryHref: noop, demo }));
+      return renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, retryHref: noop, demo }));
     case "scoring":
-      return renderToStaticMarkup(createElement(ScoringResult, { state, flags: FEATURE_FLAGS, demo }));
+      return renderToStaticMarkup(createElement(ScoringResult, { state, demo }));
     case "not_scored":
-      return renderToStaticMarkup(createElement(NotScoredResult, { state, flags: FEATURE_FLAGS, recordHref: noop, demo }));
+      return renderToStaticMarkup(createElement(NotScoredResult, { state, recordHref: noop, demo }));
     default:
       return renderToStaticMarkup(createElement(FailedResult, { state, recordHref: noop, demo }));
   }
@@ -85,7 +84,7 @@ describe("no demo label on real results", () => {
   ];
 
   it.each(realCases)("%s: the real result page shows no demo label", (_name, initial, previous) => {
-    const html = renderToStaticMarkup(createElement(AttemptResult, { initial, previous, task, bandLabels, flags: FEATURE_FLAGS }));
+    const html = renderToStaticMarkup(createElement(AttemptResult, { initial, previous, task, bandLabels }));
     expect(html).toContain('aria-labelledby="result-title"'); // it really rendered a result screen
     expect(html).not.toMatch(LABEL);
     expect(html).not.toContain(DEMO_RESULT_TEXT);
@@ -94,7 +93,7 @@ describe("no demo label on real results", () => {
   it("the result screens default to no label, and the real page never sets `demo`", () => {
     const state = resultPageState(mockResultSource(selectMock({}), task, config));
     expect(state.kind).toBe("scored");
-    if (state.kind === "scored") expect(renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task, flags: FEATURE_FLAGS }))).not.toMatch(LABEL);
+    if (state.kind === "scored") expect(renderToStaticMarkup(createElement(ScoredResult, { view: state.view, task }))).not.toMatch(LABEL);
     const real = fs.readFileSync(path.join(process.cwd(), "src", "features", "result", "AttemptResult.tsx"), "utf8");
     expect(real).not.toMatch(/\bdemo\b|DemoLabel/);
   });

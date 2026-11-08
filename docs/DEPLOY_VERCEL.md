@@ -260,11 +260,14 @@ Do this once. Each step stops at the first problem and nothing after it has happ
 2. Do the one-time setup above (it can also be done before step 1).
 3. **Run the workflow, stage `check`.** It verifies the preflight (secrets, Vercel project, production branch, credential
    scope), the connection, the token, and that the database is empty or already CEFRO's. Expected:
-   `connected (read-only). 0 of 5 migrations applied, 5 pending`. It writes nothing.
+   `connected (read-only). 0 of N migrations applied, N pending` on an empty database (or `K of N …, N−K pending` on
+   one that is already CEFRO's), where **N is the number of migrations in the release** (the entries in
+   `src/server/db/migrations/meta/_journal.json`; `ls src/server/db/migrations/*.sql | wc -l` gives the same). It writes
+   nothing.
 4. **Back up if the database holds data.** The check stage refuses a database that has tables but no CEFRO migration history,
    so a database it accepts is either empty or already CEFRO's; for a CEFRO database with data, take a Turso backup first.
-5. **Run stage `migrate`.** Expected: `db:migrate: OK. 5 migrations applied, foreign key check clean`. This is the first
-   write to the database and is a single transaction.
+5. **Run stage `migrate`.** Expected: `db:migrate: OK. N migrations applied, foreign key check clean` (the same N). This
+   is the first write to the database and is a single transaction.
 6. **Run stage `deploy`.** It first confirms the database is fully migrated, deploys exactly the run's commit, and checks
    `/api/health` on the production domain.
 7. Open the production URL and run through "How to validate" below.
@@ -290,7 +293,7 @@ The migration runs before the new release is live, so for a while the **previous
 Migrations are *backward compatible*: add tables, columns (nullable or with a default) and indexes first; remove or rename
 things in a later release, once no running code uses them. CI helps (`scripts/ci/check-migrations.mjs`):
 
-- applied migrations (0000–0004 and every later one once merged) are immutable; editing or deleting one fails the check,
+- applied migrations (every migration already on `main`) are immutable; editing or deleting one fails the check,
 - timestamps in `meta/_journal.json` must increase (Drizzle would silently skip an older one),
 - a new migration containing `DROP`, `RENAME`, `DELETE FROM`, `TRUNCATE`, `PRAGMA foreign_keys`, `ADD … NOT NULL` without a
   default, `UPDATE`, `CREATE UNIQUE INDEX`, `CREATE TRIGGER` or a `CHECK` constraint fails unless it carries a
@@ -348,7 +351,7 @@ The development environment had no Turso credentials and no outbound access to T
 observed and must not be assumed:
 
 - the web client against the real service (authentication, latency of an attempt's ~20 statements),
-- migrations 0000–0004 on the hosted engine, including the table rebuild in 0002 and `foreign_key_check`,
+- the migrations on the hosted engine, including the table rebuild in 0002 and `foreign_key_check`,
 - foreign-key enforcement on hosted connections (the code relies on constraints; check with step 4 below),
 - writing and reading a ~2 MB blob,
 - contention between simultaneous instances.
@@ -358,7 +361,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
 
 ### How to validate once the variables are in Vercel
 
-1. Follow the first-rollout sequence above: stage `check`, then `migrate` (it must print `db:migrate: OK. 5 migrations applied, foreign key check clean`), then `deploy` (it must print the production URL and `post-deploy-check: OK`).
+1. Follow the first-rollout sequence above: stage `check`, then `migrate` (it must print `db:migrate: OK. N migrations applied, foreign key check clean`, N as in the first rollout), then `deploy` (it must print the production URL and `post-deploy-check: OK`).
 2. Open the deployment URL, record an answer of at least ~30 seconds, and watch it complete. The function logs show
    `Provider configuration OK`, the database kind (`turso`), `Speech activity checked`, then completion.
 3. Cross-instance check: submit several attempts, reload the page and open the history (requests land on different
@@ -369,7 +372,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
    ```bash
    export TURSO_DATABASE_URL=...   # not in a file that is committed
    export TURSO_AUTH_TOKEN=...
-   npm run db:migrate                      # idempotent: reports 5 migrations, foreign key check clean
+   npm run db:migrate                      # idempotent: reports N migrations (all of them), foreign key check clean
    # In the Turso shell (turso db shell <name>):
    PRAGMA foreign_key_check;                                   -- expect no rows
    SELECT count(*), sum(size_bytes) FROM recording_blobs;      -- matches the number of attempts you made

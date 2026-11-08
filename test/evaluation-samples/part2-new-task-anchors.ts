@@ -10,9 +10,11 @@ import type { BandAnchor } from "./part2-band-anchors";
  *     question 1 with an ending that is still about the student's own story, the question 3 trap).
  *
  * STATUS: NOT YET LIVE-TESTED. These were written by hand and have never been scored by the live evaluator (no Gemini
- * call was made for them). They are not part of `npm run eval:live`; the unit test only checks that the expected
- * judgements give the expected band under the official scoring, and that the pipeline accepts them with the
- * development evaluator. Run them live before relying on them for calibration.
+ * call was made for them). They are wired into the live evaluation set (`npm run eval:live`; only these:
+ * `npm run eval:live:new-tasks`, each answer sent with its own task; `-- --dry-run` prints what would be sent and the
+ * estimated cost, calling nothing). The unit test only checks that the expected judgements give the expected band
+ * under the official scoring, and that the pipeline accepts them with the development evaluator. Run them live before
+ * relying on them for calibration.
  *
  * All responses are SYNTHETIC; they contain no real student data.
  */

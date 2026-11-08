@@ -16,6 +16,9 @@ import { evaluateSpeaking, type SpeakingEvaluation } from "@/server/evaluation/s
 import type { EvaluationInput } from "@/server/evaluation/types";
 import { B2_PART2_SAMPLES, type EvaluationSample } from "../evaluation-samples/b2-part2-samples";
 import { PART2_BAND_ANCHORS, PART2_INJECTION_PROBE, type BandAnchor } from "../evaluation-samples/part2-band-anchors";
+import { PART2_NEW_TASK_ANCHORS } from "../evaluation-samples/part2-new-task-anchors";
+import { LIVE_36_FLASH_FIXTURES } from "../fixtures/live-3.6-flash";
+import { calibrate, dryRunReport, type PlannedEvaluation } from "./dry-run";
 import { TECHNOLOGY_TASK } from "../evaluation-samples/technology-task";
 import { renderMultilevelResult } from "./checks";
 import { evaluatorSelection } from "./providers";
@@ -25,6 +28,8 @@ import { writeReport } from "./report";
  * The live evaluation set on the REAL configured evaluator, every sample evaluated EVAL_REPEAT times (default 3):
  *
  * - Part 2 band anchors (advice task): EVERY run must hit the exact expected band (hard).
+ * - Part 2 new-task anchors (test/evaluation-samples/part2-new-task-anchors.ts: 12 answers, 2 for each of the 6 newer
+ *   tasks, each sent with ITS OWN task): EVERY run must hit the exact expected band (hard). Not yet live-tested.
  * - S01–S15 (former technology task, ./technology-task.ts): loose expectations, reported for review (soft).
  * - Stability: any sample whose band changes between runs is listed.
  * - Hard safety checks: quality gate passes, pronunciation never judged from text, injected instructions ignored.
@@ -33,6 +38,11 @@ import { writeReport } from "./report";
  *   EVALUATION_PROVIDER=gemini GEMINI_API_KEY=... npm run eval:live
  *   EVAL_SAMPLES=A2,S15 EVAL_REPEAT=1 npm run eval:live     # subset (id prefixes; P1 = injection, RETRY = retry pair)
  *   npm run eval:live:part2                                 # the 8 Part 2 anchors + S15, ×3 (EVAL_SAMPLES=A,S15)
+ *   npm run eval:live:new-tasks                             # the 12 new-task anchors, ×3 (EVAL_SAMPLES=NEW)
+ *   npm run eval:live -- --dry-run                          # what it WOULD send and the estimated cost; no model call
+ *
+ * EVAL_SAMPLES takes id prefixes; NEW selects all 12 new-task anchors (D… G… T… F… R… H…; use full ids for one task,
+ * e.g. R4,R1, since "R" alone also matches RETRY).
  *   GEMINI_THINKING_LEVEL=medium GEMINI_EVALUATION_MAX_TOKENS=12000 npm run eval:live
  *
  * The report gives every run's band, feature levels, question statuses, time and estimated cost, plus the total
@@ -48,12 +58,20 @@ import { writeReport } from "./report";
  *                         or a per-day / zero quota, stops every remaining evaluation and the report says what finished.
  */
 const selection = evaluatorSelection();
-if (!selection.configured) console.log(`\nLIVE evaluation skipped: ${selection.hint}\n`);
+/** `--dry-run` (scripts/eval-live.mjs sets EVAL_DRY_RUN=1): build and print what would be sent; never call a model. */
+const DRY_RUN = process.env.EVAL_DRY_RUN === "1";
+if (!selection.configured && !DRY_RUN) console.log(`\nLIVE evaluation skipped: ${selection.hint}\n`);
 const REPEAT = Math.max(1, Math.min(5, Number(process.env.EVAL_REPEAT || 3)));
 const adviceTask = getSpeakingTask("b2-part2-advice-from-someone")!;
 const only = process.env.EVAL_SAMPLES?.split(",").map((s) => s.trim()).filter(Boolean);
 const selected = (id: string) => !only?.length || only.some((prefix) => id.startsWith(prefix));
 const anchors = PART2_BAND_ANCHORS.filter((a) => selected(a.id));
+const newTaskAnchors = PART2_NEW_TASK_ANCHORS.filter((a) => selected(a.id) || Boolean(only?.includes("NEW")));
+const taskOf = (taskId: string) => {
+  const task = getSpeakingTask(taskId);
+  if (!task) throw new Error(`unknown task ${taskId}`);
+  return task;
+};
 const samples = B2_PART2_SAMPLES.filter((s) => selected(s.id));
 const runInjection = selected(PART2_INJECTION_PROBE.id);
 const runRetry = selected("RETRY");
@@ -200,17 +218,65 @@ function softMisses(sample: EvaluationSample, r: MultilevelResult): string[] {
 const anchorExpected = (a: BandAnchor) =>
   `band ${a.expect.band} · language ${a.expect.language} · ${a.expect.questions.map((q, i) => `Q${i + 1}=${q}`).join(", ")}${a.expect.memorized ? " · memorized" : ""}`;
 
-const nothingSelected = anchors.length + samples.length + Number(runInjection) + Number(runRetry) === 0;
+const nothingSelected = anchors.length + newTaskAnchors.length + samples.length + Number(runInjection) + Number(runRetry) === 0;
 
 const retryLines: string[] = [];
 
-describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set (×${REPEAT} runs per sample)`, () => {
+/** Everything the run below sends, in order, with how many times: the dry run prints this. */
+function plannedEvaluations(): PlannedEvaluation[] {
+  return [
+    ...anchors.map((a) => ({ id: a.id, group: "advice anchor" as const, input: inputFor(adviceTask, a), runs: REPEAT })),
+    ...newTaskAnchors.map((a) => ({ id: a.id, group: "new-task anchor" as const, input: inputFor(taskOf(a.taskId), a), runs: REPEAT })),
+    ...samples.map((s) => ({ id: s.id, group: "sample" as const, input: inputFor(TECHNOLOGY_TASK, s), runs: REPEAT })),
+    ...(runInjection ? [{ id: PART2_INJECTION_PROBE.id, group: "injection probe" as const, input: inputFor(adviceTask, PART2_INJECTION_PROBE), runs: 1 }] : []),
+    ...(runRetry
+      ? [
+          { id: "RETRY A2", group: "retry pair" as const, input: inputFor(adviceTask, anchorById("A2")), runs: 1 },
+          // The real retry also carries the first answer's goal (known only after it is scored); none here.
+          { id: "RETRY A4", group: "retry pair" as const, input: inputFor(adviceTask, anchorById("A4"), { attemptNumber: 1, transcript: anchorById("A2").transcript, retryFocus: [] }), runs: 1 },
+        ]
+      : []),
+  ];
+}
+
+describe.runIf(DRY_RUN)("DRY RUN: what the live evaluation set would send (no model call)", () => {
+  it("prints every evaluation it would send and the estimated cost", () => {
+    const provider = process.env.EVALUATION_PROVIDER || "anthropic";
+    const model =
+      provider === "gemini" ? process.env.GEMINI_EVALUATION_MODEL || "gemini-3.8-flash" : process.env.ANTHROPIC_EVALUATION_MODEL || "claude-opus-5-5";
+    const calibration = calibrate(Object.values(LIVE_36_FLASH_FIXTURES), (id) => {
+      const anchor = PART2_BAND_ANCHORS.find((a) => a.id === id);
+      return anchor ? inputFor(adviceTask, anchor) : null;
+    });
+    const { summary, full, totals } = dryRunReport(plannedEvaluations(), { provider, model, repeat: REPEAT, price: priceFor(model), calibration });
+    const file = writeReport("evaluation-set-dry-run", full, { provider, model, repeat: REPEAT, totals, calibration });
+    console.log(`\n${summary}\n\nEvery prompt in full: ${file}\n`);
+    expect(totals.evaluations).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe.skipIf(DRY_RUN || !selection.configured || nothingSelected)(`LIVE: evaluation set (×${REPEAT} runs per sample)`, () => {
   const rows: Row[] = [];
 
   it.each(anchors.map((a) => [a.id, a] as const))("anchor %s: every run hits the exact band", async (_id, anchor) => {
     const row: Row = { id: anchor.id, kind: "anchor", description: anchor.description, expected: anchorExpected(anchor), runs: [], errors: [], misses: [], why: anchor.why };
     rows.push(row);
     await evaluateRepeated(adviceTask, anchor, row);
+    row.runs.forEach((e, i) => {
+      if (e.result.scoring.band !== anchor.expect.band) row.misses.push(`run ${i + 1}: ${judgements(e.result)}`);
+    });
+    expect(row.errors, `${anchor.id}: failed evaluations`).toEqual([]);
+    for (const e of row.runs) {
+      expect(e.quality.passed).toBe(true);
+      expect(e.result.assessment.features.pronunciation.level).toBe("not_assessed");
+    }
+    expect(row.misses, `${anchor.id}: expected ${row.expected}`).toEqual([]);
+  });
+
+  it.each(newTaskAnchors.map((a) => [a.id, a.taskId, a] as const))("new-task anchor %s (%s): every run hits the exact band", async (_id, taskId, anchor) => {
+    const row: Row = { id: anchor.id, kind: "anchor", description: `${taskId}: ${anchor.description}`, expected: anchorExpected(anchor), runs: [], errors: [], misses: [], why: anchor.why };
+    rows.push(row);
+    await evaluateRepeated(taskOf(taskId), anchor, row);
     row.runs.forEach((e, i) => {
       if (e.result.scoring.band !== anchor.expect.band) row.misses.push(`run ${i + 1}: ${judgements(e.result)}`);
     });
@@ -256,7 +322,7 @@ describe.skipIf(!selection.configured || nothingSelected)(`LIVE: evaluation set 
     console.log(`\nRETRY A2 → A4: ${notes.join("; ")}\n`);
   });
 
-  it.skipIf(anchors.length + samples.length === 0)("writes the report", () => {
+  it.skipIf(anchors.length + newTaskAnchors.length + samples.length === 0)("writes the report", () => {
     const model = liveModel();
     const all = rows.flatMap((r) => r.runs);
     const latencies = all.map((e) => e.latencyMs).sort((a, b) => a - b);

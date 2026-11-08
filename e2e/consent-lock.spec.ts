@@ -78,3 +78,21 @@ test("mock mode without ?consent= is not locked", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Start preparation" })).toBeVisible();
   await expect(page.getByTestId("recording-locked")).toHaveCount(0);
 });
+
+test("Part 1 practice brief is locked too (?consent=waiting): no Start, one black button, AA at 390 px", async ({ page }) => {
+  await page.goto("/practice/speaking/a2-part1-1-daily-life?mock=1&consent=waiting");
+  await expect(page.getByTestId("recording-locked")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
+  await audit(page);
+});
+
+for (const status of ["waiting", "granted", "withdrawn"] as const) {
+  test(`Account page, Recording consent (?consent=${status}): read-only, the 30-day rule, one black button, AA at 390 px`, async ({ page }) => {
+    await page.goto(`/profile?mock=1&consent=${status}`);
+    const section = page.getByTestId("consent-status");
+    await expect(section).toHaveAttribute("data-status", status);
+    await expect(section).toContainText("Recordings are deleted 30 days after scoring.");
+    await expect(section.locator("a, button")).toHaveCount(0);
+    await audit(page);
+  });
+}

@@ -19,12 +19,12 @@ vi.setConfig({ testTimeout: 60_000 });
 
 import { eq } from "drizzle-orm";
 import { audioDeleteDueAt, audioRetentionNote } from "@/domain/audio-retention";
-import { canShareWithTeacher, recordingLock } from "@/domain/consent";
+import { canShareWithTeacher, consentLines, parseConsentPreview, recordingLock } from "@/domain/consent";
 import { deleteAccount } from "@/server/account/delete-account";
 import { getAttemptViewForUser } from "@/server/attempts/attempt-service";
 import { deleteExpiredAudio } from "@/server/audio-retention/delete-expired-audio";
 import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
-import { setConsentRequiredForTesting } from "@/server/consent/consent";
+import { readOwnConsent, setConsentRequiredForTesting } from "@/server/consent/consent";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import { classMembers, evaluations, recordingBlobs, recordings, speakingAttempts, transcripts, users } from "@/server/db/schema";
 import { setAudioStorageForTesting, type AudioStorage } from "@/server/storage";
@@ -238,7 +238,7 @@ describe("teacher sharing needs the teacher-sharing flag", () => {
 });
 
 /** Make an attempt look scored (or failed) `daysAgo` days ago. */
-async function age(attemptId: string, daysAgo: number, status: "completed" | "failed" = "completed") {
+async function age(attemptId: string, daysAgo: number, status: "completed" | "failed" | "uploaded" | "processing" = "completed") {
   const at = new Date(Date.now() - daysAgo * DAY).toISOString();
   await db.update(speakingAttempts).set({ status, completedAt: status === "completed" ? at : null, updatedAt: at }).where(eq(speakingAttempts.id, attemptId)).run();
 }
@@ -263,25 +263,31 @@ describe.each([
     const old = await practise();
     const recent = await practise();
     const failedOld = await practise();
+    const stuckOld = await practise();
+    const stuckRecent = await practise();
     use(await register("bob@example.com"));
     const bobs = await practise();
     await age(old, 31);
     await age(recent, 29);
     await age(failedOld, 40, "failed");
+    await age(stuckOld, 35, "uploaded"); // never scored, nothing changed for 35 days: deleted too
+    await age(stuckRecent, 5, "processing");
     await age(bobs, 10);
-    for (const id of [old, recent, failedOld, bobs]) expect(await audioExists(id)).toBe(true);
+    for (const id of [old, recent, failedOld, stuckOld, stuckRecent, bobs]) expect(await audioExists(id)).toBe(true);
     expect((await recordingOf(old)).storageProvider).toBe(provider);
     const before = { transcripts: await db.select().from(transcripts).all(), evaluations: await db.select().from(evaluations).all() };
 
     const first = await deleteExpiredAudio({ files: new LocalAudioStorage(dir) });
     expect(first).toEqual({
-      deleted: 2,
-      audioFiles: provider === "local" ? 2 : 0,
-      audioBlobs: provider === "database" ? 2 : 0,
+      deleted: 3,
+      audioFiles: provider === "local" ? 3 : 0,
+      audioBlobs: provider === "database" ? 3 : 0,
       skipped: 0,
     });
     expect(await audioExists(old)).toBe(false);
     expect(await audioExists(failedOld)).toBe(false);
+    expect(await audioExists(stuckOld)).toBe(false);
+    expect(await audioExists(stuckRecent)).toBe(true);
     expect(await audioExists(recent)).toBe(true);
     expect(await audioExists(bobs)).toBe(true);
     expect((await recordingOf(old)).audioDeletedAt).not.toBeNull();
@@ -290,7 +296,7 @@ describe.each([
     // Transcripts, results and feedback are untouched, every attempt is still there.
     expect(await db.select().from(transcripts).all()).toEqual(before.transcripts);
     expect(await db.select().from(evaluations).all()).toEqual(before.evaluations);
-    expect(await attemptCount()).toBe(4);
+    expect(await attemptCount()).toBe(6);
 
     // Safe to run twice: nothing left to do, nothing changes.
     const markedAt = (await recordingOf(old)).audioDeletedAt;
@@ -356,6 +362,39 @@ describe("the cron route", () => {
     expect(await ok.json()).toEqual({ deleted: 0, audioFiles: 0, audioBlobs: 0, skipped: 0 });
     setDb(undefined);
     vi.unstubAllEnvs();
+  });
+});
+
+describe("the Account page's consent section", () => {
+  setUp(() => new LocalAudioStorage(dir));
+
+  it("shows the account's own record only while the switch is on; guests and the switch off: nothing", async () => {
+    use(await register("alice@example.com"));
+    const id = (await db.select({ id: users.id }).from(users).where(eq(users.email, "alice@example.com")).get())!.id;
+    expect(await readOwnConsent(id)).toBeNull(); // switch off
+    setConsentRequiredForTesting(true);
+    expect(await readOwnConsent(id)).toEqual({ status: null, at: null, teacherSharing: false });
+    await setConsent("alice@example.com", "granted", true);
+    expect(await readOwnConsent(id)).toMatchObject({ status: "granted", teacherSharing: true });
+    await setConsent("alice@example.com", "withdrawn", true);
+    expect(await readOwnConsent(id)).toMatchObject({ status: "withdrawn", teacherSharing: false });
+    expect(await readOwnConsent(null)).toBeNull();
+    await db.insert(users).values({ id: "guest-1", kind: "anonymous" }).run();
+    expect(await readOwnConsent("guest-1")).toBeNull();
+  });
+
+  it("plain lines for each state, with the real date and the 30-day rule", () => {
+    const at = "2026-11-08T10:00:00.000Z";
+    const rule = "Recordings are deleted 30 days after scoring. Transcripts and feedback are kept until you delete your account.";
+    expect(consentLines({ status: null, at: null, teacherSharing: false })).toEqual({
+      title: "Waiting for consent",
+      body: "Recording unlocks once a parent or guardian has agreed (or you, if you are 18 or older) and the person who invited you has recorded it.",
+      retention: rule,
+    });
+    expect(consentLines({ status: "granted", at, teacherSharing: false })).toMatchObject({ title: "Consent recorded on 08.11.26", body: "Recording is unlocked. Sharing with a teacher: not agreed." });
+    expect(consentLines({ status: "withdrawn", at, teacherSharing: false }).title).toBe("Consent withdrawn on 08.11.26");
+    expect(parseConsentPreview("granted", new Date(at))).toEqual({ status: "granted", at, teacherSharing: false });
+    expect(parseConsentPreview("anything", new Date(at))).toBeNull();
   });
 });
 

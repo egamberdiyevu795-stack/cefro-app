@@ -8,7 +8,7 @@ const DAY_MS = 86_400_000;
 /**
  * When an attempt's audio is (or was) due for deletion: 30 days after it was scored (`completedAt`), or, for an
  * attempt that could not be scored, 30 days after it failed (`updatedAt`), so no recording is kept for ever. Null while
- * the attempt is still being processed.
+ * the attempt is still being processed (the daily job also deletes one stuck that way for 30 days; nothing is shown).
  */
 export function audioDeleteDueAt(attempt: { status: string; completedAt: string | null; updatedAt: string }): string | null {
   const from = attempt.status === "completed" ? attempt.completedAt : attempt.status === "failed" ? attempt.updatedAt : null;
@@ -25,7 +25,7 @@ export function retentionCutoff(now: Date): string {
 const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tashkent", day: "2-digit", month: "2-digit", year: "2-digit" });
 
 /** "08.12.26" in Uzbekistan time, as dates are shown everywhere else. */
-function shortDate(iso: string): string {
+export function shortDate(iso: string): string {
   const parts = Object.fromEntries(DATE_FORMAT.formatToParts(new Date(iso)).map((p) => [p.type, p.value]));
   return `${parts.day}.${parts.month}.${parts.year}`;
 }

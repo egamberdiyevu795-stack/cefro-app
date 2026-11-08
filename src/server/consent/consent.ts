@@ -1,6 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { canShareWithTeacher, recordingLock, RECORDING_LOCKED_MESSAGE, type ConsentSubject, type RecordingLock } from "@/domain/consent";
+import { canShareWithTeacher, recordingLock, RECORDING_LOCKED_MESSAGE, type ConsentRecord, type ConsentSubject, type RecordingLock } from "@/domain/consent";
 import { getEnv } from "@/server/config/env";
 import { getDb } from "@/server/db/client";
 import { users } from "@/server/db/schema";
@@ -55,3 +55,18 @@ export async function teacherSharingAllowed(studentUserId: string): Promise<bool
 }
 
 export const TEACHER_SHARING_LOCKED_MESSAGE = "A parent or guardian needs to agree to sharing with a teacher first.";
+
+/**
+ * The Account page's consent section: the caller's own record, only while the switch is on and for a registered
+ * account (null otherwise: nothing is shown). Reads only; never another user's.
+ */
+export async function readOwnConsent(userId: string | null): Promise<ConsentRecord | null> {
+  if (!consentRequired() || !userId) return null;
+  const row = await (await getDb())
+    .select({ kind: users.kind, mergedInto: users.mergedIntoUserId, status: users.consentStatus, at: users.consentAt, sharing: users.consentTeacherSharing })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
+  if (!row || row.kind !== "registered" || row.mergedInto) return null;
+  return { status: row.status ?? null, at: row.status ? row.at : null, teacherSharing: row.status === "granted" && row.sharing };
+}

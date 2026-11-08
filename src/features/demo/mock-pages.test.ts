@@ -276,6 +276,20 @@ describe("Account page (/profile) in mock mode", () => {
     expectMockLinksOnly(markup);
   });
 
+  it("pilot consent preview (&consent=): the read-only Recording consent section after the account; none without it", async () => {
+    expect(await html(ProfilePage(props({ mock: "1" })))).not.toContain('data-testid="consent-status"');
+    for (const [preview, title] of [["waiting", "Waiting for consent"], ["granted", "Consent recorded on "], ["withdrawn", "Consent withdrawn on "]] as const) {
+      const markup = mainOf(await html(ProfilePage(props({ mock: "1", consent: preview }))));
+      expect(markup).toContain(`data-status="${preview}"`);
+      expect(markup).toContain(title);
+      expect(markup).toContain("Recordings are deleted 30 days after scoring.");
+      expect(markup.indexOf('data-testid="consent-status"')).toBeGreaterThan(markup.indexOf('data-testid="profile-attempts"'));
+      expect(markup.indexOf('data-testid="consent-status"')).toBeLessThan(markup.indexOf('data-testid="exam-countdown"'));
+      expect(markup.match(BLACK)).toHaveLength(1);
+      expect(markup).not.toMatch(SMALL);
+    }
+  });
+
   it("forms post to the page itself and every submit starts disabled (until the page is ready)", async () => {
     const markup = await html(ProfilePage(props({ mock: "1" })));
     const forms = [...markup.matchAll(/<form\b[^>]*>/g)].map((m) => m[0]);

@@ -3,6 +3,7 @@ import { mockLink } from "@/features/demo/demo-mode";
 import { ChangePassword } from "@/features/settings/ChangePassword";
 import { DeleteAccount } from "@/features/settings/DeleteAccount";
 import { SignOut } from "@/features/settings/SignOut";
+import { consentLines, type ConsentRecord } from "@/domain/consent";
 import type { AccountInfo } from "@/server/account/account-store";
 import { ProfileName } from "./ProfileName";
 import { PART2_HREF, attemptCountText, memberSinceText, type ProfileLevel } from "./view-model";
@@ -83,6 +84,25 @@ function LevelBlock({ level, mock }: { level: ProfileLevel; mock: boolean }) {
         <PillButton href={href}>Go to Part 2</PillButton>
       </div>
     </div>
+  );
+}
+
+/**
+ * Recording consent (pilot, docs/consent-design.md section 2b): shown only while consent is required. Read-only: only
+ * the owner can record consent (scripts/set-consent.mjs), so there is no button here. Withdrawing for good is Delete my
+ * account, below.
+ */
+export function ConsentCard({ record }: { record: ConsentRecord }) {
+  const lines = consentLines(record);
+  return (
+    <Card aria-labelledby="account-consent">
+      <CardHeader title="Recording consent" id="account-consent" />
+      <div className="flex flex-col gap-2" data-testid="consent-status" data-status={record.status ?? "waiting"}>
+        <p className="text-body font-semibold text-fg">{lines.title}</p>
+        <p className="text-body text-fg">{lines.body}</p>
+        <p className="border-t border-line pt-3 text-label text-fg-muted">{lines.retention}</p>
+      </div>
+    </Card>
   );
 }
 

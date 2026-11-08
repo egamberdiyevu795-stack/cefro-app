@@ -6,7 +6,9 @@ import { FEATURE_FLAGS } from "@/config/features";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn, type ExamDateState } from "@/domain/exam-date";
 import { ExamDate } from "@/features/dashboard/ExamDate";
 import { isMockQuery } from "@/features/demo/demo-mode";
-import { AccountCard, DeleteCard, SignInCard } from "@/features/profile/sections";
+import { AccountCard, ConsentCard, DeleteCard, SignInCard } from "@/features/profile/sections";
+import { parseConsentPreview, type ConsentRecord } from "@/domain/consent";
+import { readOwnConsent } from "@/server/consent/consent";
 import { asDemoTeacher, isDemoTeacherQuery, studentLinks } from "@/features/teacher/links";
 import { MyClassesCard, TeacherLinkCard, type MembershipView } from "@/features/teacher/sections";
 import { mockLink } from "@/features/demo/demo-mode";
@@ -41,6 +43,9 @@ export const metadata: Metadata = { title: "Account" };
  * Teacher view (docs/teacher-plan.md): a student's "Your classes" (S3, grey "Join a class"); a teacher's quiet link to
  * Your classes on Home. Real accounts only once the Teacher view is on (parent consent); in mock mode always:
  * `&joined=DEMO42` shows the demo class after Share, `&as=teacher` is the demo teacher.
+ *
+ * Pilot consent (CONSENT_REQUIRED on): a read-only "Recording consent" section for a signed-in account, after the
+ * account. Mock mode shows it only with `&consent=waiting|granted|withdrawn` (a made-up record).
  */
 export default async function AccountPage(props: PageProps<"/profile">) {
   const query = await props.searchParams;
@@ -53,11 +58,13 @@ export default async function AccountPage(props: PageProps<"/profile">) {
   let stored;
   // Teacher view: null = not shown (the Teacher view is off for real accounts until parent consent exists).
   let classes: { role: "teacher" } | { role: "student"; memberships: MembershipView[] } | null = null;
+  let consent: ConsentRecord | null = null;
   const demoTeacher = mock && isDemoTeacherQuery(query);
   if (mock) {
     account = demoTeacher ? { ...demoAccount(now), name: DEMO_TEACHER.name, email: "teacher@example.com" } : demoAccount(now);
     attempts = demoTeacher ? [] : await demoAttempts(now);
     stored = demoExamDate(now);
+    consent = demoTeacher ? null : parseConsentPreview(typeof query.consent === "string" ? query.consent : undefined, now);
     classes = demoTeacher
       ? { role: "teacher" }
       : {
@@ -73,6 +80,7 @@ export default async function AccountPage(props: PageProps<"/profile">) {
     account = await readAccount(userId);
     attempts = userId ? await listAttemptHistory(userId) : [];
     stored = userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+    consent = account.kind === "registered" ? await readOwnConsent(userId) : null;
     if (userId && account.kind === "registered" && teacherLive()) {
       classes =
         (await userRole(userId)) === "teacher"
@@ -89,6 +97,7 @@ export default async function AccountPage(props: PageProps<"/profile">) {
       <h1 className="mb-4 text-title font-medium tracking-[-0.01em] text-fg">Account</h1>
       <div className="mx-auto flex max-w-2xl flex-col gap-4 lg:mx-0">
         <AccountCard account={account} attempts={attempts.length} level={currentLevel(attempts)} mock={mock} />
+        {consent && <ConsentCard record={consent} />}
         <ExamDate state={accountExamState(examDateState(stored, now))} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant="card" demo={mock} />
         {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} />}
         {classes?.role === "student" && (

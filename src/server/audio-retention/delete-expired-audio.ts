@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull, lte, or } from "drizzle-orm";
+import { and, eq, isNull, lte, ne, or } from "drizzle-orm";
 import { AUDIO_RETENTION_DAYS, retentionCutoff } from "@/domain/audio-retention";
 import { getEnv } from "@/server/config/env";
 import { getDb, type Db } from "@/server/db/client";
@@ -24,14 +24,16 @@ const BATCH_SIZE = 200;
 
 /**
  * The daily audio-retention job (docs/consent-design.md, decision of 2026-11-08): deletes the stored audio of every
- * recording whose attempt was scored 30 days ago or more (or failed 30 days ago or more), wherever it is stored: files
+ * recording whose attempt was scored 30 days ago or more (or failed, or got stuck before scoring, and has not changed for
+ * 30 days or more), wherever it is stored: files
  * under AUDIO_STORAGE_DIR (`local`) and rows of `recording_blobs` (`database`). The `recordings` row stays, marked with
  * `audio_deleted_at`, so the result page can say the recording was deleted; the attempt, transcript, result and
  * feedback are not touched.
  *
  * Safe to run twice, or at the same time as another run: a recording is picked only while `audio_deleted_at` is null,
  * deleting audio that is already gone is not an error, and the mark is set only once (`WHERE audio_deleted_at IS
- * NULL`). A run that stops halfway leaves the rest for the next one. Attempts still being processed are never picked.
+ * NULL`). A run that stops halfway leaves the rest for the next one. An attempt being processed right now is never
+ * picked (processing gives up after minutes, so 30 days without a change means it is stuck, not running).
  */
 export async function deleteExpiredAudio(options: { now?: Date; db?: Db; files?: AudioStorage; maxBatches?: number } = {}): Promise<RetentionSummary> {
   const now = options.now ?? new Date();
@@ -51,7 +53,8 @@ export async function deleteExpiredAudio(options: { now?: Date; db?: Db; files?:
           isNull(recordings.audioDeletedAt),
           or(
             and(eq(speakingAttempts.status, "completed"), lte(speakingAttempts.completedAt, cutoff)),
-            and(eq(speakingAttempts.status, "failed"), lte(speakingAttempts.updatedAt, cutoff)),
+            // Failed, or stuck before scoring (uploaded / processing and never finished): 30 days after the last change.
+            and(ne(speakingAttempts.status, "completed"), lte(speakingAttempts.updatedAt, cutoff)),
           ),
         ),
       )

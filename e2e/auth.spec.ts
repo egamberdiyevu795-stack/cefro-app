@@ -11,7 +11,7 @@ const uniqueEmail = (label: string) => `${label}-${run}-${++counter}@example.com
 async function recordAndSubmit(page: Page, speakMs = 2500) {
   await shortPartIntros(page);
   await page.getByRole("button", { name: "Start preparation" }).click();
-  await expect(page.getByText("to prepare")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   await page.waitForTimeout(speakMs);

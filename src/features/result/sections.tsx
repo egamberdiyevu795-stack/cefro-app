@@ -199,7 +199,7 @@ function ResultCard({
 }
 
 /** One segment per band (0…max, band 0 exists): filled up to the band; the target segment is named under it. Not colour alone: the words carry it. */
-function BandMeter({ band, bandMax, target, className }: { band: number; bandMax: number; target: number; className?: string }) {
+export function BandMeter({ band, bandMax, target, className }: { band: number; bandMax: number; target: number; className?: string }) {
   const segments = Array.from({ length: bandMax + 1 }, (_, i) => i);
   const columns = { gridTemplateColumns: `repeat(${bandMax + 1}, minmax(0, 1fr))` };
   return (

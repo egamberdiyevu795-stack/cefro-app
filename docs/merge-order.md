@@ -476,6 +476,43 @@ Contains (docs/part1-plan.md, built as written; see "Not followed" below):
   the anchors (§6 step 5) not run (no model calls). (5) The questions are not listed on the introduction screen (the
   exam reads them one at a time).
 
+## Right after `claude/landing`: `claude/part3` (Part 3 in mock mode, no migration)
+
+Cut from `claude/integration-chgcwb` (`ced5367`, which holds the chain up to `claude/landing` and the launch checklist),
+with `claude/lucid-euler-460531` (step 8, the Part 3 plan) and `claude/sleepy-hypatia-rp7db1` (step 9, the overlap
+module) merged in (normal merges). So it comes **after `claude/landing` and after steps 8 and 9**, merge commit, no
+squash; merging it also brings in 8 and 9 unchanged. Branch name: `claude/part3` (5 characters after `claude/`).
+No database migration, no new environment variable, no model call.
+Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-part3-crm-b915.vercel.app/practice/part3?mock=1`.
+
+Contains (docs/part3-plan.md, built in mock mode; docs/design-system.md, "Part 3 (mock mode only)"):
+
+- **Release switch unchanged:** `PART_LIVE["3"]` stays `false`, so the dashboard tile and the home page keep "Coming
+  soon". Every Part 3 page is a 404 without `?mock=1` (also when the switch is on: there is no real Part 3 flow yet).
+- **Content:** the three v1 topics with CEFRO's own FOR / AGAINST lists (`src/content/speaking/c1/`, registry
+  `src/content/speaking/part3.ts`, separate from the Part 2 registry): cars in city centres, smartphones under 14, a
+  tax on sugary drinks and fast food. Task type `BalancedArgumentTask` (`src/domain/speaking/argument-task.ts`).
+- **Rubric and scoring:** `src/server/evaluation/rubrics/multilevel_q8.json` (bands 0–6, target band 5 = C1, C1
+  descriptors from Question 8, B2 / B1 / below-B1 reused verbatim from Question 7, coverage / dependence / language
+  caps, the band-6 gate on grammar AND vocabulary, the overlap thresholds); `src/domain/evaluation/q8/` (C1 ladder,
+  model-output schema with the point judgements, deterministic scorer, stored result `kind: "multilevel_q8"`, retry
+  goals).
+- **Evaluator pipeline:** `src/server/evaluation/argument-evaluator.ts` (schema → Part 3 quality gate → one
+  regeneration → prompt overlap → dependence decision → band → goals), the Part 3 prompt (written, **not live-tested**),
+  the Part 3 mock evaluator and its mock-only rules (`mock-argument-model.ts`, `mock-argument-rules.ts`).
+- **Mock demo:** `/practice/part3?mock=1` → brief → preparation (tick 2 + 2 points in the minute) → recording → Scoring…
+  → `/result/part3?demo=<key>&mock=1` → Retry with this goal. Made-up demo answers that follow the points chosen
+  (`src/features/demo/part3-demo-answers.ts`) go through the real Part 3 evaluation with the mock evaluator.
+- **Anchors (test-only):** `test/evaluation-samples/part3-anchors.ts`: topic 1 from the plan, topics 2 and 3 made up
+  (A0–A5 and R1 each), with their measured overlap recorded in docs/part3-plan.md.
+- **Shared code touched (small):** `retryReviewSchema` exported from `multilevel/model-output.ts`; `BandMeter`
+  exported from `features/result/sections.tsx`; `Countdown` and `LevelMeter` exported from the Part 2 practice
+  screens; `playwright.preview.config.ts` also runs `e2e/part3.spec.ts`. No Part 2 behaviour changes.
+- **Tests:** `src/domain/evaluation/q8/band-scoring.test.ts`, `test/evaluation-samples/part3-anchors.test.ts`,
+  `src/server/evaluation/argument-evaluator.test.ts`, `src/features/part3/part3.test.ts`, `e2e/part3.spec.ts`.
+- **Not followed from the plan:** see "Part 3: what the plan says and this branch does not do yet" in
+  docs/part3-plan.md.
+
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 
 claude/entry-pages-jgh558: duplicate, never merge. (It holds the first two commits of `claude/entry-pages` and is

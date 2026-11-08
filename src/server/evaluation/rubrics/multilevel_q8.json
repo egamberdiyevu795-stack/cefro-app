@@ -1,0 +1,129 @@
+{
+  "id": "multilevel-q8",
+  "version": "multilevel-q8/1.0.0",
+  "exam": "uzbmb-multilevel-speaking",
+  "part": 3,
+  "official_question": 8,
+  "target_level": "C1",
+  "points_per_side": 2,
+  "band_max": 6,
+  "meets_target_band": 5,
+  "bands": [
+    {
+      "band": 6,
+      "label": "Above C1",
+      "descriptor": "Performance is likely to be above the C1 level."
+    },
+    {
+      "band": 5,
+      "label": "C1",
+      "descriptor": "The presentation is clear, highlighting points from each section. Gives reasons in support of and against particular points of view."
+    },
+    {
+      "band": 4,
+      "label": "Higher B2",
+      "descriptor": "The response addresses the points from each section + Question 7 B2 features."
+    },
+    {
+      "band": 3,
+      "label": "Lower B2",
+      "descriptor": "The response addresses the points from only one of the sections + Question 7 B2 features."
+    },
+    {
+      "band": 2,
+      "label": "Higher B1",
+      "descriptor": "The candidate is unable to construct a coherent and sustained response and is heavily dependent on the input prompts. + Question 7 B1 features."
+    },
+    {
+      "band": 1,
+      "label": "Lower B1",
+      "descriptor": "The candidate is unable to construct a coherent and sustained response and reads directly from the input prompts. + Question 7 B1 features."
+    },
+    {
+      "band": 0,
+      "label": "Below B1",
+      "descriptor": "Performance is below B1, or there is no meaningful language, or all responses are completely off-topic."
+    }
+  ],
+  "descriptors": {
+    "C1": {
+      "grammar": "A range of complex grammar constructions are used accurately. Some minor errors occur but do not impede understanding.",
+      "vocabulary": "A range of vocabulary is used to discuss the topic required by the task. There is some awkward usage or slightly inappropriate word choices.",
+      "pronunciation": "Pronunciation is intelligible.",
+      "fluency": "Backtracking and reformulations do not fully interrupt the flow of speech.",
+      "cohesion": "A range of cohesive devices are used to clearly indicate the links between ideas."
+    },
+    "B2": {
+      "grammar": "Some complex grammar constructions are used accurately. Errors do not impede understanding.",
+      "vocabulary": "The range of vocabulary is sufficient to discuss the topics required by the task. Inappropriate lexical choices do not impede understanding.",
+      "pronunciation": "Pronunciation is intelligible. Mispronunciations do not put a strain on the listener or lead to misunderstanding.",
+      "fluency": "Some pausing while searching for vocabulary but this does not put a strain on the listener.",
+      "cohesion": "A limited number of cohesive devices are used to indicate the links between ideas."
+    },
+    "B1": {
+      "grammar": "Simple grammatical structures are used correctly. Errors occur when attempting complex structures.",
+      "vocabulary": "Limitations in vocabulary make it difficult to deal fully with the task.",
+      "pronunciation": "Pronunciation is generally intelligible but mispronunciations put an occasional strain on the listener.",
+      "fluency": "There is some pausing, false starts, and reformulations.",
+      "cohesion": "Uses only simple cohesive devices. Links between ideas are not always clearly indicated."
+    },
+    "below_B1": {
+      "grammar": "Some simple grammatical structures are used correctly but basic mistakes systematically occur.",
+      "vocabulary": "Vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable.",
+      "pronunciation": "Mispronunciations are noticeable and frequently place a strain on the listener.",
+      "fluency": "There is frequent pausing, false starts, and reformulations.",
+      "cohesion": "Cohesion between ideas is limited. Responses tend to be a list of points."
+    }
+  },
+  "descriptor_sources": {
+    "C1": "Official UZBMB Multilevel speaking rating scale, Question 8, band 5 (C1).",
+    "B2": "Official UZBMB Multilevel speaking rating scale, Question 7, B2 (Question 8 bands 3 and 4 refer to the Question 7 B2 features).",
+    "B1": "Official UZBMB Multilevel speaking rating scale, Question 7, B1 (Question 8 bands 1 and 2 refer to the Question 7 B1 features).",
+    "below_B1": "Reference only: the official 'Higher A2' text from Questions 4-6, used only to recognise below-B1 language (as in Question 7).",
+    "above_C1": "No feature text: Question 8 band 6 says only 'likely above the C1 level'. Judged only when the evidence clearly exceeds every C1 descriptor."
+  },
+  "scoring": {
+    "coverage_cap": {
+      "none": 0,
+      "one_side": 3,
+      "both_sides": 4,
+      "both_sides_full": 6
+    },
+    "dependence_cap": {
+      "own_development": 6,
+      "heavily_dependent": 2,
+      "reads_prompts": 1
+    },
+    "language_cap": {
+      "below_B1": 0,
+      "B1": 2,
+      "B2": 4,
+      "C1": 5,
+      "above_C1": 6
+    },
+    "above_target_requires": [
+      "grammar",
+      "vocabulary"
+    ],
+    "above_target_gate_cap": 5
+  },
+  "overlap": {
+    "min_run_tokens": 4,
+    "named_window_tokens": 20,
+    "named_min_novel_words": 5,
+    "point_read_coverage": 0.8,
+    "reads_prompts": {
+      "copied_ratio": 0.5,
+      "points_read": 4
+    },
+    "heavily_dependent": {
+      "copied_ratio": 0.2,
+      "points_read": 2,
+      "min_novel_content_words": 25
+    },
+    "override": {
+      "copied_ratio": 0.5,
+      "points_read": 4
+    }
+  }
+}

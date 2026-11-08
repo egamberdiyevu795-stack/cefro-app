@@ -786,9 +786,10 @@ only**. `PART_LIVE["3"]` stays off: the dashboard tile and the home page keep "C
 - **Brief:** "Speaking · Part 3 · Practice" (or "Retry"), the topic, the four instructions, Prepare 1 min / Speak 2 min,
   the goal of a retry, the grey "Check microphone", the black **"Start"** ("Turn your sound on…"). Beside it: the
   statement and both lists (F1–F3, A1–A3).
-- **Spoken introduction (as Part 1):** "Listen", "Part 3", the introduction's text (the statement and the timings),
-  "The minute of preparation starts by itself after the chime.", the goal of a retry; no button. The same offline voice
-  as Part 1 reads it, then the sample chime, then preparation starts by itself.
+- **Spoken introduction (as in the exam, Part 2 too):** `PartIntroCard` on its own (no task beside it): "Listen",
+  "Part 3" (or "Part 2"), the introduction's text, "The minute of preparation starts by itself after the chime.", the
+  goal of a retry; no button. The same offline voice as Part 1 reads it, then the chime, then the task with the
+  one-minute countdown. Part 2's brief keeps its "Start preparation" label.
 - **Preparation = choosing:** the 1-minute countdown, "Tick two points in each list…", "FOR n of 2 · AGAINST n of 2"
   (a live status), the quiet "Start speaking now" (no black button). Each point is a native checkbox with a 44 px row;
   a third tick on a side is disabled. Ticked rows are `well`, unticked `card` with a `line` ring.

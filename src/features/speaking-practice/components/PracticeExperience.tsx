@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { DemoLabel } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
+import type { RecordingLock } from "@/domain/consent";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import { ScoringResult } from "@/features/result/sections";
@@ -26,6 +27,7 @@ import {
   PracticeLayout,
   PreparationCard,
   RecordingCard,
+  RecordingLockedState,
   RetryGoalLoading,
   RetryGoalUnavailable,
   TaskCard,
@@ -57,7 +59,14 @@ export function PracticeExperience({
   mock = null,
   initialRetryOf = null,
   retryAttemptId = null,
+  lock = null,
 }: {
+  /**
+   * Pilot consent: why this caller may not record (null: they may). Decided on the server (CONSENT_REQUIRED and the
+   * account's consent); the upload and scoring routes refuse on their own too. Locked: the brief shows the task and the
+   * lock, no Check microphone and no Start preparation.
+   */
+  lock?: RecordingLock | null;
   task: PublicSpeakingTask;
   /** Mock mode; `retry` is the saved run a mock retry comes from, `demoRetry` the demo result (features/demo). */
   mock?: { retry: MockAttemptKey | null; demoRetry?: string | null } | null;
@@ -164,6 +173,7 @@ export function PracticeExperience({
 
   // ── Preparation & recording ──────────────────────────────────────
   const startPreparation = useCallback(async () => {
+    if (lock) return; // locked: the button is not shown, and nothing may start the microphone
     setPageError(null);
     primeChime(); // inside the click, so the chime is allowed when preparation runs out a minute later
     const ready = await recorder.requestMicrophone();
@@ -174,7 +184,7 @@ export function PracticeExperience({
     dispatch({ type: "preparationStarted", now: Date.now(), preparationMs: task.preparationSeconds * 1000 });
     if (retryOfId) track("retry_started", { taskId, attemptId: retryOfId });
     track("preparation_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
-  }, [recorder, task.preparationSeconds, taskId, retryOfId, track]);
+  }, [lock, recorder, task.preparationSeconds, taskId, retryOfId, track]);
 
   // The start-of-speaking chime (whether preparation ran out or was skipped), then recording: the chime is not recorded.
   const startingRef = useRef(false);
@@ -355,8 +365,9 @@ export function PracticeExperience({
     case "brief":
     case "retryBrief": {
       const isRetry = phase.kind === "retryBrief" && state.retryOf !== null;
-      const microphone =
-        goalLoad.kind === "loading" ? (
+      const microphone = lock ? (
+        <RecordingLockedState lock={lock} mock={isMock} signInNext={`/practice/speaking/${encodeURIComponent(task.id)}`} />
+      ) : goalLoad.kind === "loading" ? (
           <RetryGoalLoading />
         ) : goalLoad.kind === "failed" || goalLoad.kind === "slow" ? (
           <RetryGoalUnavailable

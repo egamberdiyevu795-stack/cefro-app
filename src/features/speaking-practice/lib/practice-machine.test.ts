@@ -12,6 +12,7 @@ const attempt = (id: string, status: AttemptView["status"] = "processing"): Atte
   failure: null,
   isStalled: false,
   recordingDurationMs: 1000,
+  audio: null,
   retryFocus: null,
   transcript: null,
   metrics: null,

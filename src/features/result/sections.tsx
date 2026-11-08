@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardHeader, DeltaLabel, DemoLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
+import { audioRetentionNote } from "@/domain/audio-retention";
 import { mockLink } from "@/features/demo/demo-mode";
 import { practiceHref as practiceLink } from "@/features/speaking-practice/lib/practice-flow";
 import { GOAL_LABEL, GOAL_NOTE, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
@@ -51,7 +52,13 @@ export function Action({
 }
 
 /** A stored recording the student can play back (real attempts only). */
-export type AnswerAudio = { src: string; durationMs: number | null };
+export type AnswerAudio = {
+  src: string;
+  durationMs: number | null;
+  /** Audio retention: when the daily job deleted the audio (then no player), or when it will. */
+  deletedAt?: string | null;
+  deletesAt?: string | null;
+};
 
 /* --------------------------------------------------------------------------------------------------- scored result */
 
@@ -391,6 +398,7 @@ function AnswerCard({
   audio?: AnswerAudio | null;
   className?: string;
 }) {
+  const retentionNote = audio ? audioRetentionNote({ deletedAt: audio.deletedAt ?? null, deletesAt: audio.deletesAt ?? null }) : null;
   return (
     <Card aria-labelledby="answer-title" className={className}>
       <CardHeader
@@ -405,7 +413,12 @@ function AnswerCard({
       />
       {audio ? (
         <div className="mb-4">
-          <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />
+          {!audio.deletedAt && <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />}
+          {retentionNote && (
+            <p data-testid="audio-retention" className={cx("text-label text-fg-muted", !audio.deletedAt && "mt-2")}>
+              {retentionNote}
+            </p>
+          )}
         </div>
       ) : null}
       <p className="text-caption text-fg-muted">Transcript</p>

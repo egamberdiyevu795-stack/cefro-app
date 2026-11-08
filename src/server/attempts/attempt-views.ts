@@ -1,4 +1,5 @@
 import "server-only";
+import { audioDeleteDueAt } from "@/domain/audio-retention";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView, FailureCode } from "@/domain/speaking/attempt";
 import { FAILURE_CODES, IN_PROGRESS_STATUSES } from "@/domain/speaking/attempt";
@@ -48,6 +49,7 @@ export function toAttemptView(
         : null,
     isStalled: isAttemptStalled(attempt),
     recordingDurationMs: recording?.durationMs ?? 0,
+    audio: recording ? { deletedAt: recording.audioDeletedAt ?? null, deletesAt: audioDeleteDueAt(attempt) } : null,
     retryFocus: (attempt.retryFocus as RetryFocusItem[] | null) ?? null,
     transcript: transcript
       ? { text: transcript.text, provider: transcript.provider, model: transcript.model }

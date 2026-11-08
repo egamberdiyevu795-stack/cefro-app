@@ -25,6 +25,10 @@ async function expectPlayableAudio(page: Page, minMs: number) {
     .poll(() => audio.evaluate((el: HTMLAudioElement) => (Number.isFinite(el.duration) ? el.duration : -1)), { timeout: 15_000 })
     .toBeGreaterThan(minMs / 1000 - 1);
   expect(await audio.evaluate((el: HTMLAudioElement) => el.error)).toBeNull();
+  // Audio retention: the real deletion date, 30 days after scoring (dd.mm.yy, Uzbekistan time).
+  await expect(page.getByTestId("audio-retention").first()).toHaveText(
+    /^Your recording will be deleted on \d\d\.\d\d\.\d\d, 30 days after scoring\. The transcript and feedback are kept\.$/,
+  );
 }
 
 /** The new result page's headline, e.g. "Part 2 · Band 2 · Higher B1" (built from the stored attempt). */

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DemoLabel } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
+import type { RecordingLock } from "@/domain/consent";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import type { QuestionSequenceTask } from "@/domain/speaking/question-sequence";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -13,7 +14,7 @@ import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, startSession, submitRecording } from "../lib/api-client";
 import { demoScoringHref, retryGoalOf, type RetryGoal } from "../lib/practice-flow";
 import { Part1BriefCard, Part1IntroCard, Part1QuestionCard, Part1SendingCard, PicturesCard } from "./part1-screens";
-import { InlineNotice, MicrophoneState, RetryGoalLoading, UploadFailedCard, type MicrophoneStateKind } from "./screens";
+import { InlineNotice, MicrophoneState, RecordingLockedState, RetryGoalLoading, UploadFailedCard, type MicrophoneStateKind } from "./screens";
 
 function newClientAttemptId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
@@ -38,8 +39,11 @@ export function Part1Experience({
   mock = null,
   initialRetryOf = null,
   retryAttemptId = null,
+  lock = null,
   timeScale = 1,
 }: {
+  /** Pilot consent: why this caller may not record (null: they may). Locked: the brief shows the lock, no Start. */
+  lock?: RecordingLock | null;
   task: PublicSpeakingTask;
   sequence: QuestionSequenceTask;
   mock?: { demoRetry: string | null } | null;
@@ -105,6 +109,7 @@ export function Part1Experience({
         timeScale={isMock ? timeScale : 1}
         onDropGoal={retryOf ? () => setRetryOf(null) : undefined}
         onRestart={() => setRun((n) => n + 1)}
+        lock={lock}
       />
     </div>
   );
@@ -120,6 +125,7 @@ const MIC_STATE: Record<SequenceFailure, MicrophoneStateKind> = {
 
 function Part1Run({
   task,
+  lock,
   sequence,
   goal,
   goalLoading,
@@ -140,6 +146,7 @@ function Part1Run({
   timeScale: number;
   onDropGoal?: () => void;
   onRestart: () => void;
+  lock: RecordingLock | null;
 }) {
   const router = useRouter();
   const ready = useHydrated();
@@ -199,6 +206,7 @@ function Part1Run({
   const audioFailedAt = useMemo(() => new Set(state.audioFailures.filter((f) => f.cue === "question").map((f) => f.index)), [state.audioFailures]);
 
   const begin = () => {
+    if (lock) return; // locked: Start is not shown, and nothing may start the microphone
     start();
     if (retryOfId) track("retry_started", { taskId: task.id, attemptId: retryOfId });
     track("recording_started", { taskId: task.id, properties: { isRetry: Boolean(retryOfId) } });
@@ -233,7 +241,11 @@ function Part1Run({
         onStart={begin}
         onDropGoal={goal ? onDropGoal : undefined}
         ready={ready}
-        microphone={goalLoading ? <RetryGoalLoading /> : failure ? <MicrophoneState kind={failure} onRetry={onRestart} /> : undefined}
+        microphone={
+          lock ? (
+            <RecordingLockedState lock={lock} mock={isMock} signInNext={`/practice/speaking/${encodeURIComponent(task.id)}`} />
+          ) : goalLoading ? <RetryGoalLoading /> : failure ? <MicrophoneState kind={failure} onRetry={onRestart} /> : undefined
+        }
       />
     );
   }

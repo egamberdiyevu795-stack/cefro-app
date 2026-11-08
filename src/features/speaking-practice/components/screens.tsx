@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Card, CardHeader, Icon, PillAction, ProgressBar, ScoringLabel, cx, styles } from "@/components/ds";
+import { Card, CardHeader, Icon, PillAction, PillButton, ProgressBar, ScoringLabel, cx, styles } from "@/components/ds";
+import { RECORDING_LOCKED_MESSAGE, type RecordingLock } from "@/domain/consent";
 import type { AttemptSummary } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import type { RecorderErrorKind } from "../hooks/useAudioRecorder";
@@ -164,6 +165,60 @@ function Timing({ label, seconds }: { label: string; seconds: number }) {
     <div className="rounded-tile bg-well px-3 py-2.5">
       <dt className="text-caption text-fg-muted">{label}</dt>
       <dd className="text-title font-medium text-fg">{formatDuration(seconds)}</dd>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------ recording lock */
+
+const LOCK_TITLE: Record<RecordingLock, string> = {
+  guest: "Sign in to record your answer",
+  waiting: "Recording is locked for now",
+  withdrawn: "Recording is locked",
+};
+
+/** The demo result every visitor may open (always mock data; the home page's "See a demo result"). */
+export const LOCKED_DEMO_HREF = "/result?demo=demo-5&mock=1";
+
+/**
+ * Pilot consent (docs/consent-design.md, "Pilot route"): shown in the brief instead of Check microphone and Start
+ * preparation while the caller may not record. Kind and plain, no blame. One black action: "Create account" for a
+ * guest, otherwise "See a demo result" (what feedback looks like while they wait). Nothing here can unlock recording:
+ * only the owner can, with scripts/set-consent.mjs.
+ */
+export function RecordingLockedState({ lock, signInNext, mock = false }: { lock: RecordingLock; signInNext: string; mock?: boolean }) {
+  const next = encodeURIComponent(signInNext);
+  const keep = (href: string) => (mock ? `${href}${href.includes("?") ? "&" : "?"}mock=1` : href);
+  return (
+    <div role="status" data-testid="recording-locked" data-lock={lock}>
+      <p className="flex items-center gap-2 text-title font-medium tracking-[-0.01em] text-fg">
+        <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-well text-fg">
+          <Icon name="micOff" size={16} />
+        </span>
+        {LOCK_TITLE[lock]}
+      </p>
+      <p className="mt-3 text-body text-fg">{RECORDING_LOCKED_MESSAGE[lock]}</p>
+      <p className="mt-2 text-label text-fg-muted">
+        {lock === "guest"
+          ? "You can read the task now. Once recording is unlocked, your answers are saved in your account."
+          : "You can read the task and see what feedback looks like while you wait. Testing as an adult? Ask the person who invited you."}
+      </p>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        {lock === "guest" ? (
+          <>
+            <PillButton href={keep(mock ? "/register" : `/register?next=${next}`)} size="lg" className="w-full sm:w-auto">
+              Create account
+            </PillButton>
+            <PillButton href={keep(mock ? "/login" : `/login?next=${next}`)} variant="quiet" size="lg" className="w-full sm:w-auto">
+              Sign in
+            </PillButton>
+          </>
+        ) : (
+          <PillButton href={LOCKED_DEMO_HREF} size="lg" icon="play" className="w-full sm:w-auto">
+            See a demo result
+          </PillButton>
+        )}
+      </div>
     </div>
   );
 }

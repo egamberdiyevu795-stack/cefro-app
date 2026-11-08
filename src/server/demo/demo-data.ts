@@ -249,6 +249,7 @@ export async function demoAttemptView(key: string): Promise<AttemptView | null> 
     failure: null,
     isStalled: false,
     recordingDurationMs: durationOf(transcript),
+    audio: null,
     retryFocus: null,
     transcript: { text: transcript, provider: "demo", model: "demo" },
     metrics: null,

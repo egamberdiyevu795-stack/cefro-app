@@ -63,6 +63,16 @@ export const users = sqliteTable("users", {
    * never by any API or by the auth library.
    */
   role: text("role", { enum: ["student", "teacher"] }).notNull().default("student"),
+  /**
+   * Pilot consent (docs/consent-design.md, "Pilot route"; migration 0007_pilot_consent). Null = none recorded,
+   * "granted" = recording unlocked (a parent or guardian, or an adult tester, confirmed by hand), "withdrawn" = locked
+   * again. Set only by the owner's script (scripts/set-consent.mjs), never by any API, page or the auth library.
+   */
+  consentStatus: text("consent_status", { enum: ["granted", "withdrawn"] }),
+  /** When the owner last set `consent_status` (ISO time). */
+  consentAt: text("consent_at"),
+  /** Teacher sharing was agreed too (`--teacher-sharing`). Only counts while `consent_status` is "granted". */
+  consentTeacherSharing: integer("consent_teacher_sharing", { mode: "boolean" }).notNull().default(false),
   createdAt: dateTimestamps.createdAt,
 }, (table) => [uniqueIndex("users_email_uq").on(table.email)]);
 
@@ -223,6 +233,11 @@ export const recordings = sqliteTable(
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     durationMs: integer("duration_ms").notNull(),
+    /**
+     * When the audio bytes were deleted by the daily retention job (30 days after scoring; migration 0007). The row
+     * stays, so the result page can say so; the transcript and result are kept. Null = the audio is still stored.
+     */
+    audioDeletedAt: text("audio_deleted_at"),
     ...timestamps,
   },
   (table) => [uniqueIndex("recordings_attempt_uq").on(table.attemptId)],

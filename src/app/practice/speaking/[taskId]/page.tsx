@@ -12,6 +12,9 @@ import { Part1Experience } from "@/features/speaking-practice/components/Part1Ex
 import { toQuestionSequenceTask } from "@/content/speaking/part1";
 import { isTaskLive } from "@/config/part-live";
 import { assertServerConfigured } from "@/server/config/boot-check";
+import { parseLockPreview } from "@/domain/consent";
+import { consentRequired, recordingLockFor } from "@/server/consent/consent";
+import { findCurrentUserId } from "@/server/identity/current-user";
 
 export async function generateMetadata(props: PageProps<"/practice/speaking/[taskId]">): Promise<Metadata> {
   const { taskId } = await props.params;
@@ -31,10 +34,14 @@ export async function generateMetadata(props: PageProps<"/practice/speaking/[tas
  *   ?mock=1&retry=<demo key>              a mock retry of a demo result of this task (server/demo/demo-data.ts)
  *   In mock mode, Finish opens this task's demo result (a retry of a fixture: the saved runs' retry result).
  *   ?flags=off            every feature flag off
+ *   ?mock=1&consent=waiting|withdrawn|guest   mock mode: preview the locked screen (pilot consent). Nothing is read.
  *
  * Part 1.1 / 1.2 tasks (a task with `delivery`) open the question-by-question flow (Part1Experience). Their parts are
  * not live yet (`PART_LIVE`), so their real page is a 404; mock mode (?mock=1) opens them, with
  * ?mock=1&retry=<demo key> for a retry and ?mock=1&timeScale=0.05 (browser tests only) for shortened timings.
+ *
+ * Pilot consent (CONSENT_REQUIRED): the real page asks the server whether the caller may record; when not, the brief
+ * shows the lock instead of Start preparation. Mock mode never locks unless `?consent=` asks for the preview.
  */
 export default async function SpeakingPracticePage(props: PageProps<"/practice/speaking/[taskId]">) {
   const [{ taskId }, query] = await Promise.all([props.params, props.searchParams]);
@@ -60,6 +67,10 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
   // A demo result of this task (a retry of another task's result is ignored).
   const demoRetry = mock && !mockRetry && retry && demoResultSpec(retry)?.task.id === task.id ? await demoAttemptView(retry) : null;
 
+  // Pilot consent. The page only reads (findCurrentUserId creates no identity); a browser with none is a guest.
+  // With the switch off nothing is read at all.
+  const lock = mock ? parseLockPreview(one(query.consent)) : consentRequired() ? await recordingLockFor(await findCurrentUserId()) : null;
+
   if (speakingTask.delivery) {
     const scale = Number(one(query.timeScale));
     return (
@@ -70,6 +81,7 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
           mock={mock ? { demoRetry: demoRetry?.id ?? null } : null}
           initialRetryOf={demoRetry}
           retryAttemptId={!mock && retry ? retry : null}
+          lock={lock}
           timeScale={mock && scale > 0 && scale <= 1 ? scale : 1}
         />
       </AppShell>
@@ -84,6 +96,7 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
         mock={mock ? { retry: mockRetry, demoRetry: demoRetry?.id ?? null } : null}
         initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : demoRetry}
         retryAttemptId={!mock && retry ? retry : null}
+        lock={lock}
       />
     </AppShell>
   );

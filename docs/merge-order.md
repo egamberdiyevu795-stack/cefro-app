@@ -548,6 +548,14 @@ Contains (docs/part3-plan.md, built in mock mode; docs/design-system.md, "Part 3
   `src/server/evaluation/argument-evaluator.test.ts`, `src/features/part3/part3.test.ts`, `e2e/part3.spec.ts`.
 - **Not followed from the plan:** see "Part 3: what the plan says and this branch does not do yet" in
   docs/part3-plan.md.
+## After `claude/integration-chgcwb`: `claude/consent-plan-j0ky8m` (docs only)
+
+Cut from `claude/integration-chgcwb` (`ced5367`), so it comes **after it** (or, like it, copy the docs instead of
+merging), merge commit, no squash. Branch name: 19 characters after `claude/`. **Documents only**: no app code, no
+migration, no environment variable. Contains: `docs/consent-design.md` (under-18 consent design, decisions of
+2026-11-08, pilot route), `docs/privacy-notice-draft.md` and `docs/terms-draft.md` (drafts for a lawyer, `[CHECK]`
+marks), `docs/lawyer-questions.md`, `docs/pilot-parent-message.md`, a change to `docs/growth-plan.md` phase 2
+(guests don't record), and this entry.
 
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 

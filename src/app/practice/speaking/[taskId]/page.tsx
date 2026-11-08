@@ -8,12 +8,16 @@ import { demoAttemptView, demoResultSpec } from "@/server/demo/demo-data";
 import { mockAttemptKey, mockRetryAttempt } from "@/features/result/mock-data";
 import { AppShell } from "@/features/shell/AppShell";
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
+import { Part1Experience } from "@/features/speaking-practice/components/Part1Experience";
+import { toQuestionSequenceTask } from "@/content/speaking/part1";
+import { isTaskLive } from "@/config/part-live";
 import { assertServerConfigured } from "@/server/config/boot-check";
 
 export async function generateMetadata(props: PageProps<"/practice/speaking/[taskId]">): Promise<Metadata> {
   const { taskId } = await props.params;
   const task = getSpeakingTask(taskId);
-  return { title: task ? `${task.level} Speaking Part ${task.part}: ${task.title}` : "Task not found" };
+  const part = task?.delivery ? (task.level === "A2" ? "1.1" : "1.2") : task?.part;
+  return { title: task ? `${task.level} Speaking Part ${part}: ${task.title}` : "Task not found" };
 }
 
 /*
@@ -27,6 +31,10 @@ export async function generateMetadata(props: PageProps<"/practice/speaking/[tas
  *   ?mock=1&retry=<demo key>              a mock retry of a demo result of this task (server/demo/demo-data.ts)
  *   In mock mode, Finish opens this task's demo result (a retry of a fixture: the saved runs' retry result).
  *   ?flags=off            every feature flag off
+ *
+ * Part 1.1 / 1.2 tasks (a task with `delivery`) open the question-by-question flow (Part1Experience). Their parts are
+ * not live yet (`PART_LIVE`), so their real page is a 404; mock mode (?mock=1) opens them, with
+ * ?mock=1&retry=<demo key> for a retry and ?mock=1&timeScale=0.05 (browser tests only) for shortened timings.
  */
 export default async function SpeakingPracticePage(props: PageProps<"/practice/speaking/[taskId]">) {
   const [{ taskId }, query] = await Promise.all([props.params, props.searchParams]);
@@ -36,13 +44,14 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
 
   // The real flow needs the full server configuration (it used to get this check from the (site) layout); mock mode
   // calls no API and runs anywhere.
+  const speakingTask = getSpeakingTask(taskId);
+  if (!speakingTask) notFound();
+  // A part that is not live has no real page (mock mode shows it), whatever the server's configuration.
+  if (!mock && !isTaskLive(speakingTask)) notFound();
   if (!mock) {
     await connection();
     assertServerConfigured();
   }
-
-  const speakingTask = getSpeakingTask(taskId);
-  if (!speakingTask) notFound();
   // Only the public part of the task reaches the browser (no evaluator guidance).
   const task = toPublicTask(speakingTask);
 
@@ -50,6 +59,22 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
   const mockRetry = mock ? mockAttemptKey(retry, one(query.run)) : null;
   // A demo result of this task (a retry of another task's result is ignored).
   const demoRetry = mock && !mockRetry && retry && demoResultSpec(retry)?.task.id === task.id ? await demoAttemptView(retry) : null;
+
+  if (speakingTask.delivery) {
+    const scale = Number(one(query.timeScale));
+    return (
+      <AppShell flags={flags} account={mock ? "mock" : "real"}>
+        <Part1Experience
+          task={task}
+          sequence={toQuestionSequenceTask(speakingTask)}
+          mock={mock ? { demoRetry: demoRetry?.id ?? null } : null}
+          initialRetryOf={demoRetry}
+          retryAttemptId={!mock && retry ? retry : null}
+          timeScale={mock && scale > 0 && scale <= 1 ? scale : 1}
+        />
+      </AppShell>
+    );
+  }
 
   return (
     // The real flow shows the signed-in student's account; mock mode the mocked one.

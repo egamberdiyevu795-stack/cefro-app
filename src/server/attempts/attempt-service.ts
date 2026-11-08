@@ -3,8 +3,7 @@ import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { getSpeakingTask } from "@/content/speaking";
-import { PART_LIVE } from "@/config/features";
-import { examPartOf } from "@/domain/speaking/exam-part";
+import { isTaskLive as isPartLive } from "@/config/part-live";
 import { validQuestionOffsets } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";
 import { trackServerEvent } from "@/server/analytics/track";
@@ -47,10 +46,7 @@ export interface CreateAttemptInput {
  * mock mode, which never uploads. Tests pass their own rule.
  */
 export type PartLiveRule = (task: SpeakingTask) => boolean;
-export const isTaskLive: PartLiveRule = (task) => {
-  const part = examPartOf(task);
-  return part !== null && PART_LIVE[part];
-};
+export const isTaskLive: PartLiveRule = isPartLive;
 
 /** The attempt already created for this idempotency key, or undefined. Someone else's id is a conflict. */
 async function findResubmittedAttempt(userId: string, clientAttemptId: string | null | undefined) {

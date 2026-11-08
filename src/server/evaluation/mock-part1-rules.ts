@@ -86,7 +86,9 @@ export function mockPart1Output(input: EvaluationInput): MultilevelModelOutput {
       const hint = task.delivery?.questions[index]?.partialHint;
       if (index === 0 && status !== "missing") {
         const both = PICTURE_WORDS.every((list) => list.some((w) => words.has(w)));
-        const compared = hits.some((s) => COMPARISON.test(s));
+        // A comparison: a sentence about the pictures with a comparing word ("but", "bigger", "both" …).
+        const pictureWords = PICTURE_WORDS.flat();
+        const compared = sentences.some((s) => COMPARISON.test(s) && evidenceTokens(s).some((w) => pictureWords.includes(w)));
         if (!both || !compared) {
           status = "partial";
           note = `Development estimate: ${both ? "you describe both pictures but don't compare them" : "you describe only one picture"}. Next time, ${hint ?? "compare the two pictures"}.`;

@@ -118,6 +118,8 @@ export function ScoredResult({
 
 const ZERO_TEXT: Partial<Record<NonNullable<ResultView["zeroReason"]>, string>> = {
   below_B1: "Band 0 because the language is below B1, even with every question answered.",
+  below_A2: "Band 0 because the language is below A2, even with every question answered.",
+  below_A1: "Band 0 because there is no meaningful language to rate yet.",
   memorized_or_irrelevant: "Band 0 because the answer doesn't answer these questions: it sounds prepared or is about something else.",
   no_question_on_topic: "Band 0 because no question was answered.",
 };
@@ -160,7 +162,7 @@ function ResultCard({
         </div>
       )}
       <h1 id="result-title" className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1" aria-label={view.headline}>
-        <span className="text-lead font-medium text-fg-muted">Part {view.part} ·</span>
+        <span className="text-lead font-medium text-fg-muted">{view.partLabel} ·</span>
         <span className="text-stat font-light tracking-[-0.03em] text-fg">Band {view.band}</span>
         <span className="text-lead font-medium text-fg">· {view.bandLabel}</span>
       </h1>
@@ -238,11 +240,16 @@ function QuestionsCard({ view, className }: { view: ResultView; className?: stri
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex items-baseline justify-between gap-3">
-                <span className="text-body font-semibold text-fg">Question {q.id}</span>
+                <span className="text-body font-semibold text-fg">Question {q.number}</span>
                 <span className="shrink-0 text-label font-medium text-fg">{q.verdictLabel}</span>
               </p>
               <p className="text-label text-fg-muted">{q.prompt}</p>
               {q.verdict !== "answered" && q.reason && <p className="mt-1 text-body text-fg">{q.reason}</p>}
+              {q.hint && !q.reason.includes(q.hint.replace(/^Next time, |\.$/g, "")) && (
+                <p className="mt-1 text-body font-medium text-fg" data-testid="question-hint">
+                  {q.hint}
+                </p>
+              )}
             </div>
           </li>
         ))}
@@ -511,14 +518,16 @@ export function NotScoredResult({
         </h1>
         <p className="mt-2 text-body text-fg">
           {tooShort
-            ? `It was too short to rate${state.wordCount !== null ? ` (${state.wordCount} words)` : ""}. Part ${state.task.part} needs about two minutes: answer every question, each with a reason or an example.`
+            ? state.task.part === 1
+              ? `It was too short to rate${state.wordCount !== null ? ` (${state.wordCount} words)` : ""}. Answer every question when you hear the chime, with a reason or a detail.`
+              : `It was too short to rate${state.wordCount !== null ? ` (${state.wordCount} words)` : ""}. Part ${state.task.part} needs about two minutes: answer every question, each with a reason or an example.`
             : "We couldn't hear enough speech in the recording. Check that the right microphone is selected, then record again."}
         </p>
         <p className="mt-5 text-caption font-semibold text-fg">Answer all {state.task.prompts.length} questions</p>
         <ol className="mt-2 space-y-2">
           {state.task.prompts.map((prompt, i) => (
             <li key={prompt} className="flex gap-3 text-body text-fg">
-              <span className="w-4 shrink-0 font-semibold">{i + 1}</span>
+              <span className="w-4 shrink-0 font-semibold">{(state.task.delivery?.firstQuestionNumber ?? 1) + i}</span>
               {prompt}
             </li>
           ))}

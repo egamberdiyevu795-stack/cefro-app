@@ -385,6 +385,60 @@ Contains (docs/design-system.md, "Signed-out pages"; docs/growth-plan.md, phase 
   switches in each state), `mock-pages.test.ts` (home's demo link), `e2e/entry-pages.spec.ts` (390 px audits, demo
   link, the list follows `PART_LIVE`, no name at sign-up, the server's name rule).
 
+## Right after `claude/landing`: `claude/part1` (Part 1.1 and 1.2, not live, no migration)
+
+Cut from `claude/integration-chgcwb` (`ced5367`, which holds `claude/landing`) with **`claude/part1-plan` (step 7) and
+`claude/part1-player` (step 12) merged in** (normal merges, no text conflict). Merge it **after `claude/landing`**,
+merge commit, no squash; it brings steps 7 and 12 with it. Branch name: `claude/part1` (5 characters after `claude/`).
+No database migration, no new environment variable, no evaluator version bump (Part 2 unchanged, see below).
+Preview (mock pages only): `https://cefro-app-mgm6-git-claude-part1-crm-b915.vercel.app/practice/speaking/a2-part1-1-daily-life?mock=1`
+and `…/practice/speaking/b1-part1-2-shopping?mock=1`.
+
+Contains (docs/part1-plan.md, built as written; see "Not followed" below):
+
+- **The one rebase of step 12 is done here:** `CountdownRing.tsx` restored (the dev page `/dev/part1-player` uses it).
+- **Release switch unchanged:** `PART_LIVE["1.1"]` and `["1.2"]` stay `false`. The real practice pages of Part 1 tasks
+  are 404 and the API refuses Part 1 uploads (`task_not_found`); the task list, dashboard tiles ("Coming soon"), home
+  and the demo student don't show Part 1. Only mock mode (`?mock=1`) opens them.
+- **Scoring generalised per rubric** (plan §3): each rubric declares its four `levels`, its `features`, its
+  `question_statuses`, `first_question_number` and `min_relevant_words` (all defaulting to Part 2's, so
+  `multilevel_q7.json` is unchanged and stored Part 2 results parse as before). `band-scoring.ts` works on the index of
+  the rubric's ladder; the zero reason for the bottom level is `below_B1` / `below_A2` / `below_A1`.
+- **Rubrics** `multilevel-q1-3/1.0.0` (target A2, no cohesion, statuses on_topic / missing / off_topic, no word floor)
+  and `multilevel-q4-6/1.0.0` (target B1, partial counts, at least 5 relevant words), official text verbatim; reference
+  texts marked as reference (decision 11).
+- **Prompt:** a Part 1 prompt of its own (`prompts/multilevel-part1-evaluation.ts`) and a Part 1 audio prompt, built
+  only from the rubric (no literal level names). **Part 2's prompt, provider schema and prompt hash are byte-for-byte
+  unchanged** (pinned by `part1-prompt.test.ts` and `test/fixtures/q7-model-output-schema.json`).
+- **Quality gate:** rejects a status, level or feature outside the draft's rubric (e.g. `partial` / `minimal` or
+  cohesion in Part 1.1); "strength below the rubric's target" (code `strength_below_target`, was `strength_below_b2`).
+- **Content:** `a2-part1-1-daily-life` (`short_answers`) and `b1-part1-2-shopping` (`picture_questions`) are now
+  `SpeakingTask`s with `delivery` (timed questions, chime, audio source) and, for 1.2, two original pictures with
+  `src`, `alt`, `author`, `sourceUrl`, `licence`, `retrievedAt` (`public/tasks/part1/`, listed in `public/tasks/README.md`).
+  `listSpeakingTasks()` stays Part 2 only; `getSpeakingTask()` finds Part 1 too.
+- **Practice flow on the design system** (`Part1Experience`, `part1-screens.tsx`, hook `useQuestionSequence` shared
+  with the dev player): introduction (black "Start"), then each question with its text and audio → chime → countdown
+  → next, **recorder paused during the question audio and the chime** (one file); Part 1.2's pictures from Question 4 to
+  the end. Retry goal on every screen. Mock mode: nothing sent, then the demo Scoring… and result.
+- **Offsets:** the upload sends `questionOffsetsMs`; the attempt keeps them in its `metrics` JSON until transcription
+  adds the speech metrics and `questionSeconds` (no migration). Part 1.1 needs only 1 recognised word.
+- **Result page in the Part 2 style:** "Part 1.1 · Band 3 · Lower A2", questions numbered as the student saw them
+  (4–6 in Part 1.2), only the part's own skills, Question 4's hint "compare the two pictures" word for word.
+- **Mock evaluator:** Part 1 rules in `server/evaluation/mock-part1-rules.ts` (imported only by the mock evaluator).
+  Demo answers per Part 1 task in `features/demo/demo-answers.ts` (`answer.<task>`, `retry.<task>.<key>`).
+- **Analytics:** new client event `question_audio_failed`.
+- **Tests:** `part1-content.test.ts`, `rubrics/part1-rubrics.test.ts` (rubric text vs the plan's §2 tables),
+  `test/evaluation-samples/part1-anchors.{ts,test.ts}` (six made-up anchors, test-only, and the §4 edge cases),
+  `evaluation/part1-prompt.test.ts`, `attempts/part1-pipeline.test.ts`, `result/part1-view-model.test.ts`;
+  `e2e/part1-practice.spec.ts` (also in `playwright.preview.config.ts`).
+- **Not followed exactly:** (1) the plan's order of work (§6: after Part 2 is merged and live-tested, from `main`, in
+  three PRs) — built in one branch from the integration branch, as asked. (2) Part 2's prompt was **not** rewritten to
+  read from the rubric (§3 item 5) and `EVALUATOR_VERSION` was **not** bumped (item 8): Part 1 has its own prompt so
+  Part 2's behaviour stays identical without a live re-run (no model calls allowed). (3) Question audio is still the
+  synthetic placeholder tones, not text-to-speech (decision 16): no TTS engine was available. (4) Live calibration on
+  the anchors (§6 step 5) not run (no model calls). (5) The questions are not listed on the introduction screen (the
+  exam reads them one at a time).
+
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 
 claude/entry-pages-jgh558: duplicate, never merge. (It holds the first two commits of `claude/entry-pages` and is

@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Mock mode on a production build started the way a Vercel Preview with no environment variables runs it:
  * NODE_ENV=production, VERCEL=1, VERCEL_ENV=preview, nothing else (no provider, key, database or auth secret).
  * The database path points at a place that cannot be created (like a Preview's read-only disk), so any page that
- * touched the database would fail. Runs e2e/mock-mode.spec.ts, the mock-mode parts of e2e/profile-settings.spec.ts and e2e/entry-pages.spec.ts
+ * touched the database would fail. Runs e2e/mock-mode.spec.ts, the mock-mode parts of e2e/profile-settings.spec.ts e2e/entry-pages.spec.ts and e2e/part1-practice.spec.ts
  * (`npm run test:e2e:preview`, which builds first).
  */
 const PORT = Number(process.env.E2E_PREVIEW_PORT ?? 3150);
@@ -17,7 +17,7 @@ const NO_DISK = "/dev/null/cefro-preview-has-no-disk";
 
 export default defineConfig({
   testDir: "e2e",
-  testMatch: ["mock-mode.spec.ts", "profile-settings.spec.ts", "teacher-view.spec.ts", "entry-pages.spec.ts"],
+  testMatch: ["mock-mode.spec.ts", "profile-settings.spec.ts", "teacher-view.spec.ts", "entry-pages.spec.ts", "part1-practice.spec.ts"],
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

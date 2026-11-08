@@ -83,10 +83,44 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
 };
 
 /**
+ * Made-up demo answers for the Part 1 tasks (mock mode only; not the anchor answers, which are test-only). One answer
+ * per question. "first" makes the common mistake (Part 1.1: question 3 about friends, not family; Part 1.2: question 4
+ * describes only one picture and question 6 is left out), so its result has a goal; "full" (a retry) answers all three.
+ */
+export const PART1_DEMO_ANSWERS: Record<string, { first: [string, string, string]; full: [string, string, string] }> = {
+  "a2-part1-1-daily-life": {
+    first: [
+      "At the weekend I usually sleep late, and then I play football in the park with my friends.",
+      "My favourite food is plov. I like it because it is very tasty, and we eat it every Friday.",
+      "Um, I spend a lot of time at school. School is big and I have many classes there.",
+    ],
+    full: [
+      "At the weekend I usually sleep late, and then I play football in the park with my friends.",
+      "My favourite food is plov. I like it because it is very tasty, and we eat it every Friday.",
+      "I spend the most time with my brother. We share a room, so we talk a lot and sometimes we watch films together.",
+    ],
+  },
+  "b1-part1-2-shopping": {
+    first: [
+      "In the first picture there is a seller at a wooden stall outside. He sells fruit and vegetables, and a woman is buying tomatoes.",
+      "I think many people like markets because the food is fresh and cheaper, and you can talk to the seller.",
+      "Um, I don't know. Sorry.",
+    ],
+    full: [
+      "In the first picture there is a small market outside, with a seller at a stall of fruit. The second picture shows a big supermarket inside, with long shelves and a man with a trolley. The market looks busy and friendly, but the supermarket is quieter and bigger.",
+      "I think many people like markets because the food is fresh and cheaper, and you can talk to the seller.",
+      "Some people prefer supermarkets because everything is in one place, the prices are fixed and there is parking for the car.",
+    ],
+  },
+};
+
+/**
  * The transcript of a demo answer: the story only ("first"), the story and the opinion ("full"), the picture only
  * ("picture"), or the story and a bare opinion ("bare"). Null when the task has no such answer.
  */
 export function demoAnswerText(taskId: string, variant: DemoAnswerVariant): string | null {
+  const part1 = PART1_DEMO_ANSWERS[taskId];
+  if (part1) return variant === "first" || variant === "full" ? part1[variant].join(" ") : null;
   const answer = DEMO_ANSWERS[taskId];
   if (!answer) return null;
   if (variant === "picture") return answer.picture ?? null;

@@ -11,6 +11,7 @@ import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { setTranscriptionProviderForTesting, type TranscriptionProvider } from "@/server/transcription";
 import { fakeWebm } from "../../../test/fixtures";
+import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { processAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser } from "./attempt-service";
 
@@ -78,7 +79,7 @@ describe("Part 1 attempts", () => {
     const view = await getAttemptViewForUser(USER, created.id);
     expect(view.status).toBe("completed");
     expect(view.metrics).toMatchObject({ questionOffsetsMs: [0, 25_000, 50_000], questionSeconds: [25, 25, 25] });
-    const result = view.evaluation!.result;
+    const result = view.evaluation!.result as MultilevelResult;
     expect(result.rubric_id).toBe("multilevel-q1-3");
     expect(view.evaluation!.meta.rubricVersion).toBe("multilevel-q1-3/1.0.0");
     expect(result.assessment.features.cohesion).toBeUndefined();
@@ -103,8 +104,8 @@ describe("Part 1 attempts", () => {
     await processAttempt(created.id);
     const view = await getAttemptViewForUser(USER, created.id);
     expect(view.status).toBe("completed");
-    expect(view.evaluation!.result.scoring.on_topic_count).toBe(3);
-    expect(view.evaluation!.result.scoring.band).toBe(2);
+    expect((view.evaluation!.result as MultilevelResult).scoring.on_topic_count).toBe(3);
+    expect((view.evaluation!.result as MultilevelResult).scoring.band).toBe(2);
   });
 
   it("Part 1.2 is scored on its own rubric, with question numbers 4–6 in the goal", async () => {
@@ -114,7 +115,7 @@ describe("Part 1 attempts", () => {
     });
     const created = await submit([0, 45_000, 75_000], "b1-part1-2-shopping");
     await processAttempt(created.id);
-    const result = (await getAttemptViewForUser(USER, created.id)).evaluation!.result;
+    const result = (await getAttemptViewForUser(USER, created.id)).evaluation!.result as MultilevelResult;
     expect(result.rubric_id).toBe("multilevel-q4-6");
     expect(result.assessment.questions[0].status).toBe("partial");
     expect(result.assessment.questions[0].note).toContain("compare the two pictures");

@@ -17,6 +17,8 @@ export const CLIENT_EVENT_NAMES = [
   "feedback_viewed",
   "retry_started",
   "comparison_viewed",
+  /** Part 1: a question's audio or the chime failed to load or play (the part went on without it). */
+  "question_audio_failed",
 ] as const;
 
 export const SERVER_EVENT_NAMES = [

@@ -170,7 +170,7 @@ function Timing({ label, seconds }: { label: string; seconds: number }) {
 
 /* ------------------------------------------------------------------------------------- preparation and recording */
 
-function Countdown({ remainingMs, label }: { remainingMs: number; label: string }) {
+export function Countdown({ remainingMs, label }: { remainingMs: number; label: string }) {
   return (
     <p className="mt-2 flex items-baseline gap-2">
       <span role="timer" aria-label={`${formatClock(remainingMs)} ${label}`} className="text-stat font-light tabular-nums tracking-[-0.03em] text-fg">
@@ -302,7 +302,7 @@ export function RecordingCard({
 export const SPEAK_NOW_MS = 4000;
 
 /** Five bars that follow the microphone input, so the student sees it hears them. */
-function LevelMeter({ level }: { level: number }) {
+export function LevelMeter({ level }: { level: number }) {
   const lit = Math.round(Math.max(0, Math.min(1, level)) * 5);
   return (
     <span className="flex items-center gap-2">

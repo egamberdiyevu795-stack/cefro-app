@@ -451,6 +451,20 @@ itself (it used to come from the `(site)` layout), except in mock mode.
 - Screenshots: `docs/design-system/practice-{brief,brief-retry,mic-asking,mic-denied,mic-none,preparation,preparation-retry,recording-retry,recording-early-warning,scoring-retry,result-goal-met,result-not-yet}-{desktop,phone}.png`.
 
 
+## Practice flow, Part 1.1 and 1.2 (`/practice/speaking/[taskId]`, not live)
+
+Part 1 tasks (a task with `delivery`) open `Part1Experience` on the same page. Not live (`PART_LIVE`): only `?mock=1`.
+
+- **Introduction:** "Speaking · Part 1.1 · Practice" (or "Retry"), title, topic line, tiles Questions (1–3 / 4–6),
+  Prepare "None", Speak ("30 s each" / "45 · 30 · 30 s"), the task's instructions (headphones recommended), the goal
+  of a retry, the black **"Start"** (it unlocks audio and asks for the microphone). The questions are not listed.
+- **Each question:** "Question 5 · 2 of 3", the question text (stays visible), the step ("Listen to the question" →
+  "Start speaking at the chime" → the recording dot, "Speak now", the countdown and bar, the 5-bar level), "The next
+  question starts by itself." No black button. Part 1.2: the two pictures beside (desktop) or under (phone) it.
+- **Microphone problems** use the Part 2 states (`MicrophoneState`) in the introduction card.
+- **Checks:** `e2e/part1-practice.spec.ts` at 390 px: one black control (none while the questions run), no text under
+  11 px, AA contrast, no horizontal scroll.
+
 ## Part 2 tasks
 
 Seven Part 2 tasks (`src/content/speaking/b2/`), all the same shape: 1 min preparation, 2 min speaking, 3 questions

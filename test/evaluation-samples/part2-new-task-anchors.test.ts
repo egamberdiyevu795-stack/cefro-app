@@ -99,16 +99,19 @@ describe("Part 2 anchor answers for the six newer tasks (not yet live-tested)", 
   });
 });
 
-describe("the new anchors stay test-only until the live run", () => {
+describe("the new anchors stay test-only: no app code reads them; only the live evaluation set sends them", () => {
   const repo = path.resolve(__dirname, "../..");
   const files = (dir: string): string[] =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
 
-  it("no app code and no live evaluation run imports them", () => {
-    const importers = [...files(path.join(repo, "src")), ...files(path.join(repo, "test", "live"))]
-      .filter((f) => /\.(ts|tsx|mjs|js)$/.test(f))
-      .filter((f) => fs.readFileSync(f, "utf8").includes("part2-new-task-anchors"));
-    expect(importers).toEqual([]);
+  it("no app code imports them; of the live runs only the evaluation set does (npm run eval:live:new-tasks)", () => {
+    const importers = (dir: string) =>
+      files(dir)
+        .filter((f) => /\.(ts|tsx|mjs|js)$/.test(f))
+        .filter((f) => fs.readFileSync(f, "utf8").includes("part2-new-task-anchors"))
+        .map((f) => path.relative(repo, f));
+    expect(importers(path.join(repo, "src"))).toEqual([]);
+    expect(importers(path.join(repo, "test", "live"))).toEqual(["test/live/evaluation-set.live.test.ts"]);
   });
 
   it.each(NEW_TASK_IDS)("%s: the request sent to Gemini contains none of the anchors (another student's answer is scored)", async (taskId) => {

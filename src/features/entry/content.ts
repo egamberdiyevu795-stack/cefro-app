@@ -19,6 +19,8 @@ export const HOME = {
     { icon: "quote", title: "See your own words quoted", detail: "What worked and what to improve." },
     { icon: "retry", title: "Fix one thing, then retry", detail: "See whether it worked." },
   ],
+  /** The last line of the page, small and grey, under the status list (Asadbek, 2026-11-08). No other claim. */
+  builtBy: "Built by a student in Tashkent for UZBMB candidates.",
 } as const;
 
 export const SIGN_IN = { heading: "Welcome back", switchText: "New here?", switchLink: "Create account" } as const;

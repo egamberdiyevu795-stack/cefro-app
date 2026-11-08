@@ -23,6 +23,9 @@ from that `main` (none is behind it), and every check here was a dry run in a th
 Steps 7–11 are independent of each other and of steps 1–6: they can go in any order, before or after them.
 Step 12 must come **after step 5** (or carry the fix below).
 
+**Update 2026-11-08:** steps 7 and 12 are both inside `claude/project-thread-krzvuk` (the finished Part 1 branch,
+after `claude/launch-cleanup`, see its section below). Merge that branch instead of 7 and 12 on their own.
+
 ### Why merge commits for 1–6 (and 10–11)
 
 Steps 1–6 are one chain: each branch contains the one before it (2 and 3 both start from 1; 4 merges 2 and 3). Merged
@@ -399,14 +402,30 @@ Cut from `claude/integration-chgcwb` (`ced5367`), so it comes **after it**, merg
 Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-launch-cleanup-crm-b915.vercel.app/dashboard?mock=1`.
 Contents: see the commits on the branch and `docs/launch-checklist.md` ("Coming soon / mock-only", live check).
 
-## Right after `claude/landing`: `claude/part1` (Part 1.1 and 1.2, not live, no migration)
+## Right after `claude/launch-cleanup`: `claude/project-thread-krzvuk` (Part 1.1 and 1.2, not live, no migration)
 
-Cut from `claude/integration-chgcwb` (`ced5367`, which holds `claude/landing`) with **`claude/part1-plan` (step 7) and
-`claude/part1-player` (step 12) merged in** (normal merges, no text conflict). Merge it **after `claude/landing`**,
-merge commit, no squash; it brings steps 7 and 12 with it. Branch name: `claude/part1` (5 characters after `claude/`).
-No database migration, no new environment variable, no evaluator version bump (Part 2 unchanged, see below).
-Preview (mock pages only): `https://cefro-app-mgm6-git-claude-part1-crm-b915.vercel.app/practice/speaking/a2-part1-1-daily-life?mock=1`
+**This is the Part 1 branch to merge.** It is `claude/part1` (`4177904`) with `claude/launch-cleanup` (`2880d95`)
+merged in, so it comes **after `claude/launch-cleanup`**, merge commit, no squash. It brings `claude/part1`, steps 7
+(`claude/part1-plan`) and 12 (`claude/part1-player`) with it: do not merge those three separately. Branch name:
+`claude/project-thread-krzvuk` (21 characters after `claude/`; the preview host name is still under Vercel's limit).
+No database migration, no new environment variable, no evaluator version bump.
+Preview (mock pages only, no variables):
+`https://cefro-app-mgm6-git-claude-project-thread-krzvuk-crm-b915.vercel.app/practice/speaking/a2-part1-1-daily-life?mock=1`
 and `…/practice/speaking/b1-part1-2-shopping?mock=1`.
+
+Added on this branch, on top of `claude/part1`:
+
+- **Merge of `claude/launch-cleanup`:** two text conflicts (this file, `playwright.preview.config.ts`: both new
+  browser tests kept). `launch-cleanup` deleted the chime `.wav`, so **Part 1 now plays the same code-made two-tone
+  chime as Part 2** (`lib/chime.ts`, primed by the Start tap). The `chime` field is gone from the Part 1 content.
+- **Real spoken questions (decision 16), replacing the placeholder tones:** pre-generated offline with Piper, voice
+  `en-us-libritts-high` speaker 6426 (LibriTTS, **CC BY 4.0**, credited in `public/audio/speaking/part1/README.md`),
+  slowed to 0.75 tempo for B1 learners. Texts, paths, voice and settings: `src/content/speaking/part1/question-audio.json`;
+  regenerate with `scripts/make-part1-question-audio.mjs`. Files are versioned with the task
+  (`/audio/speaking/part1/<task>/v<version>/q<n>.wav`). A unit test fails if a question's wording changes without new
+  audio. **Owner: listen to the six files before launch** (nobody has listened to them yet).
+
+What `claude/part1` itself contains:
 
 Contains (docs/part1-plan.md, built as written; see "Not followed" below):
 
@@ -448,8 +467,8 @@ Contains (docs/part1-plan.md, built as written; see "Not followed" below):
 - **Not followed exactly:** (1) the plan's order of work (§6: after Part 2 is merged and live-tested, from `main`, in
   three PRs) — built in one branch from the integration branch, as asked. (2) Part 2's prompt was **not** rewritten to
   read from the rubric (§3 item 5) and `EVALUATOR_VERSION` was **not** bumped (item 8): Part 1 has its own prompt so
-  Part 2's behaviour stays identical without a live re-run (no model calls allowed). (3) Question audio is still the
-  synthetic placeholder tones, not text-to-speech (decision 16): no TTS engine was available. (4) Live calibration on
+  Part 2's behaviour stays identical without a live re-run (no model calls allowed). (3) Question audio was placeholder tones on `claude/part1`; fixed
+  on `claude/project-thread-krzvuk` (see above). (4) Live calibration on
   the anchors (§6 step 5) not run (no model calls). (5) The questions are not listed on the introduction screen (the
   exam reads them one at a time).
 

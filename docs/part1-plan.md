@@ -56,7 +56,11 @@ Question audio:
   versioned with it, so every student hears the same audio and nothing depends on a speech API at practice time.
   The voice and the generator settings are recorded with the content, so changed wording can be regenerated with
   the same voice.
+  **Built 2026-11-08:** Piper, voice `en-us-libritts-high` speaker 6426 (LibriTTS, CC BY 4.0), 0.75 tempo; settings in
+  `src/content/speaking/part1/question-audio.json`, script `scripts/make-part1-question-audio.mjs`.
 - One short chime sound file (original or freely licensed, source recorded like the pictures).
+  **Changed 2026-11-08:** no file. The chime is the same two soft tones as Part 2, made in code with Web Audio
+  (`lib/chime.ts`), so there is nothing to license.
 - Browsers block autoplay, so the part starts with a "Start" button. That tap unlocks audio for the whole part.
 - If a question's audio fails to load or play, the question text is still on screen. The app plays the chime and
   starts the countdown anyway, and records the failure as an analytics event. The part never gets stuck.

@@ -27,6 +27,8 @@ Step 12 must come **after step 5** (or carry the fix below).
 after `claude/launch-cleanup`, see its section below). Merge that branch instead of 7 and 12 on their own.
 Steps 8 and 9 (with `claude/part3`) are inside `claude/project-thread-mz2ndw` (Part 3, right after
 `claude/project-thread-krzvuk`, see its section below). Merge that branch instead of 8 and 9 on their own.
+Pilot consent (`claude/consent-pilot`) comes **right after `claude/project-thread-mz2ndw`** and contains
+`claude/pilot-consent` and `claude/consent-plan-j0ky8m`: merge it instead of those two.
 
 ### Why merge commits for 1–6 (and 10–11)
 
@@ -508,6 +510,31 @@ Added on this branch, on top of `claude/part3`:
 - **`?timeScale`** (mock mode, browser tests only) shortens preparation and speaking time, as on Part 1.
 - **Tests:** `src/features/part3/part3.test.ts` (introduction text, audio files, voice, screen), `e2e/part3.spec.ts`
   (the introduction screen; a run where preparation and recording run out by themselves).
+
+## Right after `claude/project-thread-mz2ndw`: `claude/consent-pilot` (pilot consent and 30-day audio deletion, migration 0007)
+
+**This is the consent branch to merge.** It is `claude/project-thread-mz2ndw` (`e5c3a38`) with `claude/pilot-consent`
+(`d793c7e`, which contains the docs of `claude/consent-plan-j0ky8m`) merged in, plus the finishing work below. Merge
+commit, no squash. Do **not** merge `claude/pilot-consent` or `claude/consent-plan-j0ky8m` on their own. Branch name:
+13 characters after `claude/`. **One database migration, `0007_pilot_consent`** (additive; never applied anywhere yet)
+and **two new Production variables**, `CONSENT_REQUIRED` and `CRON_SECRET`: see `docs/launch-checklist.md`, section 11.
+`vercel.json` gains a daily cron. Previews (mock pages only, no variables):
+`https://cefro-app-mgm6-git-claude-consent-pilot-crm-b915.vercel.app/practice/speaking/b2-part2-happy-day?mock=1&consent=waiting`
+and `…/profile?mock=1&consent=granted`.
+
+- **Merge of `claude/pilot-consent`:** conflicts in this file, `playwright.preview.config.ts` (both test lists kept) and
+  the practice page (the lock now also reaches the Part 1 flow, which `pilot-consent` did not know about).
+- **From `claude/pilot-consent`:** the `CONSENT_REQUIRED` lock on the upload and scoring routes (guests never record),
+  the locked practice brief, teacher sharing behind `--teacher-sharing`, `scripts/set-consent.mjs`, the daily
+  audio-retention job (`/api/cron/audio-retention`, `CRON_SECRET`), "Recording deleted on …" on the result page.
+- **Added here:** `consent_notice_version` (which text was agreed; the script stores it); `scripts/delete-account.mjs`
+  (the owner deletes an account on a parent's request; a test requires it to match "Delete my account" table by
+  table); the Account page's read-only "Recording consent" section; the Part 1 brief lock; audio of attempts stuck
+  before scoring is deleted after 30 days too; a test that no code stores audio at a provider; docs updated
+  (`consent-design.md` 2b, `pilot-parent-message.md` no "free", `lawyer-questions.md`, `privacy-todo.md`,
+  `launch-checklist.md` section 11).
+- **Still open:** the parent message is not sent (native check of Uzbek and Russian; lawyer question 1 on data
+  location). Part 3 has no real recording yet; when it goes live it needs the same lock.
 
 ## Merged through `claude/project-thread-mz2ndw`: `claude/part3` (Part 3 in mock mode, no migration)
 

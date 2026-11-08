@@ -232,3 +232,21 @@ Mock / demo content reachable by anyone (always labelled):
 - **`/result` with no `?demo=` and no `?mock=1`** is now the not-found screen (it used to show the saved
   gemini-3.6-flash runs). The saved-runs prototype stays reachable only in mock mode (`/result?mock=1`, labelled).
 - **Demo teacher** (`/dashboard?mock=1&as=teacher`), Demo class `DEMO42`.
+
+## 11. Pilot consent and audio deletion (`claude/consent-pilot`)
+
+Before inviting any pilot tester (`docs/consent-design.md`, section 2b):
+
+1. **Migration `0007_pilot_consent`** (additive: four `users` columns, one `recordings` column). Same steps as
+   section 5; the counts become 8 migrations.
+2. **Vercel → Production variables:** `CONSENT_REQUIRED=true` (locks recording until consent; default `false`), and
+   `CRON_SECRET` = 16+ random characters (Vercel Cron sends it; without it the audio job refuses to run).
+3. **Check the cron after the production deploy:** Vercel → Project → Settings → Cron Jobs shows
+   `/api/cron/audio-retention` daily at 03:17 UTC. Vercel runs crons **on the production deployment only**, never on
+   Previews: until production is deployed nothing deletes audio by itself. Its log line "Audio retention run" has
+   counts only.
+4. **Owner's machine:** with the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in the shell,
+   `node scripts/set-consent.mjs <email> granted` for each tester whose (parent's) written "yes" you hold, and
+   `node scripts/delete-account.mjs <email> --yes` when someone asks for deletion (run it once without `--yes` first).
+5. **Before sending the parent message:** native check of the Uzbek and Russian, the lawyer's answer on data location
+   (lawyer question 1, still open), and steps 1 to 3 done.

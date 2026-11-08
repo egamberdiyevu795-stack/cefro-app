@@ -1,6 +1,9 @@
 # Privacy to-do: under-18 consent
 
-**Status: not built.** This lists what the under-18 consent work will need from the Account page (`/profile`, Profile
+**Status (2026-11-08): the pilot route is built on `claude/consent-pilot`** (consent recorded by the owner's script,
+recording locked until then, guests never record, owner deletion script, audio deleted 30 days after scoring); see
+`docs/consent-design.md`, section 2b. The full under-18 flow below (age, parent code, parent page) is **not built**.
+Originally this listed what the under-18 consent work will need from the Account page (`/profile`, Profile
 and Settings merged; `/settings` redirects there) added on `claude/profile-settings`, and from the microphone check on
 the practice brief. Nothing here is implemented yet, and nothing on those pages
 asks for an age or a guardian today. Legal points are to be confirmed with a lawyer before building.
@@ -48,7 +51,8 @@ providers when an answer is scored; their own retention rules apply and are not 
 ## Gaps found while building these pages (not consent, but related)
 
 - **Recording before an age is known.** Anyone can practise without an account (an anonymous identity in a cookie),
-  so a minor's voice can be stored before any age question. Consent work must decide whether recording waits for it.
+  so a minor's voice can be stored before any age question. **Decided and built for the pilot:** with
+  `CONSENT_REQUIRED=true` guests never record, and accounts record only after the owner recorded consent.
 - **No deletion without an account.** "Delete my account" needs a signed-in account. An anonymous browser's attempts
   and recordings can't be deleted from the app (only by signing up, then deleting). Consider a "Delete this browser's
   practice" for anonymous visitors.

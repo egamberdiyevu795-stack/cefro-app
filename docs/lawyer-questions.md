@@ -1,6 +1,6 @@
 # Questions for a lawyer (30 minutes)
 
-CEFRO: a free app for practising the speaking part of the UZBMB multilevel exam. It records a student's spoken
+CEFRO: an app for practising the speaking part of the UZBMB multilevel exam. It records a student's spoken
 answer, sends the audio and transcript to an AI provider (abroad) for scoring, and stores the recording, transcript and
 feedback. Many students are under 18. Pilot: about 10 testers known personally, nobody under 14, run by Asadbek as a
 private person. Bring: `docs/consent-design.md`, `docs/privacy-notice-draft.md`, `docs/terms-draft.md`,
@@ -24,7 +24,8 @@ private person. Bring: `docs/consent-design.md`, `docs/privacy-notice-draft.md`,
    parent replies be kept, and for how long?
 7. **Audio retention.** We plan to delete audio 30 days after scoring and keep transcripts and feedback until the
    account is deleted. Is 30 days acceptable, or must it be shorter? Is a voice recording treated as biometric or
-   special-category data?
+   special-category data? The scoring providers receive the audio inside each request (we store nothing with them),
+   but may keep request data for a time under their own terms: is that acceptable, and must the notice say so?
 8. **Teachers.** When a student shares answers with a teacher, does the teacher (or their school) need a written
    agreement with us? Are they responsible for what they see?
 9. **Anonymous pairs.** Is "teacher level + our level + month", with no ids, anonymous data we may keep forever?

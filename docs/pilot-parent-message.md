@@ -1,11 +1,18 @@
 # Pilot: message to a parent
 
-**Draft, 2026-11-08.** For the pilot only (about 10 known testers, nobody under 14). Asadbek sends it by message (or
-prints it), fills in `[...]`, and keeps the parent's reply. Then he records consent with the owner script
-(`docs/consent-design.md`, section 2b). Points marked **[CHECK]** need a lawyer. The Uzbek and Russian texts need a
-native speaker's check before sending. Teacher view is off in the pilot, so the message asks nothing about teachers.
-**The app does not delete audio after 30 days yet**: before sending, either that is built, or the owner deletes
-pilot audio by hand (an owner script) at least every 30 days; otherwise remove that sentence.
+**Draft, version `pilot-parent-message-2026-11-08`. NOT SENT.** For the pilot only (about 10 known testers, nobody
+under 14). Asadbek sends it by message (or prints it), fills in `[...]`, and keeps the parent's reply. Then he records
+consent with `node scripts/set-consent.mjs <email> granted` (`docs/consent-design.md`, section 2b), which stores this
+version. If the text changes, change the version here and in `scripts/set-consent.mjs` (`CURRENT_NOTICE`).
+
+Before sending:
+
+- **The Uzbek and Russian texts need a native speaker's check.** They have not been checked.
+- Points marked **[CHECK]** need a lawyer; the first lawyer question (data stored abroad) is still open.
+- **30-day audio deletion is built** (a daily job), but it runs only on the production deployment with `CRON_SECRET`
+  set (`docs/launch-checklist.md`, section 11). Don't send the message before that is live.
+- Teacher view is off in the pilot, so the message asks nothing about teachers.
+- No price and no "free" claim (owner's rule until the pricing is decided): the word was removed from all three texts.
 
 ---
 
@@ -15,7 +22,7 @@ Assalomu alaykum!
 
 Men Asadbek, CEFRO ilovasini yaratuvchisiman. Farzandingiz [ism] ilovani sinab ko'rishga taklif qilindi.
 
-**CEFRO nima:** UZBMB multilevel imtihonining gapirish (speaking) qismiga tayyorlanish uchun bepul ilova.
+**CEFRO nima:** UZBMB multilevel imtihonining gapirish (speaking) qismiga tayyorlanish uchun ilova.
 Farzandingiz savollarga ovoz chiqarib javob beradi, sun'iy intellekt javobni baholaydi va nimani tuzatish kerakligini
 aytadi.
 
@@ -47,7 +54,7 @@ Asadbek, [telefon yoki Telegram]
 
 Меня зовут Асадбек, я создатель приложения CEFRO. Вашему ребёнку [имя] предложили протестировать приложение.
 
-**Что такое CEFRO:** бесплатное приложение для подготовки к устной части (speaking) экзамена UZBMB multilevel.
+**Что такое CEFRO:** приложение для подготовки к устной части (speaking) экзамена UZBMB multilevel.
 Ребёнок отвечает на вопросы вслух, искусственный интеллект оценивает ответ и подсказывает, что исправить.
 
 **Что сохраняется:** голосовые записи, их текст (расшифровка), результаты (баллы и комментарии) и адрес электронной
@@ -76,7 +83,7 @@ Hello!
 
 I'm Asadbek, and I made the CEFRO app. Your child [name] has been invited to test it.
 
-**What CEFRO is:** a free app for practising the speaking part of the UZBMB multilevel exam. Your child answers
+**What CEFRO is:** an app for practising the speaking part of the UZBMB multilevel exam. Your child answers
 questions out loud; AI scores the answer and says what to fix.
 
 **What is kept:** voice recordings, their text (transcript), results (scores and feedback), and an email address to

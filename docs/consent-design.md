@@ -1,6 +1,7 @@
 # Under-18 consent: design
 
-Status: **proposal, 2026-11-08; decisions in section 0 (Asadbek, 2026-11-08). Nothing built.** Documents only: no app code, no migration. Replaces items 2–3 of
+Status: **decisions in section 0 (Asadbek, 2026-11-08). The pilot route (section 2b) is built on `claude/consent-pilot`;
+the full design (sections 3–5) is not.** Replaces items 2–3 of
 `docs/privacy-todo.md` ("guardian email", "email sending") with ways that need **no email**. Every legal point is for
 the lawyer: see `docs/privacy-notice-draft.md` and `docs/terms-draft.md`, where each one is marked [CHECK].
 Nothing here says any law applies; the age limit 18 is the owner's decision (teacher plan §7), pending that check.
@@ -63,23 +64,46 @@ the risk (none removes it):
 
 Whether this is enough is lawyer question 2.
 
-### 2b. Pilot route (about 10 known testers; not built)
+### 2b. Pilot route (about 10 known testers; built on `claude/consent-pilot`)
 
 - **Who:** about 10 testers Asadbek knows personally. Nobody under 14. Adults and under-18s alike go through it.
 - **How consent is collected:** by hand. Asadbek sends the parent the message in `docs/pilot-parent-message.md`
-  (Uzbek, Russian, English) and keeps the parent's reply "yes" (a message or a signed paper note). Adult testers reply
-  for themselves. Where and how long the replies are kept: lawyer question 5.
-- **How it is recorded:** an owner script, like `scripts/set-role.mjs`:
-  `node scripts/set-consent.mjs <email> given [--teacher-sharing]` and `... <email> withdrawn` (which then runs Delete
-  my account). No page and no API can set it.
-- **Minimal change (one small additive migration, later):** on `users`, `consent_status` (null = none, `given`,
-  `withdrawn`), `consent_at`, `consent_notice_version`, `consent_teacher_sharing` (0/1). One server check,
-  `canRecord(user)` = `consent_status = 'given'`, on the recording and scoring routes; guests always fail it. Share
-  (S2) and `teacherCanSee` also need `consent_teacher_sharing = 1`. Delete my account clears the columns with the row.
-  The Account page shows "Waiting for consent. Asadbek will turn on recording once it is agreed." or "Consent recorded
-  on 08.11.26". No age question, no parent page, no codes in the pilot.
-- **Audio after 30 days:** the parent message promises it, so either the daily job (section 5) ships with the
-  pilot, or an owner script deletes pilot audio older than 30 days at least weekly.
+  (Uzbek, Russian, English; **not sent yet**, the Uzbek and Russian need a native speaker's check first) and keeps the
+  parent's reply "yes" (a message or a signed paper note). Adult testers reply for themselves. Where and how long the
+  replies are kept: lawyer question 6.
+- **How it is recorded (built):** owner scripts, run by hand from Asadbek's own machine (they refuse to run on Vercel):
+  - `node scripts/set-consent.mjs <email> granted [--teacher-sharing] [--notice <version>]` unlocks recording. It
+    stores the date and **which text was agreed** (`consent_notice_version`, default the current parent message,
+    `pilot-parent-message-2026-11-08`). Teacher sharing stays off unless `--teacher-sharing` (the Teacher view is off
+    in the pilot anyway).
+  - `node scripts/set-consent.mjs <email> withdrawn` locks recording and teacher sharing again **at once**. The data is
+    kept, so a mistaken withdrawal can be undone.
+  - `node scripts/delete-account.mjs <email>` shows what would be deleted (dry run); `... <email> --yes` deletes the
+    account and everything in it, exactly like "Delete my account" (a test checks they match), without the student's
+    password. Use it when a parent withdraws and asks for deletion, as the parent message promises.
+  - No page and no API can set consent (a test checks every route file).
+- **Database (migration `0007_pilot_consent`, additive):** on `users`: `consent_status` (null = none, `granted`,
+  `withdrawn`), `consent_at`, `consent_notice_version`, `consent_teacher_sharing` (0/1); on `recordings`:
+  `audio_deleted_at`. Delete my account removes them with the row.
+- **The lock (built):** one switch, `CONSENT_REQUIRED` (default `false`; set `true` in Vercel Production before inviting
+  anyone). On: the upload and scoring routes refuse with 403 `consent_required` unless the account's status is
+  `granted`; guests (no account) never record. The practice brief (Part 2 and Part 1) shows a kind lock instead of
+  Start. Share and every teacher read also need `consent_teacher_sharing`. Part 3 has no real recording yet (mock only):
+  when it goes live, it needs the same lock.
+- **Account page (built):** a read-only "Recording consent" section while the switch is on: "Waiting for consent",
+  "Consent recorded on 08.11.26" or "Consent withdrawn on 08.11.26", plus the 30-day audio rule. No age question, no
+  parent page, no codes in the pilot.
+- **Audio after 30 days (built):** a daily job (`/api/cron/audio-retention`, Vercel Cron at 03:17 UTC, needs
+  `CRON_SECRET`) deletes the stored audio 30 days after scoring, wherever it is stored (`recording_blobs` rows on the
+  hosted setup, files locally). Failed attempts, and attempts stuck before scoring, lose their audio 30 days after their
+  last change. The recording row stays, marked, so the result page says "Recording deleted on …"; transcript and
+  feedback stay. **Provider side:** audio is sent inline in the scoring request and never uploaded to a provider's file
+  store (a test checks this), so there is no provider copy for us to delete; what Google or OpenAI keep from requests
+  for their own purposes is their policy (lawyer question 1 and 7). **Vercel runs crons on the production deployment
+  only**, so until the app is deployed to production nothing deletes audio on its own; nobody records before that
+  anyway.
+- **Not in the pilot:** deleting waiting accounts after 14 days (decision 4) needs the age question of the full design;
+  in the pilot there are no self-sign-up minors, only invited testers.
 - **Later:** the full design (sections 3–5) replaces the script; `consent_status` values from the pilot become
   `guardian_consents` rows with `method = 'by_hand'`.
 

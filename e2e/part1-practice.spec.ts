@@ -155,7 +155,7 @@ test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two
 });
 
 test("a question audio that fails still plays the chime and starts the countdown", async ({ page }) => {
-  await page.route("**/part1-1-q2.wav", (route) => route.abort());
+  await page.route("**/a2-part1-1-daily-life/v1/q2.wav", (route) => route.abort());
   await page.goto(`/practice/speaking/a2-part1-1-daily-life?mock=1&timeScale=${SCALE}`);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   const card = page.getByTestId("part1-question");

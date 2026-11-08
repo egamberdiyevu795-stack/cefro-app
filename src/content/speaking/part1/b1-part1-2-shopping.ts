@@ -1,7 +1,7 @@
 import type { SpeakingTask } from "@/domain/speaking/task";
-import { PART1_CHIME, PLACEHOLDER_AUDIO_SOURCE } from "./chime";
+import { PART1_QUESTION_AUDIO, part1AudioDir } from "./question-audio";
 
-const AUDIO = "/audio/speaking/part1/placeholder";
+const AUDIO = part1AudioDir("b1-part1-2-shopping", 1);
 
 const QUESTIONS = [
   "Look at the two pictures. Describe them and say how they are different.",
@@ -59,16 +59,15 @@ export const b1Part12Shopping: SpeakingTask = {
     questions: [
       {
         text: QUESTIONS[0],
-        audio: `${AUDIO}/part1-2-q4.wav`,
+        audio: `${AUDIO}/q4.wav`,
         prepSeconds: 0,
         speakingSeconds: 45,
         partialHint: "compare the two pictures",
       },
-      { text: QUESTIONS[1], audio: `${AUDIO}/part1-2-q5.wav`, prepSeconds: 0, speakingSeconds: 30 },
-      { text: QUESTIONS[2], audio: `${AUDIO}/part1-2-q6.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[1], audio: `${AUDIO}/q5.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[2], audio: `${AUDIO}/q6.wav`, prepSeconds: 0, speakingSeconds: 30 },
     ],
-    chime: PART1_CHIME,
-    audioSource: PLACEHOLDER_AUDIO_SOURCE,
+    audioSource: PART1_QUESTION_AUDIO,
   },
   evaluatorGuidance: [
     "Picture A shows a small open-air market: a seller behind a wooden stall of fresh fruit and vegetables, a customer with a cloth bag, outdoors.",

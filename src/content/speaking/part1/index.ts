@@ -17,7 +17,6 @@ export function toQuestionSequenceTask(task: Pick<SpeakingTask, "id" | "version"
     firstQuestionNumber: task.delivery.firstQuestionNumber,
     instructions: task.instructions,
     questions: task.delivery.questions,
-    chime: task.delivery.chime,
     audioSource: task.delivery.audioSource,
   };
 }

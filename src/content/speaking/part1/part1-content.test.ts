@@ -8,6 +8,7 @@ import { examPartOf } from "@/domain/speaking/exam-part";
 import { toPublicTask } from "@/domain/speaking/task";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { PART1_SPEAKING_TASKS, PART1_TASKS, getPart1Task } from ".";
+import { PART1_AUDIO_FILES } from "./question-audio";
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const readme = fs.readFileSync(path.join(PUBLIC_DIR, "tasks", "README.md"), "utf8");
@@ -92,8 +93,8 @@ describe("Part 1.2 pictures: licence fields (docs/part1-plan.md §1, Pictures)",
 });
 
 describe("Part 1 content: audio files", () => {
-  it.each(PART1_TASKS.map((t) => [t.id, t] as const))("%s: every question audio and the chime exist under public/", (_id, task) => {
-    for (const src of [...task.questions.map((q) => q.audio), task.chime.src]) {
+  it.each(PART1_TASKS.map((t) => [t.id, t] as const))("%s: every question audio exists under public/", (_id, task) => {
+    for (const src of task.questions.map((q) => q.audio)) {
       expect(src.startsWith("/")).toBe(true);
       expect(fs.existsSync(path.join(PUBLIC_DIR, src)), src).toBe(true);
     }
@@ -104,11 +105,36 @@ describe("Part 1 content: audio files", () => {
     expect(new Set(files).size).toBe(files.length);
   });
 
-  it("the chime records its source and licence; the question audio records where it comes from", () => {
+  it("the question audio is text-to-speech and records its voice and licence (decision 16)", () => {
     for (const task of PART1_TASKS) {
-      expect(task.chime.source.length).toBeGreaterThan(0);
-      expect(task.chime.licence.length).toBeGreaterThan(0);
+      expect(task.audioSource.kind).toBe("tts");
+      expect(task.audioSource.voice).toMatch(/CC BY 4\.0/);
       expect(task.audioSource.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("each question's audio was made from its current text (change the wording → run scripts/make-part1-question-audio.mjs)", () => {
+    const made = new Map(PART1_AUDIO_FILES.map((f) => [f.path, f.text]));
+    for (const task of PART1_TASKS) {
+      for (const q of task.questions) {
+        expect(made.get(q.audio), q.audio).toBe(q.text);
+        // Versioned with the task: a new task version gets new files.
+        expect(q.audio.startsWith(`/audio/speaking/part1/${task.id}/v${task.version}/`)).toBe(true);
+      }
+    }
+    expect(made.size).toBe(PART1_TASKS.reduce((n, t) => n + t.questions.length, 0));
+  });
+
+  it("each audio file is real speech, not a placeholder: a WAV of 1.5–8 s", () => {
+    for (const task of PART1_TASKS) {
+      for (const q of task.questions) {
+        const buf = fs.readFileSync(path.join(PUBLIC_DIR, q.audio));
+        expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");
+        const byteRate = buf.readUInt32LE(28);
+        const seconds = (buf.length - 44) / byteRate;
+        expect(seconds, q.audio).toBeGreaterThan(1.5);
+        expect(seconds, q.audio).toBeLessThan(8);
+      }
     }
   });
 

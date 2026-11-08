@@ -1,7 +1,7 @@
 import type { SpeakingTask } from "@/domain/speaking/task";
-import { PART1_CHIME, PLACEHOLDER_AUDIO_SOURCE } from "./chime";
+import { PART1_QUESTION_AUDIO, part1AudioDir } from "./question-audio";
 
-const AUDIO = "/audio/speaking/part1/placeholder";
+const AUDIO = part1AudioDir("a2-part1-1-daily-life", 1);
 
 const QUESTIONS = [
   "What do you usually do at the weekend?",
@@ -35,12 +35,11 @@ export const a2Part11DailyLife: SpeakingTask = {
   delivery: {
     firstQuestionNumber: 1,
     questions: [
-      { text: QUESTIONS[0], audio: `${AUDIO}/part1-1-q1.wav`, prepSeconds: 0, speakingSeconds: 30 },
-      { text: QUESTIONS[1], audio: `${AUDIO}/part1-1-q2.wav`, prepSeconds: 0, speakingSeconds: 30 },
-      { text: QUESTIONS[2], audio: `${AUDIO}/part1-1-q3.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[0], audio: `${AUDIO}/q1.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[1], audio: `${AUDIO}/q2.wav`, prepSeconds: 0, speakingSeconds: 30 },
+      { text: QUESTIONS[2], audio: `${AUDIO}/q3.wav`, prepSeconds: 0, speakingSeconds: 30 },
     ],
-    chime: PART1_CHIME,
-    audioSource: PLACEHOLDER_AUDIO_SOURCE,
+    audioSource: PART1_QUESTION_AUDIO,
   },
   evaluatorGuidance: [
     "Question 1 is answered when the student says anything relevant about what they do at the weekend (activities, places, people).",

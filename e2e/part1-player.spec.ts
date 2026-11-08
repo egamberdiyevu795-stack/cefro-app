@@ -54,8 +54,8 @@ test("Part 1.1: three questions in one recording, paused during question audio a
     expect(gap, `gap ${i}`).toBeGreaterThan(1300);
     expect(gap, `gap ${i}`).toBeLessThan(1900);
   }
-  // 3 × 1.5 s of speech. Had the recorder kept running through the three 1 s question files and the 0.4 s chimes,
-  // the file would be over 8 s long.
+  // 3 × 1.5 s of speech. Had the recorder kept running through Questions 2 and 3 (about 3.3 s each) and the chimes,
+  // the file would be over 11 s long.
   const seconds = await recordingSeconds(page);
   expect(seconds).toBeGreaterThan(3.5);
   expect(seconds).toBeLessThan(6);
@@ -64,7 +64,7 @@ test("Part 1.1: three questions in one recording, paused during question audio a
 });
 
 test("a question audio that fails: the text stays, the countdown starts anyway, the failure is reported", async ({ page }) => {
-  await page.route("**/part1-1-q2.wav", (route) => route.abort());
+  await page.route("**/a2-part1-1-daily-life/v1/q2.wav", (route) => route.abort());
   await page.goto(`/dev/part1-player?task=a2-part1-1-daily-life&timeScale=${SCALE}`);
   await page.getByRole("button", { name: "Start" }).click();
 
@@ -81,13 +81,29 @@ test("a question audio that fails: the text stays, the countdown starts anyway, 
   expect(offsets).toHaveLength(3);
 });
 
-test("a chime that fails still starts the countdown", async ({ page }) => {
-  await page.route("**/chime.wav", (route) => route.abort());
+test("the chime is the code-made two-tone chime (no file): three chimes, each before its question's countdown", async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __tones: number[] };
+    w.__tones = [];
+    const originalStart = OscillatorNode.prototype.start;
+    OscillatorNode.prototype.start = function (this: OscillatorNode, ...args: [number?]) {
+      w.__tones.push(Math.round(this.frequency.value));
+      return originalStart.apply(this, args);
+    };
+  });
+  const audioFiles: string[] = [];
+  page.on("request", (request) => {
+    const file = new URL(request.url()).pathname;
+    if (/\.(wav|mp3|ogg|m4a)$/.test(file)) audioFiles.push(file);
+  });
   await page.goto(`/dev/part1-player?task=a2-part1-1-daily-life&timeScale=${SCALE}`);
   await page.getByRole("button", { name: "Start" }).click();
   const offsets = await readOffsets(page);
   expect(offsets).toHaveLength(3);
-  await expect(page.getByTestId("audio-failures").locator("li")).toHaveCount(3);
+  expect(await page.evaluate(() => (window as unknown as { __tones: number[] }).__tones)).toEqual([659, 880, 659, 880, 659, 880]);
+  // Only the three spoken questions are fetched; there is no chime file.
+  expect(new Set(audioFiles.map((f) => f.split("/").pop()))).toEqual(new Set(["q1.wav", "q2.wav", "q3.wav"]));
+  await expect(page.getByTestId("audio-failures").locator("li")).toHaveCount(0);
 });
 
 test("Part 1.2: 45 + 30 + 30 s from the content, offsets follow", async ({ page }) => {

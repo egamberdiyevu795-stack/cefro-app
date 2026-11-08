@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { QuestionSequenceTask } from "@/domain/speaking/question-sequence";
+import { playChime, primeChime } from "../lib/chime";
 import { CuePlayer, type CueResult } from "../lib/cue-player";
 import { PausableRecorder, type PausedRecording } from "../lib/pausable-recorder";
 import { createSequenceState, cueFor, sequenceReducer, type AudioCue, type AudioFailure } from "../lib/question-sequence-machine";
@@ -36,7 +37,7 @@ function microphoneFailure(cause: unknown): SequenceFailure {
  *
  * `start()` must run inside the student's tap: it creates and first plays the audio element (unlocking audio for the
  * whole part) and asks for the microphone at the same moment. Failed or stuck audio never blocks the part: a failed
- * question audio still plays the chime, a failed chime still starts the countdown, and each failure is reported.
+ * question audio still plays the chime, the chime (made in code) always settles, and each failure is reported.
  * Timings come from the task; `timeScale` exists for the dev page's browser tests only.
  */
 export function useQuestionSequence({
@@ -127,8 +128,12 @@ export function useQuestionSequence({
       const player = cuePlayerRef.current;
       if (!player || playingKeyRef.current === key) return;
       playingKeyRef.current = key;
-      const src = cue === "question" ? task.questions[index]!.audio : task.chime.src;
-      void player.play(src).then((result) => handleCueEnded(index, cue, result));
+      if (cue === "chime") {
+        // The same two-tone chime as Part 2, made in code (no file). It never fails; it only settles.
+        void playChime().then(() => handleCueEnded(index, cue, { ok: true }));
+        return;
+      }
+      void player.play(task.questions[index]!.audio).then((result) => handleCueEnded(index, cue, result));
     },
     [task, handleCueEnded],
   );
@@ -136,6 +141,7 @@ export function useQuestionSequence({
   const start = useCallback(() => {
     // Everything that needs the student's tap happens here.
     cuePlayerRef.current = new CuePlayer(new Audio());
+    primeChime();
     recorderRef.current = requestRecorder();
     playCue(0, "question");
     dispatch({ type: "start" });

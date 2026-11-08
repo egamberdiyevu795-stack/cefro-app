@@ -22,15 +22,10 @@ export interface TimedQuestion {
 /** Where the question audio comes from, so changed wording can be regenerated with the same voice (decision 16). */
 export interface QuestionAudioSource {
   kind: "placeholder" | "tts" | "recorded";
+  /** For "tts": the voice, its licence and where it comes from; for "recorded": the speaker. */
+  voice?: string;
   /** Voice and generator settings; for placeholders, what the files are. */
   description: string;
-}
-
-export interface CueSound {
-  src: string;
-  /** Who made it and under which licence (original or freely licensed only). */
-  source: string;
-  licence: string;
 }
 
 export interface QuestionSequenceTask {
@@ -43,8 +38,6 @@ export interface QuestionSequenceTask {
   firstQuestionNumber: number;
   instructions: string[];
   questions: TimedQuestion[];
-  /** Plays after each question's audio; the speaking countdown starts when it ends. */
-  chime: CueSound;
   audioSource: QuestionAudioSource;
 }
 

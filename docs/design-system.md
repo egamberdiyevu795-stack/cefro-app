@@ -784,12 +784,16 @@ only**. `PART_LIVE["3"]` stays off: the dashboard tile and the home page keep "C
   retry); a result `/result/part3?demo=<key>&mock=1` (`&state=scoring&next=1`: Scoring… first). Demo keys:
   `p3.<task id>.<points>[.<points>…]`, one point list per attempt (`features/part3/links.ts`).
 - **Brief:** "Speaking · Part 3 · Practice" (or "Retry"), the topic, the four instructions, Prepare 1 min / Speak 2 min,
-  the goal of a retry, the grey "Check microphone", the black **"Start preparation"**. Beside it: the statement and both
-  lists (F1–F3, A1–A3).
+  the goal of a retry, the grey "Check microphone", the black **"Start"** ("Turn your sound on…"). Beside it: the
+  statement and both lists (F1–F3, A1–A3).
+- **Spoken introduction (as Part 1):** "Listen", "Part 3", the introduction's text (the statement and the timings),
+  "The minute of preparation starts by itself after the chime.", the goal of a retry; no button. The same offline voice
+  as Part 1 reads it, then the sample chime, then preparation starts by itself.
 - **Preparation = choosing:** the 1-minute countdown, "Tick two points in each list…", "FOR n of 2 · AGAINST n of 2"
   (a live status), the quiet "Start speaking now" (no black button). Each point is a native checkbox with a 44 px row;
   a third tick on a side is disabled. Ticked rows are `well`, unticked `card` with a `line` ring.
-- **Recording:** as Part 2 (indicator, level meter, countdown, early-finish warning), the black **"Finish"**; the lists
+- **Recording:** starts after the chime; as Part 2 (indicator, level meter, countdown, early-finish warning), the black
+  **"Finish"**; when the two minutes run out, recording stops and the chime sounds again; the lists
   show the chosen points with a tick and the word "Chosen" (never colour alone).
 - **Result (phone order):** Result (Part 3 · Band n · label, the statement, the 0–6 band meter with the target at 5,
   the distance to C1, "Pronunciation wasn't checked") → **Your points** (FOR / AGAINST, each point with a glyph and a

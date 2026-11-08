@@ -25,6 +25,8 @@ Step 12 must come **after step 5** (or carry the fix below).
 
 **Update 2026-11-08:** steps 7 and 12 are both inside `claude/project-thread-krzvuk` (the finished Part 1 branch,
 after `claude/launch-cleanup`, see its section below). Merge that branch instead of 7 and 12 on their own.
+Steps 8 and 9 (with `claude/part3`) are inside `claude/project-thread-mz2ndw` (Part 3, right after
+`claude/project-thread-krzvuk`, see its section below). Merge that branch instead of 8 and 9 on their own.
 
 ### Why merge commits for 1–6 (and 10–11)
 
@@ -476,7 +478,41 @@ Contains (docs/part1-plan.md, built as written; see "Not followed" below):
   the anchors (§6 step 5) not run (no model calls). (5) The questions are not listed on the introduction screen (the
   exam reads them one at a time).
 
-## Right after `claude/landing`: `claude/part3` (Part 3 in mock mode, no migration)
+## Right after `claude/project-thread-krzvuk`: `claude/project-thread-mz2ndw` (Part 3 in the exam style, mock mode, no migration)
+
+**This is the Part 3 branch to merge.** It is `claude/project-thread-krzvuk` (`5e57819`, the Part 1 branch) with
+`claude/part3` (`15096a4`, described in the next section) merged in, so it comes **after `claude/project-thread-krzvuk`**,
+merge commit, no squash. It brings `claude/part3` and steps 8 (`claude/lucid-euler-460531`) and 9
+(`claude/sleepy-hypatia-rp7db1`) with it: do not merge those three separately. Branch name:
+`claude/project-thread-mz2ndw` (21 characters after `claude/`, the name this session was given; the preview host name
+is 56 characters, under Vercel's 63, so it is not shortened). No database migration, no new environment variable, no
+evaluator version bump, no model call. `PART_LIVE["3"]` stays `false`.
+Preview (mock pages only, no variables):
+`https://cefro-app-mgm6-git-claude-project-thread-mz2ndw-crm-b915.vercel.app/practice/part3?mock=1`.
+
+Added on this branch, on top of `claude/part3`:
+
+- **Merge:** two text conflicts (this file, `playwright.preview.config.ts`: both browser tests kept). One type error
+  from `claude/launch-cleanup` fixed: the Part 3 result page no longer passes `flags` to `ScoringResult`.
+- **Exam-style flow, like Part 1:** brief (black "Start") → **spoken introduction** per topic (what the part is, the
+  statement, the timings, "Start speaking when you hear this sound"; our own wording; text on screen too) → **sample
+  chime** → **one minute of preparation** (countdown, tick 2 + 2 points; quiet "Start speaking now") → **chime** →
+  two minutes of recording → **chime when time is up** (after the recorder stops) → demo Scoring…. The chimes and the
+  introduction are never recorded. A missing or blocked audio file never stops the part.
+- **Voice:** the introductions (`public/audio/speaking/part3/<task>/v1/intro.wav`, about 25 s each) are made offline
+  with **the same Piper voice and settings as Part 1** (speaker 6426, tempo 0.75; LibriTTS CC BY 4.0, credited in
+  `public/audio/speaking/part3/README.md`). Texts: `src/content/speaking/c1/part3-intro-audio.json`, built from
+  `part3IntroText()`; `scripts/make-part1-question-audio.mjs` now reads both manifests (`ONLY=/part3/` for these). A
+  unit test fails if a statement changes without new audio, or if the voice block differs from Part 1's.
+  **Owner: listen to the three files before launch.**
+- **`?timeScale`** (mock mode, browser tests only) shortens preparation and speaking time, as on Part 1.
+- **Tests:** `src/features/part3/part3.test.ts` (introduction text, audio files, voice, screen), `e2e/part3.spec.ts`
+  (the introduction screen; a run where preparation and recording run out by themselves).
+
+## Merged through `claude/project-thread-mz2ndw`: `claude/part3` (Part 3 in mock mode, no migration)
+
+Do not merge this branch on its own: merge `claude/project-thread-mz2ndw` (above), which contains it.
+
 
 Cut from `claude/integration-chgcwb` (`ced5367`, which holds the chain up to `claude/landing` and the launch checklist),
 with `claude/lucid-euler-460531` (step 8, the Part 3 plan) and `claude/sleepy-hypatia-rp7db1` (step 9, the overlap

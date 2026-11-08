@@ -132,7 +132,12 @@ export function AttemptResult({
     );
   }
   const view = resultPageState(source);
-  const audio = { src: attemptAudioUrl(attempt.id), durationMs: attempt.recordingDurationMs };
+  const audio = {
+    src: attemptAudioUrl(attempt.id),
+    durationMs: attempt.recordingDurationMs,
+    deletedAt: attempt.audio?.deletedAt ?? null,
+    deletesAt: attempt.audio?.deletesAt ?? null,
+  };
   const goal = previous?.evaluation?.result.retry_focus[0]?.objective ?? null;
 
   switch (view.kind) {
@@ -172,7 +177,16 @@ export function AttemptResult({
     case "not_scored":
       return <NotScoredResult state={view} flags={flags} audio={audio} recordHref={recordAgain} />;
     case "failed":
-      return <FailedResult state={view} recordHref={recordAgain} onTryAgain={() => void restart()} isRetrying={isRestarting} retryError={restartError} />;
+      // After 30 days the recording is deleted: nothing is left to score again, so only "Record again".
+      return (
+        <FailedResult
+          state={view}
+          recordHref={recordAgain}
+          onTryAgain={attempt.audio?.deletedAt ? undefined : () => void restart()}
+          isRetrying={isRestarting}
+          retryError={restartError}
+        />
+      );
   }
 }
 

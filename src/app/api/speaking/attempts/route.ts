@@ -4,6 +4,7 @@ import { MAX_AUDIO_BYTES, createAttempt } from "@/server/attempts/attempt-servic
 import { claimAttempt, runClaimedAttempt } from "@/server/attempts/attempt-processing";
 import { getEnv } from "@/server/config/env";
 import { validateProviderConfig } from "@/server/config/provider-config";
+import { assertCanRecord } from "@/server/consent/consent";
 import { HttpError } from "@/server/errors";
 import { parseFormData, readBodyWithLimit, withErrorHandling } from "@/server/http";
 import { getOrCreateCurrentUserId } from "@/server/identity/anonymous-user";
@@ -39,6 +40,8 @@ export const POST = withErrorHandling(async (request: Request) => {
     );
   }
   const userId = await getOrCreateCurrentUserId();
+  // Pilot consent (CONSENT_REQUIRED): refused before the recording is read or stored.
+  await assertCanRecord(userId);
 
   // The body is counted as it arrives: Content-Length is only a fast path and may be missing or wrong.
   const body = await readBodyWithLimit(request, MAX_BODY_BYTES);

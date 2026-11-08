@@ -9,6 +9,9 @@ import { mockAttemptKey, mockRetryAttempt } from "@/features/result/mock-data";
 import { AppShell } from "@/features/shell/AppShell";
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
 import { assertServerConfigured } from "@/server/config/boot-check";
+import { parseLockPreview } from "@/domain/consent";
+import { consentRequired, recordingLockFor } from "@/server/consent/consent";
+import { findCurrentUserId } from "@/server/identity/current-user";
 
 export async function generateMetadata(props: PageProps<"/practice/speaking/[taskId]">): Promise<Metadata> {
   const { taskId } = await props.params;
@@ -27,6 +30,10 @@ export async function generateMetadata(props: PageProps<"/practice/speaking/[tas
  *   ?mock=1&retry=<demo key>              a mock retry of a demo result of this task (server/demo/demo-data.ts)
  *   In mock mode, Finish opens this task's demo result (a retry of a fixture: the saved runs' retry result).
  *   ?flags=off            every feature flag off
+ *   ?mock=1&consent=waiting|withdrawn|guest   mock mode: preview the locked screen (pilot consent). Nothing is read.
+ *
+ * Pilot consent (CONSENT_REQUIRED): the real page asks the server whether the caller may record; when not, the brief
+ * shows the lock instead of Start preparation. Mock mode never locks unless `?consent=` asks for the preview.
  */
 export default async function SpeakingPracticePage(props: PageProps<"/practice/speaking/[taskId]">) {
   const [{ taskId }, query] = await Promise.all([props.params, props.searchParams]);
@@ -51,6 +58,10 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
   // A demo result of this task (a retry of another task's result is ignored).
   const demoRetry = mock && !mockRetry && retry && demoResultSpec(retry)?.task.id === task.id ? await demoAttemptView(retry) : null;
 
+  // Pilot consent. The page only reads (findCurrentUserId creates no identity); a browser with none is a guest.
+  // With the switch off nothing is read at all.
+  const lock = mock ? parseLockPreview(one(query.consent)) : consentRequired() ? await recordingLockFor(await findCurrentUserId()) : null;
+
   return (
     // The real flow shows the signed-in student's account; mock mode the mocked one.
     <AppShell flags={flags} account={mock ? "mock" : "real"}>
@@ -60,6 +71,7 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
         mock={mock ? { retry: mockRetry, demoRetry: demoRetry?.id ?? null } : null}
         initialRetryOf={mockRetry ? mockRetryAttempt(mockRetry, task) : demoRetry}
         retryAttemptId={!mock && retry ? retry : null}
+        lock={lock}
       />
     </AppShell>
   );

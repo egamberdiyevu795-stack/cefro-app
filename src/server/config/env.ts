@@ -145,6 +145,22 @@ const envSchema = z.object({
   LIMIT_REGISTRATIONS_PER_IP_HOUR: z.coerce.number().int().positive().default(30),
   LIMIT_REGISTRATIONS_GLOBAL_HOUR: z.coerce.number().int().positive().default(300),
 
+  /**
+   * Pilot consent (docs/consent-design.md, "Pilot route"; docs/launch-checklist.md). "true": only accounts whose consent
+   * the owner recorded (scripts/set-consent.mjs) may record or be scored, and teacher sharing also needs the
+   * teacher-sharing flag; guests never record. "false" (the default, also in tests and always in mock mode): no lock.
+   * Set it to "true" in Vercel Production before inviting pilot testers.
+   */
+  CONSENT_REQUIRED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  /**
+   * Shared secret for the daily audio-retention job (GET /api/cron/audio-retention). Vercel Cron sends it as
+   * "Authorization: Bearer <CRON_SECRET>". Unset: the job refuses every call (also when it is shorter than 16 characters).
+   */
+  CRON_SECRET: z.string().optional(),
+
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
   EVALUATION_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),

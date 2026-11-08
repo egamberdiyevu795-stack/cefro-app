@@ -19,6 +19,7 @@ import { accountDisplayName, normaliseName } from "@/domain/account";
 import { getDb, type Db } from "@/server/db/client";
 import { classMembers, classes, ratingPairs, speakingAttempts, speakingTasks, teacherRatings, users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
+import { TEACHER_SHARING_LOCKED_MESSAGE, teacherSharingAllowed } from "@/server/consent/consent";
 import { newId, nowIso } from "@/server/ids";
 
 /*
@@ -121,7 +122,10 @@ export type MemberRow = typeof classMembers.$inferSelect;
 
 /** The open members of a class, in the order they shared. Only for its teacher (call `ownOpenClass` first). */
 export async function openMembers(classId: string): Promise<MemberRow[]> {
-  return (await getDb()).select().from(classMembers).where(and(eq(classMembers.classId, classId), isNull(classMembers.endedAt))).orderBy(classMembers.sharedAt).all();
+  const rows = await (await getDb()).select().from(classMembers).where(and(eq(classMembers.classId, classId), isNull(classMembers.endedAt))).orderBy(classMembers.sharedAt).all();
+  // Pilot consent: a student whose teacher-sharing consent is missing or withdrawn is not shown to the teacher.
+  const allowed = await Promise.all(rows.map((row) => teacherSharingAllowed(row.studentUserId)));
+  return rows.filter((_, i) => allowed[i]);
 }
 
 /** One open member of the caller's own open class, or 404. */
@@ -132,7 +136,7 @@ export async function ownOpenMember(teacherId: string, classId: string, memberId
     .from(classMembers)
     .where(and(eq(classMembers.id, memberId), eq(classMembers.classId, classId), isNull(classMembers.endedAt)))
     .get();
-  if (!member) throw notFound();
+  if (!member || !(await teacherSharingAllowed(member.studentUserId))) throw notFound();
   return { cls, member };
 }
 
@@ -197,7 +201,9 @@ export async function teacherCanSee(teacherId: string, attemptId: string): Promi
     )
     .all();
   const row = rows[0];
-  return row ? { ...row, studentUserId: attempt.userId } : null;
+  // Pilot consent: no teacher sees the attempts of a student without teacher-sharing consent.
+  if (!row || !(await teacherSharingAllowed(attempt.userId))) return null;
+  return { ...row, studentUserId: attempt.userId };
 }
 
 /* ------------------------------------------------------------------------------------------------------- ratings */
@@ -281,6 +287,8 @@ export async function accountEmail(userId: string): Promise<string | null> {
  * after it are shared. Null for a code that matches no open class. Already in the class: 409.
  */
 export async function shareWithClass(studentId: string, code: unknown, shownName: unknown): Promise<{ memberId: string } | null> {
+  // Pilot consent: Share needs teacher-sharing consent (CONSENT_REQUIRED on), checked before anything is looked up.
+  if (!(await teacherSharingAllowed(studentId))) throw new HttpError(403, "teacher_sharing_not_allowed", TEACHER_SHARING_LOCKED_MESSAGE);
   const problem = shownNameProblem(shownName);
   if (problem) throw new HttpError(400, "invalid_shown_name", problem);
   const found = await classByCode(code);

@@ -101,6 +101,7 @@ export function mockRetryAttempt(key: MockAttemptKey, task: PublicSpeakingTask):
     failure: null,
     isStalled: false,
     recordingDurationMs: a.durationMs,
+    audio: null,
     retryFocus: null,
     transcript: { text: a.transcript, provider: "fixture", model: saved.model },
     metrics: null,

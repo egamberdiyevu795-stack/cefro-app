@@ -80,6 +80,12 @@ export interface AttemptView {
   /** True when processing has been "in progress" for too long and can be restarted. */
   isStalled: boolean;
   recordingDurationMs: number;
+  /**
+   * The stored audio (docs/consent-design.md: deleted 30 days after scoring). `deletedAt`: when the daily job deleted
+   * it (null while it is stored). `deletesAt`: when it is due (null while the attempt is still being processed).
+   * Null when the attempt has no recording row.
+   */
+  audio: { deletedAt: string | null; deletesAt: string | null } | null;
   /** The focus the student was given before recording this attempt (retries only). */
   retryFocus: RetryFocusItem[] | null;
   transcript: { text: string; provider: string; model: string } | null;

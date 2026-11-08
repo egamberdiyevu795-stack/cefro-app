@@ -188,18 +188,22 @@ test("a saved date that has passed: no countdown, 'When is your next exam?', and
 
 test("slow connection: the date picker and Save wait until the page is ready, and a date picked then is saved", async ({ page }) => {
   await page.goto("/dashboard"); // compiled once, so only the delay below is slow
-  // Slow 3G, roughly: the HTML arrives, the page's scripts take 4 s more.
+  // A slow connection: the HTML arrives, and the page's scripts are held back until the checks below are done (a gate,
+  // not a fixed delay: on a slow CI runner a 4 s delay could run out before the first check, which then saw the page
+  // already working).
   let delayed = 0;
+  let releaseScripts!: () => void;
+  const scriptsHeld = new Promise<void>((resolve) => (releaseScripts = resolve));
   await page.route("**/_next/static/chunks/**", async (route) => {
     delayed += 1;
-    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    await scriptsHeld;
     await route.continue();
   });
   const navigations: string[] = [];
   page.on("request", (request) => {
     if (request.isNavigationRequest()) navigations.push(request.url());
   });
-  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  await page.goto("/dashboard", { waitUntil: "commit" });
 
   // Before the scripts run: shown, but nothing can be picked or sent (no plain form submit, no value React misses).
   const picker = page.getByLabel("When is your exam?");
@@ -207,7 +211,8 @@ test("slow connection: the date picker and Save wait until the page is ready, an
   await expect(picker).toBeDisabled();
   await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Skip" })).toBeDisabled();
-  expect(delayed).toBeGreaterThan(0);
+  await expect.poll(() => delayed).toBeGreaterThan(0);
+  releaseScripts();
 
   // As soon as the page is ready the controls work, and the date picked is the date saved.
   const exam = dayFromToday(57);

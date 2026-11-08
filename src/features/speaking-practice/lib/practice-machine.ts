@@ -42,6 +42,8 @@ export type PracticeAction =
   | { type: "attemptUpdated"; attempt: AttemptView }
   | { type: "processingRestarted"; attempt: AttemptView }
   | { type: "showAttempt"; attempt: AttemptView }
+  /** Keep an attempt (e.g. the one a retry was compared with) without changing the screen. */
+  | { type: "attemptCached"; attempt: AttemptView }
   | { type: "retryRequested"; attempt: AttemptView }
   | { type: "comparisonRequested"; before: AttemptView; after: AttemptView }
   | { type: "backToResult"; attemptId: string }
@@ -91,7 +93,12 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
         phase: { kind: stillProcessing ? "processing" : "result", attemptId: action.attempt.id },
       };
     }
+    case "attemptCached":
+      return { ...state, attempts: { ...state.attempts, [action.attempt.id]: action.attempt } };
     case "retryRequested":
+      // Only from a brief: a retry that finishes loading late must never pull the student out of preparation,
+      // recording or a result.
+      if (state.phase.kind !== "brief" && state.phase.kind !== "retryBrief") return state;
       return { ...state, retryOf: action.attempt, phase: { kind: "retryBrief" } };
     case "comparisonRequested":
       return {

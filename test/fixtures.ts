@@ -8,7 +8,7 @@ import type { LegacyEvaluationResult } from "@/domain/evaluation/schema";
 
 /** Transcript that matches the quotes used by makeEvaluation(). */
 export const FIXTURE_TRANSCRIPT =
-  "I think phones are good. I think they help us talk with friends every day. Last year I have went to Samarkand with my friend and we used maps.";
+  "I think phones are good. I think they help us talk with friends every day. Last year I have went to Samarkand with my friend and we used maps. My friend said the maps were very useful for us.";
 
 export const Q7_CONFIG = multilevelRubricConfigSchema.parse(rawQ7);
 export const FIXTURE_QUESTIONS = [
@@ -96,7 +96,7 @@ export function makeMultilevelResult(output: MultilevelModelOutput = makeModelOu
   const scoring = scoreBand(
     {
       questions: output.questions,
-      features: Object.fromEntries(FEATURES.map((f) => [f, output.features[f].level])) as Parameters<typeof scoreBand>[0]["features"],
+      features: Object.fromEntries(FEATURES.map((f) => [f, output.features[f]!.level])) as Parameters<typeof scoreBand>[0]["features"],
       memorizedOrIrrelevant: output.memorized_or_irrelevant,
     },
     Q7_CONFIG,

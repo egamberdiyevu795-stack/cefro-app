@@ -2,6 +2,8 @@ import "server-only";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView, FailureCode } from "@/domain/speaking/attempt";
 import { FAILURE_CODES, IN_PROGRESS_STATUSES } from "@/domain/speaking/attempt";
+import { examPartOf } from "@/domain/speaking/exam-part";
+import type { HistoryAttempt } from "@/domain/speaking/history";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import type { AttemptRow, EvaluationRow, RecordingRow, TranscriptRow } from "./attempt-repository";
 
@@ -50,7 +52,8 @@ export function toAttemptView(
     transcript: transcript
       ? { text: transcript.text, provider: transcript.provider, model: transcript.model }
       : null,
-    metrics: (attempt.metrics as SpeechMetrics | null) ?? null,
+    // Before transcription a Part 1 attempt's metrics hold only its question offsets: not speech metrics yet.
+    metrics: typeof (attempt.metrics as SpeechMetrics | null)?.wordCount === "number" ? (attempt.metrics as SpeechMetrics) : null,
     evaluation:
       evaluation && attempt.status === "completed" && parsedEvaluation
         ? {
@@ -80,6 +83,27 @@ export function toAttemptSummary(attempt: AttemptRow, evaluation: EvaluationRow 
     band: bandOf(evaluation),
     createdAt: attempt.createdAt,
     previousAttemptId: attempt.previousAttemptId,
+  };
+}
+
+export function toHistoryAttempt(
+  row: { attempt: AttemptRow; title: string; part: number; level: string; recordingDurationMs: number | null },
+  evaluation: EvaluationRow | undefined,
+): HistoryAttempt {
+  const { attempt } = row;
+  const parsed = evaluation && attempt.status === "completed" ? parseStoredEvaluation(evaluation.schemaVersion, evaluation.result) : null;
+  return {
+    id: attempt.id,
+    taskId: attempt.taskId,
+    title: row.title,
+    part: examPartOf(row),
+    createdAt: attempt.createdAt,
+    status: attempt.status,
+    isStalled: isAttemptStalled(attempt),
+    failureCode: attempt.status === "failed" ? toFailureCode(attempt.failureCode) : null,
+    recordingDurationMs: row.recordingDurationMs ?? 0,
+    previousAttemptId: attempt.previousAttemptId,
+    result: parsed && parsed.kind === "multilevel" ? parsed : null,
   };
 }
 

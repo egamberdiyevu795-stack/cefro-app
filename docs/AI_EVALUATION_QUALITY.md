@@ -11,6 +11,22 @@
 > describe versions ≤ 2.4.1 and are kept as history; their real-run findings informed the 3.0.0 rules (evidence,
 > plain-language numbers, honest retry review).
 >
+> **Evaluator 3.1.0 (calibration).** The first live run of the Part 2 band anchors (advice task, Gemini,
+> 3.0.0 prompt) hit 5/7: every question status was right (including the Q3 trap), but language was over-rated
+> by one level (A2 B1 → B2 = band 4; A4 B2 → above_B2 = band 5; A3 over-rated too but capped by coverage). 3.1.0
+> adds a strict calibration section to the prompt (simple vs complex structures, everyday vs topic vocabulary,
+> simple vs B2 linkers, "accuracy is not range", lower level when in doubt, transcript-only fluency capped near
+> the language level). Second run (3.1.0): 6/7, with A2 and A4 fixed, but A0 rose to band 2: the rules were read as
+> floors (vocabulary, fluency and cohesion B1 despite "very simple" notes). **3.2.0** says the rules only cap a
+> level, gives concrete below_B1 signals per feature and caps transcript-only fluency at the higher of grammar and
+> vocabulary.
+>
+> **Evaluator 3.5.0 (Part 2 picture).** The advice task (v2; v3 since its licence changed to © 2026 CEFRO, all rights reserved) shows an original illustration beside the three
+> questions (`public/tasks/`). The evaluator is told what it shows (its alt text) and that describing the picture
+> answers no question, even with the topic's words. New anchor `A0-picture-only` (describes only the picture,
+> including "the man is giving advice to the girl") must get band 0 with all three questions off topic.
+> **Not yet run live.**
+>
 > **Verbatim transcription regression.** A live run turned a learner's "nobody will helps" into "nobody helps".
 > Both transcription prompts now ask for a verbatim, disfluent transcript and name the error types models "fix".
 > `T12-verbatim-regression` (`TRANSCRIPTION_SAMPLES=T12 npm run eval:transcription:controlled`) FAILS if "nobody
@@ -228,6 +244,7 @@ evaluations:
 | Gemini model | `GEMINI_EVALUATION_MODEL` | `gemini-3.8-flash` (pinned; the ID the API reported, confirmed by live runs) |
 | Gemini max output tokens | `GEMINI_EVALUATION_MAX_TOKENS` | `24000` |
 | Gemini thinking level | `GEMINI_THINKING_LEVEL` | `high` |
+| Gemini temperature | `GEMINI_TEMPERATURE` | `0` (lowest the API accepts) |
 | Gemini structured-output mode | `GEMINI_STRUCTURED_OUTPUT` (`schema`, `json`) | `schema` |
 | Timeout (both) | `EVALUATION_TIMEOUT_MS` | `180000` |
 | Transcription provider / model | `TRANSCRIPTION_PROVIDER` / `OPENAI_TRANSCRIPTION_MODEL` | `openai` / `gpt-4o-transcribe` |
@@ -276,10 +293,13 @@ the local database.
 
 ## 6. Validating with real providers
 
-**Evaluator on the sample set** (14 calls plus a retry pair; needs only the selected provider's key):
+**Evaluator on the band anchors** (8 anchors, an injection probe and a retry pair; needs only the selected provider's key):
 
 - **Local:** put `EVALUATION_PROVIDER=gemini` and `GEMINI_API_KEY` in `.env.local` (never commit it), then
-  `npm run eval:live`. Subset: `EVAL_SAMPLES=S01,S04 npm run eval:live`.
+  `npm run eval:live`. Subset: `EVAL_SAMPLES=A2,A3 npm run eval:live`. The 8 anchors + S15 only (×3, 27 calls):
+  `npm run eval:live:part2` (on GitHub Actions: samples `A,S15`). The report gives every run's band, feature
+  levels, question statuses, time and estimated cost (`src/server/evaluation/pricing.ts`; the default
+  gemini-3.8-flash prices are unverified, override with `EVAL_PRICE_INPUT_PER_M` / `EVAL_PRICE_OUTPUT_PER_M`).
 - **GitHub Actions** (works from the cloud sandbox, which cannot reach the Gemini API): add the repository
   secret `GEMINI_API_KEY`, then run **Actions → "Live evaluation (Gemini)" → Run workflow**.
   The workflow is manual-only. It uploads the review report as an artifact **and prints it in the job
@@ -326,26 +346,57 @@ For each sample response:
 
 ## 8. Test set
 
-`test/evaluation-samples/b2-part2-samples.ts` holds 14 synthetic responses
-written to resemble Uzbek learners' verbatim transcripts. None are real
-student data.
+The B2 Part 2 task students see is **"Describe a time when you received advice from someone"**
+(`b2-part2-advice-from-someone`). It replaced "Technology and young people", which is no longer offered to students
+but is kept as a test fixture (`test/evaluation-samples/technology-task.ts`) so the S01–S15 samples written for it can
+still be evaluated.
 
-| ID | Type | Expected level | Key expectation |
+Q1–Q2 are a personal story; Q3 is a general opinion question. Q3 is the common trap: retelling the student's own
+story does not answer it (the task's `evaluatorGuidance` says so explicitly).
+
+### Decision rules (evaluator 3.3.0, rubric multilevel-q7/2.1.0)
+
+| Rule | Where |
+| --- | --- |
+| Grammar is below_B1 when basic errors in simple structures (agreement, verb form after do/will/should…, missing "be" in continuous forms) recur: 3+ instances across 2+ kinds | prompt |
+| "minimal" question status (a bare one-sentence answer, no reason/detail/example) does NOT count as on topic; "partial" still does | prompt + `levels.ts` |
+| Band 5 needs all 3 questions on topic AND grammar AND vocabulary above_B2; otherwise at most 4 | `band-scoring.ts` (`above_target_requires`) |
+| Under 30 spoken words (hesitation sounds included) = band 0, "too short to rate" | `band-scoring.ts` (`min_words`) |
+| Fluency strictly the lowest feature = the biggest fix and the first retry focus | `band-scoring.ts` |
+| Model answers and corrections one level above the student (B1 → plain B2, never C1); missing questions get a should / shouldn't frame, never an invented opinion | prompt |
+| Pronunciation judgements from text are blocked; practice tips ("pronounce the -s clearly") are allowed in instruction fields | quality gate |
+
+### Part 2 band anchors (exact 0–5 band, hard)
+
+`test/evaluation-samples/part2-band-anchors.ts`: 7 synthetic anchors, each with an **exact** expected band (the
+evaluator's own `result.scoring.band`). A unit test checks each anchor's expected judgements give its band under the
+official scoring.
+
+| ID | Language | On topic | Band |
 | --- | --- | --- | --- |
-| S01 | Strong B2 | B2-–B2+ | All 3 points covered |
-| S02 | Very strong (C1-like) | B2+–C2 | All 3 points covered |
-| S03 | Weak for B2 | A2+–B1+ | Development / range issue |
-| S04 | Grammar-heavy | B1-–B1+ | Grammar issue |
-| S05 | Limited vocabulary | B1-–B1+ | Vocabulary issue |
-| S06 | Very short (25 s) | A2–B1 | Task achievement + reliability note |
-| S07 | Repetitive ("I think" ×8) | A2+–B1 | Repetition flagged |
-| S08 | Accurate but undeveloped | B1–B2- | Task achievement (no reasons/examples) |
-| S09 | Good content, weak fluency | B1–B2- | Fluency issue |
-| S10 | Off-topic | A2–B1 | Task achievement, points 1–2 not covered, reliability note |
-| S11 | Partial (no school point) | B1+–B2 | Point 2 not covered |
-| S12 | Hesitant / very slow | A2–B1- | Fluency / task |
-| S13 | Prompt injection | A2–B1+ | Injection ignored (hard assertion) |
-| S14 | Uzbek L1 transfer ("I am agree", "make homework", "more better") | B1-–B1+ | Grammar issue |
+| A0-below-b1 | below B1 | Q1–Q3 (touched) | 0 |
+| A1-b1-only-q3 | B1 | Q3 only (no specific time) | 1 |
+| A2-b1-all-three | B1 | Q1–Q3 | 2 (B1 caps at 2) |
+| A3-b2-q3-missing | B2 | Q1, Q2 (ending is still his story) | 3 |
+| A4-b2-all-three | B2 | Q1–Q3 | 4 |
+| A5-above-b2 | above B2 | Q1–Q3 | 5 |
+| A0-memorized-off-topic | decent | none | 0 |
+
+### S01–S15 (former technology task, soft)
+
+`test/evaluation-samples/b2-part2-samples.ts`: loose band ranges re-annotated for 3.3.0, each with a `note`. Notable:
+S01 3–4 (band 5 gate), S06 0–1 (26 words: too short), S08 1–3 (bare statements are minimal), S10 0, S12 exactly 2
+with fluency as the biggest fix (24 words + 11 fillers = 35 spoken), S15 exactly 2 (grammar below B1, mean 1.5).
+Misses are reported, not fatal; S13's injection limit (band ≤ 2) is hard.
+
+### Live run
+
+`npm run eval:live` (workflow "Live evaluation (Gemini)") runs anchors, S01–S15, the injection probe P1 and the
+A2 → A4 retry, **each sample `EVAL_REPEAT` times (default 3)**. Every anchor run must hit its band. The
+`evaluation-set-*.md` report lists bands per run, flags samples whose band changes between runs, gives per-feature
+levels and question statuses for every miss, the model config and the average latency per evaluation (target under
+60 s). Workflow inputs `thinking_level`, `max_tokens` and `repeat` compare settings (e.g. medium thinking) without a
+code change. Subset: `EVAL_SAMPLES=A2,S15` (id prefixes; `P1`, `RETRY`).
 
 Automated tests that run in `npm test`:
 
@@ -359,7 +410,8 @@ Automated tests that run in `npm test`:
 | Honest comparison | `src/domain/speaking/comparison.test.ts` |
 | Stored v1 → v2 upgrade | `src/domain/evaluation/stored.test.ts` |
 | Pipeline (failures, timings, ownership, upload validation) | `src/server/attempts/attempt-pipeline.test.ts` |
-| Sample-set metrics and gate robustness | `test/evaluation-samples/samples.test.ts` |
+| Anchor set, injection isolation, verbatim regression sample | `test/evaluation-samples/part2-band-anchors.test.ts` |
+| S01–S15 metrics, 30-word rule, gate robustness | `test/evaluation-samples/samples.test.ts` |
 | Browser | `e2e/practice-flow.spec.ts` (`npm run test:e2e`) |
 
 ## Gemini evaluation provider

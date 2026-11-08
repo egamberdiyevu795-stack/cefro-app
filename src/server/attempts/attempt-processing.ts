@@ -1,7 +1,7 @@
 import "server-only";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
-import { computeSpeechMetrics, type SpeechMetrics } from "@/domain/speaking/metrics";
+import { computeSpeechMetrics, withQuestionTimes, type SpeechMetrics } from "@/domain/speaking/metrics";
 import { getSpeakingTask } from "@/content/speaking";
 import { getEnv } from "@/server/config/env";
 import { trackServerEvent } from "@/server/analytics/track";
@@ -18,6 +18,24 @@ import { PROCESSING_STALE_AFTER_MS } from "./attempt-views";
 
 /** Fewer recognised words than this means there is nothing meaningful to assess. */
 const MIN_TRANSCRIPT_WORDS = 5;
+
+/**
+ * Fewer recognised words than this = "not enough speech". Part 1.1 has no word floor (docs/part1-plan.md §2,
+ * decision 12): "Football. / Plov. / Mother." is a ratable answer, so one word is enough to reach the evaluator.
+ */
+export function minTranscriptWords(task: { taskType: string }): number {
+  return task.taskType === "short_answers" ? 1 : MIN_TRANSCRIPT_WORDS;
+}
+
+/** Stored metrics before transcription hold only a Part 1 upload's question offsets. */
+function isComputedMetrics(value: unknown): value is SpeechMetrics {
+  return typeof value === "object" && value !== null && typeof (value as SpeechMetrics).wordCount === "number";
+}
+
+function storedOffsets(value: unknown): number[] | null {
+  const offsets = (value as { questionOffsetsMs?: unknown } | null)?.questionOffsetsMs;
+  return Array.isArray(offsets) && offsets.every((n) => typeof n === "number") ? offsets : null;
+}
 
 /**
  * Atomically mark an attempt as "processing". Returns false when it is
@@ -63,7 +81,8 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
 
     // ── Transcription ───────────────────────────────────────────────
     let transcript = await repo.findLatestTranscript(attemptId);
-    let metrics = attempt.metrics as SpeechMetrics | null;
+    const offsets = storedOffsets(attempt.metrics);
+    let metrics = isComputedMetrics(attempt.metrics) ? attempt.metrics : null;
     if (!transcript || !metrics) {
       await repo.setAttemptStatus(attemptId, "transcribing");
       const provider = getTranscriptionProvider();
@@ -107,8 +126,9 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       const latencyMs = Date.now() - stageStartedAt;
       transcriptionMs = latencyMs;
 
-      metrics = computeSpeechMetrics(output.text, recording.durationMs, task.speakingSeconds);
-      if (metrics.wordCount < MIN_TRANSCRIPT_WORDS) {
+      // Part 1: the time used per question comes from the offsets the browser sent (one recording per part).
+      metrics = withQuestionTimes(computeSpeechMetrics(output.text, recording.durationMs, task.speakingSeconds), offsets, recording.durationMs);
+      if (metrics.wordCount < minTranscriptWords(task)) {
         throw new ProviderError("transcription_empty", `Only ${metrics.wordCount} words recognised`, {
           retryable: false,
         });

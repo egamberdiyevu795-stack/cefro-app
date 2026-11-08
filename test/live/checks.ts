@@ -13,8 +13,8 @@ export function studentTexts(result: MultilevelResult): { field: string; text: s
     ...a.questions.filter((q) => q.model_answer).map((q) => ({ field: `questions[${q.id}].model_answer`, text: q.model_answer })),
     ...a.error_patterns.map((p, i) => ({ field: `error_patterns[${i}]`, text: `${p.name}. ${p.rule} ${p.how_to_fix}` })),
     ...FEATURES.flatMap((f) => [
-      { field: `features.${f}.note`, text: a.features[f].note },
-      { field: `features.${f}.how_to_improve`, text: `${a.features[f].how_to_improve} ${a.features[f].how_to_check}` },
+      { field: `features.${f}.note`, text: a.features[f]!.note },
+      { field: `features.${f}.how_to_improve`, text: `${a.features[f]!.how_to_improve} ${a.features[f]!.how_to_check}` },
     ]),
     ...a.strengths.map((s, i) => ({ field: `strengths[${i}]`, text: s.note })),
     ...result.retry_focus.map((f, i) => ({ field: `retry_focus[${i}]`, text: `${f.objective} ${f.success_check}` })),
@@ -35,7 +35,7 @@ export function evidenceViolations(result: MultilevelResult, transcript: string)
   };
   const a = result.assessment;
   a.questions.forEach((q) => check(`questions[${q.id}]`, q.evidence));
-  for (const f of FEATURES) a.features[f].evidence.forEach((quote) => check(`features.${f}`, quote));
+  for (const f of FEATURES) a.features[f]!.evidence.forEach((quote) => check(`features.${f}`, quote));
   a.errors.forEach((e, i) => check(`errors[${i}]`, e.quote));
   a.strengths.forEach((s, i) => check(`strengths[${i}]`, s.quote));
   if (a.features.pronunciation.level !== "not_assessed" && result.feature_sources.pronunciation !== "audio") {
@@ -114,7 +114,7 @@ export function renderMultilevelResult(r: MultilevelResult): string[] {
     "",
     "**Features**",
     ...FEATURES.map((f) => {
-      const x = a.features[f];
+      const x = a.features[f]!;
       return `- ${f}: **${x.level}** [${r.feature_sources[f]}] — ${x.note}${x.evidence.length ? ` — ${x.evidence.map((q) => `“${q}”`).join(", ")}` : ""}${x.how_to_improve ? `\n  - Fix: ${x.how_to_improve} (check: ${x.how_to_check})` : ""}`;
     }),
     "",

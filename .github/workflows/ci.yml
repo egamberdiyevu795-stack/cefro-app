@@ -32,7 +32,9 @@ jobs:
   validate:
     name: Lint, typecheck, test, build, browser tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 30: on a GitHub runner the unit tests take ~6 min and the browser tests (107, one worker, Part 1 spoken questions
+    # in real time) ~17 min; 15 and then 20 were cut off before the end.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,7 +43,24 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # ffmpeg-static downloads its ffmpeg binary from GitHub releases in its install script. Keep that download in a
+      # cache, so an outage of the release server (HTTP 504, seen 2026-11-08) cannot fail the install once it has
+      # succeeded once for this lockfile.
+      - name: Cache the ffmpeg-static binary download
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ffmpeg-static-nodejs
+          key: ffmpeg-static-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: ffmpeg-static-${{ runner.os }}-
+      # If the binary can't be downloaded, install without install scripts,
+      # run the others, and go on: the speech guard falls back to the system ffmpeg installed below, and only its
+      # "bundled binary" tests skip (with a warning here), so the rest of the validation still runs.
+      - name: npm ci
+        run: |
+          npm ci && exit 0
+          echo "::warning::ffmpeg-static could not download its binary; installing without it (bundled-binary tests will skip)"
+          npm ci --ignore-scripts
+          npm rebuild esbuild @google/genai protobufjs unrs-resolver
       # Migrations reach the production database before the new code is deployed, so they must be backward compatible
       # and applied migrations must never be edited. No database access, no secrets.
       - name: Migration safety (journal, immutability of applied migrations, backward compatibility)

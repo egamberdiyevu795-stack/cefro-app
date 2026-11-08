@@ -101,7 +101,7 @@ Full methodology, quality checks, test set and findings: [`AI_EVALUATION_QUALITY
 `server/evaluation/speaking-evaluator.ts` runs the Multilevel (UZBMB CEFR) methodology. **The model judges; code
 scores.** Part 2 = official Question 7 (three questions on one topic, target B2, band 0–5).
 
-1. Rubric: `server/evaluation/rubrics/multilevel_q7.json` (version `multilevel-q7/2.0.0`): band labels, the official
+1. Rubric: `server/evaluation/rubrics/multilevel_q7.json` (version `multilevel-q7/2.1.0`): band labels, the official
    B2/B1 descriptors (verbatim), a below-B1 reference, and the scoring caps. Validated at load by
    `domain/evaluation/multilevel/rubric-config.ts`. Another part = another JSON file + a registry entry.
 2. Prompt (`prompts/multilevel-evaluation.ts`): the descriptors and evidence rules; the user message numbers the

@@ -50,7 +50,36 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   descriptors (rubric multilevel-q7/2.0.0), with strictly verified quotes. The 0–5 band is computed in code
  *   (domain/evaluation/multilevel/band-scoring.ts). Pronunciation and pausing come from an optional audio step
  *   (AUDIO_ASSESSMENT); without it the result is provisional. 1-based question numbering throughout. New quality gate.
+ * - speaking-evaluator/3.1.0 — First live run of the Part 2 band anchors (advice task): question statuses 7/7
+ *   correct, but language over-rated by one level (a B1 answer scored band 4, a B2 answer band 5). Prompt gains a
+ *   calibration section: what counts as simple vs complex grammar, everyday vs topic vocabulary, simple vs B2 linkers,
+ *   "accuracy is not range", choose the lower level when in doubt, and fluency from a transcript capped near the
+ *   language level. New prompt hash; scoring, schema and gate unchanged.
+ * - speaking-evaluator/3.2.0 — Second anchor run (3.1.0): 6/7, A2 and A4 fixed, but the below-B1 anchor rose to band 2
+ *   (vocabulary, fluency and cohesion rated B1 although the notes said "very simple" and "only simple linkers"): the
+ *   3.1.0 rules were read as floors. Prompt now says they only cap a level, gives concrete below_B1 signals per
+ *   feature, says what B1 needs, and caps transcript-only fluency at the higher of grammar and vocabulary.
+ * - speaking-evaluator/3.3.0 — Owner decisions after the 3.2.0 runs (rubric multilevel-q7/2.1.0):
+ *   grammar is below_B1 when basic errors in simple structures recur systematically (3+ instances across 2+ kinds);
+ *   new question status "minimal" (bare one-sentence answer, not on topic); band 5 only with grammar AND vocabulary
+ *   above_B2; under 30 words = band 0 (too_short); fluency strictly lowest = biggest fix and first retry focus;
+ *   feedback written one level above the student (no C1 for B1 students), missing-question model answers give a
+ *   should / shouldn't frame instead of an invented opinion; the gate allows pronunciation practice tips in
+ *   instruction fields but still blocks judgements of the student's pronunciation.
+ * - speaking-evaluator/3.4.0 — First 3.3.0 live run (high thinking, ×3): anchors 7/7 on every run, but S03/S07/S12 fell
+ *   to band 0 (fluency and cohesion both rated below_B1 → mean 0.5 → below B1). The 3.2.0 below-B1 cues contradicted
+ *   the official descriptors: simple linkers ARE the B1 cohesion descriptor, and short sentences are not a fluency
+ *   problem (pausing / false starts / reformulations are). Cues realigned. Also: no level codes in student text,
+ *   concrete fluency techniques (5 of 7 regenerations were generic fluency advice), no intonation talk.
+ * - speaking-evaluator/3.5.0 — Part 2 picture. The task can show a picture (task v2 of the advice task); the user
+ *   message gives the model what it shows (from its alt text), and the system prompt gains the picture rule: describing
+ *   the picture does NOT answer any question, even when it uses the topic's words ("the man is giving advice to the
+ *   girl"). New anchor A0-picture-only (band 0). Scoring, schema and gate unchanged; new prompt hash.
+ * - (no bump) Part 1.1 / 1.2 added (docs/part1-plan.md): per-rubric levels, features and question statuses, rubrics
+ *   multilevel-q1-3/1.0.0 and multilevel-q4-6/1.0.0, and a Part 1 prompt of its own. Part 2's prompt, provider schema,
+ *   scoring and gate results are byte-for-byte unchanged (tested: same prompt hash, same JSON schema), so stored Part 2
+ *   attempts keep their methodology; Part 1 results are told apart by their rubric version.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.0.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.5.0";
 
 export { EVALUATION_SCHEMA_VERSION };

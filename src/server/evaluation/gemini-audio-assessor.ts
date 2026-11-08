@@ -1,6 +1,7 @@
 import "server-only";
 import { FinishReason, GoogleGenAI } from "@google/genai";
-import { audioAssessmentSchema } from "@/domain/evaluation/multilevel/model-output";
+import { audioAssessmentSchemaFor } from "@/domain/evaluation/multilevel/model-output";
+import type { LevelLadder } from "@/domain/evaluation/multilevel/levels";
 import { ProviderError } from "@/server/errors";
 import { MAX_INLINE_AUDIO_BYTES } from "@/server/transcription/gemini-transcription";
 import { mapGeminiError } from "./gemini-evaluation-model";
@@ -23,7 +24,16 @@ export interface GeminiAudioAssessorOptions {
 export class GeminiAudioAssessor implements AudioAssessor {
   readonly provider = "gemini";
   private readonly client: GoogleGenAI;
-  private readonly responseSchema = toGeminiJsonSchema(audioAssessmentSchema);
+  private readonly schemas = new Map<string, ReturnType<typeof toGeminiJsonSchema>>();
+  private responseSchemaFor(levels?: LevelLadder) {
+    const key = levels?.join() ?? "default";
+    let schema = this.schemas.get(key);
+    if (!schema) {
+      schema = toGeminiJsonSchema(audioAssessmentSchemaFor(levels));
+      this.schemas.set(key, schema);
+    }
+    return schema;
+  }
 
   constructor(private readonly options: GeminiAudioAssessorOptions) {
     this.client = new GoogleGenAI({
@@ -40,7 +50,7 @@ export class GeminiAudioAssessor implements AudioAssessor {
     return this.options.model;
   }
 
-  async assess(request: { prompt: string; audio: Buffer; mimeType: string }): Promise<ModelEvaluationOutput> {
+  async assess(request: { prompt: string; audio: Buffer; mimeType: string; levels?: LevelLadder }): Promise<ModelEvaluationOutput> {
     if (request.audio.byteLength > MAX_INLINE_AUDIO_BYTES) {
       throw new ProviderError("audio_unsupported", "Recording is too large to send to Gemini inline", { retryable: false });
     }
@@ -57,7 +67,7 @@ export class GeminiAudioAssessor implements AudioAssessor {
             ],
           },
         ],
-        config: { temperature: 0, maxOutputTokens: 8192, responseMimeType: "application/json", responseJsonSchema: this.responseSchema },
+        config: { temperature: 0, maxOutputTokens: 8192, responseMimeType: "application/json", responseJsonSchema: this.responseSchemaFor(request.levels) },
       });
     } catch (error) {
       throw mapGeminiError(error, this.options.apiKey);

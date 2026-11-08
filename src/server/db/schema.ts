@@ -54,6 +54,15 @@ export const users = sqliteTable("users", {
    * cookie keeps resolving to the surviving user.
    */
   mergedIntoUserId: text("merged_into_user_id").references((): AnySQLiteColumn => users.id),
+  /** The student's exam date, "YYYY-MM-DD" (a calendar day in Uzbekistan). Null until they give one. */
+  examDate: text("exam_date"),
+  /** When the student answered "When is your exam?" with Skip (ISO time). Cleared when they save a date. */
+  examDateSkippedAt: text("exam_date_skipped_at"),
+  /**
+   * "student" (everyone) or "teacher" (docs/teacher-plan.md). Set only by the owner's script (scripts/set-role.mjs),
+   * never by any API or by the auth library.
+   */
+  role: text("role", { enum: ["student", "teacher"] }).notNull().default("student"),
   createdAt: dateTimestamps.createdAt,
 }, (table) => [uniqueIndex("users_email_uq").on(table.email)]);
 
@@ -307,3 +316,85 @@ export const analyticsEvents = sqliteTable(
     index("analytics_events_user_idx").on(table.userId),
   ],
 );
+
+/**
+ * Teacher view (docs/teacher-plan.md, migration 0006_teachers). A teacher's class; students join it with `join_code`
+ * (6 characters from 23456789ABCDEFGHJKMNPQRSTUVWXYZ). Closing a class ends every membership; it is never reopened.
+ */
+export const classes = sqliteTable(
+  "classes",
+  {
+    id: text("id").primaryKey(),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    joinCode: text("join_code").notNull(),
+    ...timestamps,
+    closedAt: text("closed_at"),
+  },
+  (table) => [uniqueIndex("classes_join_code_uq").on(table.joinCode), index("classes_teacher_idx").on(table.teacherUserId)],
+);
+
+/**
+ * A student sharing with a class, from the tap on "Share with this teacher" (`shared_at`). Only attempts created after
+ * `shared_at` are shared. Ended by the student (Leave), the teacher (Remove) or Close: `ended_at` / `ended_by`; rejoining
+ * is a new row. At most one open row per class and student.
+ */
+export const classMembers = sqliteTable(
+  "class_members",
+  {
+    id: text("id").primaryKey(),
+    classId: text("class_id").notNull().references(() => classes.id),
+    studentUserId: text("student_user_id").notNull().references(() => users.id),
+    /** "Name your teacher sees", confirmed by the student for this class only. */
+    shownName: text("shown_name").notNull(),
+    sharedAt: text("shared_at").notNull(),
+    /** Which wording of the Share screen the student agreed to. */
+    shareTextVersion: text("share_text_version").notNull(),
+    endedAt: text("ended_at"),
+    endedBy: text("ended_by", { enum: ["student", "teacher", "class_closed"] }),
+  },
+  (table) => [
+    uniqueIndex("class_members_open_uq").on(table.classId, table.studentUserId).where(sql`${table.endedAt} IS NULL`),
+    index("class_members_student_idx").on(table.studentUserId),
+  ],
+);
+
+/**
+ * A teacher's level for one shared attempt: Agree (`agrees`, no band) or their own band (0–5). Kept beside the app's
+ * band and the methodology that produced it. Never read by the scorer, the result page, the dashboard or History.
+ */
+export const teacherRatings = sqliteTable(
+  "teacher_ratings",
+  {
+    id: text("id").primaryKey(),
+    attemptId: text("attempt_id").notNull().references(() => speakingAttempts.id),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    classId: text("class_id").notNull().references(() => classes.id),
+    agrees: integer("agrees", { mode: "boolean" }).notNull(),
+    /** Null when the teacher agreed. */
+    teacherBand: integer("teacher_band"),
+    appBand: integer("app_band").notNull(),
+    evaluatorVersion: text("evaluator_version").notNull(),
+    rubricVersion: text("rubric_version").notNull(),
+    ...timestamps,
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("teacher_ratings_attempt_teacher_uq").on(table.attemptId, table.teacherUserId), index("teacher_ratings_class_idx").on(table.classId)],
+);
+
+/**
+ * Anonymous (teacher band, app band) pairs, kept when a membership ends (Leave, Remove, Close) to improve scoring.
+ * Deliberately nothing that links a pair to a student, an attempt, a teacher or an exact time: no ids, no names, no
+ * transcript, only the month. They can't be found again, so they are never deleted (the Share screen says so).
+ */
+export const ratingPairs = sqliteTable("rating_pairs", {
+  /** The teacher's band; the app's band when the teacher agreed. */
+  teacherBand: integer("teacher_band").notNull(),
+  appBand: integer("app_band").notNull(),
+  evaluatorVersion: text("evaluator_version").notNull(),
+  rubricVersion: text("rubric_version").notNull(),
+  /** The exam part ("2"). */
+  part: text("part").notNull(),
+  /** "YYYY-MM". */
+  month: text("month").notNull(),
+});

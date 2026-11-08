@@ -2,15 +2,17 @@ import {
   FEATURES,
   FIX_PRIORITY,
   isOnTopic,
+  ladderOf,
   levelFromValue,
   levelValue,
   NOT_ASSESSED,
   type Feature,
   type FeatureLevel,
+  type LevelLadder,
   type PronunciationLevel,
   type QuestionStatus,
 } from "./levels";
-import type { BandScoringConfig } from "./rubric-config";
+import { ladderOfConfig, type BandScoringConfig } from "./rubric-config";
 
 /**
  * Deterministic band scoring for Multilevel speaking parts.
@@ -18,24 +20,35 @@ import type { BandScoringConfig } from "./rubric-config";
  * The model judges each question and each feature against the official descriptors; this module turns those
  * judgements into the band, following the official scale's logic:
  *
- *  1. on_topic_count = questions answered on topic or partially.
- *  2. language_level = mean of the assessed feature levels (below_B1 = 0 … above_B2 = 3), rounded to the nearest
- *     level with an exact .5 rounding DOWN.
- *  3. Band 0 when the answer is memorised/irrelevant, no question is on topic, or the language is below B1.
- *  4. topic_cap from the on-topic count (above-target language with full coverage lifts the cap), language_cap from
- *     the language level; band = min(topic_cap, language_cap).
+ *  1. on_topic_count = questions answered on topic or partially ("minimal", a bare one-sentence answer, does not count).
+ *  2. language_level = mean of the assessed feature levels (index on the rubric's ladder, 0 … 3), rounded to the
+ *     nearest level with an exact .5 rounding DOWN.
+ *  3. Band 0 when the answer is too short to rate (under min_words, or under min_relevant_words relevant words),
+ *     memorised/irrelevant, no question is on topic, or the language is at the bottom of the ladder.
+ *  4. topic_cap from the on-topic count (above-target language with full coverage lifts the cap, but only when the
+ *     features in above_target_requires are themselves above the target), language_cap from the language level;
+ *     band = min(topic_cap, language_cap).
  *  5. Provisional when pronunciation could not be assessed.
  *
  * All numbers come from the rubric config, so another part only needs another config.
  */
 
+/** Feature levels as judged. A feature the rubric does not rate (Part 1.1: cohesion) is left out. */
+export type BandFeatures = { [F in Feature]?: PronunciationLevel };
+
 export interface BandScoringInput {
   questions: readonly { id: number; status: QuestionStatus }[];
-  features: Record<Exclude<Feature, "pronunciation">, FeatureLevel> & { pronunciation: PronunciationLevel };
+  features: BandFeatures;
   memorizedOrIrrelevant: boolean;
+  /** Words in the transcript; when given, answers under the config's min_words get band 0. */
+  wordCount?: number;
+  /** Relevant words (inside the on-topic questions' verified evidence, fillers excluded), for min_relevant_words. */
+  relevantWordCount?: number;
 }
 
-export type ZeroReason = "memorized_or_irrelevant" | "no_question_on_topic" | "below_B1";
+/** "below_<lowest named level>": the language is at index 0 of the ladder (Part 1.1: no meaningful language). */
+export const ZERO_REASONS = ["too_short", "memorized_or_irrelevant", "no_question_on_topic", "below_B1", "below_A2", "below_A1"] as const;
+export type ZeroReason = (typeof ZERO_REASONS)[number];
 
 export type BiggestFix =
   | { kind: "question_coverage"; question_id: number }
@@ -62,33 +75,51 @@ export interface BandScore {
 }
 
 /** Mean of levels rounded to the nearest level; an exact .5 rounds down. Exact integer arithmetic, no float drift. */
-export function bestFitLevel(levels: readonly FeatureLevel[]): { level: FeatureLevel; mean: number } {
+export function bestFitLevel(levels: readonly FeatureLevel[], ladder: LevelLadder = ladderOf(levels)): { level: FeatureLevel; mean: number } {
   if (levels.length === 0) throw new Error("bestFitLevel needs at least one assessed feature");
-  const sum = levels.reduce((total, level) => total + levelValue(level), 0);
+  const sum = levels.reduce((total, level) => total + levelValue(level, ladder), 0);
   const n = levels.length;
   // nearest integer with .5 down  ==  ceil(mean - 0.5)  ==  ceil((2·sum − n) / 2n)
   const rounded = Math.ceil((2 * sum - n) / (2 * n));
-  return { level: levelFromValue(rounded), mean: sum / n };
+  return { level: levelFromValue(rounded, ladder), mean: sum / n };
 }
 
-export function topicCap(onTopicCount: number, languageLevel: FeatureLevel, config: BandScoringConfig): number {
-  if (languageLevel === "above_B2" && onTopicCount === config.question_count) return config.scoring.above_target_full_coverage_cap;
+export function topicCap(
+  onTopicCount: number,
+  languageLevel: FeatureLevel,
+  config: BandScoringConfig,
+  features?: BandScoringInput["features"],
+): number {
+  const top = ladderOfConfig(config)[3];
+  const required = config.scoring.above_target_requires ?? [];
+  const requirementsMet = required.every((f) => features?.[f] === top);
+  if (languageLevel === top && onTopicCount === config.question_count && requirementsMet) {
+    return config.scoring.above_target_full_coverage_cap;
+  }
   const cap = config.scoring.topic_cap[String(onTopicCount)];
   if (cap === undefined) throw new Error(`No topic cap for ${onTopicCount} on-topic questions`);
   return cap;
 }
 
 export function languageCap(languageLevel: FeatureLevel, config: BandScoringConfig): number {
-  return config.scoring.language_cap[languageLevel];
+  const cap = config.scoring.language_cap[languageLevel];
+  if (cap === undefined) throw new Error(`No language cap for ${languageLevel}`);
+  return cap;
 }
 
+const isAssessed = (level: PronunciationLevel | undefined): level is FeatureLevel => level !== undefined && level !== NOT_ASSESSED;
+
 /** The assessed feature with the lowest level; ties go to the feature earliest in FIX_PRIORITY. */
-export function lowestFeature(features: BandScoringInput["features"], exclude: readonly Feature[] = []): Feature | null {
-  const assessed = FIX_PRIORITY.filter((f) => features[f] !== NOT_ASSESSED && !exclude.includes(f));
+export function lowestFeature(
+  features: BandScoringInput["features"],
+  exclude: readonly Feature[] = [],
+  ladder: LevelLadder = ladderOf(Object.values(features)),
+): Feature | null {
+  const assessed = FIX_PRIORITY.filter((f) => isAssessed(features[f]) && !exclude.includes(f));
   if (assessed.length === 0) return null;
   let lowest = assessed[0];
   for (const f of assessed) {
-    if (levelValue(features[f] as FeatureLevel) < levelValue(features[lowest] as FeatureLevel)) lowest = f;
+    if (levelValue(features[f] as FeatureLevel, ladder) < levelValue(features[lowest] as FeatureLevel, ladder)) lowest = f;
   }
   return lowest;
 }
@@ -102,31 +133,52 @@ export function firstUncoveredQuestion(questions: BandScoringInput["questions"],
 }
 
 export function scoreBand(input: BandScoringInput, config: BandScoringConfig): BandScore {
+  const ladder = ladderOfConfig(config);
+  const rated = config.features ?? FEATURES;
+  // Only the rubric's own features count; a feature it does not rate is ignored even if present.
+  const features: BandFeatures = Object.fromEntries(rated.map((f) => [f, input.features[f]]));
   const onTopicCount = input.questions.filter((q) => isOnTopic(q.status)).length;
-  const assessedFeatures = FEATURES.filter((f) => input.features[f] !== NOT_ASSESSED);
-  const { level: languageLevel, mean } = bestFitLevel(assessedFeatures.map((f) => input.features[f] as FeatureLevel));
+  const assessedFeatures = FEATURES.filter((f) => rated.includes(f) && isAssessed(features[f]));
+  const { level: languageLevel, mean } = bestFitLevel(
+    assessedFeatures.map((f) => features[f] as FeatureLevel),
+    ladder,
+  );
 
-  const zeroReason: ZeroReason | null = input.memorizedOrIrrelevant
-    ? "memorized_or_irrelevant"
-    : onTopicCount === 0
-      ? "no_question_on_topic"
-      : languageLevel === "below_B1"
-        ? "below_B1"
-        : null;
+  const minWords = config.scoring.min_words ?? 0;
+  const minRelevant = config.scoring.min_relevant_words ?? 0;
+  const tooShort =
+    (input.wordCount !== undefined && minWords > 0 && input.wordCount < minWords) ||
+    (input.relevantWordCount !== undefined && minRelevant > 0 && input.relevantWordCount < minRelevant);
+  const zeroReason: ZeroReason | null = tooShort
+    ? "too_short"
+    : input.memorizedOrIrrelevant
+      ? "memorized_or_irrelevant"
+      : onTopicCount === 0
+        ? "no_question_on_topic"
+        : languageLevel === ladder[0]
+          ? belowReason(ladder)
+          : null;
 
-  const tCap = topicCap(onTopicCount, languageLevel, config);
+  const tCap = topicCap(onTopicCount, languageLevel, config, features);
   const lCap = languageCap(languageLevel, config);
   const band = zeroReason ? 0 : Math.min(tCap, lCap);
 
   let biggestFix: BiggestFix;
+  const uncovered = firstUncoveredQuestion(input.questions, true);
   if (zeroReason === "memorized_or_irrelevant") {
     biggestFix = { kind: "own_words" };
+  } else if (isLowestAlone(features, "fluency", ladder)) {
+    // Fluency clearly below every other feature: it is what holds the answer back, whatever the coverage.
+    biggestFix = { kind: "feature", feature: "fluency" };
+  } else if (zeroReason === "too_short") {
+    // Too short to rate: say more, starting with the first question not (fully) answered.
+    biggestFix = uncovered !== null ? { kind: "question_coverage", question_id: uncovered } : { kind: "feature", feature: "fluency" };
   } else if (tCap < lCap) {
     // Coverage limits the band more than language does: answering the missing question is the biggest gain.
     biggestFix = { kind: "question_coverage", question_id: firstUncoveredQuestion(input.questions) ?? 1 };
   } else {
     // At least the four transcript features are always assessed, so there is always a lowest one.
-    biggestFix = { kind: "feature", feature: lowestFeature(input.features)! };
+    biggestFix = { kind: "feature", feature: lowestFeature(features, [], ladder)! };
   }
 
   return {
@@ -141,10 +193,28 @@ export function scoreBand(input: BandScoringInput, config: BandScoringConfig): B
     band_max: config.band_max,
     target_band: config.meets_target_band,
     meets_target: band >= config.meets_target_band,
-    provisional: input.features.pronunciation === NOT_ASSESSED,
+    provisional: rated.includes("pronunciation") && !isAssessed(features.pronunciation),
     zero_reason: zeroReason,
     biggest_fix: biggestFix,
   };
+}
+
+/** True when `feature` is assessed and strictly lower than every other assessed feature. */
+export function isLowestAlone(
+  features: BandScoringInput["features"],
+  feature: Feature,
+  ladder: LevelLadder = ladderOf(Object.values(features)),
+): boolean {
+  const level = features[feature];
+  if (!isAssessed(level)) return false;
+  const others = FEATURES.filter((f) => f !== feature && isAssessed(features[f]));
+  return others.length > 0 && others.every((f) => levelValue(features[f] as FeatureLevel, ladder) > levelValue(level, ladder));
+}
+
+function belowReason(ladder: LevelLadder): ZeroReason {
+  const reason = `below_${ladder[1]}`;
+  if (!(ZERO_REASONS as readonly string[]).includes(reason)) throw new Error(`No zero reason for a ladder starting at ${ladder[0]}`);
+  return reason as ZeroReason;
 }
 
 export function bandLabel(band: number, config: Pick<BandScoringConfig, "bands">): string {

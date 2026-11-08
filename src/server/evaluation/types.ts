@@ -1,4 +1,5 @@
 import "server-only";
+import type { LevelLadder } from "@/domain/evaluation/multilevel/levels";
 import type { RetryFocusItem } from "@/domain/evaluation/stored";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";
@@ -54,5 +55,6 @@ export interface EvaluationModel {
 export interface AudioAssessor {
   readonly provider: string;
   readonly model: string;
-  assess(request: { prompt: string; audio: Buffer; mimeType: string }): Promise<ModelEvaluationOutput>;
+  /** `levels`: the rubric's level names, for the provider's response schema (Part 2's when left out). */
+  assess(request: { prompt: string; audio: Buffer; mimeType: string; levels?: LevelLadder }): Promise<ModelEvaluationOutput>;
 }

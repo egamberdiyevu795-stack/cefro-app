@@ -14,9 +14,9 @@ vi.mock("./env", () => ({
 const logs = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }));
 vi.mock("@/server/logging/logger", () => ({ logger: logs }));
 
-import { checkProvidersAtBoot } from "./boot-check";
+import { assertServerConfigured, checkProvidersAtBoot, isServerConfigured } from "./boot-check";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
-import { describeProviderMode, validateAuthConfig, validateDatabaseConfig, validateProviderConfig } from "./provider-config";
+import { describeProviderMode, validateAuthConfig, validateDatabaseConfig, validateExplicitProviders, validateProviderConfig } from "./provider-config";
 
 const env = (overrides: Record<string, unknown>) =>
   ({ NODE_ENV: "development", TRANSCRIPTION_PROVIDER: "openai", EVALUATION_PROVIDER: "gemini", SPEECH_GUARD: "off", ...overrides }) as unknown as ServerEnv;
@@ -96,9 +96,10 @@ describe("checkProvidersAtBoot", () => {
     expect(logs.info).toHaveBeenCalledWith("Provider configuration OK", expect.objectContaining({ mode: "real" }));
   });
 
-  it("throws in production (making the server unhealthy), naming only variables", () => {
+  it("logs every problem in production, naming only variables, but never throws (a throw would 500 every route)", () => {
     state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "sk-do-not-print" });
-    expect(() => checkProvidersAtBoot()).toThrow(/GEMINI_API_KEY/);
+    expect(() => checkProvidersAtBoot()).not.toThrow();
+    expect(logs.error).toHaveBeenCalledWith("Provider configuration problem", expect.objectContaining({ variable: "GEMINI_API_KEY" }));
     expect(JSON.stringify(logs.error.mock.calls)).not.toContain("sk-do-not-print");
   });
 
@@ -115,6 +116,46 @@ describe("checkProvidersAtBoot", () => {
     const original = process.env.NODE_ENV;
     expect(() => checkProvidersAtBoot()).not.toThrow(); // vitest runs with NODE_ENV=test
     expect(process.env.NODE_ENV).toBe(original);
+  });
+});
+
+describe("assertServerConfigured (enforced per route: API wrapper, app pages, health)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    state.throwOnParse = false;
+  });
+
+  it("refuses with 503 in production when anything is missing, without revealing values", () => {
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "sk-do-not-print" });
+    expect(isServerConfigured()).toBe(false);
+    let thrown: unknown;
+    try {
+      assertServerConfigured();
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ status: 503, code: "service_not_configured" });
+    expect(JSON.stringify(thrown)).not.toContain("sk-do-not-print");
+    expect(String((thrown as Error).message)).not.toContain("sk-do-not-print");
+  });
+
+  it("refuses in production when the environment cannot be parsed", () => {
+    state.throwOnParse = true;
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(isServerConfigured()).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("passes in production when complete, and never refuses in development or tests", () => {
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com" });
+    expect(() => assertServerConfigured()).not.toThrow();
+    state.env = env({ NODE_ENV: "development" });
+    expect(() => assertServerConfigured()).not.toThrow();
+    state.env = env({ NODE_ENV: "test" });
+    expect(() => assertServerConfigured()).not.toThrow();
   });
 });
 
@@ -137,13 +178,13 @@ describe("validateAuthConfig", () => {
     expect(JSON.stringify(validateAuthConfig(env({ NODE_ENV: "production", AUTH_SECRET: INSECURE_DEV_AUTH_SECRET })))).not.toContain(INSECURE_DEV_AUTH_SECRET);
   });
 
-  it("makes the production boot check fail without it", () => {
+  it("makes the production per-route check refuse without it", () => {
     vi.clearAllMocks();
     state.throwOnParse = false;
     state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" });
-    expect(() => checkProvidersAtBoot()).toThrow(/AUTH_SECRET/);
+    expect(() => assertServerConfigured()).toThrow();
     state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", GEMINI_API_KEY: "k", AUTH_SECRET: SECRET, APP_URL: "https://app.example.com" });
-    expect(() => checkProvidersAtBoot()).not.toThrow();
+    expect(() => assertServerConfigured()).not.toThrow();
   });
 });
 
@@ -190,5 +231,68 @@ describe("validateDatabaseConfig", () => {
     expect(vars(TURSO)).toEqual([]);
     expect(vars({ ...TURSO, AUDIO_STORAGE_PROVIDER: "local" })).toEqual(["AUDIO_STORAGE_PROVIDER"]);
     expect(vars({ ...local, AUDIO_STORAGE_PROVIDER: "database" })).toContain("AUDIO_STORAGE_PROVIDER");
+  });
+});
+
+describe("providers must be explicit on Vercel", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const names = (raw: Record<string, string | undefined>) => validateExplicitProviders(raw).map((p) => p.variable);
+
+  it("locally (no VERCEL) the defaults stay: nothing is required", () => {
+    expect(names({})).toEqual([]);
+    expect(names({ NODE_ENV: "production" })).toEqual([]);
+  });
+
+  it("on Vercel, each missing (or empty) provider variable is named", () => {
+    expect(names({ VERCEL: "1" })).toEqual(["TRANSCRIPTION_PROVIDER", "EVALUATION_PROVIDER"]);
+    expect(names({ VERCEL: "1", VERCEL_ENV: "preview", TRANSCRIPTION_PROVIDER: "gemini" })).toEqual(["EVALUATION_PROVIDER"]);
+    expect(names({ VERCEL: "1", VERCEL_ENV: "production", EVALUATION_PROVIDER: "gemini", TRANSCRIPTION_PROVIDER: "" })).toEqual(["TRANSCRIPTION_PROVIDER"]);
+    expect(names({ VERCEL: "1", TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "gemini" })).toEqual([]);
+    const [problem] = validateExplicitProviders({ VERCEL: "1", TRANSCRIPTION_PROVIDER: "openai" });
+    expect(problem).toEqual({
+      variable: "EVALUATION_PROVIDER",
+      message: expect.stringMatching(/^must be set explicitly on Vercel: EVALUATION_PROVIDER=gemini or EVALUATION_PROVIDER=anthropic\. The local default is not used there/),
+    });
+  });
+
+  it("names each variable's own values: speech-to-text is openai or gemini, scoring is gemini or anthropic", () => {
+    const messages = Object.fromEntries(validateExplicitProviders({ VERCEL: "1" }).map((p) => [p.variable, p.message]));
+    expect(messages.TRANSCRIPTION_PROVIDER).toContain("TRANSCRIPTION_PROVIDER=openai or TRANSCRIPTION_PROVIDER=gemini.");
+    expect(messages.EVALUATION_PROVIDER).toContain("EVALUATION_PROVIDER=gemini or EVALUATION_PROVIDER=anthropic.");
+    // Never the other step's provider: anthropic does no speech-to-text, openai does no scoring here.
+    expect(messages.TRANSCRIPTION_PROVIDER).not.toMatch(/anthropic/);
+    expect(messages.EVALUATION_PROVIDER).not.toMatch(/openai/);
+    for (const message of Object.values(messages)) expect(message).not.toMatch(/mock/);
+  });
+
+  it("is part of the provider check, which sees the raw variables (the parsed ones already hold the defaults)", () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("TRANSCRIPTION_PROVIDER", "gemini");
+    vi.stubEnv("EVALUATION_PROVIDER", "");
+    // The parsed env has evaluation "anthropic" (the default) and its key, yet the check still refuses.
+    const parsed = env({ TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "anthropic", GEMINI_API_KEY: "k", ANTHROPIC_API_KEY: "k" });
+    expect(validateProviderConfig(parsed).map((p) => p.variable)).toContain("EVALUATION_PROVIDER");
+  });
+
+  it("on Vercel in production: logged at start-up naming the variable, and refused (503) everywhere the check applies", () => {
+    vi.clearAllMocks();
+    state.throwOnParse = false;
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("TRANSCRIPTION_PROVIDER", "gemini");
+    vi.stubEnv("EVALUATION_PROVIDER", "");
+    state.env = env({ NODE_ENV: "production", TRANSCRIPTION_PROVIDER: "gemini", EVALUATION_PROVIDER: "anthropic", GEMINI_API_KEY: "k", ANTHROPIC_API_KEY: "k", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com" });
+    checkProvidersAtBoot();
+    expect(logs.error).toHaveBeenCalledWith("Provider configuration problem", expect.objectContaining({ variable: "EVALUATION_PROVIDER", message: expect.stringContaining("must be set explicitly on Vercel") }));
+    expect(logs.error).toHaveBeenCalledWith(expect.stringMatching(/^Server not configured/), { variables: expect.arrayContaining(["EVALUATION_PROVIDER"]) });
+    expect(isServerConfigured()).toBe(false);
+    expect(() => assertServerConfigured()).toThrow(expect.objectContaining({ status: 503, code: "service_not_configured" }));
+  });
+
+  it("the same configuration locally (no VERCEL) is accepted with the defaults", () => {
+    vi.stubEnv("VERCEL", "");
+    vi.stubEnv("EVALUATION_PROVIDER", "");
+    state.throwOnParse = false;
+    state.env = env({ NODE_ENV: "production", TRANSCRIPTION_PROVIDER: "openai", EVALUATION_PROVIDER: "anthropic", OPENAI_API_KEY: "k", ANTHROPIC_API_KEY: "k", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com" });
+    expect(isServerConfigured()).toBe(true);
   });
 });

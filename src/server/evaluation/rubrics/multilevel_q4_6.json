@@ -1,0 +1,70 @@
+{
+  "id": "multilevel-q4-6",
+  "version": "multilevel-q4-6/1.0.0",
+  "exam": "uzbmb-multilevel-speaking",
+  "part": 1,
+  "official_question": 4,
+  "first_question_number": 4,
+  "target_level": "B1",
+  "question_count": 3,
+  "band_max": 5,
+  "meets_target_band": 3,
+  "levels": ["below_A2", "A2", "B1", "above_B1"],
+  "features": ["grammar", "vocabulary", "pronunciation", "fluency", "cohesion"],
+  "question_statuses": ["on_topic", "partial", "missing", "off_topic"],
+  "bands": [
+    { "band": 5, "label": "Above B1", "descriptor": "Performance is above B1." },
+    { "band": 4, "label": "Higher B1", "descriptor": "B1 descriptors; all three questions on topic." },
+    { "band": 3, "label": "Lower B1", "descriptor": "B1 descriptors; two questions on topic." },
+    { "band": 2, "label": "Higher A2", "descriptor": "A2 descriptors; at least two questions on topic." },
+    { "band": 1, "label": "Lower A2", "descriptor": "A2 descriptors; one question on topic." },
+    {
+      "band": 0,
+      "label": "Below A2",
+      "descriptor": "Below A2, or no meaningful language, or all responses completely off-topic."
+    }
+  ],
+  "descriptors": {
+    "B1": {
+      "grammar": "Simple grammatical structures are used correctly. Errors occur when attempting complex structures.",
+      "vocabulary": "There is sufficient range and control of vocabulary for the task. Errors occur when expressing complex thoughts.",
+      "pronunciation": "Pronunciation is generally intelligible but mispronunciations put an occasional strain on the listener.",
+      "fluency": "There is some pausing, false starts, and reformulations.",
+      "cohesion": "Uses only simple cohesive devices. Links between ideas are not always clearly indicated."
+    },
+    "A2": {
+      "grammar": "Some simple grammatical structures are used correctly but basic mistakes systematically occur.",
+      "vocabulary": "Vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable.",
+      "pronunciation": "Mispronunciations are noticeable and frequently place a strain on the listener.",
+      "fluency": "There is frequent pausing, false starts, and reformulations.",
+      "cohesion": "Cohesion between ideas is limited. Responses tend to be a list of points."
+    },
+    "above_B1": {
+      "grammar": "Some complex grammar constructions are used accurately. Errors do not impede understanding.",
+      "vocabulary": "The range of vocabulary is sufficient to discuss the topics required by the task. Inappropriate lexical choices do not impede understanding.",
+      "pronunciation": "Pronunciation is intelligible. Mispronunciations do not put a strain on the listener or lead to misunderstanding.",
+      "fluency": "Some pausing while searching for vocabulary but this does not put a strain on the listener.",
+      "cohesion": "A limited number of cohesive devices are used to indicate the links between ideas."
+    },
+    "below_A2": {
+      "grammar": "Grammatical structure is limited to words and phrases. Errors in basic patterns and simple grammar structures impede understanding.",
+      "vocabulary": "Vocabulary is limited to very basic words related to personal information.",
+      "pronunciation": "Pronunciation is mostly unintelligible except for isolated words.",
+      "fluency": "Frequent pausing, false starts, and reformulations impede understanding."
+    }
+  },
+  "descriptor_sources": {
+    "B1": "Official UZBMB Multilevel speaking rating scale, Questions 4-6, B1 (bands 4 and 3).",
+    "A2": "Official UZBMB Multilevel speaking rating scale, Questions 4-6, A2 (bands 2 and 1).",
+    "above_B1": "Reference only: the official Question 7 B2 text, used only to recognise language above B1. Never band text.",
+    "below_A2": "Reference only: the official Questions 1-3 A1 text (no cohesion: the Questions 4-6 A2 cohesion text is the lowest, so cohesion is below A2 only when even that is not met). Never band text."
+  },
+  "scoring": {
+    "topic_cap": { "0": 0, "1": 1, "2": 3, "3": 4 },
+    "above_target_full_coverage_cap": 5,
+    "above_target_requires": ["grammar", "vocabulary"],
+    "min_words": 0,
+    "min_relevant_words": 5,
+    "language_cap": { "below_A2": 0, "A2": 2, "B1": 4, "above_B1": 5 }
+  }
+}

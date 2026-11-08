@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A family sharing a meal at a decorated table</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. Three generations of a family sit together behind a long table: a grandmother with grey hair, a father, a mother and a young boy. On the table are a large shared dish, round flat breads, a teapot and small bowls. A string of small coloured flags hangs above them.</desc>
+  <!-- room -->
+  <rect width="480" height="360" fill="#f6eadb"/>
+  <rect y="286" width="480" height="74" fill="#d9c3a5"/>
+  <!-- string of flags -->
+  <path d="M0 34 Q240 104 480 34" fill="none" stroke="#9ca3af" stroke-width="2"/>
+  <g>
+    <path d="M30 42 L52 49 L38 66Z" fill="#d9534f"/>
+    <path d="M78 55 L100 61 L86 78Z" fill="#5b7fa6"/>
+    <path d="M128 64 L150 69 L137 87Z" fill="#7a9e5a"/>
+    <path d="M178 70 L200 72 L190 91Z" fill="#e6a64a"/>
+    <path d="M228 72 L250 72 L240 92Z" fill="#a77bc2"/>
+    <path d="M278 71 L300 69 L292 89Z" fill="#d9534f"/>
+    <path d="M328 66 L350 62 L344 81Z" fill="#5b7fa6"/>
+    <path d="M378 58 L400 52 L396 71Z" fill="#7a9e5a"/>
+    <path d="M428 46 L450 40 L448 59Z" fill="#e6a64a"/>
+  </g>
+  <!-- grandmother -->
+  <g>
+    <path d="M74 240 Q72 180 110 176 Q148 180 146 240Z" fill="#7a9e5a"/>
+    <circle cx="110" cy="150" r="21" fill="#e9b98f"/>
+    <circle cx="110" cy="124" r="10" fill="#d7d7d7"/>
+    <path d="M89 150 Q88 128 110 128 Q132 128 131 150 Q122 138 110 139 Q98 138 89 150Z" fill="#d7d7d7"/>
+    <circle cx="103" cy="152" r="2.1" fill="#333"/>
+    <circle cx="117" cy="152" r="2.1" fill="#333"/>
+    <path d="M104 162 Q110 166 116 162" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- father -->
+  <g>
+    <path d="M160 240 Q158 172 198 168 Q238 172 236 240Z" fill="#4b5563"/>
+    <circle cx="198" cy="138" r="22" fill="#c98e66"/>
+    <path d="M176 136 Q176 112 198 112 Q221 112 220 138 Q212 124 198 125 Q184 124 176 136Z" fill="#222"/>
+    <path d="M180 146 Q198 170 216 146 Q210 160 198 161 Q186 160 180 146Z" fill="#222"/>
+    <circle cx="191" cy="139" r="2.1" fill="#333"/>
+    <circle cx="205" cy="139" r="2.1" fill="#333"/>
+    <path d="M192 151 Q198 155 204 151" fill="none" stroke="#7a3f2f" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- mother -->
+  <g>
+    <path d="M262 132 Q260 108 284 108 Q308 108 306 134 L308 178 Q296 170 292 154 L276 154 Q272 170 260 178Z" fill="#3b2a20"/>
+    <path d="M250 240 Q248 178 284 174 Q320 178 318 240Z" fill="#e8835a"/>
+    <circle cx="284" cy="142" r="20" fill="#d9a07a"/>
+    <path d="M264 136 Q270 118 285 120 Q300 120 304 136 Q292 126 278 130 Q270 132 264 136Z" fill="#3b2a20"/>
+    <circle cx="278" cy="144" r="2.1" fill="#333"/>
+    <circle cx="291" cy="144" r="2.1" fill="#333"/>
+    <path d="M279 154 Q284 158 290 154" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- boy -->
+  <g>
+    <path d="M338 240 Q336 196 364 192 Q392 196 390 240Z" fill="#5b7fa6"/>
+    <circle cx="364" cy="170" r="17" fill="#d9a07a"/>
+    <path d="M347 168 Q348 150 364 150 Q381 150 381 170 Q374 158 364 159 Q353 159 347 168Z" fill="#222"/>
+    <circle cx="359" cy="172" r="1.9" fill="#333"/>
+    <circle cx="370" cy="172" r="1.9" fill="#333"/>
+    <path d="M359 180 Q364 184 369 180" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- table with cloth -->
+  <path d="M48 276 L432 276 L406 230 L74 230Z" fill="#f4f1ea"/>
+  <rect x="48" y="276" width="384" height="20" fill="#c96f53"/>
+  <g fill="#f6eadb">
+    <path d="M70 286 l6 -6 l6 6 l-6 6z"/><path d="M110 286 l6 -6 l6 6 l-6 6z"/><path d="M150 286 l6 -6 l6 6 l-6 6z"/>
+    <path d="M190 286 l6 -6 l6 6 l-6 6z"/><path d="M230 286 l6 -6 l6 6 l-6 6z"/><path d="M270 286 l6 -6 l6 6 l-6 6z"/>
+    <path d="M310 286 l6 -6 l6 6 l-6 6z"/><path d="M350 286 l6 -6 l6 6 l-6 6z"/><path d="M390 286 l6 -6 l6 6 l-6 6z"/>
+  </g>
+  <!-- shared dish -->
+  <ellipse cx="240" cy="254" rx="58" ry="14" fill="#ffffff" stroke="#9ca3af" stroke-width="2"/>
+  <path d="M200 254 Q240 222 280 254Z" fill="#e6a64a"/>
+  <circle cx="226" cy="244" r="3" fill="#c96f53"/>
+  <circle cx="246" cy="240" r="3" fill="#c96f53"/>
+  <circle cx="258" cy="247" r="3" fill="#7a9e5a"/>
+  <!-- breads -->
+  <ellipse cx="128" cy="258" rx="28" ry="9" fill="#d9a35f"/>
+  <ellipse cx="128" cy="256" rx="16" ry="4.5" fill="#c08440"/>
+  <ellipse cx="350" cy="258" rx="28" ry="9" fill="#d9a35f"/>
+  <ellipse cx="350" cy="256" rx="16" ry="4.5" fill="#c08440"/>
+  <!-- teapot and bowls -->
+  <path d="M164 248 Q164 230 180 230 Q196 230 196 248Z" fill="#5b7fa6"/>
+  <path d="M196 238 L206 232" stroke="#5b7fa6" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="180" cy="228" r="3" fill="#3f6f8f"/>
+  <path d="M300 246 Q308 256 316 246Z" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+  <path d="M396 246 Q404 256 412 246Z" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+  <path d="M84 246 Q92 256 100 246Z" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+</svg>

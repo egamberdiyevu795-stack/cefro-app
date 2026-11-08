@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { multilevelModelOutputSchema, providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
 
 function collectKeys(node: unknown, found = new Set<string>()): Set<string> {
@@ -16,7 +16,7 @@ function collectKeys(node: unknown, found = new Set<string>()): Set<string> {
 }
 
 describe("toGeminiJsonSchema", () => {
-  const schema = toGeminiJsonSchema(multilevelModelOutputSchema) as {
+  const schema = toGeminiJsonSchema(providerOutputSchema()) as {
     type: string;
     required: string[];
     properties: Record<string, { type?: string; description?: string; anyOf?: unknown[] }>;
@@ -44,7 +44,7 @@ describe("toGeminiJsonSchema", () => {
     expect(schema.properties.retry_review.anyOf).toEqual(expect.arrayContaining([{ type: "null" }]));
     const json = JSON.stringify(schema);
     expect(json).toContain('"enum":["below_B1","B1","B2","above_B2"]');
-    expect(json).toContain('"enum":["on_topic","partial","missing","off_topic"]');
+    expect(json).toContain('"enum":["on_topic","partial","minimal","missing","off_topic"]');
     expect(json).toContain('"minimum":1');
     expect(json).toContain("Never paraphrase");
     expect(json).toContain('"maxItems":4');

@@ -46,7 +46,7 @@ if (!configured) console.log("\nLIVE full pipeline skipped: needs the transcript
 
 const only = process.env.EVAL_SAMPLES?.split(",").map((s) => s.trim());
 const samples = PIPELINE_SAMPLES.filter((s) => !only || only.some((p) => s.id.startsWith(p) || s.retryOf?.startsWith(p)));
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 const USER = "5e1f0000-0000-4000-8000-000000000001";
 
 interface Row {

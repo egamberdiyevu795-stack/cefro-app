@@ -1,0 +1,48 @@
+{
+  "voice": {
+    "engine": "Piper text-to-speech (https://github.com/rhasspy/piper, MIT licence)",
+    "model": "en-us-libritts-high (Piper voice release v0.0.2: voice-en-us-libritts-high.tar.gz)",
+    "modelLicence": "Trained on LibriTTS (Zen et al., 2019, http://www.openslr.org/60/), CC BY 4.0",
+    "speaker": "6426",
+    "speakerIndex": 80,
+    "lengthScale": 1.0,
+    "noiseScale": 0.667,
+    "noiseW": 0.8,
+    "sentenceSilence": 0.3,
+    "tempo": 0.75
+  },
+  "files": [
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/intro.wav",
+      "text": "Part 1.1. In this part, you will hear three short questions about yourself and your daily life. After each question, you have five seconds to get ready, and then thirty seconds to answer. Start speaking when you hear this sound."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/q1.wav",
+      "text": "What do you usually do at the weekend?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/q2.wav",
+      "text": "What is your favourite food? Why?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/q3.wav",
+      "text": "Who do you spend the most time with in your family?"
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v1/intro.wav",
+      "text": "Part 1.2. Now you will compare two pictures, and then answer two more questions about them. Start speaking when you hear this sound."
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v1/q4.wav",
+      "text": "Look at the two pictures. Describe them and say how they are different."
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v1/q5.wav",
+      "text": "Why do many people like shopping at local markets?"
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v1/q6.wav",
+      "text": "Why do some people prefer big supermarkets?"
+    }
+  ]
+}

@@ -90,22 +90,113 @@ cancelled does not run.
 that, Vercel would build and publish every push to `main` on its own, immediately and unmigrated, regardless of the
 workflow. With it, the workflow is the only thing that deploys production.
 
-**What a Preview does.** A Vercel Preview runs the production build (`NODE_ENV=production`), so the start-up configuration
-check (`src/server/config/boot-check.ts`) applies to it, and it fails in either direction:
+**What a Preview does.** A Vercel Preview runs the production build (`NODE_ENV=production`), so the configuration check
+(`src/server/config/boot-check.ts`) applies to it. At start-up it logs every problem (variable names only, never a
+value); it is then enforced on every request that needs the configuration: every API route answers 503
+`service_not_configured`, `/api/health` answers 503 "unavailable", and the app's pages (home, login, register, practice)
+fail with HTTP 500, except in mock mode (`?mock=1`, below). It fails in either direction:
 
-- *With Turso credentials* (a variable ticked for Preview by mistake): the boot check reports "Database credentials are
-  present in a Vercel Preview or Development environment…" (variable names and that sentence only, never a value) and the
-  application **does not start normally**: Next.js reports "Failed to prepare server" and **every route, pages and
-  `/api/health` included, returns HTTP 500**. The database initialisation (`getDb`) also refuses the same configuration
-  before any network request, as a second layer.
-- *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the same
-  boot check fails ("required on Vercel…") and the Preview also returns HTTP 500 on every route.
+- *With Turso credentials* (a variable ticked for Preview by mistake): the check reports "Database credentials are
+  present in a Vercel Preview or Development environment…" and everything that can reach the database is refused as
+  above. The database initialisation (`getDb`) also refuses the same configuration before any network request, as a
+  second layer.
+- *Without credentials* (the intended setup): Vercel requires the hosted database (`validateDatabaseConfig`), so the
+  same check fails ("required on Vercel…") and the same routes are refused.
+
+**Mock mode: the whole app on a Preview with no variables (`?mock=1`).** Add `?mock=1` to an address and the page
+shows demo data instead of the student's own: a demo student with six attempts on five Part 2 tasks (one failed with
+no speech, one retry with its goal), a level, a biggest fix and an exam date 23 days away. Every demo result is for
+its own task: a hand-written demo answer to that task (`src/features/demo/demo-answers.ts`) goes through the real
+evaluation with the existing **mock evaluator** (no model call), in the real types; the dashboard, History and the
+result page run their real code on them (`src/server/demo/demo-data.ts`). The mock evaluator is a crude keyword
+heuristic, so the bands are demo values, not assessments.
+Mock mode never reads or writes the database, reads no cookie or identity, calls no API and no AI provider, and skips
+the configuration check, so it works on a Preview where every real page is refused. Every link inside it keeps
+`?mock=1` (navigation, back links, task tiles, rows, filters, retries), so a tester cannot fall into a real page by
+accident. Every mock page shows a demo label: "Demo mode. Your answer won't be scored." (task list and practice),
+"Demo result. Your answer was not scored." (results), "Demo mode. These are example attempts, not yours." (dashboard
+and History). Real pages never show it. In mock mode the exam date can be changed on the dashboard, but only on that
+page (nothing is saved; a reload brings the demo date back), and the Account menu shows the demo account with no
+sign-in or Log out.
+
+What a Preview **with no environment variables** serves, checked on 2026-11-07 with a production build started the way
+a Preview runs (`NODE_ENV=production`, `VERCEL=1`, `VERCEL_ENV=preview`, no other variables, a database path that
+cannot be created): `npm run test:e2e:preview` (`playwright.preview.config.ts`, `e2e/mock-mode.spec.ts`).
+
+**Mock URLs that work on a Preview (200):**
+
+| Page | Address |
+| --- | --- |
+| Signed-out home, sign in, Create account | `/?mock=1`, `/login?mock=1`, `/register?mock=1` (nobody is looked up; the forms send nothing; "Try the demo" opens `/dashboard?mock=1`) |
+| Task list | `/practice?mock=1` (every task opens its brief in mock mode; it was `/?mock=1` before `claude/entry-pages`) |
+| Part 2 brief, then preparation, recording, Scoring… and the demo result | `/practice/speaking/<task id>?mock=1`, for all 7 tasks: `b2-part2-advice-from-someone`, `b2-part2-important-decision`, `b2-part2-goal-you-set`, `b2-part2-working-in-a-team`, `b2-part2-trying-and-failing`, `b2-part2-a-tradition`, `b2-part2-happy-day` |
+| A retry with its goal | `/practice/speaking/<task id>?mock=1&retry=<demo key>` (a demo result of that task, e.g. `b2-part2-a-tradition?mock=1&retry=demo-5`; opened by "Retry with this goal" and "Start retry"), or `&retry=<saved run>&run=1..3` (the saved-runs prototype) |
+| Part 1.1 / 1.2 (not live: real pages are 404, dashboard and home say "Coming soon") | `/practice/speaking/a2-part1-1-daily-life?mock=1`, `/practice/speaking/b1-part1-2-shopping?mock=1` (introduction → questions one by one → Scoring… → demo result; "Retry with this goal" keeps the goal: `?mock=1&retry=answer.<task id>`); results `/result?demo=answer.<task id>&mock=1` |
+| A demo attempt's result, for its own task | `/result?demo=demo-1..6&mock=1` (opened from the dashboard and History rows) |
+| The result of a mock practice of a task, and of its retry | `/result?demo=answer.<task id>&mock=1`, `/result?demo=retry.<task id>.<demo key>&mock=1` (opened by Finish, with `&state=scoring&next=1` first) |
+| The saved-runs prototype ("Advice from someone" only) | `/result?mock=1`, `/result?mock=1&anchor=<saved run>&run=1..3`, `/result?mock=1&state=scoring\|too-short\|no-speech\|retry` (`/result` without `mock=1` is the same prototype; its links add it) |
+| Dashboard | `/dashboard?mock=1` (`&flags=off` also works) |
+| History | `/history?mock=1`, `/history?mock=1&part=2` |
+| Static files | e.g. the task pictures `/tasks/*.svg` |
+
+Start a tester at `/?mock=1` and "Try the demo" (or `/dashboard?mock=1`): the loop task list → brief → practice → result → retry →
+dashboard → History clicks through without leaving mock mode. Only exactly `mock=1` counts (`mock=0`, `mock=true`
+are real pages).
+
+**Still refused on a Preview with no variables** (unchanged): every page without `?mock=1`: `/`, `/login`,
+`/register`, `/practice`, the practice pages (HTTP 500, "CEFRO isn't available right now", the configuration check), `/dashboard`,
+`/history`, `/result/<attempt id>` (500: the configuration check or the database); every API route (503
+`service_not_configured`) and `/api/health` (503 "unavailable").
+
+How mock mode reaches the task list and the signed-out pages: `/practice` sits in the `(site)` layout and `/`, `/login`,
+`/register` in the `(entry)` layout; both run the configuration check, and a layout gets no query. `src/proxy.ts` therefore passes `?mock=1` on as the request header `x-cefro-mock: 1` (and removes one
+sent by a browser); the layout skips the check only then. The pages themselves read `?mock=1`.
+
+So to look at a branch on its Preview without a database, open `/?mock=1` (the signed-out home), then "Try the demo". (Until November 2026 a failed check made
+the start-up hook throw, which made Next.js answer 500 on every route.)
+
+**Which variables the check reports on a Preview with none set:** `TRANSCRIPTION_PROVIDER` and `EVALUATION_PROVIDER`
+(they must be explicit on Vercel, see "AI providers" below), the key of each chosen provider (`GEMINI_API_KEY` with the
+Gemini settings), `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` and `AUTH_SECRET`. `APP_URL` is not needed on Vercel: it is taken from
+`VERCEL_PROJECT_PRODUCTION_URL` or `VERCEL_URL` (`applyHostingDefaults` in `src/server/config/env.ts`).
 
 So a Preview of this application is **not usable as a running app** unless it has its own database. That is deliberate:
 the Preview is kept away from real data rather than half-working. If you want working Previews, create a **second** Turso
 database for them, migrate it yourself (the pipeline does not touch it), give Preview its own `TURSO_*` values in Vercel,
 and set `CEFRO_ALLOW_PREVIEW_TURSO=true` for Preview in Vercel and the repository variable `CEFRO_ALLOW_PREVIEW_TURSO=true`
 in GitHub, to say that the Preview credentials are a different database. The same flag covers a Development environment.
+
+### AI providers: the defaults, and how to switch to Gemini
+
+The code's defaults (`src/server/config/env.ts`, also in `.env.example`) are **not** Gemini:
+
+| Step | Variable | Default | Its key | Other choices |
+|---|---|---|---|---|
+| Speech-to-text | `TRANSCRIPTION_PROVIDER` | `openai` (model `OPENAI_TRANSCRIPTION_MODEL`, default `gpt-4o-transcribe`) | `OPENAI_API_KEY` | `gemini` (model `GEMINI_TRANSCRIPTION_MODEL`, default `gemini-3.8-flash`); `mock` (development only, refused in production) |
+| Speech-to-text fallback | `TRANSCRIPTION_FALLBACK_PROVIDER` | `none` | the fallback's key | `openai`, `gemini` (must differ from the primary) |
+| Scoring (the evaluator) | `EVALUATION_PROVIDER` | `anthropic` (model `ANTHROPIC_EVALUATION_MODEL`, default `claude-opus-5-5`) | `ANTHROPIC_API_KEY` | `gemini` (model `GEMINI_EVALUATION_MODEL`, default `gemini-3.8-flash`); `mock` (development only, refused in production) |
+| Audio step (pronunciation, pausing) | `AUDIO_ASSESSMENT` | `auto`: Gemini when `GEMINI_API_KEY` is set and the evaluator is not the mock, else off | `GEMINI_API_KEY` | `gemini` (always), `off` (pronunciation "not assessed") |
+
+**Scoring switches to Gemini with `EVALUATION_PROVIDER=gemini`** (and `GEMINI_API_KEY`). Speech-to-text switches with
+`TRANSCRIPTION_PROVIDER=gemini`. Only the selected providers' keys are needed. The production setup below sets both to
+`gemini`, so production needs only `GEMINI_API_KEY`.
+
+**On Vercel both must be set explicitly.** The defaults above apply only off Vercel (local development, tests, a
+self-hosted server). On Vercel (Production, Preview and Development: whenever `VERCEL` is set) a missing or empty
+`TRANSCRIPTION_PROVIDER` or `EVALUATION_PROVIDER` is a configuration problem (`validateExplicitProviders` in
+`src/server/config/provider-config.ts`), so a variable that was not ticked for an environment can never switch it to
+another provider silently. At start-up the server logs, for each one:
+
+```
+{"level":"error","message":"must be set explicitly on Vercel: TRANSCRIPTION_PROVIDER=openai or TRANSCRIPTION_PROVIDER=gemini. The local default is not used there. Set it for this environment in the Vercel project settings.","variable":"TRANSCRIPTION_PROVIDER",…}
+{"level":"error","message":"must be set explicitly on Vercel: EVALUATION_PROVIDER=gemini or EVALUATION_PROVIDER=anthropic. The local default is not used there. Set it for this environment in the Vercel project settings.","variable":"EVALUATION_PROVIDER",…}
+{"level":"error","message":"Server not configured: API routes, the app's pages and /api/health refuse until this is fixed","variables":["EVALUATION_PROVIDER",…]}
+```
+
+and then refuses like any other configuration problem: every API route 503, the app's pages 500, `/api/health` 503, so
+the production pipeline's post-deploy health check fails. It does **not** crash the server at start-up: a throwing
+start-up hook makes Next.js answer 500 on every route, which would also take down the pages that need no
+configuration (the `?mock=1` pages, the `/result` prototype). The defaults themselves are unchanged.
 
 ### One-time setup
 
@@ -134,7 +225,9 @@ Required:
 4. **Vercel → project → Settings**:
    - *Environments → Production → Branch Tracking*: `main`.
    - *Environment Variables*: `GEMINI_API_KEY`, `TRANSCRIPTION_PROVIDER=gemini`, `EVALUATION_PROVIDER=gemini`, `AUTH_SECRET`
-     (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Mark the secrets
+     (32+ random characters, `openssl rand -base64 48`), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Tick
+     `TRANSCRIPTION_PROVIDER` and `EVALUATION_PROVIDER` for every environment you deploy (Production and Preview): on
+     Vercel they have no default (see "AI providers"). Mark the secrets
      *Sensitive*; never prefix any with `NEXT_PUBLIC_`. **Tick only *Production* for the two `TURSO_*` variables** (untick
      Preview and Development; edit them if they were set for all environments).
    - *Git → Deploy Hooks*: none.
@@ -168,11 +261,14 @@ Do this once. Each step stops at the first problem and nothing after it has happ
 2. Do the one-time setup above (it can also be done before step 1).
 3. **Run the workflow, stage `check`.** It verifies the preflight (secrets, Vercel project, production branch, credential
    scope), the connection, the token, and that the database is empty or already CEFRO's. Expected:
-   `connected (read-only). 0 of 5 migrations applied, 5 pending`. It writes nothing.
+   `connected (read-only). 0 of N migrations applied, N pending` on an empty database (or `K of N …, N−K pending` on
+   one that is already CEFRO's), where **N is the number of migrations in the release** (the entries in
+   `src/server/db/migrations/meta/_journal.json`; `ls src/server/db/migrations/*.sql | wc -l` gives the same). It writes
+   nothing.
 4. **Back up if the database holds data.** The check stage refuses a database that has tables but no CEFRO migration history,
    so a database it accepts is either empty or already CEFRO's; for a CEFRO database with data, take a Turso backup first.
-5. **Run stage `migrate`.** Expected: `db:migrate: OK. 5 migrations applied, foreign key check clean`. This is the first
-   write to the database and is a single transaction.
+5. **Run stage `migrate`.** Expected: `db:migrate: OK. N migrations applied, foreign key check clean` (the same N). This
+   is the first write to the database and is a single transaction.
 6. **Run stage `deploy`.** It first confirms the database is fully migrated, deploys exactly the run's commit, and checks
    `/api/health` on the production domain.
 7. Open the production URL and run through "How to validate" below.
@@ -198,7 +294,7 @@ The migration runs before the new release is live, so for a while the **previous
 Migrations are *backward compatible*: add tables, columns (nullable or with a default) and indexes first; remove or rename
 things in a later release, once no running code uses them. CI helps (`scripts/ci/check-migrations.mjs`):
 
-- applied migrations (0000–0004 and every later one once merged) are immutable; editing or deleting one fails the check,
+- applied migrations (every migration already on `main`) are immutable; editing or deleting one fails the check,
 - timestamps in `meta/_journal.json` must increase (Drizzle would silently skip an older one),
 - a new migration containing `DROP`, `RENAME`, `DELETE FROM`, `TRUNCATE`, `PRAGMA foreign_keys`, `ADD … NOT NULL` without a
   default, `UPDATE`, `CREATE UNIQUE INDEX`, `CREATE TRIGGER` or a `CHECK` constraint fails unless it carries a
@@ -256,7 +352,7 @@ The development environment had no Turso credentials and no outbound access to T
 observed and must not be assumed:
 
 - the web client against the real service (authentication, latency of an attempt's ~20 statements),
-- migrations 0000–0004 on the hosted engine, including the table rebuild in 0002 and `foreign_key_check`,
+- the migrations on the hosted engine, including the table rebuild in 0002 and `foreign_key_check`,
 - foreign-key enforcement on hosted connections (the code relies on constraints; check with step 4 below),
 - writing and reading a ~2 MB blob,
 - contention between simultaneous instances.
@@ -266,7 +362,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
 
 ### How to validate once the variables are in Vercel
 
-1. Follow the first-rollout sequence above: stage `check`, then `migrate` (it must print `db:migrate: OK. 5 migrations applied, foreign key check clean`), then `deploy` (it must print the production URL and `post-deploy-check: OK`).
+1. Follow the first-rollout sequence above: stage `check`, then `migrate` (it must print `db:migrate: OK. N migrations applied, foreign key check clean`, N as in the first rollout), then `deploy` (it must print the production URL and `post-deploy-check: OK`).
 2. Open the deployment URL, record an answer of at least ~30 seconds, and watch it complete. The function logs show
    `Provider configuration OK`, the database kind (`turso`), `Speech activity checked`, then completion.
 3. Cross-instance check: submit several attempts, reload the page and open the history (requests land on different
@@ -277,7 +373,7 @@ two instances) and on a fake HTTP endpoint (client initialisation, bearer header
    ```bash
    export TURSO_DATABASE_URL=...   # not in a file that is committed
    export TURSO_AUTH_TOKEN=...
-   npm run db:migrate                      # idempotent: reports 5 migrations, foreign key check clean
+   npm run db:migrate                      # idempotent: reports N migrations (all of them), foreign key check clean
    # In the Turso shell (turso db shell <name>):
    PRAGMA foreign_key_check;                                   -- expect no rows
    SELECT count(*), sum(size_bytes) FROM recording_blobs;      -- matches the number of attempts you made

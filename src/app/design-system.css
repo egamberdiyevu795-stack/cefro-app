@@ -1,0 +1,66 @@
+/*
+ * CEFRO design system: the only tokens new pages may use.
+ * Every token is described in docs/design-system.md.
+ *
+ * Rules: no colours beyond these, no gradients except the radar fill, no shadow heavier than --shadow-card,
+ * no emojis. When unsure, choose the quieter option.
+ */
+@theme {
+  /* Type */
+  --font-ui: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 0.6875rem; /* 11px: axis labels, meta */
+  --text-caption--line-height: 1rem;
+  --text-label: 0.75rem; /* 12px: stat labels, list cells, status */
+  --text-label--line-height: 1rem;
+  --text-body: 0.8125rem; /* 13px: list names, buttons, search */
+  --text-body--line-height: 1.25rem;
+  --text-lead: 0.9375rem; /* 15px: the word next to the big number ("· target B2") */
+  --text-lead--line-height: 1.25rem;
+  --text-title: 1.0625rem; /* 17px: card titles */
+  --text-title--line-height: 1.5rem;
+  --text-heading: 1.75rem; /* 28px: the one page heading of the signed-out pages ("Practise the multilevel speaking exam") */
+  --text-heading--line-height: 2.25rem;
+  --text-stat: 2.25rem; /* 36px: the big number ("Band 3") */
+  --text-stat--line-height: 1;
+
+  /* Surfaces (grey levels, darkest last) */
+  --color-page: #e9e9ec; /* behind everything */
+  --color-shell: #f4f4f5; /* the large rounded frame on desktop */
+  --color-card: #fcfcfc; /* cards */
+  --color-well: #ececee; /* quiet fills inside a card: goal pill, quiet button, bar track */
+  --color-line: #e7e7e9; /* thin dividers */
+
+  /* Text */
+  --color-fg: #151517; /* titles, values */
+  --color-fg-muted: #5e5f64; /* labels, secondary cells */
+  --color-fg-subtle: #838489; /* icons only (inactive sidebar, status glyphs): 3:1 on every surface */
+
+  /* Action */
+  --color-primary: #151517; /* primary button, active sidebar square, goal check */
+  --color-on-primary: #ffffff;
+
+  /* Accent (the only hue): charts and progress */
+  --color-accent: #1f3be8;
+  --color-radar-core: #2f7bff; /* radar fill, centre */
+  --color-radar-edge: #d9ecff; /* radar fill, edge */
+
+  /* Positive change label */
+  --color-lime: #c8f26c;
+  --color-on-lime: #263409;
+
+  /* Neutral image placeholders (exam-part tiles, avatars), lightest to darkest; all pass 4.5:1 with white text */
+  --color-block-1: #737479;
+  --color-block-2: #65666b;
+  --color-block-3: #54555a;
+  --color-block-4: #424347;
+
+  /* Shape */
+  --radius-shell: 2.5rem; /* 40px */
+  --radius-card: 1.5rem; /* 24px */
+  --radius-tile: 1rem; /* 16px: tiles inside cards */
+  --radius-icon: 0.75rem; /* 12px: active sidebar square */
+
+  /* Elevation: the single soft shadow */
+  --shadow-card: 0 1px 2px rgb(21 21 23 / 0.03), 0 8px 24px -8px rgb(21 21 23 / 0.06);
+}

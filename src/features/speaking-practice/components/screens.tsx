@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardHeader, Icon, PillAction, PillButton, ProgressBar, ScoringLabel, cx, styles } from "@/components/ds";
+import { introBody } from "@/content/speaking/part-intro-audio";
 import { RECORDING_LOCKED_MESSAGE, type RecordingLock } from "@/domain/consent";
 import type { AttemptSummary } from "@/domain/speaking/attempt";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
@@ -651,5 +652,29 @@ export function InlineNotice({ title, children }: { title: string; children: Rea
     <p role="alert" className="rounded-tile bg-card p-4 text-body text-fg shadow-card">
       <span className="font-semibold">{title}</span> {children}
     </p>
+  );
+}
+
+/**
+ * The spoken introduction of a part (Part 2, Part 3), on its own screen as in the exam: "Listen", the part, what
+ * happens in it and the timings. Read aloud, then the chime, then the task with its one-minute countdown. The text is on
+ * screen too, so a student without sound misses nothing. No button.
+ */
+export function PartIntroCard({ part, text, goal, testId }: { part: string; text: string; goal: RetryGoal | null; testId?: string }) {
+  return (
+    <Card aria-labelledby="step-title" data-testid={testId ?? "part-intro"} className="mx-auto w-full max-w-2xl">
+      <p className="flex items-center gap-2 text-label font-semibold text-fg" aria-live="polite">
+        <Icon name="play" size={16} className="text-fg-subtle" />
+        Listen
+      </p>
+      <h1 id="step-title" className="mt-3 text-stat font-light tracking-[-0.03em] text-fg">
+        {part}
+      </h1>
+      <p className="mt-3 text-body text-fg" data-testid="intro-text">
+        {introBody(text)}
+      </p>
+      <p className="mt-4 text-label text-fg-muted">The minute of preparation starts by itself after the chime.</p>
+      {goal && <GoalCard goal={goal} className="mt-4" />}
+    </Card>
   );
 }

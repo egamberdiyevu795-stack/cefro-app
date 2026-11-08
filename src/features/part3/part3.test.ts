@@ -33,8 +33,7 @@ import Part3ResultPage from "@/app/result/part3/page";
 import { PART_LIVE } from "@/config/features";
 import { examStatus } from "@/features/entry/content";
 import { listArgumentTasks } from "@/content/speaking/part3";
-import { PART3_INTRO_AUDIO_FILES, PART3_INTRO_VOICE, part3Intro, part3IntroText } from "@/content/speaking/c1/part3-intro-audio";
-import { PART1_AUDIO_FILES } from "@/content/speaking/part1/question-audio";
+import { PART2_INTRO, PART3_INTRO, PART_INTRO_AUDIO_FILES, PART_INTRO_VOICE, introBody } from "@/content/speaking/part-intro-audio";
 import part1AudioManifest from "@/content/speaking/part1/question-audio.json";
 import { listSpeakingTasks } from "@/content/speaking";
 import { argumentTaskProblems, toPublicArgumentTask, type PointId } from "@/domain/speaking/argument-task";
@@ -149,7 +148,7 @@ describe("screens", () => {
   const SCREENS: [string, string, number][] = [
     ["brief", screen(createElement(Part3BriefCard, { task, goal: null, onStart: noop })), 1],
     ["brief (retry)", screen(createElement(Part3BriefCard, { task, goal, onStart: noop })), 1],
-    ["introduction (retry)", screen(createElement(Part3IntroCard, { text: part3IntroText(task), goal })), 0],
+    ["introduction (retry)", screen(createElement(Part3IntroCard, { text: PART3_INTRO.text, goal })), 0],
     ["preparation", screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, chosen: ["F1", "A1"], goal, onSkip: noop }), ["F1", "A1"], true), 0],
     ["recording", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 90_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: false, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
     ["recording, early warning", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 100_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: true, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
@@ -234,37 +233,49 @@ describe("mock-only files", () => {
   });
 });
 
-describe("spoken introduction (exam style, same offline voice as Part 1)", () => {
-  it.each(listArgumentTasks().map((t) => [t.id, t] as const))("%s: the introduction reads the statement and the timings and ends with the chime sample", (_id, task) => {
-    const intro = part3Intro(task);
-    expect(intro.text).toContain(task.statement);
-    expect(intro.text).toMatch(/one minute to prepare/);
-    expect(intro.text).toMatch(/two minutes to speak/);
-    expect(intro.text).toMatch(/Start speaking when you hear this sound\.$/);
-    expect(intro.audio).toBe(`/audio/speaking/part3/${task.id}/v${task.version}/intro.wav`);
+describe("spoken introductions of Part 2 and Part 3 (exam style, same offline voice as Part 1)", () => {
+  it("Part 2 and Part 3 each have one introduction that gives the timings and ends with the chime sample", () => {
+    for (const intro of [PART2_INTRO, PART3_INTRO]) {
+      expect(intro.text).toMatch(/one minute to prepare/);
+      expect(intro.text).toMatch(/two minutes to/);
+      expect(intro.text).toMatch(/Start speaking when you hear this sound\.$/);
+    }
+    expect(PART2_INTRO.text).toMatch(/^Part 2\. /);
+    expect(PART3_INTRO.text).toMatch(/^Part 3\. /);
+    expect(PART2_INTRO.audio).toBe("/audio/speaking/part2/intro/v1/intro.wav");
+    expect(PART3_INTRO.audio).toBe("/audio/speaking/part3/intro/v1/intro.wav");
   });
 
-  it("every introduction's audio was made from its current text (changing a statement fails until the audio is remade)", () => {
-    const expected = listArgumentTasks().map((t) => part3Intro(t)).map(({ audio, text }) => ({ path: audio, text }));
-    expect(PART3_INTRO_AUDIO_FILES).toEqual(expected);
+  it("the introductions' timings match every task (1 min to prepare, 2 min to speak)", () => {
+    for (const task of [...listArgumentTasks(), ...listSpeakingTasks()]) {
+      expect([task.id, task.preparationSeconds, task.speakingSeconds]).toEqual([task.id, 60, 120]);
+    }
+  });
+
+  it("our own wording, not the official introductions", () => {
+    for (const intro of [PART2_INTRO, PART3_INTRO]) {
+      expect(intro.text).not.toMatch(/I'm going to show you|Begin speaking|balanced argument to represent/i);
+    }
   });
 
   it("uses exactly the Part 1 voice and settings", () => {
-    expect(PART3_INTRO_VOICE).toEqual(part1AudioManifest.voice);
-    expect(PART1_AUDIO_FILES.length).toBeGreaterThan(0);
+    expect(PART_INTRO_VOICE).toEqual(part1AudioManifest.voice);
   });
 
-  it.each(PART3_INTRO_AUDIO_FILES.map((f) => [f.path] as const))("%s exists as a WAV file in /public", (file) => {
+  it.each(PART_INTRO_AUDIO_FILES.map((f) => [f.path] as const))("%s exists as a WAV file in /public", (file: string) => {
     const full = join(process.cwd(), "public", file);
     expect(statSync(full).size).toBeGreaterThan(10_000);
     expect(readFileSync(full).subarray(0, 4).toString("ascii")).toBe("RIFF");
   });
 
-  it("the introduction screen has its text, the goal on a retry, and no black button", () => {
-    const task = listArgumentTasks()[0];
-    const markup = renderToStaticMarkup(createElement(Part3IntroCard, { text: part3IntroText(task), goal: null }));
-    expect(markup).toContain(task.statement);
+  it("the introduction screen shows the part, its text without 'Part n.', the goal on a retry, and no black button", () => {
+    const goal = { objective: "Answer all three questions.", check: null };
+    const markup = renderToStaticMarkup(createElement(Part3IntroCard, { text: PART3_INTRO.text, goal }));
+    expect(markup).toContain("Part 3");
+    expect(markup).toContain(introBody(PART3_INTRO.text));
+    expect(markup).not.toContain("Part 3. In this part");
     expect(markup).toContain("Listen");
+    expect(markup).toContain("Your goal:");
     expect(blacks(markup)).toBe(0);
   });
 });

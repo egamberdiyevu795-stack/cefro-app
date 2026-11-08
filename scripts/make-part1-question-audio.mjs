@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Makes the Part 1 question audio and the Part 3 topic introductions (docs/part1-plan.md §1, decision 16): pre-generated text-to-speech, one clear neutral
+ * Makes the Part 1 question audio and the Part 2 and Part 3 introductions (docs/part1-plan.md §1, decision 16): pre-generated text-to-speech, one clear neutral
  * English voice for every task, stored with the content. Nothing calls a speech API at practice time.
  *
  * The texts, file paths, voice and settings live in src/content/speaking/part1/question-audio.json (and, for Part 3,
- * src/content/speaking/c1/part3-intro-audio.json, which must use the same voice block). A unit test checks
+ * src/content/speaking/part-intro-audio.json for the Part 2 and Part 3 introductions, which must use the same voice block). A unit test checks
  * that every Part 1 question's text and audio path match that file, so changing a question's wording fails the tests
  * until its audio is made again with this script (same voice, same settings).
  *
@@ -25,8 +25,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), "..");
-// Part 1 questions and introductions, then the Part 3 topic introductions: one voice and one set of settings for both.
-const MANIFESTS = ["src/content/speaking/part1/question-audio.json", "src/content/speaking/c1/part3-intro-audio.json"];
+// Part 1 questions and introductions, then the Part 2 and Part 3 introductions: one voice and one set of settings for all.
+const MANIFESTS = ["src/content/speaking/part1/question-audio.json", "src/content/speaking/part-intro-audio.json"];
 const manifests = MANIFESTS.map((file) => JSON.parse(fs.readFileSync(path.join(ROOT, file), "utf8")));
 const manifest = manifests[0];
 for (const other of manifests.slice(1)) {

@@ -1,5 +1,11 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { runSql } from "./db";
+import { shortPartIntros } from "./short-intro";
+
+// The Part 2 / Part 3 spoken introductions are shortened (e2e/short-intro.ts).
+test.beforeEach(async ({ context }) => {
+  await shortPartIntros(context);
+});
 
 const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
 /** Black buttons and links (the goal bar's black check square is a glyph, not a button). */

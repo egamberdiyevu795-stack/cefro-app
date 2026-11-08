@@ -24,9 +24,9 @@ type Phase =
   | { kind: "sending" };
 
 /**
- * The Part 3 practice loop in mock mode, in the exam's order: brief → the spoken introduction (the statement and the
- * timings, read by the same offline voice as Part 1) and the sample chime → one minute of preparation (choose two
- * points per side) → chime → two minutes of recording → chime when time is up → the demo result's "Scoring…" for the
+ * The Part 3 practice loop in mock mode, in the exam's order: brief → the spoken introduction on its own screen (what
+ * the part is and the timings, read by the same offline voice as Part 1) → chime → the task with the one-minute
+ * countdown (choose two points per side) → chime → two minutes of recording → chime when time is up → the demo result's "Scoring…" for the
  * points chosen. The chimes and the introduction are never recorded. The real recorder runs (so the microphone states
  * are real), but nothing is uploaded, no session or analytics is started, and no API is called. Part 3 has no real
  * flow yet. A missing or blocked introduction file never stops the part: its text is on screen and the chime follows.
@@ -158,7 +158,8 @@ export function Part3Practice({
       />
     );
   } else if (phase.kind === "intro") {
-    content = <PracticeLayout task={<StatementCard task={task} chosen={chosen} />} step={<Part3IntroCard text={intro.text} goal={goal} />} />;
+    // As in the exam: the introduction on its own; the statement and lists appear with the minute of preparation.
+    content = <Part3IntroCard text={intro.text} goal={goal} />;
   } else if (phase.kind === "preparing") {
     content = (
       <PracticeLayout

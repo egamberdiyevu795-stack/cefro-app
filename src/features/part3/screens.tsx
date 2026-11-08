@@ -1,7 +1,7 @@
 import { Card, CardHeader, Icon, PillAction, ProgressBar, cx } from "@/components/ds";
 import { POINTS_PER_SIDE, SIDE_LABELS, pointsOn, type PointId, type PublicArgumentTask, type Side } from "@/domain/speaking/argument-task";
 import { MicCheck } from "@/features/speaking-practice/components/MicCheck";
-import { Countdown, GoalCard, LevelMeter, SPEAK_NOW_MS } from "@/features/speaking-practice/components/screens";
+import { Countdown, GoalCard, LevelMeter, PartIntroCard, SPEAK_NOW_MS } from "@/features/speaking-practice/components/screens";
 import { formatClock, formatDuration } from "@/features/speaking-practice/lib/format";
 import type { RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
 
@@ -140,8 +140,8 @@ export function Part3BriefCard({
               Start
             </PillAction>
             <p className="mt-3 text-label text-fg-muted">
-              Turn your sound on. You will hear a short introduction and a chime, then the minute of preparation starts:
-              choose your points then. Recording starts by itself after the next chime.
+              Turn your sound on. You hear a short introduction and a chime, then the minute of preparation starts: choose
+              your points then. At 0:00 another chime, and recording starts by itself.
             </p>
           </>
         )}
@@ -159,27 +159,9 @@ function Timing({ label, seconds }: { label: string; seconds: number }) {
   );
 }
 
-/**
- * The spoken introduction (the statement and the timings), then the sample chime. Its text is on screen too, so a
- * student without sound misses nothing. No button: preparation starts by itself after the chime.
- */
+/** The Part 3 introduction screen (the shared exam-style introduction card). */
 export function Part3IntroCard({ text, goal }: { text: string; goal: RetryGoal | null }) {
-  return (
-    <Card aria-labelledby="step-title" data-testid="part3-intro">
-      <p className="flex items-center gap-2 text-label font-semibold text-fg" aria-live="polite">
-        <Icon name="play" size={16} className="text-fg-subtle" />
-        Listen
-      </p>
-      <h1 id="step-title" className="mt-3 text-stat font-light tracking-[-0.03em] text-fg">
-        Part 3
-      </h1>
-      <p className="mt-3 text-body text-fg" data-testid="intro-text">
-        {text.replace(/^Part 3\.\s*/, "")}
-      </p>
-      <p className="mt-4 text-label text-fg-muted">The minute of preparation starts by itself after the chime.</p>
-      {goal && <GoalCard goal={goal} className="mt-4" />}
-    </Card>
-  );
+  return <PartIntroCard part="Part 3" text={text} goal={goal} testId="part3-intro" />;
 }
 
 /** Preparation: one minute to choose 2 + 2 points and plan. "Start speaking now" (quiet) skips the rest. No black button. */

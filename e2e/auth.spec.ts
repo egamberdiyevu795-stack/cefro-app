@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { shortPartIntros } from "./short-intro";
 
 const TASK = "b2-part2-advice-from-someone";
 const TASK_URL = `/practice/speaking/${TASK}`;
@@ -8,6 +9,7 @@ let counter = 0;
 const uniqueEmail = (label: string) => `${label}-${run}-${++counter}@example.com`;
 
 async function recordAndSubmit(page: Page, speakMs = 2500) {
+  await shortPartIntros(page);
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare")).toBeVisible();
   await page.getByRole("button", { name: "Start speaking now" }).click();

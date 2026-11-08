@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
-import { part3Intro } from "@/content/speaking/c1/part3-intro-audio";
+import { PART3_INTRO } from "@/content/speaking/part-intro-audio";
 import { getArgumentTask } from "@/content/speaking/part3";
 import { toPublicArgumentTask } from "@/domain/speaking/argument-task";
 import { isMockQuery } from "@/features/demo/demo-mode";
@@ -43,7 +43,7 @@ export default async function Part3PracticePage(props: PageProps<"/practice/part
         retryOf={previous ? retryKey : null}
         goal={focus ? { objective: focus.objective, check: focus.success_check || null } : null}
         initialChosen={previous ? previous.result.chosen_points : []}
-        intro={part3Intro(task)}
+        intro={PART3_INTRO}
         timeScale={scale > 0 && scale <= 1 ? scale : 1}
       />
     </AppShell>

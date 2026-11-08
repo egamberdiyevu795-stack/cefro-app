@@ -3,11 +3,13 @@ import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attemp
 /**
  * State machine for one practice session on a task.
  *
- *  brief ──▶ preparing ──▶ recording ──▶ review ──▶ uploading ──▶ processing ──▶ result
+ *  brief ──▶ intro ──▶ preparing ──▶ recording ──▶ review ──▶ uploading ──▶ processing ──▶ result
  *    ▲                         ▲            │            │                          │
  *    │                         └─ re-record ┘     uploadFailed (recording kept)     │
  *    └──────────── retryBrief ◀───────────────────── "Retry this task" ◀────────────┤
  *                                                    comparison ◀── "Compare" ◀─────┘
+ *
+ * "intro" is the part's spoken introduction on its own screen (then the chime), as in the exam.
  *
  * Timers are stored as absolute deadlines (`endsAt`), so the displayed
  * countdown is always derived from this state, never kept separately.
@@ -15,6 +17,7 @@ import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attemp
 export type PracticePhase =
   | { kind: "brief" }
   | { kind: "retryBrief" }
+  | { kind: "intro" }
   | { kind: "preparing"; endsAt: number }
   | { kind: "recording"; endsAt: number }
   | { kind: "review" }
@@ -33,6 +36,7 @@ export interface PracticeState {
 }
 
 export type PracticeAction =
+  | { type: "introStarted" }
   | { type: "preparationStarted"; now: number; preparationMs: number }
   | { type: "recordingStarted"; now: number; speakingMs: number }
   | { type: "recordingStopped" }
@@ -53,6 +57,8 @@ export const initialPracticeState: PracticeState = { phase: { kind: "brief" }, r
 
 export function practiceReducer(state: PracticeState, action: PracticeAction): PracticeState {
   switch (action.type) {
+    case "introStarted":
+      return state.phase.kind === "brief" || state.phase.kind === "retryBrief" ? { ...state, phase: { kind: "intro" } } : state;
     case "preparationStarted":
       return { ...state, phase: { kind: "preparing", endsAt: action.now + action.preparationMs } };
     case "recordingStarted":

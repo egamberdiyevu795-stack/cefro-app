@@ -2,6 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_DATA_DIR, querySql } from "./db";
+import { shortPartIntros } from "./short-intro";
+
+// The Part 2 / Part 3 spoken introductions are shortened (e2e/short-intro.ts).
+test.beforeEach(async ({ context }) => {
+  await shortPartIntros(context);
+});
 
 /*
  * The Account page (/profile; /settings redirects to it): mock mode with the demo student (nothing sent, every link

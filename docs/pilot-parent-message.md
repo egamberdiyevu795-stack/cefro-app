@@ -11,6 +11,8 @@ Before sending:
 - Points marked **[CHECK]** need a lawyer; the first lawyer question (data stored abroad) is still open.
 - **30-day audio deletion is built** (a daily job), but it runs only on the production deployment with `CRON_SECRET`
   set (`docs/launch-checklist.md`, section 11). Don't send the message before that is live.
+- The 30 days are for **CEFRO's own copy**. The AI service may keep request data for a while under its own terms (for
+  Gemini, its abuse-monitoring page says 55 days); the message says so and promises nothing about that copy.
 - Teacher view is off in the pilot, so the message asks nothing about teachers.
 - No price and no "free" claim (owner's rule until the pricing is decided): the word was removed from all three texts.
 
@@ -33,11 +35,12 @@ elektron pochta manzili.
 yuboriladi. Ma'lumotlar O'zbekistondan tashqaridagi serverlarda saqlanadi [CHECK]. O'qituvchilar hech narsani
 ko'rmaydi.
 
-**Qancha saqlanadi:** ovozli yozuvlar baholangandan keyin 30 kun o'tib o'chiriladi [CHECK]. Matn va natijalar akkaunt
-o'chirilguncha saqlanadi.
+**Qancha saqlanadi:** bizdagi ovozli yozuvlar baholangandan keyin 30 kun o'tib o'chiriladi [CHECK]. Matn va natijalar
+akkaunt o'chirilguncha saqlanadi. Sun'iy intellekt xizmati so'rov ma'lumotlarini o'z qoidalariga ko'ra cheklangan
+muddat (masalan, suiiste'mollikni aniqlash uchun) saqlashi mumkin; bu nusxani biz o'chira olmaymiz [CHECK].
 
 **Qanday o'chiriladi:** farzandingiz istalgan vaqtda ilovadagi "Account" sahifasida "Delete my account" orqali
-hamma narsani o'chirishi mumkin. Yoki menga yozing, men barcha ma'lumotlarni o'chiraman. Roziligingizni istalgan
+hamma narsani o'chirishi mumkin. Yoki menga yozing, men CEFRO saqlagan barcha ma'lumotlarni o'chiraman. Roziligingizni istalgan
 vaqtda qaytarib olishingiz mumkin.
 
 Agar rozi bo'lsangiz, iltimos, shu xabarga **"ha"** deb javob yozing va ismingizni hamda farzandingizga kim
@@ -63,11 +66,12 @@ Asadbek, [telefon yoki Telegram]
 **Кто видит:** только ваш ребёнок и я. Записи отправляются на оценку в сервис искусственного интеллекта
 ([провайдер]). Данные хранятся на серверах за пределами Узбекистана [CHECK]. Учителя ничего не видят.
 
-**Сколько хранится:** голосовые записи удаляются через 30 дней после оценки [CHECK]. Текст и результаты хранятся,
-пока аккаунт не удалён.
+**Сколько хранится:** наша копия голосовых записей удаляется через 30 дней после оценки [CHECK]. Текст и результаты
+хранятся, пока аккаунт не удалён. Сервис искусственного интеллекта может по своим правилам хранить данные запросов
+ограниченное время (например, для выявления злоупотреблений); эту копию мы удалить не можем [CHECK].
 
 **Как удалить:** ребёнок в любой момент может удалить всё на странице «Account» в приложении («Delete my account»).
-Или напишите мне, и я удалю все данные. Вы можете отозвать согласие в любой момент.
+Или напишите мне, и я удалю все данные, которые хранит CEFRO. Вы можете отозвать согласие в любой момент.
 
 Если вы согласны, пожалуйста, ответьте на это сообщение **«да»** и укажите ваше имя и кем вы приходитесь ребёнку
 (мать, отец или опекун) [CHECK: достаточно ли такого ответа].
@@ -92,11 +96,12 @@ sign in.
 **Who sees it:** only your child and me. Recordings are sent to an AI service ([provider]) to be scored. The data is
 stored on servers outside Uzbekistan [CHECK]. Teachers see nothing.
 
-**How long:** voice recordings are deleted 30 days after scoring [CHECK]. Text and results are kept until the account
-is deleted.
+**How long:** we delete our copy of the voice recordings 30 days after scoring [CHECK]. Text and results are kept
+until the account is deleted. The AI service may keep request data for a limited time under its own rules (for
+example, to detect misuse); we cannot delete that copy [CHECK].
 
 **How to delete it:** your child can delete everything at any time on the app's Account page ("Delete my account").
-Or message me and I will delete all the data. You can withdraw your consent at any time.
+Or message me and I will delete all the data CEFRO holds. You can withdraw your consent at any time.
 
 If you agree, please reply **"yes"** to this message with your name and your relationship to the child (mother,
 father or guardian) [CHECK: whether such a reply is enough].

@@ -24,11 +24,16 @@ private person. Bring: `docs/consent-design.md`, `docs/privacy-notice-draft.md`,
    parent replies be kept, and for how long?
 7. **Audio retention.** We plan to delete audio 30 days after scoring and keep transcripts and feedback until the
    account is deleted. Is 30 days acceptable, or must it be shorter? Is a voice recording treated as biometric or
-   special-category data? The scoring providers receive the audio inside each request (we store nothing with them),
-   but may keep request data for a time under their own terms: is that acceptable, and must the notice say so?
+   special-category data?
 8. **Teachers.** When a student shares answers with a teacher, does the teacher (or their school) need a written
    agreement with us? Are they responsible for what they see?
 9. **Anonymous pairs.** Is "teacher level + our level + month", with no ids, anonymous data we may keep forever?
 10. **Language and form.** Must the notice and terms be in Uzbek (the state language)? Which version binds? Is a
     tick box enough to accept the terms, and can a minor accept them?
 11. **Anything else** in the drafts marked [CHECK] that is wrong or missing.
+12. **Provider retention.** The scoring providers receive the audio and transcript inside each request; we store no
+    file with them, but they may keep request data for a limited time under their own terms (Gemini's
+    abuse-monitoring page says 55 days, also on paid plans; OpenAI has its own terms). We can't delete that copy. Is
+    this acceptable for minors' voices? Must the notice name the provider and its retention period, and is our wording
+    ("we delete our copy after 30 days; the AI service may keep request data for a limited time") enough? Do we need a
+    data processing agreement with the provider?

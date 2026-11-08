@@ -73,7 +73,7 @@ We do not sell your data and do not show ads.
 
 ## 6. How long we keep it
 
-- **Voice recordings: deleted 30 days after the answer is scored** [CHECK: whether a shorter period is required].
+- **Voice recordings (our copy): deleted 30 days after the answer is scored** (the scoring providers may keep request data for a limited time under their own terms, see above; Gemini says 55 days) [CHECK: whether a shorter period is required].
 - Account, transcripts, feedback, results: until you delete your account [CHECK: whether a maximum period must be set].
 - Under-18 accounts waiting for a parent: 14 days.
 - Consent records: as long as the account exists [CHECK: whether proof must be kept after deletion, and for how long].

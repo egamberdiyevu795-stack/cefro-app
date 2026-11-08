@@ -98,8 +98,13 @@ Whether this is enough is lawyer question 2.
   hosted setup, files locally). Failed attempts, and attempts stuck before scoring, lose their audio 30 days after their
   last change. The recording row stays, marked, so the result page says "Recording deleted on …"; transcript and
   feedback stay. **Provider side:** audio is sent inline in the scoring request and never uploaded to a provider's file
-  store (a test checks this), so there is no provider copy for us to delete; what Google or OpenAI keep from requests
-  for their own purposes is their policy (lawyer question 1 and 7). **Vercel runs crons on the production deployment
+  store (a test checks this), so CEFRO keeps no stored file there. That does **not** mean no copy exists: providers may
+  keep request data for a limited time under their own terms, which we can't delete. Gemini's abuse-monitoring page
+  (ai.google.dev/gemini-api/docs/usage-policies, checked 2026-11-08) says prompts and outputs are kept **55 days**, for
+  paid use too; the free tier may also use content to improve Google's products, with human review, so **only made-up
+  answers go to the free tier**. Gemini API **logging** (developer logs, up to 55 days, on by default for projects
+  created from 26.10.26) would be a copy in our own project: keep it **off** (launch checklist, section 11). OpenAI, if
+  used, has its own terms. Our promise is only about our own copy (lawyer question 12). **Vercel runs crons on the production deployment
   only**, so until the app is deployed to production nothing deletes audio on its own; nobody records before that
   anyway.
 - **Not in the pilot:** deleting waiting accounts after 14 days (decision 4) needs the age question of the full design;

@@ -248,5 +248,8 @@ Before inviting any pilot tester (`docs/consent-design.md`, section 2b):
 4. **Owner's machine:** with the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in the shell,
    `node scripts/set-consent.mjs <email> granted` for each tester whose (parent's) written "yes" you hold, and
    `node scripts/delete-account.mjs <email> --yes` when someone asks for deletion (run it once without `--yes` first).
-5. **Before sending the parent message:** native check of the Uzbek and Russian, the lawyer's answer on data location
+5. **Gemini API logging off:** in Google AI Studio, check that request logging is off for the production project
+   (projects created from 26.10.26 have it on by default; logs keep prompts, including audio, up to 55 days). This is a
+   copy we control; the provider's own abuse-monitoring copy (55 days) we can't delete.
+6. **Before sending the parent message:** native check of the Uzbek and Russian, the lawyer's answer on data location
    (lawyer question 1, still open), and steps 1 to 3 done.

@@ -6,8 +6,9 @@ import { describe, expect, it } from "vitest";
  * Provider-side audio (docs/consent-design.md, "Audio after 30 days"). The 30-day deletion can only reach audio CEFRO
  * stores. So the app must never leave a stored copy at a scoring provider that it would then have to delete: audio goes
  * inline in the request (Gemini `inlineData`) or as the body of one transcription request (OpenAI
- * `/audio/transcriptions`), never through a provider's file store (Gemini Files API, OpenAI or Anthropic Files). What
- * the providers keep for their own abuse monitoring is their policy, listed for the lawyer, not something we can delete.
+ * `/audio/transcriptions`), never through a provider's file store (Gemini Files API, OpenAI or Anthropic Files). This
+ * does NOT mean the provider keeps nothing: providers may keep request data for a limited time under their own terms
+ * (Gemini abuse monitoring: 55 days). We can't delete that copy; the parent message says so (lawyer question 12).
  * If this test fails, a provider file upload was added: delete the file right after scoring, or keep audio inline.
  */
 

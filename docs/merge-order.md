@@ -385,6 +385,19 @@ Contains (docs/design-system.md, "Signed-out pages"; docs/growth-plan.md, phase 
   switches in each state), `mock-pages.test.ts` (home's demo link), `e2e/entry-pages.spec.ts` (390 px audits, demo
   link, the list follows `PART_LIVE`, no name at sign-up, the server's name rule).
 
+## Right after `claude/landing`: `claude/integration-chgcwb` (docs only, no migration)
+
+Cut from `claude/landing` (`b528b15`), so it comes **after it**, merge commit, no squash. One commit, docs only:
+`docs/launch-checklist.md` (the checks run on the whole chain, the merge commands, migration, live-check, deploy and
+rollback steps). No app code, no migration, no new environment variable.
+
+## Right after `claude/integration-chgcwb`: `claude/launch-cleanup` (no migration)
+
+Cut from `claude/integration-chgcwb` (`ced5367`), so it comes **after it**, merge commit, no squash. Branch name:
+`claude/launch-cleanup` (14 characters after `claude/`). No database migration, no new environment variable.
+Preview (mock pages only, no variables): `https://cefro-app-mgm6-git-claude-launch-cleanup-crm-b915.vercel.app/dashboard?mock=1`.
+Contents: see the commits on the branch and `docs/launch-checklist.md` ("Coming soon / mock-only", live check).
+
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)
 
 claude/entry-pages-jgh558: duplicate, never merge. (It holds the first two commits of `claude/entry-pages` and is

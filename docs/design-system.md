@@ -95,7 +95,7 @@ navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `b
 ## Navigation: five tabs
 
 Rail on desktop, bottom bar on phones, the same five tabs in this order: **Home** (`/dashboard`), **Practice** (`/practice`, the task list; it was `/` until the signed-out home page),
-**Lessons** (flag `lessons`: "Coming soon"), **History** (`/history`, flag `history`), **Account** (`/profile`). The
+**Lessons** (`/lessons`, the list of approved lessons), **History** (`/history`, flag `history`), **Account** (`/profile`). The
 Account tab is a plain link (`AccountTab`), no menu, always shown; it carries `data-testid="account-status"` and
 `data-state` (signed in or not). There is no Settings (gear) tab: Profile and Settings were merged into the Account
 page (approved by Asadbek, 2026-11-07), and `/settings` redirects to `/profile`, keeping `?mock=1`. The current tab is
@@ -103,15 +103,19 @@ the grey square. In mock mode every tab keeps `?mock=1`.
 
 ## Feature flags
 
-Elements that are designed but not built are kept in the design behind flags in `src/config/features.ts`:
-notifications (bell), search, Mock exam link, "Last 30 days" filter, sidebar Lessons, the attempt
-row menu (Delete, Report a wrong score). Two flags now cover built features (both on): `history` (the sidebar item and
-"See all" are real links to `/history`; off: not rendered and `/history` is a 404) and `examCountdown` (the real exam
-date: question, countdown, Edit, Add exam date; off: not rendered and Practise next takes the full row).
+**No control that does nothing** (launch cleanup, 2026-11-08). The designed-but-unbuilt "Coming soon" controls are
+gone in every mode, with their flags and the `ComingSoon` components: notifications (bell), search, the Mock exam link,
+the "Last 30 days" filter, the attempt row menu (Delete, Report a wrong score) and the result page's placeholder "Play
+recording". The Lessons tab is a real link. A new unbuilt feature is not shown until it works. Browser test:
+`e2e/no-dead-controls.spec.ts` (no disabled control once the page is ready, every button does something when tapped,
+every link opens a page, no "Coming soon" except the exam-part status).
 
-- **Flag on** (prototype default): the element is shown exactly as designed; tapping it shows a small "Coming soon".
+Two flags remain, both for built features (both on): `history` (the sidebar item and "See all" are real links to
+`/history`; off: not rendered and `/history` is a 404) and `examCountdown` (the real exam date: question, countdown,
+Edit, Add exam date; off: not rendered and Practise next takes the full row).
+
 - **Flag off:** the element is not rendered. Neighbours fill the space (e.g. "Practise next" takes the full row when
-  the countdown is off; the search row disappears on phones).
+  the countdown is off).
 - **Exam parts are live or not** (`PART_LIVE`, in the same file): one switch per part. On: the tile says "Start"
   ("Practise" once tried) and links to the part's tasks. Off: "Coming soon", no link. All four tiles are always shown.
   Part 2 is live; 1.1, 1.2 and 3 are not. These are release switches, not preview flags: `?flags=off` leaves them as they
@@ -122,8 +126,7 @@ date: question, countdown, Edit, Add exam date; off: not rendered and Practise n
 ## Dashboard (real data)
 
 Everything on `/dashboard` about the student comes from their own attempts (`listAttemptHistory`, the same owner rule
-as History and the result page) and their exam date. Only the first visit's wording, the navigation and the flagged
-"Coming soon" controls are fixed. Every number is computed by pure, unit-tested functions in
+as History and the result page) and their exam date. Only the first visit's wording and the navigation are fixed. Every number is computed by pure, unit-tested functions in
 `features/dashboard/progress.ts` (and `domain/exam-date.ts`); the page only loads data and lays out cards.
 
 "Scored" = a completed Multilevel result that is a rating: not "too short to rate", not old-method, not still being
@@ -161,7 +164,7 @@ scored, not failed.
   "Not tried yet", "Start". A part with tasks opens its section of the task list (Part 2: `/practice#part-2`, where the
   student picks one of the 7 tasks), when the part is live (`PART_LIVE`). A part not live yet (1.1, 1.2, 3) has **no
   link**: its tile says "Coming soon". All four tiles are always shown.
-- **Recent attempts:** the History rows (latest 4); the flagged row menu is hidden on phones, where it squeezed the
+- **Recent attempts:** the History rows (latest 4), no row menu (removed at launch; it used to be hidden on phones, where it squeezed the
   task name onto two lines.
 - **Phone order:** Practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
 - **Account** (with Log out) is always in the nav, whatever the flags, now the real account (`source="real"`).
@@ -250,7 +253,7 @@ scored, not failed.
 | `--color-line` | `#e7e7e9` | `border-line`, `bg-line` | Thin dividers (card header, stat-row divider, top-bar divider), radar grid. |
 | `--color-fg` | `#151517` | `text-fg` | Titles, values, list names, body. |
 | `--color-fg-muted` | `#5e5f64` | `text-fg-muted` | Labels ("Attempts this month"), secondary cells, placeholders, "See all". |
-| `--color-fg-subtle` | `#838489` | `text-fg-subtle` | Icons only (inactive sidebar, status glyphs, clock, bell), radar axis that was not assessed. Not for text. |
+| `--color-fg-subtle` | `#838489` | `text-fg-subtle` | Icons only (inactive sidebar, status glyphs, clock), radar axis that was not assessed. Not for text. |
 | `--color-primary` | `#151517` | `bg-primary` | Primary pill button, active sidebar square, goal check square. |
 | `--color-on-primary` | `#ffffff` | `text-on-primary` | Text and glyphs on `primary` and on `block-*`. |
 | `--color-accent` | `#1f3be8` | `bg-accent`, `border-accent` | The only hue: radar outline and dots, progress-bar fill, quote rule, focus ring. |
@@ -292,7 +295,7 @@ One family: Inter (`font-ui`, loaded with `next/font/google` in `src/app/layout.
 | --- | --- | --- | --- |
 | `--text-caption` | 11 / 16 px | `text-caption` | Small meta: "Current level", tile lines, list subtitles, lime label. The smallest text allowed anywhere. |
 | `--text-label` | 12 / 16 px | `text-label` | Stat rows, list cells, status labels, header actions ("Last 30 days", "See all"). |
-| `--text-body` | 13 / 20 px | `text-body` | List names (semibold), buttons (medium), search, quotes. |
+| `--text-body` | 13 / 20 px | `text-body` | List names (semibold), buttons (medium), quotes. |
 | `--text-lead` | 15 / 20 px | `text-lead` | The words beside the big number ("· target B2"), medium. |
 | `--text-title` | 17 / 24 px | `text-title` | Card titles, medium weight, slight negative tracking. Quiet: never bold. |
 | `--text-heading` | 28 / 36 px | `text-heading` | The one page heading of the signed-out pages ("Know exactly what to fix before your speaking exam", "Welcome back"), medium weight, tight tracking. |
@@ -314,7 +317,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 ## Layout
 
 - **Desktop (≥ 1024 px):** `bg-page`, then a rounded `bg-shell` frame (max 1280 px, 24 px padding). Left: a 48 px icon
-  rail with the wordmark on top. Right: the top bar (search left; quiet text actions, a thin divider and a bell right),
+  rail with the wordmark on top. Right: the top bar (quiet text actions on the right: "All tasks"; hidden on phones),
   then a two-column grid (`1fr` | `~0.44fr`, 16 px gaps). Cards use 24 px padding.
 - **Phone (< 1024 px):** one column, 16 px side gutters, 20 px card padding. The rail becomes a fixed bottom bar with the
   same items and the same grey active square; the page gets bottom padding so nothing hides under it.
@@ -331,7 +334,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `Notice` | A short message in a `well` box (`rounded-tile`, `text-body`, `fg`): `tone="alert"` for a problem to fix, `status` (default) for news ("Your account and all your data were deleted."). Off a card pass `bg-card`. Words only, never colour. |
 | `WordmarkLink` | The CEFRO wordmark as a link (`text-body`, semibold, wide tracking). The dashboard's `Wordmark` is this with its own link. |
 | `PillButton` | Pill link. `primary` = near-black (main action, e.g. "Start retry"); `quiet` = grey well (e.g. "View report"); `light` = card-white, for pills that sit on a `well` surface. Sizes `lg` (44 px, 13 px text: the one main action of a practice step, easy to hit on a phone), `md` (36 px, 13 px text) and `sm` (28 px, 12 px text). Optional leading icon and `label` (accessible name when the visible text repeats, e.g. "Practise Part 2"). |
-| `IconButton` | Round icon-only button (bell, row menu). Needs a `label`. |
+| `IconButton` | Round icon-only button. Needs a `label`. |
 | `ScoringLabel` | The only attempt status: grey hourglass + "Scoring…", shown in place of the level while an answer is processed. No Passed/Failed, no colour. |
 | `DeltaLabel` | Small lime pill for an improvement. Only for positive change. |
 | `DemoLabel` | "Demo result. Your answer was not scored." (`variant="mode"`: "Demo mode. Your answer won't be scored.", practice and task list in mock mode; `variant="data"`: "Demo mode. These are example attempts, not yours.", dashboard and History in mock mode). A `well` pill (or `card` off a card) with the `info` glyph, `text-label` (12 px), `fg` text (15.46:1 on well, 17.78:1 on card; glyph `fg-subtle` 3.16 / 3.64:1), `role="note"`, not a button. On every screen built from mock data: at the top of the result card of the `/result` prototype (every state: result, retry, Scoring…, couldn't score) and above the step card of the practice page's mock mode (`?mock=1`). Real results never pass `demo`; tests check both. |
@@ -341,10 +344,9 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `RadarChart` | Radar on ordinal rings (Below B1, B1, B2, Above B2), thin grey grid, accent outline and dots, the soft gradient fill. A skill that was not assessed (`value: null`, e.g. pronunciation when the audio check did not run) gets a dashed axis, a hollow dashed point at the axis end, no polygon vertex, and the label "Not assessed". **No text under 11 px:** two fixed-size versions are picked by the chart's own width (container query). At 23rem (368 px) and wider: full names and ring names at their natural size. Narrower: short names (Gram, Vocab, Flu, Coh, Pron), no ring names, and the level of each skill listed under the chart. The list is always there for screen readers. |
 | Part tile (pattern, dashboard) | `well` tile with `rounded-tile`: part (caption, semibold) and its name, the band as the largest text (`text-title`, "Band 2"), its label below (`text-label`, muted, "Higher B1"), and a small `light` pill ("Practise"; "Start" for an untried part, same tile). |
 | `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), optional trailing `menu`. `Thumb` is the neutral avatar/photo placeholder. |
-| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` grey (`well`) square with a dark glyph (never black: see "One primary action per screen"). An item with `soon: true` looks the same and says "Coming soon". |
-| `TopBar`, `TopBarLink`, `SearchSoon` | Optional search on the left, quiet text actions with small grey glyphs on the right. `TopBarLink soon` and `SearchSoon` are future entry points that say "Coming soon". |
-| `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Used by the row menu and the Account menu. |
-| `ComingSoonButton`, `ComingSoonMenu`, `ComingSoonToast` | Future controls behind a feature flag. The button takes the real control's classes (from `styles.ts`), so it looks identical; tapping it shows the toast. The menu is a ⋮ button with a small card menu whose items all say "Coming soon" (closes on Escape or outside tap). The toast is one small near-black pill ("Coming soon") near the bottom, a polite live region; mount it once per page. |
+| `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` grey (`well`) square with a dark glyph (never black: see "One primary action per screen"). Every item is a real link. |
+| `TopBar`, `TopBarLink` | Quiet text actions with small grey glyphs, on the right. |
+| `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Used by the Account menu. |
 | `styles.ts` | Shared class strings (focus ring, icon button, nav item, text actions), so server and client components render a control the same way. |
 | `AppShell` (`features/shell`) | The task-page frame (result, practice): page, shell, rail / bottom bar, back link. `account={false}` leaves out the mocked Account menu; `headerEnd` adds header content (the practice page's real sign-in state). |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |
@@ -353,6 +355,9 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 
 Design prototype of the page a student sees after an answer. Mock data only, no model calls: every scored result is a
 saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-flash, **not** the production model).
+**Only in mock mode:** `/result` needs `?demo=<key>` or `?mock=1`; a bare `/result` (an old link, a guessed address)
+is the not-found screen, so no student ever sees the saved runs as if they were theirs. Real attempts are at
+`/result/[attemptId]`.
 
 - **Real types, no UI change later.** The page renders only `ResultPageState`, built by
   `src/features/result/view-model.ts` from a `ResultSource`: the attempt's status, failure, transcript and the
@@ -368,7 +373,7 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   (the student's quote, "Try instead", the retry goal, the black "Retry with this goal", the quiet "Learn how" when an
   approved lesson matches the fix: see [Lessons](#lessons-lessonsslug))
   → Skills (each feature folded in a `<details>`: level, then quote and why; Pronunciation "Not assessed" when the audio
-  step didn't run) → Your answer (flagged "Play recording", transcript).
+  step didn't run) → Your answer (the recording's player when there is one, transcript).
 - **Desktop:** [Result, Biggest fix, Your answer] | [Questions, Skills].
 - **Biggest fix** follows the scorer's `biggest_fix`: a feature → the first error of that type and its correction (or
   their own words and the evaluator's instruction when there is no error); a question → what they said for it, or the
@@ -386,7 +391,7 @@ saved live evaluator output from `test/fixtures/live-3.6-flash/` (gemini-3.6-fla
   band 0 run), `?state=scoring|too-short|no-speech|retry`, `?flags=off`, `&from=<fixture id>&fromRun=n` (the attempt
   a retry comes from: its goal on Scoring… and the one the retry result checks), `&next=1` (Scoring… opens the result
   after about 4 s: used by the practice page's mock mode).
-- **New flags:** `recordingPlayback` (and `fixLesson`, removed once lessons were built). **New icons:** `play`, `partly`, `cross`, `info`. **New style:** `PILL_QUIET`.
+- **New flags:** none left (`recordingPlayback` and `fixLesson` were removed). **New icons:** `play`, `partly`, `cross`, `info`. **New style:** `PILL_QUIET`.
 - **Demo label:** every prototype screen starts its result card with `DemoLabel` ("Demo result. Your answer was not
   scored."), so a tester can't mistake a saved demo score for their own. Real attempts (`/result/[attemptId]`) never
   show it.
@@ -418,12 +423,13 @@ itself (it used to come from the `(site)` layout), except in mock mode.
   "Finish anyway"; the recording keeps running. At 0:00 it finishes by itself, without the warning.
 - **Start of speaking:** when the minute of preparation runs out, recording starts by itself (it always did). It now
   also plays the chime, shows "Speak now" beside "Recording" for 4 s and announces "Recording started. Speak now." to
-  screen readers. Same when the student skips with "Start speaking now". The chime is **Part 1's sound file**
-  (`public/audio/speaking/part1/placeholder/chime.wav`, byte-identical to the one on `part1-player`, an original
-  placeholder tone), so both parts sound the same; it replaced the generated beep. `lib/chime.ts` loads and decodes it
-  during the "Start preparation" click (which also unlocks audio), plays it with Web Audio, and resolves when it has
-  ended (0.4 s; a watchdog settles it 0.5 s later if the browser never reports the end): recording starts only then,
-  so the chime is never recorded. Sound failures (file missing, decode error, no Web Audio) are ignored.
+  screen readers. Same when the student skips with "Start speaking now". The chime is **made in code** (`lib/chime.ts`,
+  Web Audio, no sound file; the placeholder `.wav` it replaced is deleted): two soft sine tones, E5 (659 Hz) then A5
+  (880 Hz) 0.16 s later, each 0.34 s with a 15 ms fade-in and a smooth fade-out, peak gain 0.18, 0.5 s in all. The
+  audio context is created only inside the "Start preparation" click (which also unlocks audio), so the chime can never
+  play before the student presses a button; `playChime()` without it does nothing. It resolves when the last tone has
+  ended (a watchdog settles it 0.5 s later if the browser never reports the end): recording starts only then, so the
+  chime is never recorded. Sound failures (no Web Audio, a suspended output) are ignored.
 - **4. After Finish:** the answer is sent at once (there is no listen-back step any more), then the attempt's own
   result page opens (`/result/[attemptId]`, see "Result address" below): **"Scoring…"** (the same `ScoringResult`
   component, with the transcript as soon as it exists and a quiet line if checking is slow), then the **new result
@@ -474,7 +480,7 @@ the prototype.
   failure screen. An attempt scored with the old method (no Part band) gets a short notice instead.
 - **Actions** take a link or a callback (`ActionTarget`): on `/result/[attemptId]` "Compare" and "Try again" act on the
   page, "Retry with this goal" and "Record again" open the practice page; on the prototype they are all links.
-- **Real-only parts:** a real audio player for the stored recording (instead of the flagged "Play recording"); a
+- **Real-only parts:** a real audio player for the stored recording (no placeholder when there is none); a
   quiet "Development evaluator." note when the mock evaluator scored it; "Compare with your last attempt" (quiet, small)
   on a retry whose previous attempt is loaded (it is fetched when missing).
 - **Retry comparison** (`features/result/comparison.tsx`): attempt N-1 vs N as two band tiles, the honest verdict
@@ -531,8 +537,7 @@ without JavaScript and a filtered view has its own address.
   chart). **Phone:** filter, chart, list.
 - **Owner only:** the caller is identified exactly as on the result page (`findCurrentUserId`) and only rows recorded
   under that user id are read (`listAttemptsForUser`). A browser with no identity yet sees the empty state.
-- **Dashboard:** Recent attempts lists the same rows (the latest 4, real data, same row component; the flagged row menu
-  sits beside each row) and "See all" links here. The rest of the dashboard is still mocked. If the attempts cannot be
+- **Dashboard:** Recent attempts lists the same rows (the latest 4, real data, same row component) and "See all" links here. The rest of the dashboard is still mocked. If the attempts cannot be
   read, only that card says so.
 - **Checks:** `features/history/view-model.test.ts` (order, level and band, statuses, retries and goals, filter,
   paging, chart threshold and target, markup: one black button only on the empty state, no text under 11 px);
@@ -578,9 +583,22 @@ through end to end.
   real pages still refuse), `server/demo/demo-data.test.ts` (every demo attempt's result has the attempt's task id and questions), `e2e/mock-mode.spec.ts` (also on a production build:
   `npm run test:e2e:preview`).
 
-## Lessons (`/lessons/[slug]`)
+## Lessons (`/lessons`, `/lessons/[slug]`)
 
-The lesson for a result's biggest fix (`docs/teaching-plan.md`). Content in `src/content/lessons/`, copied word for word
+**Lessons list (`/lessons`, the Lessons tab):** every approved lesson (`shownLessons`), one row each: book glyph, the
+title (semibold) and the lesson file's Variant field ("Part 2 (B2)", caption, muted), a chevron; the whole row (56 px)
+opens the lesson. No other text: no lesson has an approved one-line summary, and none is invented. No black button.
+`?mock=1` keeps every link in mock mode; without it the page checks the configuration like every real page (it reads
+no database). `src/features/lessons/LessonList.tsx`.
+
+**A lesson opened from the list** (`/lessons/<slug>`, no result in the address): the same lesson, explanation,
+examples and drill, but no result to fill it from, so no "Why this lesson", no goal, no "Ready for your retry" and no
+"Retry with this goal". The caption is "Lesson · Part 2 (B2)", the back link says "Lessons" (to the list), and the last
+card, "Practise Part 2", has the lesson's own "Remember:" line and the one black **"Go to Part 2"** (the Part 2 task
+list, `/practice#part-2`). That wording is reused from the Account page and is **for the owner's review**
+(`src/features/lessons/no-result.ts`). Every approved lesson is a Part 2 lesson today (a test checks it).
+
+**A lesson opened from a result** ("Learn how"): unchanged, below. The lesson for a result's biggest fix (`docs/teaching-plan.md`). Content in `src/content/lessons/`, copied word for word
 from `docs/lessons/drafts/` (a test compares every string with its file). Only **approved** lessons are ever shown
 (`getShownLesson`, `lessonForResult`); a draft never gets a link or a page. Today: L-T1, L-T8, L-T4 (B2), approved by
 Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks they match).
@@ -603,7 +621,7 @@ Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks t
   shows "Try once more" and keeps "Record again"; a new recording asks again. When every prompt is Yes, "Ready for your
   retry" shows just above "Retry with this goal". Nothing is saved or uploaded; it resets when the page closes.
 - **Navigation on a lesson:** the Lessons (book) tab is the current section (the grey active square, as on every page),
-  not a link (there is no lesson library yet), so "Retry with this goal" is the only black control on screen.
+  a link to the list; "Retry with this goal" (or "Go to Part 2") stays the only black control on screen.
 - **No checklist on the page:** the per-prompt self-checks cover it. The checklist lines stay in the lesson files,
   marked "not shown (covered by drill self-checks)", and in the lesson data (`drill.checklist`, not rendered).
 - **Drill topic:** each lesson's drill has its own made-up topic (a place you like to visit, a skill learned outside
@@ -612,8 +630,8 @@ Asadbek on 2026-11-07 (recorded in each lesson file and in code; a test checks t
   "Advice from someone", are retired. L-T8's drill picture is a one-line description in the drill-topic box; there is
   no image.
 - **Addresses:** `?demo=<demo key>` and `?anchor=<fixture>&run=n` (mock data, every link keeps `?mock=1`), or
-  `?attempt=<id>` (a real attempt, its owner only, like `/result/[attemptId]`). Anything else, or a lesson the result
-  does not lead to, is the not-found screen (v1 has no lesson library).
+  `?attempt=<id>` (a real attempt, its owner only, like `/result/[attemptId]`). None of them: the lesson opened from
+  the list (above). A result that is not found, or a lesson the result does not lead to, is the not-found screen.
 - **Mock mode:** the demo result of "A tradition" (`demo-5`, question 3 missing) leads to L-T1. Two demo results exist
   only for the lessons: `picture.b2-part2-advice-from-someone` (L-T8) and `bare.b2-part2-advice-from-someone` (L-T4),
   produced by the mock evaluator, whose mock-only rules (`server/evaluation/mock-answer-rules.ts`, imported by nothing

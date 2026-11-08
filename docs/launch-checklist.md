@@ -129,6 +129,8 @@ Run with the GitHub `live-evaluation` / `live-pipeline` workflows (manual, use t
 the merge, before or right after the deploy. **First run the same command with `-- --dry-run`**: it removes every
 provider key, calls no model, prints one row per evaluation with its prompt size and the estimated cost, and writes
 every prompt in full to `eval-reports/` (`scripts/eval-live.mjs`, `test/live/dry-run.ts`).
+Set `EVALUATION_PROVIDER=gemini` for the dry run too, e.g. `EVALUATION_PROVIDER=gemini npm run eval:live:new-tasks -- --dry-run`:
+without it the dry run assumes the default provider (Anthropic), has no price for it and prints "n/a".
 
 | Run | What | Calls | Estimated cost (dry run) |
 | --- | --- | --- | --- |

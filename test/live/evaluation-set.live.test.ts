@@ -39,7 +39,7 @@ import { writeReport } from "./report";
  *   EVAL_SAMPLES=A2,S15 EVAL_REPEAT=1 npm run eval:live     # subset (id prefixes; P1 = injection, RETRY = retry pair)
  *   npm run eval:live:part2                                 # the 8 Part 2 anchors + S15, ×3 (EVAL_SAMPLES=A,S15)
  *   npm run eval:live:new-tasks                             # the 12 new-task anchors, ×3 (EVAL_SAMPLES=NEW)
- *   npm run eval:live -- --dry-run                          # what it WOULD send and the estimated cost; no model call
+ *   EVALUATION_PROVIDER=gemini npm run eval:live -- --dry-run  # what it WOULD send and the estimated cost; no model call
  *
  * EVAL_SAMPLES takes id prefixes; NEW selects all 12 new-task anchors (D… G… T… F… R… H…; use full ids for one task,
  * e.g. R4,R1, since "R" alone also matches RETRY).

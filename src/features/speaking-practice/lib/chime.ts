@@ -25,7 +25,21 @@ const ATTACK_SECONDS = 0.015;
 /** Settles a chime whose "ended" never comes (a suspended audio output), a little after its own length. */
 const END_GRACE_MS = 500;
 
+/** Longest wait for a suspended audio output to resume before the chime is skipped. */
+const RESUME_WAIT_MS = 300;
+
 let context: AudioContext | null = null;
+
+/** Resolves when `promise` settles or after `ms`, whichever comes first; never rejects. */
+function settleWithin(promise: Promise<unknown>, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    promise.then(
+      () => (clearTimeout(timer), resolve()),
+      () => (clearTimeout(timer), resolve()),
+    );
+  });
+}
 
 /** Called from the "Start preparation" click: creates and unlocks the audio context, so the chime may play later. */
 export function primeChime(): void {
@@ -58,7 +72,8 @@ export async function playChime(): Promise<void> {
   try {
     const ctx = context;
     if (!ctx) return; // never primed by a button press: no sound
-    if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
+    // A suspended output (e.g. a phone that paused audio) may never resume: wait a moment at most, never block recording.
+    if (ctx.state !== "running") await settleWithin(ctx.resume(), RESUME_WAIT_MS);
     const now = ctx.currentTime + 0.01;
     const oscillators = CHIME_TONES.map((t) => tone(ctx, t.frequency, now + t.start));
     const last = oscillators[oscillators.length - 1];

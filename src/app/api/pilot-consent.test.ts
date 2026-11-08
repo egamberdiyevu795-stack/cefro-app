@@ -386,7 +386,7 @@ describe("scripts/set-consent.mjs (the owner's script)", () => {
     }
   };
   const row = async (fileDb: Db, email: string) =>
-    (await fileDb.select({ s: users.consentStatus, at: users.consentAt, t: users.consentTeacherSharing }).from(users).where(eq(users.email, email)).get())!;
+    (await fileDb.select({ s: users.consentStatus, at: users.consentAt, t: users.consentTeacherSharing, v: users.consentNoticeVersion }).from(users).where(eq(users.email, email)).get())!;
 
   beforeEach(() => {
     fileDir = fs.mkdtempSync(path.join(os.tmpdir(), "cefro-consent-script-"));
@@ -401,20 +401,23 @@ describe("scripts/set-consent.mjs (the owner's script)", () => {
       { id: "u2", kind: "registered", email: "bob@example.com" },
       { id: "u3", kind: "anonymous" },
     ]).run();
-    expect(await row(fileDb, "alice@example.com")).toEqual({ s: null, at: null, t: false });
+    expect(await row(fileDb, "alice@example.com")).toEqual({ s: null, at: null, t: false, v: null });
 
-    expect(run("Alice@Example.com", "granted").out).toMatch(/consent granted, recording unlocked; teacher sharing off/);
-    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: false });
+    expect(run("Alice@Example.com", "granted").out).toMatch(/consent granted \(pilot-parent-message-2026-11-08\), recording unlocked; teacher sharing off/);
+    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: false, v: "pilot-parent-message-2026-11-08" });
+    expect(run("alice@example.com", "granted", "--notice", "pilot-parent-message-2026-12-01").code).toBe(0);
+    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", v: "pilot-parent-message-2026-12-01" });
     expect(run("alice@example.com", "granted", "--teacher-sharing").out).toMatch(/teacher sharing on/);
     expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: true });
-    expect(run("alice@example.com", "withdrawn").code).toBe(0);
+    expect(run("alice@example.com", "withdrawn").out).toMatch(/node scripts\/delete-account\.mjs alice@example\.com/);
     const withdrawn = await row(fileDb, "alice@example.com");
-    expect(withdrawn).toMatchObject({ s: "withdrawn", t: false });
+    // Withdrawn keeps the version that was agreed (a record), and tells the owner how to delete the account.
+    expect(withdrawn).toMatchObject({ s: "withdrawn", t: false, v: "pilot-parent-message-2026-11-08" });
     expect(Date.parse(withdrawn.at!)).toBeGreaterThan(Date.now() - 60_000);
     // Bob untouched.
-    expect(await row(fileDb, "bob@example.com")).toEqual({ s: null, at: null, t: false });
+    expect(await row(fileDb, "bob@example.com")).toEqual({ s: null, at: null, t: false, v: null });
 
-    for (const args of [[], ["alice@example.com"], ["alice@example.com", "given"], ["alice@example.com", "withdrawn", "--teacher-sharing"], ["alice@example.com", "granted", "--all"]]) {
+    for (const args of [[], ["alice@example.com"], ["alice@example.com", "given"], ["alice@example.com", "withdrawn", "--teacher-sharing"], ["alice@example.com", "granted", "--all"], ["alice@example.com", "granted", "--notice"], ["alice@example.com", "granted", "--notice", "Bad Version!"], ["alice@example.com", "withdrawn", "--notice", "pilot-x-1"]]) {
       expect(run(...args).code, args.join(" ")).toBe(1);
     }
     expect(run("nobody@example.com", "granted").out).toMatch(/no registered account/);

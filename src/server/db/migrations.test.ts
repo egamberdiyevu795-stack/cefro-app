@@ -196,11 +196,12 @@ describe("teacher migration (0006)", () => {
 });
 
 describe("pilot consent migration (0007)", () => {
-  it("is additive: three users columns (nullable or defaulted) and one nullable recordings column", () => {
+  it("is additive: four users columns (nullable or defaulted) and one nullable recordings column", () => {
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0007_pilot_consent.sql"), "utf8");
     expect(sql).toContain("ALTER TABLE `recordings` ADD `audio_deleted_at` text;");
     expect(sql).toContain("ALTER TABLE `users` ADD `consent_status` text;");
     expect(sql).toContain("ALTER TABLE `users` ADD `consent_at` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `consent_notice_version` text;");
     expect(sql).toContain("ALTER TABLE `users` ADD `consent_teacher_sharing` integer DEFAULT false NOT NULL;");
     expect(sql).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME|CREATE/i);
   });
@@ -213,8 +214,8 @@ describe("pilot consent migration (0007)", () => {
     old.client.close();
     const { client, db } = await openRaw(file);
     await migrateDatabase(db);
-    expect(await query(client, "SELECT consent_status, consent_at, consent_teacher_sharing FROM users")).toEqual([
-      { consent_status: null, consent_at: null, consent_teacher_sharing: 0 },
+    expect(await query(client, "SELECT consent_status, consent_at, consent_notice_version, consent_teacher_sharing FROM users")).toEqual([
+      { consent_status: null, consent_at: null, consent_notice_version: null, consent_teacher_sharing: 0 },
     ]);
     expect(names(await pragma(client, "table_info(recordings)"))).toContain("audio_deleted_at");
     client.close();

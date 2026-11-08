@@ -1626,6 +1626,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "consent_notice_version": {
+          "name": "consent_notice_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "consent_teacher_sharing": {
           "name": "consent_teacher_sharing",
           "type": "integer",

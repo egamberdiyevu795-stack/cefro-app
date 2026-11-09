@@ -438,7 +438,8 @@ for (const [name, url] of [
     let delayed = 0;
     await page.route("**/_next/static/chunks/**", async (route) => {
       delayed += 1;
-      await new Promise((resolve) => setTimeout(resolve, 4_000));
+      // 8 s, not 4: on a busy CI runner the page was sometimes ready before the second control was checked.
+      await new Promise((resolve) => setTimeout(resolve, 8_000));
       await route.continue();
     });
     await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -446,8 +447,12 @@ for (const [name, url] of [
     // Before the scripts run, a tap did nothing at all (no microphone prompt, no sign): now the button says so.
     const start = page.getByRole("button", { name: "Start preparation" });
     await expect(start).toBeVisible();
-    await expect(start).toBeDisabled();
-    if (name === "retry brief") await expect(page.getByRole("button", { name: "Practise without the goal" })).toBeDisabled();
+    // Both read at the same moment (one snapshot), so the page becoming ready between two checks cannot fail the test.
+    const before = await page.evaluate(() => {
+      const byText = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === text);
+      return { start: byText("Start preparation")?.disabled, withoutGoal: byText("Practise without the goal")?.disabled };
+    });
+    expect(before).toEqual(name === "retry brief" ? { start: true, withoutGoal: true } : { start: true, withoutGoal: undefined });
     expect(delayed).toBeGreaterThan(0);
 
     await expect(start).toBeEnabled({ timeout: 30_000 });

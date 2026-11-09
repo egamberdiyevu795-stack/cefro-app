@@ -194,11 +194,12 @@ test("a saved date that has passed: no countdown, 'When is your next exam?', and
 
 test("slow connection: the date picker and Save wait until the page is ready, and a date picked then is saved", async ({ page }) => {
   await page.goto("/dashboard"); // compiled once, so only the delay below is slow
-  // Slow 3G, roughly: the HTML arrives, the page's scripts take 4 s more.
+  // Slow 3G, roughly: the HTML arrives, the page's scripts take 8 s more (4 s was too short a window on a busy CI
+  // runner: the page was sometimes ready before the third control was checked).
   let delayed = 0;
   await page.route("**/_next/static/chunks/**", async (route) => {
     delayed += 1;
-    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    await new Promise((resolve) => setTimeout(resolve, 8_000));
     await route.continue();
   });
   const navigations: string[] = [];
@@ -210,9 +211,17 @@ test("slow connection: the date picker and Save wait until the page is ready, an
   // Before the scripts run: shown, but nothing can be picked or sent (no plain form submit, no value React misses).
   const picker = page.getByLabel("When is your exam?");
   await expect(picker).toBeVisible();
-  await expect(picker).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Skip" })).toBeDisabled();
+  // All three read at the same moment (one snapshot), so the page becoming ready between checks cannot fail the test.
+  const before = await page.evaluate(() => {
+    const byText = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === text);
+    const input = document.querySelector<HTMLInputElement>('input[type="date"]');
+    return {
+      picker: input?.disabled,
+      save: byText("Save")?.disabled,
+      skip: byText("Skip")?.disabled,
+    };
+  });
+  expect(before).toEqual({ picker: true, save: true, skip: true });
   expect(delayed).toBeGreaterThan(0);
 
   // As soon as the page is ready the controls work, and the date picked is the date saved.

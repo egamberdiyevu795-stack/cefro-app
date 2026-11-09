@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { QuestionSequenceTask } from "@/domain/speaking/question-sequence";
-import { playChime, primeChime } from "../lib/chime";
+import { playChime, primeChime, releaseChime } from "../lib/chime";
 import { CuePlayer, type CueResult } from "../lib/cue-player";
 import { PausableRecorder, type PausedRecording } from "../lib/pausable-recorder";
 import { createSequenceState, cueFor, sequenceReducer, type AudioCue, type AudioFailure } from "../lib/question-sequence-machine";
@@ -218,6 +218,7 @@ export function useQuestionSequence({
     return () => {
       unmountedRef.current = true;
       cuePlayerRef.current?.stop();
+      releaseChime();
       void recorderRef.current?.then((recorder) => recorder?.stop());
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };

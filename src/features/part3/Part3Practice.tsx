@@ -9,7 +9,7 @@ import { MicrophoneCard, MicrophoneState, PracticeLayout } from "@/features/spea
 import { useAudioLevel } from "@/features/speaking-practice/hooks/useAudioLevel";
 import { useAudioRecorder } from "@/features/speaking-practice/hooks/useAudioRecorder";
 import { useDeadline } from "@/features/speaking-practice/hooks/useDeadline";
-import { playChime, primeChime } from "@/features/speaking-practice/lib/chime";
+import { playChime, primeChime, releaseChime } from "@/features/speaking-practice/lib/chime";
 import { CuePlayer } from "@/features/speaking-practice/lib/cue-player";
 import type { PartIntro } from "@/domain/speaking/question-sequence";
 import { isEarlyFinish, type RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
@@ -67,6 +67,7 @@ export function Part3Practice({
     return () => {
       unmountedRef.current = true;
       cuePlayerRef.current?.stop();
+      releaseChime();
     };
   }, []);
 

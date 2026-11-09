@@ -14,7 +14,7 @@ import { useDeadline } from "../hooks/useDeadline";
 import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, fetchTaskAttempts, startSession, submitRecording } from "../lib/api-client";
 import { initialPracticeState, practiceReducer, type PracticeState } from "../lib/practice-machine";
-import { playChime, primeChime } from "../lib/chime";
+import { playChime, primeChime, releaseChime } from "../lib/chime";
 import { CuePlayer, DEFAULT_CUE_TIMEOUTS } from "../lib/cue-player";
 import { PART2_INTRO } from "@/content/speaking/part-intro-audio";
 import { part2QuestionAudioPath } from "@/content/speaking/part2-question-audio";
@@ -186,6 +186,7 @@ export function PracticeExperience({
     return () => {
       unmountedRef.current = true;
       cuePlayerRef.current?.stop();
+      releaseChime();
     };
   }, []);
   const phaseRef = useRef(phase.kind);
@@ -358,6 +359,7 @@ export function PracticeExperience({
 
   const backToBrief = useCallback(() => {
     cuePlayerRef.current?.stop();
+    releaseChime();
     dispatch({ type: "backToBrief" });
     void loadHistory();
   }, [loadHistory]);

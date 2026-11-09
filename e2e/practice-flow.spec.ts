@@ -142,6 +142,17 @@ test("after the spoken introduction and its chime, the questions are read aloud,
       this.addEventListener("ended", () => w.__events.push("tone-ended"));
       return originalStart.apply(this, args);
     };
+    // The keep-awake hum (a looping buffer, not an oscillator): started by the click, stopped when the page is left.
+    const originalBufferStart = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (this: AudioBufferSourceNode, ...args: [number?, number?, number?]) {
+      if (this.loop) w.__events.push("hum");
+      return originalBufferStart.apply(this, args);
+    };
+    const originalBufferStop = AudioBufferSourceNode.prototype.stop;
+    AudioBufferSourceNode.prototype.stop = function (this: AudioBufferSourceNode, ...args: [number?]) {
+      if (this.loop) w.__events.push("hum-stopped");
+      return originalBufferStop.apply(this, args);
+    };
     const originalRecord = MediaRecorder.prototype.start;
     MediaRecorder.prototype.start = function (this: MediaRecorder, ...args: [number?]) {
       w.__events.push("recorder");
@@ -174,6 +185,8 @@ test("after the spoken introduction and its chime, the questions are read aloud,
     .toBe(true);
   const afterIntro = await events();
   expect(afterIntro[0]).toBe("audio-context");
+  // The sound output is kept awake from the click, so the chime after the silent minute is not swallowed.
+  expect(afterIntro[1]).toBe("hum");
   expect(tones(afterIntro)).toEqual(["tone:659Hz", "tone:880Hz"]);
   expect(afterIntro).not.toContain("recorder");
   const startTones = (log: string[]) => tones(log).slice(2);
@@ -193,6 +206,8 @@ test("after the spoken introduction and its chime, the questions are read aloud,
   await expect(page.getByRole("status").filter({ hasText: "Recording started. Speak now." })).toHaveCount(1);
   const log = await events();
   expect(startTones(log)).toEqual(["tone:659Hz", "tone:880Hz"]);
+  // The hum ran through preparation and is still running while recording (for the time-up chime).
+  expect(log.filter((e) => e.startsWith("hum"))).toEqual(["hum"]);
   expect(log.indexOf("recorder")).toBeGreaterThan(log.lastIndexOf("tone:880Hz"));
   // When the browser reports the last tone's end, the recorder started after it (never during the chime).
   const lastEnd = log.lastIndexOf("tone-ended");

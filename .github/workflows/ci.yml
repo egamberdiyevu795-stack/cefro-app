@@ -41,7 +41,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # ffmpeg-static downloads its binary from GitHub releases during install, and those downloads sometimes fail
+      # with a 504 for a few minutes. Try again with a pause rather than failing the whole run on a download.
+      - name: npm ci (retried on a failed download)
+        run: |
+          for attempt in 1 2 3 4; do
+            npm ci && exit 0
+            echo "npm ci failed (attempt $attempt); retrying in $((attempt * 20)) s"
+            sleep $((attempt * 20))
+          done
+          exit 1
       # Migrations reach the production database before the new code is deployed, so they must be backward compatible
       # and applied migrations must never be edited. No database access, no secrets.
       - name: Migration safety (journal, immutability of applied migrations, backward compatibility)

@@ -1,6 +1,6 @@
 {
   "id": "multilevel-q7",
-  "version": "multilevel-q7/2.0.0",
+  "version": "multilevel-q7/2.1.0",
   "exam": "uzbmb-multilevel-speaking",
   "part": 2,
   "official_question": 7,
@@ -51,6 +51,8 @@
   "scoring": {
     "topic_cap": { "0": 0, "1": 1, "2": 3, "3": 4 },
     "above_target_full_coverage_cap": 5,
+    "above_target_requires": ["grammar", "vocabulary"],
+    "min_words": 30,
     "language_cap": { "below_B1": 0, "B1": 2, "B2": 4, "above_B2": 5 }
   }
 }

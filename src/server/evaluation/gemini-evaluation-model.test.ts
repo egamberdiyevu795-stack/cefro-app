@@ -54,7 +54,7 @@ const valid = () => JSON.stringify(makeModelOutput());
 describe("GeminiEvaluationModel — requests", () => {
   it("sends the shared prompt, schema and settings server-side with the key only in a header", async () => {
     const fetchMock = vi.fn(async () => json(200, reply(valid())));
-    const result = await modelWith(fetchMock, { thinkingLevel: "low" }).evaluate(prompt, unusedInput);
+    const result = await modelWith(fetchMock, { thinkingLevel: "low", temperature: 0 }).evaluate(prompt, unusedInput);
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("/models/gemini-test:generateContent");
@@ -71,6 +71,7 @@ describe("GeminiEvaluationModel — requests", () => {
       maxOutputTokens: 24000,
       responseMimeType: "application/json",
       thinkingConfig: { thinkingLevel: "LOW" },
+      temperature: 0,
     });
     expect(body.generationConfig.responseJsonSchema.type).toBe("object");
     expect(JSON.stringify(body)).not.toContain(KEY);
@@ -85,13 +86,14 @@ describe("GeminiEvaluationModel — requests", () => {
     const body = JSON.parse(String(((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]).body));
     expect(body.generationConfig.responseJsonSchema).toBeUndefined();
     expect(body.generationConfig.thinkingConfig).toBeUndefined();
+    expect(body.generationConfig.temperature).toBeUndefined();
     expect(body.generationConfig.responseMimeType).toBe("application/json");
     expect(body.systemInstruction.parts[0].text).toContain('"memorized_or_irrelevant"'); // shape still described
   });
 
   it("records the request config for versioning", () => {
-    const model = modelWith(vi.fn(), { thinkingLevel: "medium" });
-    expect(model.config).toEqual({ maxTokens: 24000, structuredOutput: "schema", thinkingLevel: "medium" });
+    const model = modelWith(vi.fn(), { thinkingLevel: "medium", temperature: 0 });
+    expect(model.config).toEqual({ maxTokens: 24000, structuredOutput: "schema", thinkingLevel: "medium", temperature: 0 });
     expect(modelWith(vi.fn()).config).toEqual({ maxTokens: 24000, structuredOutput: "schema" });
   });
 
@@ -176,7 +178,7 @@ describe("GeminiEvaluationModel — failures map to controlled errors", () => {
 });
 
 describe("Gemini through the shared evaluation pipeline", () => {
-  const task = getSpeakingTask("b2-part2-technology-young-people")!;
+  const task = getSpeakingTask("b2-part2-advice-from-someone")!;
   const input: EvaluationInput = {
     task,
     rubric: getSpeakingRubric(task),
@@ -196,7 +198,7 @@ describe("Gemini through the shared evaluation pipeline", () => {
     expect(result).toMatchObject({
       provider: "gemini",
       model: "gemini-test-001",
-      evaluatorVersion: "speaking-evaluator/3.0.0",
+      evaluatorVersion: "speaking-evaluator/3.5.0",
       schemaVersion: 3,
       modelCalls: 1,
       inputTokens: 1500,

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">Four young people working together at a table</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. Four young people work together around a table in a classroom. On the table are a large sheet of paper with simple drawn shapes and a small model made of coloured blocks. One of them points at the paper, another adds a block to the model.</desc>
+  <!-- room -->
+  <rect width="480" height="360" fill="#eef2f6"/>
+  <rect y="262" width="480" height="98" fill="#e3d7c4"/>
+  <rect x="300" y="36" width="130" height="86" rx="6" fill="#bcdcef" stroke="#c9d2dd" stroke-width="6"/>
+  <line x1="365" y1="36" x2="365" y2="122" stroke="#c9d2dd" stroke-width="5"/>
+  <rect x="44" y="40" width="150" height="80" rx="6" fill="#dfe6ee"/>
+  <!-- person behind the table, left -->
+  <g>
+    <path d="M150 232 Q148 176 180 172 Q212 176 210 232Z" fill="#5b7fa6"/>
+    <circle cx="180" cy="148" r="20" fill="#e9b98f"/>
+    <path d="M160 146 Q160 124 180 124 Q201 124 201 148 Q192 136 180 137 Q168 137 160 146Z" fill="#7a4a2a"/>
+    <circle cx="174" cy="150" r="2.1" fill="#333"/>
+    <circle cx="187" cy="150" r="2.1" fill="#333"/>
+    <path d="M175 160 Q180 164 186 160" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- person behind the table, right -->
+  <g>
+    <path d="M262 232 Q260 176 292 172 Q324 176 322 232Z" fill="#a77bc2"/>
+    <path d="M270 140 Q268 116 292 116 Q316 116 314 142 L316 182 Q304 176 300 160 L284 160 Q280 176 268 182Z" fill="#222"/>
+    <circle cx="292" cy="148" r="20" fill="#c98e66"/>
+    <path d="M272 142 Q278 124 293 126 Q308 126 312 142 Q300 132 286 136 Q278 138 272 142Z" fill="#222"/>
+    <circle cx="286" cy="150" r="2.1" fill="#333"/>
+    <circle cx="299" cy="150" r="2.1" fill="#333"/>
+    <path d="M287 160 Q292 164 298 160" fill="none" stroke="#7a3f2f" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- table -->
+  <path d="M96 268 L384 268 L360 228 L120 228Z" fill="#c48d5c"/>
+  <rect x="96" y="268" width="288" height="12" rx="3" fill="#b07d4f"/>
+  <rect x="110" y="280" width="10" height="56" fill="#6d5137"/>
+  <rect x="360" y="280" width="10" height="56" fill="#6d5137"/>
+  <!-- sheet of paper with simple shapes -->
+  <path d="M146 262 L254 262 L244 234 L156 234Z" fill="#ffffff" stroke="#c9d2dd" stroke-width="1.5"/>
+  <circle cx="180" cy="248" r="7" fill="none" stroke="#5b7fa6" stroke-width="2"/>
+  <path d="M196 256 L214 240 L232 256" fill="none" stroke="#e8835a" stroke-width="2"/>
+  <line x1="168" y1="257" x2="236" y2="257" stroke="#9ca3af" stroke-width="1.5"/>
+  <!-- block model -->
+  <rect x="278" y="244" width="18" height="16" fill="#e8835a"/>
+  <rect x="298" y="244" width="18" height="16" fill="#5b7fa6"/>
+  <rect x="318" y="244" width="18" height="16" fill="#7a9e5a"/>
+  <rect x="288" y="228" width="18" height="16" fill="#fbe7a1"/>
+  <rect x="308" y="228" width="18" height="16" fill="#d9534f"/>
+  <!-- person standing at the left end, pointing at the paper -->
+  <g>
+    <rect x="58" y="252" width="11" height="70" fill="#4b5563"/>
+    <rect x="73" y="252" width="11" height="70" fill="#4b5563"/>
+    <rect x="54" y="318" width="17" height="8" rx="3" fill="#2f2f2f"/>
+    <rect x="71" y="318" width="17" height="8" rx="3" fill="#2f2f2f"/>
+    <path d="M50 258 Q48 196 71 192 Q94 196 92 258Z" fill="#7a9e5a"/>
+    <circle cx="71" cy="168" r="20" fill="#d9a07a"/>
+    <path d="M51 166 Q52 144 71 144 Q92 144 92 168 Q84 154 71 155 Q58 155 51 166Z" fill="#3b2a20"/>
+    <circle cx="66" cy="170" r="2.1" fill="#333"/>
+    <circle cx="79" cy="170" r="2.1" fill="#333"/>
+    <path d="M67 180 Q72 184 78 180" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+    <path d="M88 204 Q118 214 150 236" fill="none" stroke="#7a9e5a" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="154" cy="239" r="6" fill="#d9a07a"/>
+    <path d="M54 204 Q46 228 52 248" fill="none" stroke="#7a9e5a" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  <!-- person standing at the right end -->
+  <g>
+    <rect x="396" y="252" width="11" height="70" fill="#3f6f8f"/>
+    <rect x="411" y="252" width="11" height="70" fill="#3f6f8f"/>
+    <rect x="392" y="318" width="17" height="8" rx="3" fill="#d9534f"/>
+    <rect x="409" y="318" width="17" height="8" rx="3" fill="#d9534f"/>
+    <path d="M388 258 Q386 196 409 192 Q432 196 430 258Z" fill="#e8835a"/>
+    <path d="M390 166 Q388 140 410 140 Q432 140 430 168 L432 200 Q420 194 418 180 L402 180 Q398 194 388 200Z" fill="#b5651d"/>
+    <circle cx="409" cy="168" r="20" fill="#e9b98f"/>
+    <path d="M390 162 Q396 144 410 146 Q426 146 429 162 Q416 152 402 156 Q396 158 390 162Z" fill="#b5651d"/>
+    <circle cx="403" cy="170" r="2.1" fill="#333"/>
+    <circle cx="416" cy="170" r="2.1" fill="#333"/>
+    <path d="M404 180 Q409 184 415 180" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+    <path d="M392 206 Q362 214 346 226" fill="none" stroke="#e8835a" stroke-width="12" stroke-linecap="round"/>
+    <rect x="330" y="214" width="16" height="14" fill="#5b7fa6"/>
+    <circle cx="346" cy="226" r="6" fill="#e9b98f"/>
+    <path d="M428 206 Q436 228 430 248" fill="none" stroke="#e8835a" stroke-width="12" stroke-linecap="round"/>
+  </g>
+</svg>

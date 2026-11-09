@@ -98,12 +98,16 @@ describe("fresh database", () => {
       "auth_accounts",
       "auth_sessions",
       "auth_verifications",
+      "class_members",
+      "classes",
       "evaluations",
       "practice_sessions",
+      "rating_pairs",
       "recording_blobs",
       "recordings",
       "speaking_attempts",
       "speaking_tasks",
+      "teacher_ratings",
       "transcripts",
       "users",
     ]);
@@ -150,6 +154,74 @@ describe("fresh database", () => {
   });
 });
 
+describe("exam date migration (0005)", () => {
+  it("only adds two nullable columns to users", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0005_exam_date.sql"), "utf8");
+    expect(sql).toContain("ALTER TABLE `users` ADD `exam_date` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `exam_date_skipped_at` text;");
+    expect(sql).not.toMatch(/DROP|DELETE|UPDATE|NOT NULL|CREATE/i);
+  });
+});
+
+describe("teacher migration (0006)", () => {
+  it("is additive: four new tables and one users column with a default; nothing dropped, deleted or rewritten", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0006_teachers.sql"), "utf8");
+    for (const table of ["classes", "class_members", "teacher_ratings", "rating_pairs"]) expect(sql).toContain(`CREATE TABLE \`${table}\``);
+    expect(sql).toContain("ALTER TABLE `users` ADD `role` text DEFAULT 'student' NOT NULL;");
+    expect(sql).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME/i);
+  });
+
+  it("upgrades a 0005 database: every existing user becomes a student, and the anonymous pairs hold no id", async () => {
+    const dir = tempDir();
+    const file = path.join(dir, "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(6));
+    await old.client.execute("INSERT INTO users (id, kind) VALUES ('u1', 'anonymous')");
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT role FROM users")).toEqual([{ role: "student" }]);
+    const pairColumns = names(await pragma(client, "table_info(rating_pairs)"));
+    expect(pairColumns).toEqual(["app_band", "evaluator_version", "month", "part", "rubric_version", "teacher_band"]);
+    // One open membership per class and student: a second open row is refused, an ended one is fine.
+    await client.execute("UPDATE users SET kind = 'registered' WHERE id = 'u1'");
+    await client.execute("INSERT INTO classes (id, teacher_user_id, name, join_code) VALUES ('c1', 'u1', 'B', 'K7M4QD')");
+    const member = (id: string, ended: string | null) =>
+      client.execute({ sql: "INSERT INTO class_members (id, class_id, student_user_id, shown_name, shared_at, share_text_version, ended_at) VALUES (?, 'c1', 'u1', 'A', 'x', 'v', ?)", args: [id, ended] });
+    await member("m1", "2026-11-01");
+    await member("m2", null);
+    await expect(member("m3", null)).rejects.toThrow();
+    client.close();
+  });
+});
+
+describe("pilot consent migration (0007)", () => {
+  it("is additive: four users columns (nullable or defaulted) and one nullable recordings column", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0007_pilot_consent.sql"), "utf8");
+    expect(sql).toContain("ALTER TABLE `recordings` ADD `audio_deleted_at` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `consent_status` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `consent_at` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `consent_notice_version` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `consent_teacher_sharing` integer DEFAULT false NOT NULL;");
+    expect(sql).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME|CREATE/i);
+  });
+
+  it("upgrades a 0006 database: existing users have no consent, existing recordings keep their audio", async () => {
+    const file = path.join(tempDir(), "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(7));
+    await old.client.execute("INSERT INTO users (id, kind) VALUES ('u1', 'anonymous')");
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT consent_status, consent_at, consent_notice_version, consent_teacher_sharing FROM users")).toEqual([
+      { consent_status: null, consent_at: null, consent_notice_version: null, consent_teacher_sharing: 0 },
+    ]);
+    expect(names(await pragma(client, "table_info(recordings)"))).toContain("audio_deleted_at");
+    client.close();
+  });
+});
+
 describe("upgrading a database created by an earlier release", () => {
   /** Rows as the pre-Stage-3 application wrote them (migrations 0000 and 0001 only). */
   async function seedOldDatabase(file: string) {
@@ -157,14 +229,14 @@ describe("upgrading a database created by an earlier release", () => {
     await migrateDatabase(db, migrationsUpTo(2));
     expect(names(await pragma(client, "table_info(speaking_attempts)"))).not.toContain("session_id");
 
-    const content = JSON.stringify({ id: "b2-part2-technology-young-people", version: 1 });
+    const content = JSON.stringify({ id: "b2-part2-advice-from-someone", version: 1 });
     await client.executeMultiple(`
       INSERT INTO users (id) VALUES ('u1'), ('u2');
-      INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-technology-young-people', 1, 'B2', 2, 'Technology', '${content}');
+      INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-advice-from-someone', 1, 'B2', 2, 'Technology', '${content}');
       INSERT INTO speaking_attempts (id, user_id, task_id, task_version, attempt_number, previous_attempt_id, status, updated_at, created_at, retry_focus, metrics, processing_runs) VALUES
-        ('a1', 'u1', 'b2-part2-technology-young-people', 1, 1, NULL, 'completed', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', NULL, '{"wordCount":120}', 1),
-        ('a2', 'u1', 'b2-part2-technology-young-people', 1, 2, 'a1', 'completed', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z', '[{"objective":"x"}]', NULL, 2),
-        ('a3', 'u2', 'b2-part2-technology-young-people', 1, 1, 'does-not-exist', 'failed', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z', NULL, NULL, 1);
+        ('a1', 'u1', 'b2-part2-advice-from-someone', 1, 1, NULL, 'completed', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', NULL, '{"wordCount":120}', 1),
+        ('a2', 'u1', 'b2-part2-advice-from-someone', 1, 2, 'a1', 'completed', '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z', '[{"objective":"x"}]', NULL, 2),
+        ('a3', 'u2', 'b2-part2-advice-from-someone', 1, 1, 'does-not-exist', 'failed', '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z', NULL, NULL, 1);
       INSERT INTO recordings (id, attempt_id, storage_provider, storage_key, mime_type, size_bytes, duration_ms) VALUES ('r1', 'a1', 'local', 'speaking/u1/a1.webm', 'audio/webm', 1000, 60000);
       INSERT INTO transcripts (id, attempt_id, provider, model, text) VALUES ('t1', 'a1', 'openai', 'm', 'hello world');
       INSERT INTO evaluations (id, attempt_id, transcript_id, evaluator_version, rubric_version, schema_version, prompt_hash, provider, model, overall_level, result)
@@ -195,7 +267,7 @@ describe("upgrading a database created by an earlier release", () => {
     // The unique numbering rule survived the rebuild.
     await client.execute("PRAGMA foreign_keys = ON");
     await expect(
-      client.execute("INSERT INTO speaking_attempts (id,user_id,task_id,task_version,attempt_number,status,updated_at) VALUES ('dup','u1','b2-part2-technology-young-people',1,1,'uploaded','x')"),
+      client.execute("INSERT INTO speaking_attempts (id,user_id,task_id,task_version,attempt_number,status,updated_at) VALUES ('dup','u1','b2-part2-advice-from-someone',1,1,'uploaded','x')"),
     ).rejects.toThrow(/UNIQUE/);
   });
 
@@ -211,7 +283,7 @@ describe("upgrading a database created by an earlier release", () => {
     expect(await findRecording("a1")).toMatchObject({ storageKey: "speaking/u1/a1.webm" });
 
     // Write a new one through the repository (a retry of the old attempt).
-    const task = getSpeakingTask("b2-part2-technology-young-people")!;
+    const task = getSpeakingTask("b2-part2-advice-from-someone")!;
     await ensureTaskSnapshot(task);
     const created = await insertAttemptWithRecording({
       attemptId: "11111111-1111-4111-8111-111111111111",
@@ -268,13 +340,13 @@ describe("Stage 4 (authentication) migration", () => {
     const { client, db } = await openRaw(path.join(tempDir(), "previous.sqlite"));
     await migrateDatabase(db, migrationsUpTo(3)); // the schema before authentication existed
     expect(names(await pragma(client, "table_info(users)"))).not.toContain("email");
-    const content = JSON.stringify({ id: "b2-part2-technology-young-people", version: 1 });
+    const content = JSON.stringify({ id: "b2-part2-advice-from-someone", version: 1 });
     await client.executeMultiple(`
       INSERT INTO users (id) VALUES ('${ANON}'), ('a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2');
       INSERT INTO practice_sessions (id, user_id) VALUES ('5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', '${ANON}');
-      INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-technology-young-people', 1, 'B2', 2, 'T', '${content}');
+      INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-advice-from-someone', 1, 'B2', 2, 'T', '${content}');
       INSERT INTO speaking_attempts (id, user_id, session_id, task_id, task_version, attempt_number, status, updated_at) VALUES
-        ('d1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1', '${ANON}', '5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', 'b2-part2-technology-young-people', 1, 1, 'completed', 'x');
+        ('d1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1', '${ANON}', '5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', 'b2-part2-advice-from-someone', 1, 1, 'completed', 'x');
       INSERT INTO analytics_events (id, name, source, user_id, session_id, occurred_at) VALUES ('ev1', 'practice_opened', 'client', '${ANON}', '5e5e5e5e-5e5e-45e5-85e5-5e5e5e5e5e5e', '2026-01-01T00:00:00.000Z');
     `);
 

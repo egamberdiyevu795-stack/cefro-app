@@ -1,4 +1,5 @@
-import { B2_PART2_SAMPLES, OWNER_SAMPLE_ANSWER } from "../evaluation-samples/b2-part2-samples";
+import { OWNER_SAMPLE_ANSWER } from "../evaluation-samples/owner-sample";
+import { PART2_BAND_ANCHORS } from "../evaluation-samples/part2-band-anchors";
 
 /**
  * Controlled audio samples for the real-transcription validation. Every `ref` is the exact text that is spoken
@@ -25,14 +26,14 @@ export interface AudioSample {
   noise?: { color: "white" | "pink"; amplitude: number };
 }
 
-const s = (id: string) => B2_PART2_SAMPLES.find((x) => x.id.startsWith(id))!;
+const s = (id: string) => PART2_BAND_ANCHORS.find((x) => x.id.startsWith(id))!;
 
 export const TRANSCRIPTION_SAMPLES: AudioSample[] = [
   {
     id: "T01-normal-b2",
-    description: "Normal B2 Part 2 answer (the strong sample from the evaluation set).",
+    description: "Normal B2 Part 2 answer (the B2 anchor from the evaluation set).",
     kind: "speech",
-    ref: s("S01").transcript,
+    ref: s("A4").transcript,
   },
   {
     id: "T02-learner-errors",
@@ -121,13 +122,16 @@ export const TRANSCRIPTION_SAMPLES: AudioSample[] = [
 ];
 
 /** The strong answer re-encoded, to check the other containers the app accepts. */
-export const FORMAT_SAMPLE_REF = s("S01").transcript;
+export const FORMAT_SAMPLE_REF = s("A4").transcript;
 
 /** Samples for the full pipeline: the audio is the text-to-speech rendering of an evaluation-set transcript. */
 export interface PipelineSample {
   id: string;
   description: string;
-  source: string; // evaluation sample id the spoken text comes from
+  /** Band anchor id (prefix) the spoken text comes from; ignored when `text` is set. */
+  source: string;
+  /** Spoken text written for this sample (behaviours no anchor shows, e.g. heavy repetition). */
+  text?: string;
   /** Retry of the sample with this id, in the same practice session. */
   retryOf?: string;
   /**
@@ -139,16 +143,26 @@ export interface PipelineSample {
   pauses?: boolean;
 }
 
+const REPETITIVE_ANSWER =
+  "I think advice is good. My father give me good advice. I think good advice is very good. My father say study is good, " +
+  "so I think study is good. I think young people should listen advice because advice is good. I think advice is good for everybody, so advice is good.";
+
+const HESITANT_ANSWER =
+  "Um, well, I want to talk about, uh, about advice from my, my uncle. Er, last year I, I was, um, choosing a university and, uh, " +
+  "I didn't know, I didn't know what to, to choose. Um, he told me to, uh, to visit the universities first. Well, I, I did it and, um, " +
+  "it helped me. Er, about young people, um, I think they should, uh, listen to older people, but, um, not always, because, uh, " +
+  "sometimes the advice is, is old.";
+
 export const PIPELINE_SAMPLES: PipelineSample[] = [
-  { id: "P1-normal-b2", description: "Normal B2 answer", source: "S01" },
-  { id: "P2-weaker", description: "Weaker B1 answer (also the first attempt of the retry pair)", source: "S03" },
-  { id: "P3-grammar-mistakes", description: "Obvious grammar mistakes", source: "S04" },
-  { id: "P4-repetition", description: "Repeated words and phrases", source: "S07" },
-  { id: "P4b-fillers", description: "Many hesitations and false starts", source: "S09" },
-  { id: "P5-off-task", description: "Does not address the task", source: "S10" },
-  { id: "P6-retry-stronger", description: "Stronger retry of P2 (weak-to-strong pair)", source: "S01", retryOf: "P2-weaker" },
-  { id: "P8-pauses", description: "Grammar-mistakes answer spoken in three parts with 3 s pauses and 4 s of silence before and after", source: "S04", pauses: true },
-  { id: "P7-guided-retry", description: "Synthetic guided retry of P2: P2's transcript rewritten applying only P2's retry focus", source: "S03", retryOf: "P2-weaker", guided: true },
+  { id: "P1-normal-b2", description: "Normal B2 answer", source: "A4" },
+  { id: "P2-weaker", description: "Weaker B1 answer (also the first attempt of the retry pair)", source: "A2" },
+  { id: "P3-grammar-mistakes", description: "Obvious grammar mistakes", source: "A0-below-b1" },
+  { id: "P4-repetition", description: "Repeated words and phrases", source: "", text: REPETITIVE_ANSWER },
+  { id: "P4b-fillers", description: "Many hesitations and false starts", source: "", text: HESITANT_ANSWER },
+  { id: "P5-off-task", description: "Does not address the task", source: "A0-memorized" },
+  { id: "P6-retry-stronger", description: "Stronger retry of P2 (weak-to-strong pair)", source: "A4", retryOf: "P2-weaker" },
+  { id: "P8-pauses", description: "Grammar-mistakes answer spoken in three parts with 3 s pauses and 4 s of silence before and after", source: "A0-below-b1", pauses: true },
+  { id: "P7-guided-retry", description: "Synthetic guided retry of P2: P2's transcript rewritten applying only P2's retry focus", source: "A2", retryOf: "P2-weaker", guided: true },
 ];
 
 /** Splits an answer into three consecutive parts at sentence boundaries (for the paused-speech sample). */
@@ -158,4 +172,4 @@ export function threeParts(text: string): string[] {
   return [0, 1, 2].map((i) => sentences.slice(i * size, (i + 1) * size).join(" ")).filter(Boolean);
 }
 
-export const pipelineText = (sample: PipelineSample) => B2_PART2_SAMPLES.find((x) => x.id.startsWith(sample.source))!.transcript;
+export const pipelineText = (sample: PipelineSample) => sample.text ?? s(sample.source).transcript;

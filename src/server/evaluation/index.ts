@@ -43,6 +43,7 @@ export function getEvaluationModel(): EvaluationModel {
         model: env.GEMINI_EVALUATION_MODEL,
         maxTokens: env.GEMINI_EVALUATION_MAX_TOKENS,
         thinkingLevel: env.GEMINI_THINKING_LEVEL,
+        temperature: env.GEMINI_TEMPERATURE,
         structuredOutput: env.GEMINI_STRUCTURED_OUTPUT,
         timeoutMs: env.EVALUATION_TIMEOUT_MS,
       });

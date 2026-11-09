@@ -2,6 +2,9 @@ import "server-only";
 import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { mockIsMinimal, mockIsPictureOnly } from "./mock-answer-rules";
+import { mockPart1Output } from "./mock-part1-rules";
+import { MOCK_QUESTION_KEYWORDS } from "./mock-question-keywords";
 import type { EvaluationInput, EvaluationModel, ModelEvaluationOutput } from "./types";
 
 /**
@@ -18,17 +21,25 @@ export class MockEvaluationModel implements EvaluationModel {
   readonly isDevelopmentProvider = true;
   readonly config = {};
 
+  /** `delayMs`: how long a "model call" takes (default 1.2 s, so the loop shows Scoring…; mock mode's demo uses 0). */
+  constructor(private readonly options: { delayMs?: number } = {}) {}
+
   async evaluate(_prompt: unknown, input: EvaluationInput): Promise<ModelEvaluationOutput> {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    return { output: buildHeuristicResult(input), provider: this.provider, model: this.model, inputTokens: null, outputTokens: null };
+    const delayMs = this.options.delayMs ?? 1200;
+    if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    // Part 1 has rules of its own (mock-part1-rules.ts), on its own ladder.
+    const output = input.rubric.config.part === 1 ? mockPart1Output(input) : buildHeuristicResult(input);
+    return { output, provider: this.provider, model: this.model, inputTokens: null, outputTokens: null };
   }
 }
 
-const MOCK_MODEL_ANSWERS = [
-  "My friends and I mostly use Telegram and video calls to stay in touch every day.",
-  "Social media helps us share ideas, but it can also waste a lot of our time.",
-  "I think schools should limit phones in lessons, because students concentrate better without them.",
-];
+/**
+ * The "model answer" for a question the answer missed. A mock can't write a real answer on every task's topic, so it
+ * says how to answer that very question; it never borrows another task's topic.
+ */
+function mockModelAnswer(questionId: number, prompt: string): string {
+  return `Start with a direct answer to question ${questionId} ("${prompt}"), then give one reason and one example.`;
+}
 
 const LINKERS_B2 = ["however", "although", "on the other hand", "as a result", "whereas", "overall", "since"];
 
@@ -55,17 +66,35 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
     how_to_check,
   });
 
+  // Every sentence talks about the picture ("In the picture I can see…"): the answer describes it and answers no question.
+  const pictureOnly = mockIsPictureOnly(sentences);
+
   const questions = task.prompts.map((prompt, index) => {
-    const keywords = evidenceTokens(prompt).filter((w) => w.length > 4);
-    const hit = sentences.find((s) => keywords.some((k) => evidenceTokens(s).includes(k)));
+    const keywords = questionKeywords(task, index);
+    const hits = sentences.filter((s) => keywords.some((k) => evidenceTokens(s).includes(k)));
+    const hit = hits[0];
     const shared = new Set(keywords.filter((k) => evidenceTokens(transcript).includes(k))).size;
-    const status: QuestionStatus = shared >= 2 ? "on_topic" : shared === 1 ? "partial" : "missing";
+    let status: QuestionStatus = shared >= 2 ? "on_topic" : shared === 1 ? "partial" : "missing";
+    // Answered in one bare sentence and nowhere else: "minimal" (it does not count).
+    if (status === "on_topic" && mockIsMinimal(hits)) status = "minimal";
+    if (pictureOnly) {
+      return {
+        id: index + 1,
+        status: "off_topic" as const,
+        evidence: sentences[0],
+        note: "Development estimate: your answer describes the picture instead of answering this question.",
+        model_answer: mockModelAnswer(index + 1, prompt),
+      };
+    }
     return {
       id: index + 1,
       status,
       evidence: status === "missing" ? "" : (hit ?? ""),
-      note: `Development estimate: ${shared} key word(s) from question ${index + 1} appear in your answer.`,
-      model_answer: status === "on_topic" ? "" : MOCK_MODEL_ANSWERS[index] ?? "",
+      note:
+        status === "minimal"
+          ? `Development estimate: question ${index + 1} is answered in one short sentence only.`
+          : `Development estimate: ${shared} key word(s) from question ${index + 1} appear in your answer.`,
+      model_answer: status === "on_topic" ? "" : mockModelAnswer(index + 1, prompt),
     };
   });
 
@@ -76,15 +105,16 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
         base,
         first,
         "Development estimate from the length of your answer.",
-        "Use one sentence with 'if' (e.g. 'If schools limit phones, students will focus more').",
+        // Examples on a topic of their own, never the task's (docs/feedback-review.md, issue 3).
+        "Use one sentence with 'if' to say how things could have gone differently (e.g. 'If it had rained, we would have stayed at home').",
         "Your next answer has at least one sentence with 'if'.",
       ),
       vocabulary: feature(
         base,
         first,
         "Development estimate from how many different words you used.",
-        "Use two topic words such as 'screen time' and 'stay in touch'.",
-        "You hear 'screen time' or 'stay in touch' when you listen back.",
+        "Use two phrases that fit your story, such as 'looking back' and 'as far as I remember'.",
+        "You hear 'looking back' or 'as far as I remember' when you listen back.",
       ),
       fluency: feature(
         fluency,
@@ -115,12 +145,20 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
   };
 }
 
+/**
+ * The key words of question `index` (0-based): the task's mock-only list when it has one (mock-question-keywords.ts),
+ * else the question's own words longer than 4 letters.
+ */
+function questionKeywords(task: EvaluationInput["task"], index: number): string[] {
+  const listed = MOCK_QUESTION_KEYWORDS[task.id]?.[index];
+  return listed ? [...listed] : evidenceTokens(task.prompts[index] ?? "").filter((w) => w.length > 4);
+}
+
 function reviewObjective(objective: string, input: EvaluationInput) {
   const question = /^Answer question (\d+)/.exec(objective);
   if (question) {
-    const prompt = input.task.prompts[Number(question[1]) - 1] ?? "";
     const words = new Set(evidenceTokens(input.transcript));
-    const shared = new Set(evidenceTokens(prompt).filter((w) => w.length > 4 && words.has(w))).size;
+    const shared = new Set(questionKeywords(input.task, Number(question[1]) - 1).filter((w) => words.has(w))).size;
     return {
       objective,
       outcome: shared >= 2 ? ("achieved" as const) : shared === 1 ? ("partly_achieved" as const) : ("not_achieved" as const),

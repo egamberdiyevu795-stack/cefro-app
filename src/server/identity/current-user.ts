@@ -96,3 +96,30 @@ export async function requireAuthenticated(): Promise<Extract<CurrentUser, { kin
   if (user.kind !== "authenticated") throw new HttpError(401, "not_authenticated", "Please sign in to do that.");
   return user;
 }
+
+/**
+ * Read-only version of `getCurrentUserId`, for pages (a Server Component cannot set cookies). The same rules: the
+ * signed-in account, else the anonymous cookie's user when it is an active anonymous user. Returns null instead of
+ * creating an identity: a caller with no usable identity owns nothing yet.
+ */
+export async function findCurrentUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  if (hasSessionCookie(cookieStore)) {
+    const account = await readAuthenticatedUser();
+    if (account) return account.userId;
+  }
+  const presented = cookieStore.get(USER_COOKIE_NAME)?.value;
+  if (!presented || !isValidUserId(presented)) return null;
+  const db = await getDb();
+  const row = await db.select({ kind: users.kind, mergedInto: users.mergedIntoUserId }).from(users).where(eq(users.id, presented)).get();
+  return row && row.kind === "anonymous" && !row.mergedInto ? presented : null;
+}
+
+/**
+ * Is the caller signed in to a live account? Read-only, for pages (the signed-out home sends signed-in users to the
+ * dashboard). No login-session cookie: false at once, without touching the database.
+ */
+export async function isSignedIn(): Promise<boolean> {
+  if (!hasSessionCookie(await cookies())) return false;
+  return (await readAuthenticatedUser()) !== null;
+}

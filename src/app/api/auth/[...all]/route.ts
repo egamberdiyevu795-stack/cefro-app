@@ -1,8 +1,8 @@
+import { normaliseName, signUpNameProblem } from "@/domain/account";
 import { getAuth } from "@/server/auth/auth";
-import { authLimiters, clientIp } from "@/server/auth/auth-limits";
-import { getEnv } from "@/server/config/env";
+import { authLimiters, clientIp, countPasswordFailure, passwordFailureBlocked } from "@/server/auth/auth-limits";
 import { HttpError } from "@/server/errors";
-import { errorResponse, readBodyWithLimit, withErrorHandling } from "@/server/http";
+import { errorResponse, isCrossSite, readBodyWithLimit, withErrorHandling } from "@/server/http";
 
 /**
  * The only authentication endpoints CEFRO exposes, served by the auth library (see server/auth/auth.ts):
@@ -33,20 +33,6 @@ export async function GET() {
 /** Credentials are tiny; anything larger is refused before it is buffered or parsed (Content-Length may be missing or false). */
 const MAX_AUTH_BODY_BYTES = 8 * 1024;
 
-/**
- * Login CSRF / forced sign-out: a browser always sends `Origin` on a cross-site POST, so a request whose origin is
- * not ours is refused, and so is one the browser marks cross-site without an Origin. Requests with neither header
- * (curl, server-to-server) are not browser-driven and are allowed. The library's own origin check only runs for
- * requests that already carry cookies, which is why this does not rely on it.
- */
-function isCrossSite(request: Request): boolean {
-  const ownOrigin = getEnv().APP_URL ? new URL(getEnv().APP_URL!).origin : new URL(request.url).origin;
-  const origin = request.headers.get("origin");
-  if (origin !== null) return origin !== ownOrigin;
-  const site = request.headers.get("sec-fetch-site");
-  return site !== null && site !== "same-origin" && site !== "none";
-}
-
 async function handlePost(original: Request) {
   const path = allowedPath(original);
   if (!path) return notFound();
@@ -63,6 +49,9 @@ async function handlePost(original: Request) {
   const ip = clientIp(request);
 
   if (path === "/sign-up/email") {
+    const named = await withCheckedName(request);
+    if (named instanceof Response) return named;
+    request = named;
     const perIp = limits.registerByIp.hit(ip);
     if (!perIp.allowed) return limited("registration_rate_limited", "Too many accounts were created from this connection. Please try again later.", perIp.retryAfterSeconds);
     const total = limits.registerGlobal.hit("all");
@@ -72,15 +61,14 @@ async function handlePost(original: Request) {
 
   if (path === "/sign-in/email") {
     const email = await emailOf(request);
-    for (const [limiter, key] of [[limits.loginByEmail, email], [limits.loginByIp, ip]] as const) {
-      const state = limiter.isBlocked(key);
+    for (const state of [passwordFailureBlocked(email, ip), limits.loginByIp.isBlocked(ip)]) {
       if (state.blocked) {
         return limited("login_rate_limited", "Too many failed sign-in attempts. Please wait a few minutes and try again.", state.retryAfterSeconds);
       }
     }
     const response = await (await getAuth()).handler(request);
     if (response.status >= 400) {
-      limits.loginByEmail.hit(email);
+      countPasswordFailure(email, ip);
       limits.loginByIp.hit(ip);
     }
     return withoutSessionToken(response);
@@ -92,13 +80,34 @@ async function handlePost(original: Request) {
 /** Wrapped so an unreachable database answers 503 (with the standard error body) instead of an unhandled 500. */
 export const POST = withErrorHandling(handlePost);
 
-/** The lower-cased email from a JSON sign-in body, or a constant when it cannot be read (the library rejects such requests itself). */
+/**
+ * Sign-up's name: optional. Empty = no name (stored as none: never made from the email, see server/auth/auth.ts).
+ * Otherwise 1–50 characters after trimming and not an email address, or a 400 `invalid_name` with the reason. The
+ * name is passed on trimmed. A body that is not JSON is passed on unchanged (the library rejects it itself).
+ */
+async function withCheckedName(request: Request): Promise<Request | Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.clone().json()) as Record<string, unknown>;
+  } catch {
+    return request;
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return request;
+  const problem = signUpNameProblem(body.name);
+  if (problem) return errorResponse(400, "invalid_name", problem);
+  const name = typeof body.name === "string" ? normaliseName(body.name) : "";
+  const headers = new Headers(request.headers);
+  headers.delete("content-length"); // the body changed length
+  return new Request(request.url, { method: request.method, headers, body: JSON.stringify({ ...body, name }) });
+}
+
+/** The email from a JSON sign-in body, or a constant when it cannot be read (the library rejects such requests itself). */
 async function emailOf(request: Request): Promise<string> {
   try {
     const body = (await request.clone().json()) as { email?: unknown };
-    return typeof body.email === "string" ? `email:${body.email.trim().toLowerCase().slice(0, 254)}` : "email:(none)";
+    return typeof body.email === "string" ? body.email : "(none)";
   } catch {
-    return "email:(unreadable)";
+    return "(unreadable)";
   }
 }
 

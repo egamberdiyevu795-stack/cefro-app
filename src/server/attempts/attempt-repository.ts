@@ -42,6 +42,8 @@ export async function insertAttemptWithRecording(input: {
   task: SpeakingTask;
   previousAttemptId: string | null;
   retryFocus: RetryFocusItem[] | null;
+  /** Part 1: where each question's speaking window starts in the recording (kept in `metrics` until transcription). */
+  questionOffsetsMs?: number[] | null;
   recording: {
     storageProvider: string;
     storageKey: string;
@@ -71,6 +73,8 @@ export async function insertAttemptWithRecording(input: {
         attemptNumber: (current?.value ?? 0) + 1,
         previousAttemptId: input.previousAttemptId,
         retryFocus: input.retryFocus,
+        // No migration: the offsets wait in the metrics column, and transcription adds the speech metrics to them.
+        ...(input.questionOffsetsMs ? { metrics: { questionOffsetsMs: input.questionOffsetsMs } } : {}),
         status: "uploaded",
         createdAt: now,
         updatedAt: now,
@@ -97,6 +101,28 @@ export async function listAttemptsForUserTask(userId: string, taskId: string): P
     .from(speakingAttempts)
     .where(and(eq(speakingAttempts.userId, userId), eq(speakingAttempts.taskId, taskId)))
     .orderBy(desc(speakingAttempts.attemptNumber))
+    .all();
+}
+
+/**
+ * Every attempt of one user, newest first, with its task snapshot's title, part and level and its recording length.
+ * Only rows whose `userId` is the caller's are ever read: this is the History page's owner check.
+ */
+export async function listAttemptsForUser(userId: string) {
+  const db = await getDb();
+  return db
+    .select({
+      attempt: speakingAttempts,
+      title: speakingTasks.title,
+      part: speakingTasks.part,
+      level: speakingTasks.level,
+      recordingDurationMs: recordings.durationMs,
+    })
+    .from(speakingAttempts)
+    .innerJoin(speakingTasks, and(eq(speakingTasks.id, speakingAttempts.taskId), eq(speakingTasks.version, speakingAttempts.taskVersion)))
+    .leftJoin(recordings, eq(recordings.attemptId, speakingAttempts.id))
+    .where(eq(speakingAttempts.userId, userId))
+    .orderBy(desc(speakingAttempts.createdAt), desc(speakingAttempts.id))
     .all();
 }
 

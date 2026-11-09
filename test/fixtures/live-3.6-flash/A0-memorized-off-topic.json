@@ -1,0 +1,207 @@
+{
+  "_fixture": {
+    "model": "gemini-3.6-flash",
+    "production": false,
+    "warning": "NOT the production model. Production evaluates with gemini-3.8-flash; this free-tier run used gemini-3.6-flash, so bands and judgements may differ from production.",
+    "anchor": "A0-memorized-off-topic",
+    "expectedBand": 0,
+    "bands": [
+      0
+    ],
+    "runAt": "2026-11-06",
+    "commit": "4edee53 (evaluator 3.5.0)",
+    "source": "eval-reports/evaluation-set-2026-11-06T09-59-29-104Z.json",
+    "settings": "EVAL_REPEAT=3, one at a time, 8 s pause, SDK retries off; transcript only (no audio)",
+    "savedFromRun": [
+      "result",
+      "latencyMs",
+      "modelCalls",
+      "inputTokens",
+      "outputTokens",
+      "model (answering model)",
+      "modelConfig (except audioAssessment)"
+    ],
+    "rebuiltFromCode": [
+      "evaluatorVersion",
+      "rubricVersion",
+      "schemaVersion",
+      "promptHash (deterministic)",
+      "modelConfig.audioAssessment",
+      "provider",
+      "isDevelopmentProvider"
+    ],
+    "notSaved": "quality (the quality-gate report) was not written to the report and is left out; qualityPassed is true where the live test asserted it, null where it did not reach that check."
+  },
+  "runs": [
+    {
+      "run": 1,
+      "qualityPassed": null,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "off_topic",
+                "evidence": "",
+                "note": "You talked about playing football instead of describing a time someone gave you advice.",
+                "model_answer": "My teacher / father gave me advice when I was struggling to choose my future career."
+              },
+              {
+                "id": 2,
+                "status": "off_topic",
+                "evidence": "",
+                "note": "You did not mention what advice you received or whether you followed it.",
+                "model_answer": "He advised me to focus on my main strengths, and I followed his suggestion."
+              },
+              {
+                "id": 3,
+                "status": "off_topic",
+                "evidence": "",
+                "note": "You did not share your opinion on whether young people should follow advice from older people.",
+                "model_answer": "In my opinion, young people should / shouldn't always follow older people's advice, because older people have more life experience / times have changed."
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B2",
+                "evidence": [
+                  "which is playing football",
+                  "because it helps them relax after studying"
+                ],
+                "note": "You used complex grammatical structures like relative clauses and gerunds accurately.",
+                "how_to_improve": "Try using a second conditional (e.g., 'If I were in that situation, I would...') when giving your opinion.",
+                "how_to_check": "Check that your sentence uses 'if + past simple' followed by 'would + verb'."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "favourite hobby",
+                  "stay healthy",
+                  "teaches me teamwork"
+                ],
+                "note": "Your vocabulary was clear, but you used basic words and did not address the required topic of advice.",
+                "how_to_improve": "Learn specific vocabulary related to advice, such as 'valuable guidance', 'seek advice', or 'recommendation'.",
+                "how_to_check": "Check if your text contains topic-specific words like 'guidance' or 'follow advice'."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "I play three times a week with my friends"
+                ],
+                "note": "You spoke smoothly without fillers, but you only used 45 seconds out of the available 120 seconds.",
+                "how_to_improve": "Extend your speaking time by giving reasons and examples for each question to cover more of the 120 seconds.",
+                "how_to_check": "Record your response and check if your speaking time reaches at least 90 seconds."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "which is",
+                  "and now",
+                  "and it also",
+                  "because"
+                ],
+                "note": "You connected your ideas using simple linking words like 'and', 'also', and 'because'.",
+                "how_to_improve": "Use a wider variety of cohesive devices such as 'for example', 'however', or 'as a result'.",
+                "how_to_check": "Look at your response to verify you included linkers beyond 'and' and 'because'."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": true,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "which is playing football",
+                "note": "You formed a relative clause accurately."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 0,
+            "language_level": "B1",
+            "language_mean": 1.25,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 0,
+            "language_cap": 2,
+            "band": 0,
+            "label": "Below B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": "memorized_or_irrelevant",
+            "biggest_fix": {
+              "kind": "own_words"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Answer the questions you are asked, in your own words. Do not use a prepared text.",
+              "success_check": "Each part of your answer starts by answering one of the questions directly.",
+              "target": {
+                "kind": "own_words"
+              }
+            },
+            {
+              "objective": "Learn specific vocabulary related to advice, such as 'valuable guidance', 'seek advice', or 'recommendation'.",
+              "success_check": "Check if your text contains topic-specific words like 'guidance' or 'follow advice'.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 28386,
+        "modelCalls": 1,
+        "inputTokens": 6107,
+        "outputTokens": 4574
+      }
+    }
+  ]
+}

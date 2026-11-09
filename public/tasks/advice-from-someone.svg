@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">An older man giving advice to a girl</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. An older man with grey hair and glasses sits on a park bench and talks to a teenage girl beside him, one hand raised as he explains something. She holds a notebook and listens.</desc>
+  <!-- sky and ground -->
+  <rect width="480" height="360" fill="#e8f1f8"/>
+  <circle cx="404" cy="70" r="34" fill="#fbe7a1"/>
+  <path d="M0 262 Q120 236 240 254 T480 246 V360 H0Z" fill="#cfe6c4"/>
+  <!-- tree -->
+  <rect x="38" y="120" width="22" height="150" rx="6" fill="#9a7653"/>
+  <circle cx="49" cy="104" r="52" fill="#8fc185"/>
+  <circle cx="86" cy="132" r="34" fill="#7db174"/>
+  <circle cx="18" cy="138" r="30" fill="#7db174"/>
+  <!-- bench -->
+  <rect x="104" y="208" width="290" height="14" rx="4" fill="#b07d4f"/>
+  <rect x="104" y="170" width="290" height="10" rx="4" fill="#c48d5c"/>
+  <rect x="104" y="186" width="290" height="10" rx="4" fill="#c48d5c"/>
+  <rect x="120" y="222" width="10" height="62" fill="#6d5137"/>
+  <rect x="368" y="222" width="10" height="62" fill="#6d5137"/>
+  <!-- older man (left) -->
+  <g>
+    <path d="M150 284 L156 222 L196 222 L200 284" fill="#4b5563"/>
+    <rect x="146" y="278" width="26" height="10" rx="4" fill="#2f2f2f"/>
+    <rect x="182" y="278" width="26" height="10" rx="4" fill="#2f2f2f"/>
+    <path d="M144 214 Q144 150 180 146 Q216 150 216 214 Z" fill="#5b7fa6"/>
+    <circle cx="180" cy="118" r="26" fill="#e9b98f"/>
+    <path d="M155 112 Q158 88 180 88 Q204 88 206 112 Q198 98 180 99 Q162 98 155 112Z" fill="#d7d7d7"/>
+    <path d="M162 128 Q180 152 198 128 Q192 140 180 141 Q168 140 162 128Z" fill="#e2e2e2"/>
+    <circle cx="171" cy="116" r="7" fill="none" stroke="#333" stroke-width="2"/>
+    <circle cx="191" cy="116" r="7" fill="none" stroke="#333" stroke-width="2"/>
+    <line x1="178" y1="116" x2="184" y2="116" stroke="#333" stroke-width="2"/>
+    <circle cx="171" cy="116" r="1.8" fill="#333"/>
+    <circle cx="191" cy="116" r="1.8" fill="#333"/>
+    <path d="M174 131 Q180 135 186 131" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+    <!-- raised explaining arm -->
+    <path d="M208 164 Q236 166 246 136" fill="none" stroke="#5b7fa6" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="248" cy="128" r="9" fill="#e9b98f"/>
+    <line x1="250" y1="120" x2="253" y2="108" stroke="#e9b98f" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <!-- speech bubble -->
+  <path d="M232 58 h60 a12 12 0 0 1 12 12 v18 a12 12 0 0 1 -12 12 h-34 l-12 12 l2 -12 h-16 a12 12 0 0 1 -12 -12 v-18 a12 12 0 0 1 12 -12z" fill="#ffffff" stroke="#9ca3af" stroke-width="2"/>
+  <circle cx="248" cy="79" r="4" fill="#6b7280"/>
+  <circle cx="262" cy="79" r="4" fill="#6b7280"/>
+  <circle cx="276" cy="79" r="4" fill="#6b7280"/>
+  <!-- girl (right) -->
+  <g>
+    <path d="M300 284 L304 222 L340 222 L344 284" fill="#3f6f8f"/>
+    <rect x="294" y="278" width="24" height="10" rx="4" fill="#d9534f"/>
+    <rect x="328" y="278" width="24" height="10" rx="4" fill="#d9534f"/>
+    <path d="M294 214 Q294 158 322 154 Q350 158 350 214 Z" fill="#e8835a"/>
+    <path d="M298 100 Q296 70 322 70 Q350 70 348 104 L350 150 Q336 142 330 120 L314 120 Q306 142 294 150Z" fill="#3b2a20"/>
+    <circle cx="322" cy="112" r="22" fill="#d9a07a"/>
+    <path d="M300 104 Q306 82 324 84 Q342 84 344 104 Q330 92 314 96 Q306 98 300 104Z" fill="#3b2a20"/>
+    <circle cx="314" cy="113" r="2.2" fill="#333"/>
+    <circle cx="330" cy="113" r="2.2" fill="#333"/>
+    <path d="M316 123 Q322 127 328 123" fill="none" stroke="#8a4b3a" stroke-width="2" stroke-linecap="round"/>
+    <!-- notebook -->
+    <rect x="290" y="186" width="44" height="32" rx="3" fill="#ffffff" stroke="#9ca3af" stroke-width="2" transform="rotate(-8 312 202)"/>
+    <line x1="297" y1="196" x2="326" y2="192" stroke="#cbd5e1" stroke-width="2"/>
+    <line x1="298" y1="204" x2="327" y2="200" stroke="#cbd5e1" stroke-width="2"/>
+    <path d="M296 190 Q304 198 316 206" fill="none" stroke="#e8835a" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="318" cy="206" r="6" fill="#d9a07a"/>
+  </g>
+</svg>

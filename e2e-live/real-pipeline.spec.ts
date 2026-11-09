@@ -10,7 +10,7 @@ import type { MultilevelResult } from "../src/domain/evaluation/multilevel/resul
  * One real-provider browser flow: the real recorder path → upload → real transcription → real evaluation →
  * feedback on screen, then the stored attempt read back through the API. Marked NOT RUN when keys are absent.
  */
-const TASK_URL = "/practice/speaking/b2-part2-technology-young-people";
+const TASK_URL = "/practice/speaking/b2-part2-advice-from-someone";
 const wav = path.join(process.cwd(), "eval-audio", "browser-answer.wav");
 
 test("browser → real recording path → real transcription → real evaluation → feedback", async ({ page }) => {
@@ -27,22 +27,23 @@ test("browser → real recording path → real transcription → real evaluation
   await page.goto(TASK_URL);
   await page.getByRole("button", { name: "Start preparation" }).click(); // opens the (fake) microphone: playback starts now
   await expect(page.getByText("to prepare")).toBeVisible();
-  await page.getByRole("button", { name: /start speaking/ }).click();
-  await expect(page.getByRole("button", { name: "Finish answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Start speaking now" }).click();
+  await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
   // Preparation is skipped immediately, so recording starts about a second after playback began: wait for the speech to end.
   await page.waitForTimeout((speechSeconds + 1.5) * 1000);
   const startedAt = Date.now();
-  await page.getByRole("button", { name: "Finish answer" }).click();
-  await expect(page.locator("audio")).toBeVisible();
-  await page.getByRole("button", { name: "Submit for feedback" }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  // Under a minute of speech opens the early-finish warning first.
+  const finishAnyway = page.getByRole("button", { name: "Finish anyway" });
+  if (await finishAnyway.isVisible()) await finishAnyway.click();
 
   // Real transcription + real evaluation. Generous: observed ~15-45 s, regeneration possible.
-  await expect(page.getByRole("heading", { name: "The biggest thing to fix" })).toBeVisible({ timeout: 4 * 60_000 });
+  await expect(page.getByRole("heading", { name: /^Part 2 · Band [0-5] · / })).toBeVisible({ timeout: 4 * 60_000 }); // the new result page
   const endToEndMs = Date.now() - startedAt;
-  await expect(page.getByText("Development evaluator")).toHaveCount(0); // not the mock
+  await expect(page.getByTestId("development-evaluator")).toHaveCount(0); // not the mock
 
   // Read the stored attempt back through the API, the way the page does.
-  const list = await (await page.request.get("/api/speaking/tasks/b2-part2-technology-young-people/attempts")).json();
+  const list = await (await page.request.get("/api/speaking/tasks/b2-part2-advice-from-someone/attempts")).json();
   expect(list.attempts).toHaveLength(1);
   const { attempt } = await (await page.request.get(`/api/speaking/attempts/${list.attempts[0].id}`)).json();
 

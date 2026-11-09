@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A young woman walking up a hill towards a flag</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. A young woman with a backpack walks up a winding path on a green hill. At the top of the hill, still far ahead of her, a small red flag stands on a pole.</desc>
+  <!-- sky -->
+  <rect width="480" height="360" fill="#e8f1f8"/>
+  <circle cx="74" cy="66" r="30" fill="#fbe7a1"/>
+  <path d="M150 70 q10 -16 28 -10 q8 -12 24 -6 q16 0 16 14 q-34 6 -68 2z" fill="#ffffff"/>
+  <!-- hills -->
+  <path d="M0 236 Q90 196 180 226 Q240 204 320 214 V360 H0Z" fill="#dcebd3"/>
+  <path d="M0 304 Q150 294 240 232 Q318 168 384 110 Q432 150 480 168 V360 H0Z" fill="#cfe6c4"/>
+  <!-- trees -->
+  <rect x="44" y="262" width="10" height="44" rx="3" fill="#9a7653"/>
+  <circle cx="49" cy="252" r="22" fill="#8fc185"/>
+  <rect x="444" y="196" width="8" height="34" rx="3" fill="#9a7653"/>
+  <circle cx="448" cy="188" r="17" fill="#7db174"/>
+  <!-- winding path to the top -->
+  <path d="M90 360 Q150 330 196 300 Q232 280 262 254 Q300 222 330 178 Q352 144 382 114" fill="none" stroke="#e9dcc0" stroke-width="12" stroke-linecap="round"/>
+  <!-- flag at the top -->
+  <line x1="384" y1="112" x2="384" y2="56" stroke="#6d5137" stroke-width="4" stroke-linecap="round"/>
+  <path d="M386 58 L424 69 L386 81Z" fill="#d9534f"/>
+  <!-- young woman with a backpack, walking up -->
+  <g>
+    <path d="M248 228 L238 258" stroke="#4b5563" stroke-width="10" stroke-linecap="round"/>
+    <path d="M256 228 L270 250" stroke="#4b5563" stroke-width="10" stroke-linecap="round"/>
+    <rect x="230" y="256" width="15" height="7" rx="3" fill="#2f2f2f"/>
+    <rect x="266" y="248" width="15" height="7" rx="3" fill="#2f2f2f" transform="rotate(-20 273 251)"/>
+    <rect x="226" y="190" width="16" height="32" rx="5" fill="#5b7fa6"/>
+    <path d="M238 232 Q236 190 252 188 Q268 190 266 232Z" fill="#e8835a"/>
+    <path d="M262 196 Q274 208 278 220" fill="none" stroke="#e8835a" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="279" cy="223" r="4.5" fill="#d9a07a"/>
+    <path d="M244 196 Q240 206 240 216" fill="none" stroke="#e8835a" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="236" cy="174" r="7" fill="#3b2a20"/>
+    <circle cx="253" cy="172" r="15" fill="#d9a07a"/>
+    <path d="M238 170 Q240 155 254 155 Q268 155 268 170 Q260 162 252 163 Q244 164 238 170Z" fill="#3b2a20"/>
+    <circle cx="260" cy="171" r="1.8" fill="#333"/>
+    <path d="M258 179 Q262 181 265 179" fill="none" stroke="#8a4b3a" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+</svg>

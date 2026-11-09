@@ -4,6 +4,7 @@ import { MAX_AUDIO_BYTES, createAttempt } from "@/server/attempts/attempt-servic
 import { claimAttempt, runClaimedAttempt } from "@/server/attempts/attempt-processing";
 import { getEnv } from "@/server/config/env";
 import { validateProviderConfig } from "@/server/config/provider-config";
+import { assertCanRecord } from "@/server/consent/consent";
 import { HttpError } from "@/server/errors";
 import { parseFormData, readBodyWithLimit, withErrorHandling } from "@/server/http";
 import { getOrCreateCurrentUserId } from "@/server/identity/anonymous-user";
@@ -17,6 +18,8 @@ const fieldsSchema = z.object({
   previousAttemptId: z.string().uuid().optional(),
   sessionId: z.string().uuid().optional(),
   clientAttemptId: z.string().uuid().optional(),
+  /** Part 1: JSON array of the start of each question's speaking window (ms, recording time). */
+  questionOffsetsMs: z.string().max(200).optional(),
 });
 
 /** The audio limit plus room for the multipart framing and the small text fields. */
@@ -39,6 +42,8 @@ export const POST = withErrorHandling(async (request: Request) => {
     );
   }
   const userId = await getOrCreateCurrentUserId();
+  // Pilot consent (CONSENT_REQUIRED): refused before the recording is read or stored.
+  await assertCanRecord(userId);
 
   // The body is counted as it arrives: Content-Length is only a fast path and may be missing or wrong.
   const body = await readBodyWithLimit(request, MAX_BODY_BYTES);
@@ -53,6 +58,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     previousAttemptId: form.get("previousAttemptId") || undefined,
     sessionId: form.get("sessionId") || undefined,
     clientAttemptId: form.get("clientAttemptId") || undefined,
+    questionOffsetsMs: form.get("questionOffsetsMs") || undefined,
   });
   if (!fields.success) throw new HttpError(400, "invalid_fields", "The upload was missing information.");
 
@@ -65,6 +71,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     previousAttemptId: fields.data.previousAttemptId ?? null,
     sessionId: fields.data.sessionId ?? null,
     clientAttemptId: fields.data.clientAttemptId ?? null,
+    questionOffsetsMs: parseOffsets(fields.data.questionOffsetsMs),
   });
 
   // A resent recording returns the existing attempt; claiming is a no-op unless it never started processing.
@@ -72,3 +79,12 @@ export const POST = withErrorHandling(async (request: Request) => {
   if (claimed) after(() => runClaimedAttempt(attempt.id));
   return Response.json({ attempt: claimed ? { ...attempt, status: "processing" } : attempt }, { status: 201 });
 });
+
+function parseOffsets(value: string | undefined): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}

@@ -1,6 +1,6 @@
 import "server-only";
 import { isQuoteInTranscript } from "@/domain/evaluation/evidence";
-import { audioAssessmentSchema, type AudioAssessment } from "@/domain/evaluation/multilevel/model-output";
+import { audioAssessmentSchemaFor, type AudioAssessment } from "@/domain/evaluation/multilevel/model-output";
 import type { MultilevelRubricConfig } from "@/domain/evaluation/multilevel/rubric-config";
 import { logger } from "@/server/logging/logger";
 import { buildAudioAssessmentPrompt } from "./prompts/multilevel-audio-assessment";
@@ -32,11 +32,12 @@ export async function runAudioAssessment(options: {
       prompt: buildAudioAssessmentPrompt(options.config, options.transcript),
       audio,
       mimeType: options.mimeType,
+      levels: options.config.levels,
     });
     const value = typeof raw.output === "string" ? JSON.parse(stripCodeFence(raw.output)) : raw.output;
-    const parsed = audioAssessmentSchema.safeParse(value);
+    const parsed = audioAssessmentSchemaFor(options.config.levels).safeParse(value);
     if (!parsed.success) throw new Error(`Audio assessment failed schema validation: ${parsed.error.issues[0]?.message}`);
-    const assessment = parsed.data;
+    const assessment = parsed.data as AudioAssessment;
     if (!assessment.speech_audible) {
       return { status: "not_assessed", reason: "unclear", provider: raw.provider, model: raw.model };
     }

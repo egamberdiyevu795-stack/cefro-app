@@ -1,7 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
 import { ProviderError } from "@/server/errors";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
 
@@ -53,8 +53,7 @@ export class AnthropicEvaluationModel implements EvaluationModel {
     return this.options.model;
   }
 
-  async evaluate(prompt: EvaluationPrompt, _input: EvaluationInput): Promise<ModelEvaluationOutput> {
-    void _input; // transcript-only: the prompt already contains everything needed (audio has its own step).
+  async evaluate(prompt: EvaluationPrompt, input: EvaluationInput): Promise<ModelEvaluationOutput> {
     let response;
     try {
       response = await this.client.beta.messages.parse({
@@ -67,7 +66,7 @@ export class AnthropicEvaluationModel implements EvaluationModel {
         thinking: { type: "adaptive" },
         output_config: {
           effort: this.options.effort,
-          format: betaZodOutputFormat(multilevelModelOutputSchema),
+          format: betaZodOutputFormat(providerOutputSchema(input?.rubric?.config)),
         },
         system: prompt.system,
         messages: [{ role: "user", content: prompt.user }],

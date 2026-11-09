@@ -2,10 +2,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { synthesizeSpeechWav } from "../test/live/audio";
-import { B2_PART2_SAMPLES } from "../test/evaluation-samples/b2-part2-samples";
+import { PART2_BAND_ANCHORS } from "../test/evaluation-samples/part2-band-anchors";
 
-/** Builds the fake-microphone file: the strong sample read aloud, preceded by silence so no word is lost before recording starts. */
-export const BROWSER_ANSWER_TEXT = B2_PART2_SAMPLES.find((s) => s.id.startsWith("S01"))!.transcript;
+/** Builds the fake-microphone file: the B2 anchor answer read aloud, preceded by silence so no word is lost before recording starts. */
+export const BROWSER_ANSWER_TEXT = PART2_BAND_ANCHORS.find((s) => s.id.startsWith("A4"))!.transcript;
 export const LEAD_IN_SECONDS = 3;
 
 export default async function globalSetup() {

@@ -1,11 +1,13 @@
 import "server-only";
+import { isServerConfigured } from "@/server/config/boot-check";
 import { assertSchemaCurrent, getDb } from "@/server/db/client";
 import { safeDatabaseMessage } from "@/server/db/errors";
 import { logger } from "@/server/logging/logger";
 
 /**
- * Is this deployment able to serve? That means: the database it is configured for can be reached with the credentials
- * it actually runs with, and it has been migrated to the schema this code expects.
+ * Is this deployment able to serve? That means: in production its provider and sign-in configuration is complete
+ * (server/config/boot-check.ts), and the database it is configured for can be reached with the credentials it actually
+ * runs with and has been migrated to the schema this code expects.
  *
  * It answers yes or no only. Why it is "no" goes to the server log (redacted), never to the caller: the endpoint is
  * public, so it must not reveal configuration, versions, table names or error text.
@@ -19,6 +21,7 @@ export async function isHealthy(now: number = Date.now()): Promise<boolean> {
   if (cached && now - cached.at < CACHE_MS) return cached.healthy;
   let healthy = false;
   try {
+    if (!isServerConfigured()) throw new Error("server configuration incomplete (see the startup log for variable names)");
     const db = await getDb();
     await db.$client.execute("SELECT 1");
     await assertSchemaCurrent(db);

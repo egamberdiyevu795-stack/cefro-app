@@ -787,9 +787,14 @@ only**. `PART_LIVE["3"]` stays off: the dashboard tile and the home page keep "C
   the goal of a retry, the grey "Check microphone", the black **"Start"** ("Turn your sound on…"). Beside it: the
   statement and both lists (F1–F3, A1–A3).
 - **Spoken introduction (as in the exam, Part 2 too):** `PartIntroCard` on its own (no task beside it): "Listen",
-  "Part 3" (or "Part 2"), the introduction's text, "The minute of preparation starts by itself after the chime.", the
-  goal of a retry; no button. The same offline voice as Part 1 reads it, then the chime, then the task with the
-  one-minute countdown. Part 2's brief keeps its "Start preparation" label.
+  "Part 3" (or "Part 2"), the introduction's text, "The minute of preparation starts by itself after the chime." (Part 2:
+  "After the chime, you will hear the questions. Then the minute of preparation starts by itself."), the goal of a
+  retry; no button. The same offline voice as Part 1 reads it, then the chime, then the task with the one-minute
+  countdown. Part 2's brief keeps its "Start preparation" label.
+- **Part 2 questions read aloud (as in the exam):** after the introduction's chime, the task with its questions on
+  screen and `QuestionsReadingCard` beside it ("Listen", "The questions", "The minute of preparation starts by itself
+  when the reading ends.", the goal of a retry); no countdown, no button. The same voice reads the task line and the
+  three questions; when it ends, the preparation countdown starts. Part 3 has no such step.
 - **Preparation = choosing:** the 1-minute countdown, "Tick two points in each list…", "FOR n of 2 · AGAINST n of 2"
   (a live status), the quiet "Start speaking now" (no black button). Each point is a native checkbox with a 44 px row;
   a third tick on a side is disabled. Ticked rows are `well`, unticked `card` with a `line` ring.

@@ -31,6 +31,19 @@ describe("practiceReducer", () => {
     expect(practiceReducer(intro, { type: "backToBrief" }).phase).toEqual({ kind: "brief" });
   });
 
+  it("Part 2: after the introduction the questions are read (no countdown), and only then the minute of preparation", () => {
+    const intro = practiceReducer(initialPracticeState, { type: "introStarted" });
+    const questions = practiceReducer(intro, { type: "questionsStarted" });
+    expect(questions.phase).toEqual({ kind: "questions" });
+    expect(practiceReducer(questions, { type: "preparationStarted", now: 1_000, preparationMs: 60_000 }).phase).toEqual({ kind: "preparing", endsAt: 61_000 });
+    // Only from the introduction: never from the brief, preparation or a second time.
+    expect(practiceReducer(initialPracticeState, { type: "questionsStarted" })).toBe(initialPracticeState);
+    expect(practiceReducer(questions, { type: "questionsStarted" })).toBe(questions);
+    const preparing = practiceReducer(questions, { type: "preparationStarted", now: 0, preparationMs: 60_000 });
+    expect(practiceReducer(preparing, { type: "questionsStarted" })).toBe(preparing);
+    expect(practiceReducer(questions, { type: "backToBrief" }).phase).toEqual({ kind: "brief" });
+  });
+
   it("a retry that finishes loading late never pulls the student out of preparation or recording", () => {
     const preparing = practiceReducer(initialPracticeState, { type: "preparationStarted", now: 1000, preparationMs: 60_000 });
     expect(practiceReducer(preparing, { type: "retryRequested", attempt: attempt("a", "completed") })).toBe(preparing);

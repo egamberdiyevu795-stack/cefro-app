@@ -156,10 +156,14 @@ test("the real introduction plays, then preparation and recording start by thems
   expect(seen.apiCalls).toEqual([]);
 });
 
-test("Part 2 (mock mode): the real introduction plays on its own screen, then the chime and the minute of preparation", async ({ page }) => {
-  test.setTimeout(90_000);
+test("Part 2 (mock mode): the real introduction plays on its own screen, then the chime, then the real questions are read aloud, and only then the minute of preparation", async ({ page }) => {
+  test.setTimeout(120_000);
   const seen = watch(page);
   const intro = page.waitForResponse((r) => r.url().endsWith("/audio/speaking/part2/intro/v1/intro.wav") && r.ok());
+  const questions = page.waitForResponse(
+    (r) => r.url().endsWith("/audio/speaking/part2/b2-part2-advice-from-someone/v3/questions.wav") && r.ok(),
+    { timeout: 45_000 },
+  );
   await page.goto("/practice/speaking/b2-part2-advice-from-someone?mock=1");
   await page.getByRole("button", { name: "Start preparation" }).click();
   await intro;
@@ -167,9 +171,18 @@ test("Part 2 (mock mode): the real introduction plays on its own screen, then th
   await expect(page.getByRole("heading", { name: "Part 2", exact: true })).toBeVisible();
   await expect(page.getByTestId("intro-text")).toContainText("a picture and three questions");
   await audit(page, 0);
-  // About 15 s of speech, then the chime, then the task with the one-minute countdown.
-  await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible({ timeout: 40_000 });
+  // About 15 s of speech, then the chime, then the questions screen: the task on screen, no countdown, no button.
+  await expect(page.getByTestId("part2-questions")).toBeVisible({ timeout: 40_000 });
+  await questions;
   await expect(page.getByTestId("part2-intro")).toHaveCount(0);
+  await expect(page.getByText("Who gave you the advice, and what situation were you in?")).toBeVisible();
+  await expect(page.getByText("to prepare", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start speaking now" })).toHaveCount(0);
+  await audit(page, 0);
+  // About 19 s of reading, then the one-minute countdown starts (no chime between them).
+  await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("part2-questions")).toHaveCount(0);
   expect(seen.apiCalls).toEqual([]);
 });
 

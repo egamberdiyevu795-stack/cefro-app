@@ -29,6 +29,7 @@ Steps 8 and 9 (with `claude/part3`) are inside `claude/project-thread-mz2ndw` (P
 `claude/project-thread-krzvuk`, see its section below). Merge that branch instead of 8 and 9 on their own.
 Pilot consent (`claude/consent-pilot`) comes **right after `claude/project-thread-mz2ndw`** and contains
 `claude/pilot-consent` and `claude/consent-plan-j0ky8m`: merge it instead of those two.
+`claude/p2-read-qs` (Part 2 questions read aloud) comes **right after `claude/consent-pilot`** and contains it.
 
 ### Why merge commits for 1–6 (and 10–11)
 
@@ -513,6 +514,30 @@ Added on this branch, on top of `claude/part3`:
   `practice-machine.test.ts` (the intro phase), `e2e/part3.spec.ts` (both real introductions; a Part 3 run where
   preparation and recording run out by themselves). Other browser specs serve a 0.2 s silent file for the
   introductions (`e2e/short-intro.ts`).
+
+## Right after `claude/consent-pilot`: `claude/p2-read-qs` (Part 2 questions read aloud, no migration)
+
+It is `claude/consent-pilot` plus one change from the owner's feedback on the real exam (2026-11-09). Merge commit, no
+squash. Branch name: 11 characters after `claude/`. Preview (mock mode, sound on):
+`https://cefro-app-mgm6-git-claude-p2-read-qs-crm-b915.vercel.app/practice/speaking/b2-part2-happy-day?mock=1`.
+
+- **Part 2 order is now:** brief → spoken introduction on its own screen → **chime** → **the examiner reads the task
+  aloud** (the task line, e.g. "Describe a very happy day in your life.", then the three questions; not "Answer the
+  three questions below" or "Look at the photograph") with the task on screen and a "Listen" card, **no countdown and
+  no button** → only when the reading ends, the **1:00 preparation countdown** → chime → 2:00 speaking → chime. A
+  missing or blocked file never stops the part (its watchdog settles it; the questions are on screen). The
+  introduction screen now says "After the chime, you will hear the questions. Then the minute of preparation starts
+  by itself." **Part 3 is unchanged** (introduction, chime, then the timer: the owner confirmed it matches the exam).
+- **Audio:** one file per task version, `public/audio/speaking/part2/<task id>/v<version>/questions.wav` (12–19 s),
+  made offline with the same Piper voice and settings as Part 1 and the introductions. Texts:
+  `src/content/speaking/part2-question-audio.json`, built from each task's own wording
+  (`part2SpokenQuestions` in `src/content/speaking/part2-question-audio.ts`); `scripts/make-part1-question-audio.mjs`
+  reads it too (`ONLY=questions.wav` remakes only these). A unit test fails when a question's wording changes until
+  its audio is made again. **Owner: listen to the seven files before launch.**
+- **Tests:** `part2-tasks.test.ts` (texts match the screen, files exist, same voice, the listening screen),
+  `practice-machine.test.ts` (the new `questions` phase), `e2e/part3.spec.ts` (the real introduction and real
+  questions, then the countdown), `e2e/practice-flow.spec.ts` (sound files in order). Other browser specs serve a
+  0.2 s silent file for the questions too (`e2e/short-intro.ts`).
 
 ## Right after `claude/project-thread-mz2ndw`: `claude/consent-pilot` (pilot consent and 30-day audio deletion, migration 0007)
 

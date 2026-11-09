@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import HomePage from "@/app/(site)/practice/page";
@@ -10,7 +11,10 @@ import { openDatabase, setDbForTesting } from "@/server/db/client";
 import { speakingTasks } from "@/server/db/schema";
 import { buildMultilevelEvaluationPrompt } from "@/server/evaluation/prompts/multilevel-evaluation";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { PartIntroCard, QuestionsReadingCard } from "@/features/speaking-practice/components/screens";
 import { getSpeakingTask, listSpeakingTasks } from "./index";
+import part1AudioManifest from "./part1/question-audio.json";
+import { PART2_QUESTION_AUDIO_FILES, PART2_QUESTION_AUDIO_VOICE, part2QuestionAudioPath, part2SpokenQuestions } from "./part2-question-audio";
 
 /**
  * Every Part 2 task has the same shape as "Advice from someone": 1 min preparation, 2 min speaking, 3 questions, one
@@ -205,5 +209,47 @@ describe("task list page (/)", () => {
     expect(html).toContain('data-testid="demo-label"');
     const hrefs = [...html.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
     expect(hrefs).toEqual(tasks.map((t) => `${t.id}?mock=1`));
+  });
+});
+
+describe("Part 2 question audio (read aloud after the introduction's chime, before the minute of preparation)", () => {
+  it("one file per task version, speaking the task line and the three questions exactly as on screen", () => {
+    expect(PART2_QUESTION_AUDIO_FILES.map((f) => f.path)).toEqual(tasks.map((t) => part2QuestionAudioPath(t)));
+    for (const task of tasks) {
+      const file = PART2_QUESTION_AUDIO_FILES.find((f) => f.path === part2QuestionAudioPath(task))!;
+      // Changing a question's wording fails here until its audio is made again (scripts/make-part1-question-audio.mjs).
+      expect(file.text, task.id).toBe(part2SpokenQuestions(task));
+      expect(file.path).toBe(`/audio/speaking/part2/${task.id}/v${task.version}/questions.wav`);
+      for (const q of task.prompts) expect(file.text).toContain(q);
+      expect(file.text).toMatch(/^Describe /);
+      expect(file.text).not.toContain("Answer the three questions below");
+      expect(file.text).not.toMatch(/Look at the (photograph|picture)/i);
+    }
+  });
+
+  it("uses exactly the Part 1 voice and settings", () => {
+    expect(PART2_QUESTION_AUDIO_VOICE).toEqual(part1AudioManifest.voice);
+  });
+
+  it.each(tasks.map((t) => [part2QuestionAudioPath(t)] as const))("%s exists as a WAV file in /public", (file) => {
+    const full = path.join(process.cwd(), "public", file);
+    expect(fs.statSync(full).size).toBeGreaterThan(10_000);
+    expect(fs.readFileSync(full).subarray(0, 4).toString("ascii")).toBe("RIFF");
+  });
+});
+
+describe("Part 2 listening screens", () => {
+  it("the questions screen says to listen, has no countdown and no black button; the intro says the questions come next", () => {
+    const goal = { objective: "Answer all three questions.", check: null };
+    const markup = renderToStaticMarkup(createElement(QuestionsReadingCard, { goal }));
+    expect(markup).toContain("Listen");
+    expect(markup).toContain("The minute of preparation starts by itself when the reading ends.");
+    expect(markup).toContain("Your goal:");
+    expect(markup).not.toMatch(/<button|bg-primary text-on-primary|to prepare/);
+    const intro = renderToStaticMarkup(
+      createElement(PartIntroCard, { part: "Part 2", text: "Part 2. Hello.", goal: null, note: "After the chime, you will hear the questions." }),
+    );
+    expect(intro).toContain("After the chime, you will hear the questions.");
+    expect(intro).not.toContain("starts by itself after the chime");
   });
 });

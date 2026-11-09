@@ -15,8 +15,9 @@ import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, fetchTaskAttempts, startSession, submitRecording } from "../lib/api-client";
 import { initialPracticeState, practiceReducer, type PracticeState } from "../lib/practice-machine";
 import { playChime, primeChime } from "../lib/chime";
-import { CuePlayer } from "../lib/cue-player";
+import { CuePlayer, DEFAULT_CUE_TIMEOUTS } from "../lib/cue-player";
 import { PART2_INTRO } from "@/content/speaking/part-intro-audio";
+import { part2QuestionAudioPath } from "@/content/speaking/part2-question-audio";
 import { initialRetryGoalLoad, pendingRequest, RETRY_GOAL_TIMEOUT_MS, retryGoalLoadReducer } from "../lib/retry-goal-load";
 import { demoScoringHref, isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
 import {
@@ -29,6 +30,7 @@ import {
   PartIntroCard,
   PracticeLayout,
   PreparationCard,
+  QuestionsReadingCard,
   RecordingCard,
   RecordingLockedState,
   RetryGoalLoading,
@@ -49,7 +51,7 @@ function newClientAttemptId(): string {
 
 /**
  * The B2 Part 2 practice loop: brief → the spoken introduction on its own screen, then the chime (as in the exam) →
- * prepare (one minute) → chime → record (two minutes; a chime again when time is up) → (Finish) upload, then the attempt's own result page
+ * the examiner reads the task line and its three questions aloud, with the task on screen → prepare (one minute) → chime → record (two minutes; a chime again when time is up) → (Finish) upload, then the attempt's own result page
  * (/result/[id]: Scoring…, result, retry, comparison). A retry comes back here with ?retry=<id>.
  *
  * This component wires state, side effects and analytics together; the screens it renders are presentational
@@ -196,7 +198,8 @@ export function PracticeExperience({
     setPageError(null);
     primeChime(); // inside the click, so the chime is allowed after the introduction and when preparation runs out
     cuePlayerRef.current?.stop();
-    const player = new CuePlayer(new Audio());
+    // The introduction and the read-out questions are longer than a Part 1 question: a longer watchdog.
+    const player = new CuePlayer(new Audio(), { ...DEFAULT_CUE_TIMEOUTS, maxMs: 60_000 });
     cuePlayerRef.current = player;
     const spoken = player.play(PART2_INTRO.audio);
     const ready = await recorder.requestMicrophone();
@@ -214,9 +217,16 @@ export function PracticeExperience({
     if (!result.ok) track("question_audio_failed", { taskId, properties: { cue: "intro", reason: result.reason } });
     await playChime();
     if (unmountedRef.current || phaseRef.current !== "intro") return;
+    // Then the examiner reads the questions (the task is on screen); the minute starts only when the reading ends. A
+    // missing or blocked file never stops the part either: the questions are on screen and the minute starts.
+    dispatch({ type: "questionsStarted" });
+    phaseRef.current = "questions";
+    const read = await player.play(part2QuestionAudioPath(task));
+    if (unmountedRef.current || (!read.ok && read.reason === "superseded") || phaseRef.current !== "questions") return;
+    if (!read.ok) track("question_audio_failed", { taskId, properties: { cue: "questions", reason: read.reason } });
     dispatch({ type: "preparationStarted", now: Date.now(), preparationMs: task.preparationSeconds * 1000 });
     track("preparation_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
-  }, [lock, recorder, task.preparationSeconds, taskId, retryOfId, track]);
+  }, [lock, recorder, task, taskId, retryOfId, track]);
 
   // The start-of-speaking chime (whether preparation ran out or was skipped), then recording: the chime is not recorded.
   const startingRef = useRef(false);
@@ -376,7 +386,7 @@ export function PracticeExperience({
   };
 
   // A microphone problem after the brief replaces the step card (its "Try again" goes back to the brief).
-  if (micError && ["intro", "preparing", "recording", "review"].includes(phase.kind)) {
+  if (micError && ["intro", "questions", "preparing", "recording", "review"].includes(phase.kind)) {
     return (
       <PracticeLayout task={taskCard(true)} step={<MicrophoneCard kind={micError} onRetry={retryMicrophone} />} />
     );
@@ -439,7 +449,18 @@ export function PracticeExperience({
       break;
     }
     case "intro":
-      content = <PartIntroCard part="Part 2" text={PART2_INTRO.text} goal={goal} testId="part2-intro" />;
+      content = (
+        <PartIntroCard
+          part="Part 2"
+          text={PART2_INTRO.text}
+          goal={goal}
+          testId="part2-intro"
+          note="After the chime, you will hear the questions. Then the minute of preparation starts by itself."
+        />
+      );
+      break;
+    case "questions":
+      content = <PracticeLayout task={taskCard(true)} step={<QuestionsReadingCard goal={goal} />} />;
       break;
     case "preparing":
       content = (

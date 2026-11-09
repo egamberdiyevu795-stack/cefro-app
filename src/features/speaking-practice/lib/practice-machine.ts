@@ -3,13 +3,14 @@ import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attemp
 /**
  * State machine for one practice session on a task.
  *
- *  brief ──▶ intro ──▶ preparing ──▶ recording ──▶ review ──▶ uploading ──▶ processing ──▶ result
+ *  brief ──▶ intro ──▶ questions ──▶ preparing ──▶ recording ──▶ review ──▶ uploading ──▶ processing ──▶ result
  *    ▲                         ▲            │            │                          │
  *    │                         └─ re-record ┘     uploadFailed (recording kept)     │
  *    └──────────── retryBrief ◀───────────────────── "Retry this task" ◀────────────┤
  *                                                    comparison ◀── "Compare" ◀─────┘
  *
- * "intro" is the part's spoken introduction on its own screen (then the chime), as in the exam.
+ * "intro" is the part's spoken introduction on its own screen (then the chime), as in the exam. "questions" is the
+ * examiner reading the task's questions aloud, with the task on screen; the minute of preparation starts only after it.
  *
  * Timers are stored as absolute deadlines (`endsAt`), so the displayed
  * countdown is always derived from this state, never kept separately.
@@ -18,6 +19,7 @@ export type PracticePhase =
   | { kind: "brief" }
   | { kind: "retryBrief" }
   | { kind: "intro" }
+  | { kind: "questions" }
   | { kind: "preparing"; endsAt: number }
   | { kind: "recording"; endsAt: number }
   | { kind: "review" }
@@ -37,6 +39,7 @@ export interface PracticeState {
 
 export type PracticeAction =
   | { type: "introStarted" }
+  | { type: "questionsStarted" }
   | { type: "preparationStarted"; now: number; preparationMs: number }
   | { type: "recordingStarted"; now: number; speakingMs: number }
   | { type: "recordingStopped" }
@@ -59,6 +62,8 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
   switch (action.type) {
     case "introStarted":
       return state.phase.kind === "brief" || state.phase.kind === "retryBrief" ? { ...state, phase: { kind: "intro" } } : state;
+    case "questionsStarted":
+      return state.phase.kind === "intro" ? { ...state, phase: { kind: "questions" } } : state;
     case "preparationStarted":
       return { ...state, phase: { kind: "preparing", endsAt: action.now + action.preparationMs } };
     case "recordingStarted":

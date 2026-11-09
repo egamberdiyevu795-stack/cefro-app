@@ -273,6 +273,28 @@ export function PreparationCard({
 }
 
 /**
+ * Part 2, between the introduction's chime and the minute of preparation: the examiner reads the task line and its
+ * three questions aloud (the task is on screen beside this card). No countdown and no button: as in the exam, the
+ * minute starts by itself when the reading ends.
+ */
+export function QuestionsReadingCard({ goal }: { goal: RetryGoal | null }) {
+  return (
+    <Card aria-labelledby="step-title" data-testid="part2-questions">
+      <p className="flex items-center gap-2 text-label font-semibold text-fg" aria-live="polite">
+        <Icon name="play" size={16} className="text-fg-subtle" />
+        Listen
+      </p>
+      <h1 id="step-title" className="mt-3 text-label font-semibold text-fg">
+        The questions
+      </h1>
+      <p className="mt-3 text-body text-fg">Listen to the questions. You can read them on the screen too.</p>
+      <p className="mt-4 text-label text-fg-muted">The minute of preparation starts by itself when the reading ends.</p>
+      {goal && <GoalCard goal={goal} className="mt-4" />}
+    </Card>
+  );
+}
+
+/**
  * Recording: two-minute countdown, a recording indicator (dot, word and live microphone level, never colour alone),
  * the black "Finish". Finishing very early opens a warning in the card first; the recording keeps running meanwhile.
  */
@@ -660,7 +682,20 @@ export function InlineNotice({ title, children }: { title: string; children: Rea
  * happens in it and the timings. Read aloud, then the chime, then the task with its one-minute countdown. The text is on
  * screen too, so a student without sound misses nothing. No button.
  */
-export function PartIntroCard({ part, text, goal, testId }: { part: string; text: string; goal: RetryGoal | null; testId?: string }) {
+export function PartIntroCard({
+  part,
+  text,
+  goal,
+  testId,
+  note = "The minute of preparation starts by itself after the chime.",
+}: {
+  part: string;
+  text: string;
+  goal: RetryGoal | null;
+  testId?: string;
+  /** What happens after the chime (Part 2: the questions are read first; Part 3: the minute starts). */
+  note?: string;
+}) {
   return (
     <Card aria-labelledby="step-title" data-testid={testId ?? "part-intro"} className="mx-auto w-full max-w-2xl">
       <p className="flex items-center gap-2 text-label font-semibold text-fg" aria-live="polite">
@@ -673,7 +708,7 @@ export function PartIntroCard({ part, text, goal, testId }: { part: string; text
       <p className="mt-3 text-body text-fg" data-testid="intro-text">
         {introBody(text)}
       </p>
-      <p className="mt-4 text-label text-fg-muted">The minute of preparation starts by itself after the chime.</p>
+      <p className="mt-4 text-label text-fg-muted">{note}</p>
       {goal && <GoalCard goal={goal} className="mt-4" />}
     </Card>
   );

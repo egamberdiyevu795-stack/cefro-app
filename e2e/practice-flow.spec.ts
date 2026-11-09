@@ -124,7 +124,7 @@ test("a result has its own address: a reload reopens it; another browser, or an 
   await stranger.close();
 });
 
-test("after the spoken introduction and its chime, the minute of preparation; when it ends, the two-tone chime plays (made in code), then recording starts by itself, with 'Speak now'", async ({ page }) => {
+test("after the spoken introduction and its chime, the questions are read aloud, then the minute of preparation; when it ends, the two-tone chime plays (made in code), then recording starts by itself, with 'Speak now'", async ({ page }) => {
   // Log the audio context, each chime tone (a Web Audio oscillator) and the recorder, in the order they happen.
   await page.addInitScript(() => {
     const w = window as unknown as { __events: string[] };
@@ -165,6 +165,7 @@ test("after the spoken introduction and its chime, the minute of preparation; wh
   // The click unlocks audio and plays the spoken introduction (its own screen; a short silent file here), then the chime
   // ("Start speaking when you hear this sound"), then the minute starts. The chime's watchdog runs on the fake clock.
   await expect(page.getByTestId("part2-intro")).toBeVisible();
+  await expect(page.getByTestId("part2-intro")).toContainText("After the chime, you will hear the questions.");
   await expect
     .poll(async () => {
       await page.clock.fastForward(500);
@@ -196,8 +197,11 @@ test("after the spoken introduction and its chime, the minute of preparation; wh
   // When the browser reports the last tone's end, the recorder started after it (never during the chime).
   const lastEnd = log.lastIndexOf("tone-ended");
   if (log.filter((e) => e === "tone-ended").length === 4) expect(log.indexOf("recorder")).toBeGreaterThan(lastEnd);
-  // The only sound file is the spoken introduction; the chime is made in code.
-  expect(audioRequests.map((url) => new URL(url).pathname)).toEqual(["/audio/speaking/part2/intro/v1/intro.wav"]);
+  // The sound files are the spoken introduction, then this task's questions; the chime is made in code.
+  expect([...new Set(audioRequests.map((url) => new URL(url).pathname))]).toEqual([
+    "/audio/speaking/part2/intro/v1/intro.wav",
+    "/audio/speaking/part2/b2-part2-advice-from-someone/v3/questions.wav",
+  ]);
   await page.clock.fastForward(5_000);
   await expect(page.getByTestId("speak-now")).toHaveCount(0);
 });

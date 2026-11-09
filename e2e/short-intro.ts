@@ -1,8 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
 /**
- * The spoken introductions of Part 2 and Part 3 are real-time audio (15–21 s). Tests that are not about them serve a
- * 0.2 s silent WAV in their place, so the one-minute preparation starts after a moment. The real files are checked by
+ * The spoken introductions of Part 2 and Part 3 (15–21 s) and the Part 2 questions read aloud after the introduction
+ * (12–19 s) are real-time audio. Tests that are not about them serve a 0.2 s silent WAV in their place, so the
+ * one-minute preparation starts after a moment. The real files are checked by
  * the unit tests and by the "real introduction" test in e2e/part3.spec.ts.
  */
 export function silentWav(seconds = 0.2, rate = 22_050): Buffer {
@@ -25,7 +26,7 @@ export function silentWav(seconds = 0.2, rate = 22_050): Buffer {
 }
 
 export async function shortPartIntros(page: Page | BrowserContext): Promise<void> {
-  await page.route(/\/audio\/speaking\/part[23]\/intro\/v\d+\/intro\.wav$/, (route) =>
+  await page.route(/\/audio\/speaking\/(part[23]\/intro\/v\d+\/intro|part2\/[a-z0-9-]+\/v\d+\/questions)\.wav$/, (route) =>
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
   );
 }

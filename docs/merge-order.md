@@ -30,6 +30,7 @@ Steps 8 and 9 (with `claude/part3`) are inside `claude/project-thread-mz2ndw` (P
 Pilot consent (`claude/consent-pilot`) comes **right after `claude/project-thread-mz2ndw`** and contains
 `claude/pilot-consent` and `claude/consent-plan-j0ky8m`: merge it instead of those two.
 `claude/p2-read-qs` (Part 2 questions read aloud) comes **right after `claude/consent-pilot`** and contains it.
+`claude/practice-list` (task list restyle) comes **right after `claude/p2-read-qs`** and contains it.
 
 ### Why merge commits for 1–6 (and 10–11)
 
@@ -514,6 +515,20 @@ Added on this branch, on top of `claude/part3`:
   `practice-machine.test.ts` (the intro phase), `e2e/part3.spec.ts` (both real introductions; a Part 3 run where
   preparation and recording run out by themselves). Other browser specs serve a 0.2 s silent file for the
   introductions (`e2e/short-intro.ts`).
+
+## Right after `claude/p2-read-qs`: `claude/practice-list` (task list restyle, no migration)
+
+It is `claude/p2-read-qs` plus the task list (`/practice`) on the design system. Merge commit, no squash. Branch
+name: 13 characters after `claude/`. Preview (mock mode):
+`https://cefro-app-mgm6-git-claude-practice-list-crm-b915.vercel.app/practice?mock=1`.
+
+- `/practice` moved from `src/app/(site)/practice/page.tsx` to `src/app/practice/page.tsx` (same URL) and now uses
+  the app frame (`AppShell`), like Lessons and History. One card per part with tasks, one row per task, no black
+  button. See docs/design-system.md, "Task list".
+- The `(site)` layout (its old header) and the `AccountMenu` it used are deleted, with the unused `components/ui/Badge`.
+  The configuration check now runs in the page itself (mock mode still skips it).
+- Tests: `part2-tasks.test.ts`, `mock-pages.test.ts`, `e2e/mock-mode.spec.ts` (390 px audit now includes
+  `/practice?mock=1`), `e2e/auth.spec.ts` Journey A (reads the Account tab and Account page, not the old menu).
 
 ## Right after `claude/consent-pilot`: `claude/p2-read-qs` (Part 2 questions read aloud, no migration)
 

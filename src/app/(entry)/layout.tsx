@@ -5,7 +5,7 @@ import { assertServerConfigured } from "@/server/config/boot-check";
 
 /**
  * The signed-out pages: home (`/`), sign in (`/login`), Create account (`/register`). No header menu, no navigation tabs:
- * each page draws its own frame (`EntryFrame`). Like the (site) layout, these pages need the full server configuration:
+ * each page draws its own frame (`EntryFrame`). Like every real app page, these pages need the full server configuration:
  * in production a misconfigured server fails them (500) here, on every request (`connection()`), never at build time.
  *
  * Mock mode (`?mock=1`, passed on by src/proxy.ts as a header, since a layout gets no query): no check. The pages then

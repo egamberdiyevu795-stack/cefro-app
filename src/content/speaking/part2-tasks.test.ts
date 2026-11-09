@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it } from "vitest";
-import HomePage from "@/app/(site)/practice/page";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import HomePage from "@/app/practice/page";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import { toPublicTask } from "@/domain/speaking/task";
 import { ensureTaskSnapshot } from "@/server/attempts/attempt-repository";
@@ -15,6 +15,9 @@ import { PartIntroCard, QuestionsReadingCard } from "@/features/speaking-practic
 import { getSpeakingTask, listSpeakingTasks } from "./index";
 import part1AudioManifest from "./part1/question-audio.json";
 import { PART2_QUESTION_AUDIO_FILES, PART2_QUESTION_AUDIO_VOICE, part2QuestionAudioPath, part2SpokenQuestions } from "./part2-question-audio";
+
+// The task list page asks for a request (`connection()`) before its configuration check; rendered here without one.
+vi.mock("next/server", async (importOriginal) => ({ ...(await importOriginal<object>()), connection: async () => undefined }));
 
 /**
  * Every Part 2 task has the same shape as "Advice from someone": 1 min preparation, 2 min speaking, 3 questions, one
@@ -185,7 +188,7 @@ describe("snapshots", () => {
 const homePage = async (query: Record<string, string> = {}) =>
   renderToStaticMarkup(await HomePage({ params: Promise.resolve({}), searchParams: Promise.resolve(query) } as never));
 
-describe("task list page (/)", () => {
+describe("task list page (/practice)", () => {
   it("shows all 7 tasks, each linking to its own practice page, in order", async () => {
     const html = await homePage();
     const hrefs = [...html.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
@@ -196,7 +199,7 @@ describe("task list page (/)", () => {
 
   it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/practice#part-2)", async () => {
     const html = await homePage();
-    const section = html.split('<section id="part-2"')[1]?.split("</section>")[0];
+    const section = html.split(/<section [^>]*id="part-2"/)[1]?.split("</section>")[0];
     expect(section, "Part 2 section").toBeDefined();
     expect(section).toContain("Part 2 · Long turn");
     expect(section!.match(/href="\/practice\/speaking\//g)).toHaveLength(7);

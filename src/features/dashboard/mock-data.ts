@@ -24,7 +24,7 @@ export function navItemsFor(flags: FeatureFlags, mock = false): NavItem[] {
   });
 }
 
-/** The demo account of the Account page and the (site) header's Account menu in mock mode (mock mode calls no API). */
+/** The demo account of the Account page in mock mode (mock mode calls no API). */
 export const ACCOUNT = { name: "Student", email: "student@example.com" };
 
 /** First visit: what the welcome card says. "Start your first practice" goes to the recommended part (Part 2). */

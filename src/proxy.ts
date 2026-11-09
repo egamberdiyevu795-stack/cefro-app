@@ -14,7 +14,7 @@ import {
  * proxy off them avoids buffering audio uploads.
  *
  * Also tells the page whether it is in mock mode (`?mock=1`), as the request header `x-cefro-mock: 1`: a layout gets
- * no query, so the (site) layout reads this to skip the configuration check and show the demo account. The header is
+ * no query, so the (entry) layout reads this to skip the configuration check. The header is
  * set only from the address; one sent by the browser is removed.
  */
 export function proxy(request: NextRequest) {

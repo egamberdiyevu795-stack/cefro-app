@@ -31,10 +31,6 @@ async function accountState(page: Page): Promise<string> {
   return (await (await page.request.get("/api/account/me")).json()).state;
 }
 
-async function openAccount(page: Page) {
-  await header(page).getByRole("button", { name: "Account" }).click();
-}
-
 /** Sign out from the Account page (the Account tab opens it directly). */
 async function logOut(page: Page) {
   await page.goto("/profile");
@@ -57,11 +53,12 @@ async function newUserContext(browser: Browser) {
 test("Journey A: an anonymous visitor practises and gets feedback without any account", async ({ page }) => {
   await page.goto("/practice");
   await expect(header(page)).toHaveAttribute("data-state", "anonymous");
-  await openAccount(page);
-  await expect(header(page).getByText("Practising without an account")).toBeVisible();
-  await expect(header(page).getByRole("menuitem", { name: "Sign in" })).toBeVisible();
-  await expect(header(page).getByRole("menuitem", { name: "Create account" })).toBeVisible();
-  await page.keyboard.press("Escape");
+  // The Account tab opens the Account page: practising without an account, with Sign in / Create account.
+  await header(page).getByRole("link", { name: "Account" }).click();
+  await expect(page.getByText("Practising without an account")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Create account" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" }).click();
   await page.getByRole("link", { name: /Advice from someone/ }).click();
   await recordAndSubmit(page);
   await expect(page.getByRole("button", { name: "Retry with this goal" })).toBeVisible();

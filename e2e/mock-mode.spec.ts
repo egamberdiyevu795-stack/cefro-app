@@ -249,6 +249,7 @@ test("mock mode at 390 px: every main page has at most one black control, naviga
   await page.setViewportSize({ width: 390, height: 844 });
   for (const url of [
     "/dashboard?mock=1",
+    "/practice?mock=1",
     "/practice/speaking/b2-part2-a-tradition?mock=1",
     "/result?demo=demo-5&mock=1",
     "/history?mock=1",

@@ -5,8 +5,8 @@ Tokens live in one file: `src/app/design-system.css` (a Tailwind v4 `@theme`, so
 e.g. `--color-card` → `bg-card`). Components live in `src/components/ds/`. The first page built on it is `/dashboard`.
 
 The signed-out pages (home, sign in, Create account) are on the design system: see [Signed-out pages](#signed-out-pages-home-sign-in-create-account).
-Only the task list (`/practice`) still uses the earlier tokens in `globals.css` (its header already uses the
-design-system Account menu). The practice page is fully on the design system: every step, the
+The task list (`/practice`) is on the design system too (see [Task list](#task-list-practice)), so no page uses the
+earlier tokens in `globals.css` any more. The practice page is fully on the design system: every step, the
 result page for real attempts, the retry comparison and the error screens.
 
 ## Merge order (read before merging)
@@ -14,6 +14,8 @@ result page for real attempts, the retry comparison and the error screens.
 See **[docs/merge-order.md](merge-order.md)**: the safe order for every open branch, what each contains, and the one
 rebase needed (`part1-player`). (An earlier note here called `claude/friendly-darwin-l73xx9` PR #5's branch: PR #5 is
 `claude/compassionate-johnson-odu08r`. And `part1-player`'s dev page no longer needs to move into `(site)`.)
+The `(site)` route group is gone since `claude/practice-list`: its last page, the task list, moved to
+`src/app/practice/page.tsx` (same URL) with the app frame, and its header (the old Account menu) was deleted.
 
 ### Files the route-group move touched
 
@@ -42,7 +44,7 @@ welcome card's "Start your first practice" (it goes to the recommended part, Par
 same card's "Start practice". All part tiles use the white tile pill. The exam date's Save is grey; Edit, Add exam
 date, Skip, Cancel and Remove date are small text actions with a 36 px tap area. Practice brief: "Start
 preparation"; "Check microphone" above it is grey. Signed-out home: "Start practising" ("See a demo result" is grey); sign in: "Sign in"; Create account: "Create account".
-Account page: "Go to Part 2" / "Practise Part 2"; Change password,
+Task list: none (the rows are the page; the brief has the black "Start preparation"). Account page: "Go to Part 2" / "Practise Part 2"; Change password,
 Sign out and Delete my account are grey (a destructive action is never black).
 
 ## Signed-out pages (home, sign in, Create account)
@@ -91,6 +93,34 @@ navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `b
   AA contrast of every visible text, no horizontal scroll; "See a demo result" keeps `?mock=1`; the list follows
   `PART_LIVE`; no name at sign-up and the server's name rule; signed in → dashboard), `e2e/auth.spec.ts` (unchanged journeys; the sign-in pages have no Account menu now, so their
   state is read from `/api/account/me`).
+
+## Task list (`/practice`)
+
+The Practice tab. Built only from `components/ds` and the tokens (`src/app/practice/page.tsx`,
+`src/features/task-list/TaskList.tsx`), in the app frame (`AppShell`: rail on desktop, bottom bar on phones, Practice
+as the current grey square, back link to the dashboard). One column, max 672 px, like Lessons.
+
+- **Top to bottom:** the demo label in mock mode; the heading "Practice" and one muted line ("Choose a task. Speak
+  under exam timing, see your own words quoted, fix one thing and try again."); then **one card per exam part that has
+  tasks** (`listSpeakingTasks`: Part 2 today; Part 1 tasks join only when their parts go live). The card is the part's
+  anchor (`id="part-2"`, opened by the dashboard's Part 2 tile and the Account page's "Go to Part 2"): title
+  "Part 2 · Long turn", the level in a grey pill on the right ("B2"), one line on what the part asks ("Three questions
+  and one picture. Answer the questions: describing the picture answers none of them."), then the tasks.
+- **Each task** is one row and one link to its brief: a `mic` glyph in a `well` circle, the title (`text-body`,
+  semibold), "1 min preparation · 2 min speaking" (`text-caption`, muted) and a chevron. Rows are 56 px tall.
+- **No black button.** Choosing a task is the page (as on Lessons); the brief's "Start preparation" is the next black
+  control. No price, "free", rating or level claims.
+- **Unchanged behaviour:** same URL, same 7 tasks in the same order, same links (`practiceHref`); the consent lock is
+  on the brief (a locked student still sees the list and opens the locked brief). The real page checks the server
+  configuration on every request (it used to come from the `(site)` layout). `?mock=1`: no check, the demo account,
+  the demo label ("Demo mode. Your answer won't be scored."), every link keeps `?mock=1`. `?flags=off`: the frame with
+  every flag off (no History tab).
+- **Checks:** `content/speaking/part2-tasks.test.ts` (7 tasks in order under `#part-2`, timing line, demo label only in
+  mock mode), `features/demo/mock-pages.test.ts` (mock mode: frame, Practice tab current, no black button, no text
+  under 11 px, mock links only; real: the configuration check), `e2e/mock-mode.spec.ts` (at 390 px: no horizontal
+  scroll, no text under 11 px, at most one black control, grey current tab), `e2e/no-dead-controls.spec.ts`,
+  `e2e/auth.spec.ts` (Journey A starts here and reads the Account tab).
+- Screenshots: `docs/design-system/task-list-{desktop,phone}.png` (mock mode).
 
 ## Navigation: five tabs
 
@@ -346,7 +376,7 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 | `ListRow`, `Thumb` | List row: round neutral thumb, semibold name with an optional muted subtitle, aligned cells (shared grid template; a cell with `phone: false` is hidden on phones), optional trailing `menu`. `Thumb` is the neutral avatar/photo placeholder. |
 | `Sidebar`, `SidebarItem` | Icon rail (desktop) / bottom bar (phone). Active item = `rounded-icon` grey (`well`) square with a dark glyph (never black: see "One primary action per screen"). Every item is a real link. |
 | `TopBar`, `TopBarLink` | Quiet text actions with small grey glyphs, on the right. |
-| `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Used by the Account menu. |
+| `Menu` | A button that opens a small card menu (`rounded-tile`, `border-line`, `shadow-card`), with an optional header. Closes on Escape, outside tap or after a choice. Not used by any page now (the Account menu was removed). |
 | `styles.ts` | Shared class strings (focus ring, icon button, nav item, text actions), so server and client components render a control the same way. |
 | `AppShell` (`features/shell`) | The task-page frame (result, practice): page, shell, rail / bottom bar, back link. `account={false}` leaves out the mocked Account menu; `headerEnd` adds header content (the practice page's real sign-in state). |
 | `Icon` | The icon set (24 px grid, currentColor). Add new glyphs here in the same style. |
@@ -507,7 +537,7 @@ the prototype.
   saved recording can be scored again, else black "Record again"; the other is quiet; "That didn't work" if the
   retry fails); answer not found and "can't compare" (`NoticeCard`, one black action); a problem above a screen
   (`InlineNotice`, no button).
-- **Server not configured** (`src/app/error.tsx`): in production the practice page and the `(site)` pages still
+- **Server not configured** (`src/app/error.tsx`): in production the practice page and the task list still
   answer 500 when a provider or sign-in setting is missing (`/api/health` 503); the page now shows "CEFRO isn't
   available right now" with a reference number, black "Try again" and quiet "Go to the dashboard", instead of Next's
   default error page. It never says why (production hides error details). Mock mode needs no configuration.
@@ -685,21 +715,19 @@ their API calls fail into the in-page screens (upload failed, scoring failed). M
 configuration. Without JavaScript a failed page is blank (Next sends an empty error shell and draws the screen in the
 browser); it never shows the raw "Internal Server Error". Screenshot: `docs/design-system/not-found-phone.png`.
 
-## Account menu (the `(site)` header)
+## Account menu (removed)
 
-`AccountMenu source="real"` asks `/api/account/me` (now `{ state, email, name }`, still no ids) and asks again after
-every navigation. Signed in: name (the account's display name, else the part of the email before "@") and email, then
-Log out. Not signed in: "Practising without an account", "Your answers are kept in this browser.", then Sign in and
-Create account. Every state starts with **Your account** (`/profile`; mock mode: `/profile?mock=1`, and it is the only
-item). Used only in the `(site)` header (home, sign-in, register; `placement="header"`): the app's navigation has the
-Account tab instead (see "Navigation: five tabs"). Prototypes use `source="mock"`.
+The `(site)` header's `AccountMenu` was deleted with the `(site)` layout (`claude/practice-list`): no page used it any
+more. Who is signed in is shown by the Account tab (`data-testid="account-status"`, `data-state`) on every app page,
+and the Account page shows "Practising without an account" with Sign in / Create account. `Menu` stays in
+`components/ds` for a future menu. The checks below belong to the practice flow's real-attempt screens.
 
 - **Checks:** `features/result/from-attempt.test.ts` (stored attempt → result page, retry "Goal met", development
   evaluator note, real player, every status, old method; comparison and error screens: one black button, no text under
   11 px). `e2e/practice-flow.spec.ts`: record → upload → evaluate (mock providers) → new result page → retry with goal →
   comparison → reopen from history; auto-start after preparation with the beep and "Speak now" (Playwright clock);
-  upload failure, scoring failure, answer lost. `e2e/auth.spec.ts` uses the Account menu, the Account tab and the
-  Account page's Sign out.
+  upload failure, scoring failure, answer lost. `e2e/auth.spec.ts` uses the Account tab and the Account page
+  (signed out: Sign in / Create account; signed in: Sign out).
 - Screenshots (1440 px and 390 px): `docs/design-system/practice-{real-result,real-retry-result,comparison,upload-failed,scoring-failed,answer-lost,server-unavailable,recording-speak-now,account-anonymous,account-signed-in}-{desktop,phone}.png`.
   Audited in the browser: no horizontal scroll, smallest text 11 px, one black button per screen.
 

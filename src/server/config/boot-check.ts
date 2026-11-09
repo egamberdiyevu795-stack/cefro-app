@@ -11,8 +11,8 @@ import { logger } from "@/server/logging/logger";
  *
  * Where the check is enforced, in production:
  * - Every API route (`withErrorHandling` in server/http.ts): 503 "service_not_configured" before the handler runs.
- * - The app's pages: home, login, register via `src/app/(entry)/layout.tsx`; the task list via `src/app/(site)/layout.tsx`;
- *   the practice page itself. The page fails (500).
+ * - The app's pages: home, login, register via `src/app/(entry)/layout.tsx`; the task list (`src/app/practice/page.tsx`)
+ *   and the practice page check it themselves. The page fails (500).
  * - `/api/health`: reports "unavailable" (503), so a deploy with a bad configuration fails its health check.
  *
  * Not enforced in mock mode (`?mock=1`: the task list, practice, dashboard and History with demo data, which never

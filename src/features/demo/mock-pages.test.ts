@@ -20,7 +20,7 @@ const { touched, forbidden } = vi.hoisted(() => {
 
 vi.mock("next/headers", () => ({
   cookies: forbidden("cookies"),
-  // Only the (site) and (entry) layouts read a header: whether the proxy marked the request as mock mode.
+  // Only the (entry) layout reads a header: whether the proxy marked the request as mock mode.
   headers: async () => new Headers(touched.mockHeader ? { "x-cefro-mock": "1" } : {}),
 }));
 vi.mock("next/server", async (importOriginal) => ({ ...(await importOriginal<object>()), connection: async () => undefined }));
@@ -37,8 +37,7 @@ import EntryLayout from "@/app/(entry)/layout";
 import LoginPage from "@/app/(entry)/login/page";
 import HomePage from "@/app/(entry)/page";
 import RegisterPage from "@/app/(entry)/register/page";
-import SiteLayout from "@/app/(site)/layout";
-import TaskListPage from "@/app/(site)/practice/page";
+import TaskListPage from "@/app/practice/page";
 import DashboardPage from "@/app/dashboard/page";
 import HistoryPage from "@/app/history/page";
 import LessonPage from "@/app/lessons/[lessonId]/page";
@@ -87,11 +86,14 @@ afterEach(() => {
 });
 
 describe("mock pages on a Preview with no configuration", () => {
-  it("task list (/practice) in its layout: demo label, every task opens its brief in mock mode, the demo account", async () => {
-    touched.mockHeader = true; // set by src/proxy.ts for ?mock=1
-    const markup = await html(SiteLayout({ children: await TaskListPage(props({ mock: "1" })) }));
+  it("task list (/practice): the app frame, demo label, every task opens its brief in mock mode, no black button", async () => {
+    const markup = await html(TaskListPage(props({ mock: "1" })));
     expect(markup).toContain(escaped(DEMO_MODE_TEXT));
     expect(markup).toContain('href="/practice/speaking/b2-part2-advice-from-someone?mock=1"');
+    expect(markup).toContain('aria-label="Main"'); // the five tabs
+    expect(markup).toMatch(/<a [^>]*href="\/practice\?mock=1"[^>]*aria-current="page"|<a [^>]*aria-current="page"[^>]*href="\/practice\?mock=1"/);
+    expect(markup.match(BLACK) ?? []).toHaveLength(0); // choosing a task is the page; the brief has the black Start
+    expect(markup).not.toMatch(SMALL);
     expectMockLinksOnly(markup);
   });
 
@@ -478,10 +480,10 @@ describe("real pages on the same Preview keep refusing", () => {
     await expect(LessonPage(props({}, { lessonId: "l-t1" }))).rejects.toMatchObject({ status: 503 });
   });
 
-  it("History, the practice page and the (site) pages fail the configuration check; no demo label anywhere", async () => {
+  it("History, the practice page and the task list fail the configuration check; no demo label anywhere", async () => {
     await expect(HistoryPage(props({}))).rejects.toMatchObject({ status: 503, code: "service_not_configured" });
     await expect(PracticePage(props({}, { taskId: "b2-part2-happy-day" }))).rejects.toMatchObject({ status: 503 });
-    await expect(SiteLayout({ children: null })).rejects.toMatchObject({ status: 503 });
+    await expect(TaskListPage(props({}))).rejects.toMatchObject({ status: 503 });
     // ?mock=0 or any other value is not mock mode.
     await expect(HistoryPage(props({ mock: "0" }))).rejects.toMatchObject({ status: 503 });
   });

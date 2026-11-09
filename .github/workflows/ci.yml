@@ -32,7 +32,9 @@ jobs:
   validate:
     name: Lint, typecheck, test, build, browser tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The full chain has 119 browser tests in one worker (about 13 min on CI) after about 9 min of install, lint,
+    # typecheck and unit tests: 15 minutes cancelled the run half way through the browser tests.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:

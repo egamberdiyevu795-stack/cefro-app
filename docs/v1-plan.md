@@ -1,7 +1,7 @@
 # CEFRO Version 1: plan for students and teachers
 
-Status: **draft for Asadbek, 2026-11-10. Nothing in this plan is built yet, and no decision here is final until
-Asadbek answers section 9.** Planning only: no app code, no migration, no model call was made to write it.
+Status: **draft, 2026-11-10. Asadbek answered Q1–Q4 and Q7 the same day (Decisions log at the end); the plan below
+follows those answers. Q6, Q8, Q9 and Q10 are still open. Nothing in this plan is built yet.** Planning only: no app code, no migration, no model call was made to write it.
 Cut from `claude/project-thread-e59hcb`.
 
 Read with: `docs/teacher-plan.md` (Teacher view, built in mock mode), `docs/consent-design.md` (under-18 consent,
@@ -36,7 +36,7 @@ problem nobody notices); progress is in the teacher's head.
 
 ### Success for V1 (how we know it worked)
 
-- One real teacher runs **one class mock with at least 6 students** through CEFRO instead of YouTube + phone.
+- One real teacher runs **one class mock with at least 6 students** on the exam laptop instead of YouTube + phone.
 - The teacher says it saved time, and **checks at least 3 students' recordings** against the app's level.
 - **Teacher and app agree within one band on most attempts** (the Agree / Choose level data already planned in
   `docs/teacher-plan.md`). Where they don't, we learn why before any public launch.
@@ -67,9 +67,9 @@ recording yet (mock only).
 | **History** | Built: all attempts, filter by part, levels over time. | Mocks shown as one row (not 4 loose attempts); filter "Mock exams". | Small |
 | **Teacher: class + join code** | Built in **mock mode** (`TEACHER_LIVE = false`): create class, code, students join and confirm "Name your teacher sees", class overview, student page, attempt page, Agree / Choose level, leave / remove / close, delete rules. | Turn on for the pilot (needs consent with teacher sharing). | Small |
 | **Teacher sees all parts** | Share screen promises **Part 2 attempts only**. | Share Part 1, Part 3 and mocks; new share text version. | Small |
-| **Teacher listens to recordings** | **Decided no** on 2026-11-07 (recordings are owner-only; Share screen says "Won't see: recordings"). | Owner now wants it. Needs: a new decision, new consent text, access rule, teacher terms. See section 7. | Medium |
+| **Teacher listens to recordings** | **Decided no** on 2026-11-07 (recordings are owner-only; Share screen says "Won't see: recordings"). | Owner decided yes (Q4). Needs: player on teacher pages, access rule, new Share text. See section 7. | Medium |
 | **Teacher mock view** | Nothing. | A mock page per student: each part's audio, transcript, app band, teacher's band. | Medium |
-| **Classroom mock** | Nothing. | Section 6. Same paper for the class + live "who has finished" list. | Medium |
+| **Classroom mock** | Nothing. | Section 6. Exam laptop mode: one student at a time, PIN, saved to the student's account. | Medium |
 | **Consent for under-18s** | Pilot route built: owner script `set-consent.mjs` (has `--teacher-sharing`), recording locked until consent, audio deleted 30 days after scoring. Parent message written but **not sent**. | Parent message must name teacher listening; native Uzbek/Russian check; lawyer questions still open. | Small (text), but blocks the pilot |
 | **Scoring cost** | Gemini credit is near zero. Mock evaluators work for everything. | A full mock = about 4 scorings (1.1, 1.2, 2, 3) instead of 1. Measure the real cost before the pilot. | — |
 
@@ -106,7 +106,7 @@ Part 3 = intro, 1:00 prep, 2:00.
    - While scoring: "Scoring Part 1… Part 2…", each row fills in when ready.
 
 Question choice in a mock: the app picks one task per part the student **hasn't done recently**, so a second mock is
-not a repeat. (A teacher's class mock gives everyone the same tasks; section 6.)
+not a repeat. (A teacher's exam laptop can give everyone the same tasks; section 6.)
 
 ### 3.3 Transcript with mistakes and better versions
 
@@ -194,22 +194,23 @@ practice_sessions          add: status ('in_progress' | 'finished' | 'not_finish
                                 estimated_level (written by code when all parts are scored)
 
 class_mocks (new)          id, class_id, teacher_user_id, title ("Mock 3"),
-                           task_1_1, task_1_2, task_2, task_3 (the same paper for everyone),
-                           start_code (4 digits, only while open), opened_at, closed_at
+                           task_1_1, task_1_2, task_2, task_3 (null = a different paper per student),
+                           opened_at, closed_at  (one row per "Start exam laptop"; two laptops share it)
 
-class_members              add: share_text_version already exists; V1 writes a new version
-                                ("v1-all-parts-audio") and stores audio_shared (0/1) per membership
+exam_passes (new)          id, class_mock_id, student_user_id, device_label ("Room 2"),
+                           created_at, expires_at, used_up_at  (the one-mock pass of section 6)
+
+class_members              add: pin_hash (the student's 4-digit class PIN, hashed), pin_failures;
+                                share_text_version already exists, V1 writes a new version ("v1-all-parts-audio")
 
 teacher_ratings            add: session_id (rate a whole mock), part (rate one part); unique per
                                 (attempt or session) and teacher
 
-audio_access_log (new)     id, teacher_user_id, attempt_id, played_at
-                           (so a parent or the owner can see who listened; deleted with the account)
 ```
 
 Access rule stays one function: `teacherCanSee(teacher, attempt)` (exists) plus `teacherCanHear(teacher, attempt)` =
-`teacherCanSee` **and** the membership has `audio_shared = 1` **and** the account still has `consent_teacher_sharing`
-**and** the audio is not deleted yet. Every audio request writes one `audio_access_log` row.
+`teacherCanSee` **and** the account still has `consent_teacher_sharing` **and** the audio is not deleted yet. (No
+log of who listened: Asadbek, Q4.)
 
 Delete rules: the new tables go into `delete-account.ts` and its table-by-table test (as every table does today). On
 Leave / Remove / Close, the teacher loses audio access at the same moment as everything else.
@@ -224,11 +225,11 @@ Phone first, design system, at most one black button per screen. T1–T5 exist i
 | --- | --- | --- |
 | T1 Your classes (exists, top of Home) | One row per class: name, students, last activity | Create class |
 | T2 Create class (exists) | Name → code, large | Create class, then Copy code |
-| **T3 Class overview** (exists, V1 adds) | Join code + **Copy join link**. **Most common problems** (exists). **Students** table: name, level, **last mock** (level, date), attempts, last practice, biggest fix. **Class mocks** list (new): "Mock 3 · 10.11.26 · 8 of 9 finished". | **Start a class mock** (replaces Copy join code as the black one; Copy becomes grey) |
+| **T3 Class overview** (exists, V1 adds) | Join code + **Copy join link**. **Most common problems** (exists). **Students** table: name, level, **last mock** (level, date), attempts, last practice, biggest fix. **Class mocks** list (new): "Mock 3 · 10.11.26 · 8 of 9 finished". | **Start exam laptop** (replaces Copy join code as the black one; Copy becomes grey) |
 | T4 Student (exists, V1 adds) | Name, level, **level over time (mocks)**, skills, **mocks** first, then single attempts | Open latest mock |
 | T5 Attempt (exists, V1 adds) | Result components read-only, **plus the recording player** and the transcript with mistakes. Your view: Agree / Choose level, both grey. | None |
 | **T6 Student's mock (new)** | Top: estimated level, date, "Finished" / "Not finished". Four part cards, each: player, transcript (tap to expand), app band, **teacher's band** (Agree / Choose level per part). Bottom: "Your level for this mock" (optional). | None (rating buttons are grey, like T5) |
-| **T7 Class mock: live (new)** | Big start code, the paper (4 tasks), a list of students: Not started / Part 2 / Uploading / Finished / Scored. Quiet Close mock. | **Close mock** at the end |
+| **T7 Exam laptop (new)** | Class name, "Tap your name". Student list: Not started / In progress (Room 2) / Done. Then PIN pad → "Hi Aziza" → mock → "Done" → back to the list. Quiet End exam laptop (teacher's password). | **Start mock** (on the student's screen) |
 | **T8 Class mock: results (new)** | One row per student: level, part bands, "Listen" (opens T6). Sort by level. "3 students: Answer every question" style common problems for this mock. | Open first unrated |
 
 **Listening flow** (the teacher's evening job, now): T8 → first student → T6 → play Part 2 at 1.5× speed while reading
@@ -237,71 +238,76 @@ Playback speed 1× / 1.25× / 1.5× on the player (new, small).
 
 ---
 
-## 6. Classroom flow: one teacher, many students, one mock
+## 6. Classroom flow: one laptop per room, one student at a time
 
-### Recommended: each student on their own phone, same paper
+**Decided (Asadbek, Q7):** in class, students take the mock **one at a time on one laptop**, like the YouTube setup
+today. To go faster, **two laptops in two separate rooms**. Each student speaks alone in a quiet room, so other voices
+don't get into the recording, and students don't need their own phone or headphones in class.
 
-1. **Before class (once):** students join the class with the code and the parent consent is done (section 7).
-2. **In class:** teacher opens T3 → **Start a class mock** → picks a paper (the app suggests 4 tasks nobody in the class
-   has done) → a 4-digit **start code** appears big on T7 (and can be put on the projector).
-3. Students: dashboard → "Join class mock" → start code → the normal full mock with that paper.
-4. Teacher watches T7: who started, who is on which part, who finished. Students who finish early can sit quietly.
-5. Teacher taps **Close mock** at the end; later starts are refused. Results fill T8 as scoring finishes.
-6. After class: teacher listens to the ones that matter (T6), not all of them.
+### What the teacher does
 
-**The noise problem (real risk):** 15 students speaking at once in one room means each phone also hears the others.
-The app needs to hear only the speaker. In order of usefulness:
+1. **Before class (once):** students join the class with the code on their own phone and set a **4-digit class PIN**
+   on the Share screen (so nobody can record under someone else's name). Under-18s have consent (section 7).
+2. **In class:** teacher signs in on the laptop → class page (T3) → **Start exam laptop** → picks the paper (the app
+   suggests 4 tasks nobody in the class has done) or "a different paper for each student". The laptop is now in
+   **exam laptop mode** (T7). For two rooms, do the same on the second laptop: both show the same class.
+3. **Each student:** taps their name on the list → types their PIN → "Hi Aziza, this mock is saved to your account" →
+   **Start mock** → the full mock (about 15 minutes) → end screen "Done. Your results will be on your phone." → back
+   to the list. **No results on the shared screen**, so the next student doesn't see them.
+4. The list shows: Not started / In progress (Room 2) / Done. A student in progress on one laptop can't be picked on
+   the other.
+5. **End exam laptop** (needs the teacher's password again, so a student can't wander into the teacher's account).
+   Results fill the class mock page (T8) as they come in.
+6. After class: the teacher listens and marks (T6), at 1.5× speed with the transcript beside it.
 
-- **Headphones with a microphone** (most students have cheap ones): strongly recommended on the Before-you-start screen
-  and on T7 ("Ask students to use headphones with a mic").
-- **Spread out / stagger:** half the class starts, the other half 2 minutes later, so the loud parts don't overlap.
-- **Test it first** (build step 0 in section 8): record a real classroom with 5 phones and check the transcripts.
-  If other voices get into the transcript, the transcript-only scoring will be wrong.
+**Time:** about 15 minutes per student, so 10 students take about 2.5 hours on one laptop, or about 1¼ hours on two.
+That is about the same as today, but the evening of listening gets shorter: marking with the transcript beside the
+audio, and no hunting for files in the phone gallery.
 
-### Fallback: one shared laptop (like the YouTube setup today)
+### How it works behind the screen
 
-Students take turns on the teacher's laptop. Each student signs in, does the mock, signs out. Slower and less private
-(the next student is waiting next to them), but it needs no student phones. V1 supports it only by **not breaking it**:
-a clear "Sign out" at the end of a mock, and the next sign-in never shows the previous student. No special "kiosk mode"
-in V1.
+- The laptop stays signed in as the **teacher**. When a student enters their PIN, the server gives that laptop a
+  **one-mock pass for that student only** (valid about 30 minutes, ends at the end screen). Every recording made with
+  the pass is saved to the **student's own account**, not the teacher's, so the student sees their own result, can
+  delete it, and the consent check is the student's.
+- 5 wrong PINs lock that student on that laptop until the teacher unlocks them.
+- A student who forgot their PIN: the teacher can't see it; the student resets it on their own phone (Account page →
+  My classes).
+
+### Also works: students on their own phones at home
+
+Nothing stops a student doing a full mock or a single part at home on their own phone. Those attempts are shared with
+the teacher too (made after joining), and show as "At home" instead of "In class".
 
 ### Why not: the teacher records students on their own account
 
 It is closest to today's habit, but the recordings would sit in the teacher's account, not the student's: the student
-can't see their own result, can't delete it, and consent is unclear. Not in V1.
-
----
+can't see their own result, can't delete it, and consent is unclear. The PIN pass above gives the same "teacher's
+laptop" feel without that problem.
 
 ## 7. Privacy and consent (under 18, teacher listening)
 
-**What changes:** a teacher (an adult who is not the parent) hears a child's voice and reads what they said about
-their family, school and plans. That is more sensitive than reading feedback, and our 2026-11-07 decision said no.
-If Asadbek now says yes, these are the minimum rules:
+**Decided (Asadbek, Q4): teachers can listen to recordings.** Asadbek also decided the extras are not needed: **no
+log of who listened, no "listened" line on the Account page, no separate teacher terms, no separate "Share
+recordings" switch.** What stays, because it is already built or costs nothing:
 
-1. **Consent names it.** The parent message (`docs/pilot-parent-message.md`, not sent yet) adds one plain line:
-   "If your child joins a teacher's class in CEFRO, that teacher can listen to the recordings and read the
-   transcripts of answers made after joining, until the recording is deleted (30 days)." New notice version; recorded
-   with `set-consent.mjs --teacher-sharing`. The native Uzbek / Russian check is still needed before sending.
-2. **The student chooses, per class.** The Share screen shows, in its "Will see" list: "Your recordings (deleted after
-   30 days)". It is one tap for everything in V1 (simpler); a separate "Share recordings" switch is section 9, Q5.
-3. **Play only, no download.** The player streams; there is no download button. (A determined teacher can still record
-   the speaker. The teacher terms forbid it.)
-4. **Teacher terms**, accepted when Asadbek makes the account a teacher: teaching use only, no copies, no sharing,
-   delete nothing locally because nothing is saved locally. Stored with the date.
-5. **Who listened is recorded** (`audio_access_log`). The student's Account page shows "Ms Karimova listened to 3
-   recordings" so the family can see it. Deleted with the account.
-6. **Audio still deleted 30 days after scoring**; transcripts and feedback stay until the account is deleted (decided
-   2026-11-08). The teacher sees "Recording deleted on …" after that.
-7. **Leaving cuts access at once**, recordings included (as today for everything else).
-8. **First name only** for under-18s in "Name your teacher sees" (teacher plan §7, item 4).
-9. **Nobody under 14** until the lawyer answers (decided 2026-11-08). Add to `docs/lawyer-questions.md`: "Can a teacher
-   (not the parent) listen to a minor's recording with the parent's written consent? Must the school or centre also
-   sign something?"
+1. **The student opts in per class** with the Share tap (exists). The Share screen's "Will see" list says "Your
+   recordings (deleted after 30 days)" instead of today's "Won't see: recordings", so the screen tells the truth.
+2. **Play only, no download button** on the teacher's player.
+3. **Audio deleted 30 days after scoring** (built); transcripts and feedback stay until the account is deleted.
+4. **Leaving the class cuts access at once**, recordings included (built for everything else).
+5. **Recording stays locked until consent** (built, `CONSENT_REQUIRED`), and teacher pages need the account's
+   teacher-sharing consent (built, `set-consent.mjs --teacher-sharing`).
+6. **First name only** for under-18s in "Name your teacher sees", and nobody under 14 until the lawyer answers
+   (decided earlier).
 
-Today's recordings on the teacher's phone gallery have none of these protections, so V1 is a privacy improvement over
-the current practice, as long as these rules hold.
+**One open point (Asadbek's call, Q10):** I recommend the parent message (`docs/pilot-parent-message.md`, not sent
+yet) still says in one sentence that the child's teacher can listen to the recordings. It is a text change to a
+message that needs a native speaker's check anyway, so it costs nothing, and it is the one thing a parent would be
+upset to learn later. Nothing new is built for parents either way.
 
----
+The lawyer list (`docs/lawyer-questions.md`) should still get: "Can a teacher (not the parent) listen to a minor's
+recording with the parent's consent?" That is a question, not a build step.
 
 ## 8. Build order
 
@@ -310,56 +316,52 @@ on the step before it. Sizes: S ≈ one chat, M ≈ one long chat, L ≈ may nee
 
 | # | Step | What it delivers | Needs | Size |
 | --- | --- | --- | --- | --- |
-| 0 | **Classroom noise test** (not code) | Asadbek records 5 phones answering at the same time in one room, half with headphones; we listen to how much of the other voices each phone picks up (and run speech-to-text on them once there is a key) | A classroom, 20 minutes | — |
 | 1 | **Part 3 real recording** | Upload and scoring route, consent lock, real result; `PART_LIVE["3"]` stays off | — | M |
-| 2 | **Transcript with mistakes and better versions** | Evaluator output gets the sentence list; mock evaluators fill it; result page underlines and expands; the "found word for word" check | Step 1 (so all parts get it) | M |
-| 3 | **Full mock runner** | `full_mock` session, the 4 parts back to back with intros, resume after a break, uploads during the next intro | Step 1 | L |
-| 4 | **Mock result + overall level** | Mock result page, the level rule in code, mock biggest fix; History rows and filter | Step 3, Q3 answered | M |
-| 5 | **Teacher: all parts and mocks** | New share text, T3/T4 updates, T6 student's mock page, ratings per part | Step 4 | M |
-| 6 | **Teacher: audio** | Player on T5/T6 with speed control, `teacherCanHear`, access log, Account page "listened" line, consent text | Step 5, Q4 answered | M |
-| 7 | **Class mock** | Start a class mock, start code, T7 live list, T8 results, Close | Step 5 | L |
-| 8 | **Pilot switch-on checklist** | Parent message updated and checked, teacher terms, `TEACHER_LIVE` and part switches on in Production, consent recorded, cost measured | Steps 1–7, credit | S |
+| 2 | **Full mock runner** | `full_mock` session, the 4 parts back to back with intros, resume after a break, uploads during the next intro; works on a laptop screen as well as a phone | Step 1 | L |
+| 3 | **Official scale check** (docs only) | Collect what UZBMB officially publishes about the speaking score and level boundaries (sources linked, quoted exactly), so the mock result follows the official scale as far as it is public | — | S |
+| 4 | **Mock result** | Mock result page (each part: transcript, recording, level), History rows and filter. The overall level follows step 3; while scoring is off it shows the teacher's level | Steps 2, 3 | M |
+| 5 | **Teacher: all parts, mocks and audio** | New share text, T3/T4 updates, T6 student's mock page with player (speed control, no download), ratings per part, `teacherCanHear` | Step 4 | M |
+| 6 | **Exam laptop mode** | Class PIN on the Share screen, Start exam laptop, T7 list and PIN pad, one-mock pass, end screen, End exam laptop, two laptops on one class, T8 class mock results | Step 5 | L |
+| 7 | **Pilot switch-on checklist** | Speech-to-text key, parent message checked, `TEACHER_LIVE` and part switches on in Production, consent recorded, `CONSENT_REQUIRED=true`, a dry run with Asadbek on two laptops | Steps 1–6 | S |
+| 8 | **AI scoring on** (when there is credit) | Live check on `gemini-3.8-flash`, feedback-review fixes, overall AI level on the mock result | Credit | M |
+| 9 | **Transcript with mistakes and better versions** | Evaluator output gets the sentence list (own sentences only, Q2); mock evaluators fill it; result page underlines and expands; the "found word for word" check | Step 8 for real data (screens can be built on mock data earlier) | M |
 
-### Minimum cut for the first pilot (recommended)
+### First pilot (decided: Q1)
 
-**Steps 0, 1, 3, 4, 5, 6, 8.** One teacher, one class, students on their own phones, full mock and part-by-part,
-teacher sees every result and can listen. **Left out:** step 7 (class mock with start code: in the pilot, the teacher
-just says "everyone start a full mock now" and sees results on T3/T4) and step 2 (better versions: students still
-get the biggest fix, quotes and transcript as today). Step 2 is the first thing after the pilot, because it needs a
-live test with credit anyway.
+**Steps 1–7, scoring off.** One teacher, about 10 students, one or two laptops in quiet rooms. Students sit the full
+mock in class (or single parts at home); the teacher listens with the transcript and gives the level (Choose level);
+the student sees their transcript and the teacher's level. This replaces the YouTube + phone routine without Gemini
+credit, and gives us real teacher-marked recordings to test our scoring against later (step 8).
 
-**Cheaper pilot if there is no Gemini credit** (section 9, Q1): steps 0, 1, 3, 5, 6, 8 with **scoring off**: students
-record the mock, the teacher listens and gives the level (Choose level), the student sees the transcript and the
-teacher's level. This already replaces the YouTube + phone routine, costs only speech-to-text, and gives us a set of
-teacher-marked recordings to test our scoring against later. It needs speech-to-text (an OpenAI key, or Gemini
-transcription), and the student would see the teacher's level, which the teacher plan says students don't see in v1.
+**What it still needs:** speech-to-text for the transcript (an OpenAI key, or Gemini transcription; a small cost per
+minute of audio), and Q6 answered (the student seeing the teacher's level).
 
----
+Better versions (step 9) come right after AI scoring is on. Their screens can be built on mock data before that.
 
 ## 9. Questions for Asadbek
 
-**Q1. Pilot with AI scoring, or recording + teacher marking first?** Recommended: **recording + teacher marking first**
+**Q1 (answered: recording + teacher marking first). Pilot with AI scoring, or recording + teacher marking first?** Recommended: **recording + teacher marking first**
 if credit is still short. It solves the teacher's problem today and gives us real marked answers to check our scoring.
 AI scoring switches on when there is credit.
 
-**Q2. Better versions: own sentences only, or also a full improved answer?** Recommended: **own sentences only** in V1
+**Q2 (answered: own sentences only). Better versions: own sentences only, or also a full improved answer?** Recommended: **own sentences only** in V1
 (section 3.3). A full rewritten answer gets memorised and goes against our "no ready-made sentences" rule.
 
-**Q3. What overall result does a mock show?** The real exam's total score and level boundaries need checking against
+**Q3 (answered: estimated level, following the official scale as far as it is published; step 3). What overall result does a mock show?** The real exam's total score and level boundaries need checking against
 the official UZBMB papers before we show anything. Recommended: show **an estimated level only (B1 / B2 / C1)**, no
 made-up total score, until the official conversion is checked.
 
-**Q4. Can teachers listen to recordings?** This changes the 2026-11-07 decision ("teachers never hear recordings").
+**Q4 (answered: yes, without the extras; section 7). Can teachers listen to recordings?** This changes the 2026-11-07 decision ("teachers never hear recordings").
 Recommended: **yes, with the rules in section 7** (consent names it, play only, access log, 30-day deletion). Also
 add the question to the lawyer list.
 
-**Q5. One Share tap for everything, or a separate "Share recordings" switch?** Recommended: **one tap** in V1. Simpler
+**Q5 (settled by Q4: one tap). One Share tap for everything, or a separate "Share recordings" switch?** Recommended: **one tap** in V1. Simpler
 for students; the parent consent already decides it for under-18s.
 
 **Q6. Does the student see the teacher's level?** Teacher plan says no in v1. In a class it would be natural, and the
 cheap pilot (Q1) needs it. Recommended: **yes, labelled "Your teacher: B2"**, next to the app's level, never instead.
 
-**Q7. Classroom setup:** is "each student on their own phone, with headphones" realistic in the classes you know?
+**Q7 (answered: one student at a time on one laptop, or two laptops in two rooms; section 6). Classroom setup:** is "each student on their own phone, with headphones" realistic in the classes you know?
 If not, we design the shared-laptop flow properly instead of just not breaking it.
 
 **Q8. Who is the first pilot teacher**, and how many students (we planned about 10)? Are any under 14? (Not invited
@@ -371,6 +373,15 @@ teacher.
 
 ---
 
+**Q10. One sentence in the parent message about teachers listening?** (section 7) Recommended: **yes**, nothing
+else for parents.
+
 ## Decisions log
 
-(Empty: to be filled when Asadbek answers section 9.)
+Asadbek, 2026-11-10:
+
+- **Q1:** first pilot = students record, the teacher listens and gives the level; AI scoring later, when there is credit.
+- **Q2:** better versions fix the student's own sentences only; no full rewritten answer.
+- **Q3:** the mock shows an estimated level, following the official UZBMB scale as closely as it is published.
+- **Q4:** teachers can listen to recordings. No extra parent information, access log or teacher terms needed.
+- **Q7:** in class, one student at a time on one laptop; two laptops in two separate rooms to go faster.

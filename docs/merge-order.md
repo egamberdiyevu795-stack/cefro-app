@@ -529,7 +529,10 @@ Vercel's limit and not shortened.) Preview (mock mode):
 - The timing is said **once per part** under its title ("1 min to prepare · 2 min to speak"; Part 1 "3 questions ·
   30 s each" / "45 s for the first, 30 s for the others"), not on every row.
 - One grey tag from the student's own history: "Start here" (no attempts yet) or "Try next" on the task the
-  dashboard's Practise next picks; "Practised dd.mm.yy" under practised tasks. `PractiseNext` gains `taskId`.
+  dashboard's Practise next picks; "Practised dd.mm.yy" under practised tasks.
+- SAMPLE "Often / Sometimes / Rarely asked" labels, sorted often → rarely, **only with `?mock=1&freq=1`**, each card
+  saying they are made up (`features/task-list/sample-frequency.ts`). For the owner to judge the idea; there is no
+  real exam data, so they never show on the real site. Delete the file or replace it with real data before use. `PractiseNext` gains `taskId`.
   The real page now reads the caller's attempts (`findCurrentUserId`, `listAttemptHistory`, like the dashboard);
   mock mode uses the demo student and reads nothing.
 - Tests: `part2-tasks.test.ts` (order, timing once, Coming soon, mock links, tags), `e2e/no-dead-controls.spec.ts`

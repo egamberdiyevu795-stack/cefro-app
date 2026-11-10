@@ -259,6 +259,18 @@ describe("task list page (/practice)", () => {
     expect(html).toMatch(/Practised \d\d\.\d\d\.\d\d/);
   });
 
+  it("SAMPLE frequency labels: only with ?mock=1&freq=1, marked as made up, sorted often → rarely; never on the real site", async () => {
+    for (const html of [await homePage(), await homePage({ freq: "1" }), await homePage({ mock: "1" })]) {
+      expect(html).not.toMatch(/Often asked|Sometimes asked|Rarely asked|sample-frequency-note/);
+    }
+    const html = await homePage({ mock: "1", freq: "1" });
+    expect(html.match(/data-testid="sample-frequency-note"/g)).toHaveLength(4);
+    expect(html).toContain("Made up to preview the idea, not real exam data.");
+    const labels = [...sectionOf(html, "part-2")!.matchAll(/(Often|Sometimes|Rarely) asked/g)].map((m) => m[1]);
+    expect(labels).toHaveLength(7);
+    expect(labels).toEqual([...labels].sort((a, b) => ["Often", "Sometimes", "Rarely"].indexOf(a) - ["Often", "Sometimes", "Rarely"].indexOf(b)));
+  });
+
   it("no demo label on the real list; in mock mode (?mock=1) the label, and every task opens its brief in mock mode", async () => {
     expect(await homePage()).not.toContain('data-testid="demo-label"');
     const html = await homePage({ mock: "1" });

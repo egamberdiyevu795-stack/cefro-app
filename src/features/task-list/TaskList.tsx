@@ -12,6 +12,8 @@ export type TaskListRow = {
   tag?: TaskTag;
   /** Under the title: "Practised 04.11.26" once the student has answered it; nothing before. */
   detail?: string;
+  /** SAMPLE only (mock mode, `?freq=1`): a made-up "how often asked" label. */
+  frequency?: string;
 };
 
 /**
@@ -29,6 +31,8 @@ export type TaskListPart = {
   /** The part's timing, once, in the card header: "1 min to prepare · 2 min to speak". */
   timing: string;
   status: TaskListPartStatus;
+  /** The rows carry SAMPLE frequency labels: the card says they are made up. */
+  sample?: boolean;
   tasks: TaskListRow[];
 };
 
@@ -67,7 +71,7 @@ export function TaskList({ parts, top }: { parts: TaskListPart[]; /** Above the 
         <h1 className="text-title font-medium tracking-[-0.01em] text-fg">Practice</h1>
         <p className="mt-1 text-body text-fg-muted">Choose a task. Speak under exam timing, see your own words quoted, fix one thing and try again.</p>
       </div>
-      {parts.map(({ part, name, level, note, timing, status, tasks }) => {
+      {parts.map(({ part, name, level, note, timing, status, sample, tasks }) => {
         const anchor = examPartAnchor(part);
         return (
           <Card key={part} id={anchor} aria-labelledby={`${anchor}-heading`} className="scroll-mt-4" data-status={status}>
@@ -88,6 +92,11 @@ export function TaskList({ parts, top }: { parts: TaskListPart[]; /** Above the 
                 {status === "demo" ? " You can try the demo below; it is not scored." : null}
               </p>
             )}
+            {sample && tasks.length > 0 && (
+              <p className="mt-3 rounded-tile bg-well px-3 py-2 text-label text-fg" data-testid="sample-frequency-note">
+                <span className="font-medium">Sample labels.</span> Made up to preview the idea, not real exam data. Sorted from often to rarely asked.
+              </p>
+            )}
             {tasks.length > 0 && (
               <ul className="mt-2 divide-y divide-line">
                 {tasks.map((task) => (
@@ -98,7 +107,9 @@ export function TaskList({ parts, top }: { parts: TaskListPart[]; /** Above the 
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-body font-semibold text-fg">{task.title}</span>
-                        {task.detail && <span className="block text-caption text-fg-muted">{task.detail}</span>}
+                        {(task.frequency || task.detail) && (
+                          <span className="block text-caption text-fg-muted">{[task.frequency, task.detail].filter(Boolean).join(" · ")}</span>
+                        )}
                       </span>
                       {task.tag && (
                         <span className="shrink-0 rounded-full bg-well px-2.5 py-1 text-label font-medium text-fg" data-testid="task-tag">

@@ -12,6 +12,7 @@ import { formatDate } from "@/features/history/view-model";
 import { part3PracticeHref } from "@/features/part3/links";
 import { AppShell } from "@/features/shell/AppShell";
 import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
+import { byFrequency, sampleFrequency, showSampleFrequency } from "@/features/task-list/sample-frequency";
 import { TaskList, timingText, type TaskListPart, type TaskListRow } from "@/features/task-list/TaskList";
 import { listAttemptHistory } from "@/server/attempts/attempt-service";
 import { assertServerConfigured } from "@/server/config/boot-check";
@@ -46,6 +47,9 @@ const PART_LEVELS: Record<ExamPartId, string> = { "1.1": "A2", "1.2": "B1", "2":
  * recently). "Start here" before any attempt, "Try next" after. A practised task says "Practised dd.mm.yy". No tag
  * or order claims how often a task comes up in the exam: we have no such data.
  *
+ * `?mock=1&freq=1`: SAMPLE "Often / Sometimes / Rarely asked" labels, tasks sorted often → rarely, each card saying
+ * they are made up (features/task-list/sample-frequency.ts). For the owner to judge the idea; never on the real site.
+ *
  * Real page: the full server configuration is checked on every request (it used to come from the `(site)` layout).
  * `?mock=1` (mock mode): no check, the demo student's attempts (no cookie or database read), the demo label, and every
  * link keeps ?mock=1. `?flags=off` previews the frame with every flag off.
@@ -56,6 +60,8 @@ export default async function PracticePage(props: PageProps<"/practice">) {
   await connection();
   if (!mock) assertServerConfigured();
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
+  // SAMPLE frequency labels (made up, for the owner to judge the idea): mock mode with ?freq=1 only.
+  const sample = showSampleFrequency(mock, query.freq);
 
   const userId = mock ? null : await findCurrentUserId();
   const attempts: HistoryAttempt[] = mock ? await demoAttempts(new Date()) : userId ? await listAttemptHistory(userId) : [];
@@ -92,6 +98,7 @@ export default async function PracticePage(props: PageProps<"/practice">) {
                   detail: last ? `Practised ${formatDate(last)}` : undefined,
                 };
               });
+    const shown = sample ? byFrequency(rows).map((r) => ({ ...r, frequency: sampleFrequency(r.id) })) : rows;
     return {
       part,
       name: PART_NAMES[part],
@@ -99,7 +106,8 @@ export default async function PracticePage(props: PageProps<"/practice">) {
       note: PART_NOTES[part],
       timing: timed[0] ? timingText(timed[0]) : "",
       status,
-      tasks: rows,
+      sample,
+      tasks: shown,
     };
   });
 

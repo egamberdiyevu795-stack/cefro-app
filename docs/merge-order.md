@@ -687,3 +687,10 @@ Vercel does not shorten them and Preview links stay predictable. Branches that a
 `git merge-base --is-ancestor` for every pair (what contains what); `git rev-list --count` against `main` (none is
 behind); a trial merge of steps 7–12 onto step 6 in a separate worktree (no conflicts), then `tsc`, `eslint`, `vitest`
 and the Part 1 browser test there. Re-run these if `main` moves before merging.
+
+## After `claude/project-thread-e59hcb`: `claude/project-thread-8yy31h` (docs only)
+
+Cut from `claude/project-thread-e59hcb`. **Documents only**: `docs/v1-plan.md` (Version 1 plan for students and
+teachers: gap analysis, full mock, better versions, teacher audio, classroom mock, consent, build order, questions for
+Asadbek) and this entry. No app code, no migration, no environment variable. Merge any time after it, merge commit,
+no squash.

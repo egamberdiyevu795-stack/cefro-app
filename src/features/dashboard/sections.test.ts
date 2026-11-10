@@ -67,7 +67,7 @@ describe("exam date before the page is ready (server HTML, before hydration)", (
 describe("Practise next", () => {
   it("shows the whole goal, never clamped, on every screen size", () => {
     const goal = "Try adding a third conditional sentence (for example, 'If I hadn't listened to him, I would have given up') to show even greater grammatical range when you tell the story.";
-    const markup = html(createElement(PractiseNextCard, { next: { title: "Advice from someone", partLabel: "Part 2", minutes: 3, reason: "Your goal isn't met yet", goal, href: "/x" } }));
+    const markup = html(createElement(PractiseNextCard, { next: { taskId: "b2-part2-advice-from-someone", title: "Advice from someone", partLabel: "Part 2", minutes: 3, reason: "Your goal isn't met yet", goal, href: "/x" } }));
     const shown = `Your goal: ${goal.replace(/'/g, "&#x27;")}`;
     expect(markup).toContain(shown);
     expect(markup).not.toContain("line-clamp");

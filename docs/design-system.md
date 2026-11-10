@@ -101,16 +101,26 @@ The Practice tab. Built only from `components/ds` and the tokens (`src/app/pract
 as the current grey square, back link to the dashboard). One column, max 672 px, like Lessons.
 
 - **Top to bottom:** the demo label in mock mode; the heading "Practice" and one muted line ("Choose a task. Speak
-  under exam timing, see your own words quoted, fix one thing and try again."); then **one card per exam part that has
-  tasks** (`listSpeakingTasks`: Part 2 today; Part 1 tasks join only when their parts go live). The card is the part's
-  anchor (`id="part-2"`, opened by the dashboard's Part 2 tile and the Account page's "Go to Part 2"): title
-  "Part 2 · Long turn", the level in a grey pill on the right ("B2"), one line on what the part asks ("Three questions
-  and one picture. Answer the questions: describing the picture answers none of them."), then the tasks.
+  under exam timing, see your own words quoted, fix one thing and try again."); then **one card per exam part, all
+  four, in exam order** (1.1, 1.2, 2, 3; `claude/project-thread-e59hcb`). Each card is the part's anchor (`id="part-1-1"`,
+  `part-1-2`, `part-2`, `part-3`; the dashboard's Part 2 tile and the Account page's "Go to Part 2" open `#part-2`):
+  title ("Part 2 · Long turn"), the target level in a grey pill on the right (A2, B1, B2, C1), one line on what the
+  part asks, then **the part's timing, once** (`clock` glyph, `text-label`): "3 questions · 30 s each" (1.1),
+  "3 questions · 45 s for the first, 30 s for the others" (1.2), "1 min to prepare · 2 min to speak" (2 and 3).
+- **Parts that are not live** (`PART_LIVE`): the line "**Coming soon.**" (`data-testid="part-status"`, text, never a
+  control). Real page: no task rows (their pages are a 404). Mock mode: "Coming soon. You can try the demo below; it is
+  not scored." and the tasks, opening their mock pages (Part 1: the question-by-question flow, which keeps the consent
+  lock; Part 3: the Part 3 demo).
 - **Each task** is one row and one link to its brief: a `mic` glyph in a `well` circle, the title (`text-body`,
-  semibold), "1 min preparation · 2 min speaking" (`text-caption`, muted) and a chevron. Rows are 56 px tall.
+  semibold), "Practised dd.mm.yy" under it once the student has answered it (`text-caption`, muted; nothing before),
+  and a chevron. The timing is no longer repeated on every row. Rows are 56 px tall.
+- **One tag, from the student's own history:** a grey pill on the task the dashboard's Practise next picks
+  (`practiseNext`: an unmet goal first, then a task never practised, then the one practised least recently). "Start
+  here" before any attempt (the recommended first task, "Advice from someone"), "Try next" after. Live parts only.
+  No label or order claims how often a task comes up in the exam: there is no such data.
 - **No black button.** Choosing a task is the page (as on Lessons); the brief's "Start preparation" is the next black
   control. No price, "free", rating or level claims.
-- **Unchanged behaviour:** same URL, same 7 tasks in the same order, same links (`practiceHref`); the consent lock is
+- **Unchanged behaviour:** same URL, same 7 Part 2 tasks in the same order, same links (`practiceHref`); the consent lock is
   on the brief (a locked student still sees the list and opens the locked brief). The real page checks the server
   configuration on every request (it used to come from the `(site)` layout). `?mock=1`: no check, the demo account,
   the demo label ("Demo mode. Your answer won't be scored."), every link keeps `?mock=1`. `?flags=off`: the frame with

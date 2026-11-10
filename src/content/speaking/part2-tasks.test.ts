@@ -18,6 +18,13 @@ import { PART2_QUESTION_AUDIO_FILES, PART2_QUESTION_AUDIO_VOICE, part2QuestionAu
 
 // The task list page asks for a request (`connection()`) before its configuration check; rendered here without one.
 vi.mock("next/server", async (importOriginal) => ({ ...(await importOriginal<object>()), connection: async () => undefined }));
+// The real task list reads the caller's own attempts for its "Start here" / "Try next" tag; here, a visitor with none.
+const caller = vi.hoisted(() => ({ attempts: [] as unknown[] }));
+vi.mock("@/server/identity/current-user", () => ({ findCurrentUserId: async () => (caller.attempts.length ? "user-1" : null) }));
+vi.mock("@/server/attempts/attempt-service", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  listAttemptHistory: async () => caller.attempts,
+}));
 
 /**
  * Every Part 2 task has the same shape as "Advice from someone": 1 min preparation, 2 min speaking, 3 questions, one
@@ -188,29 +195,75 @@ describe("snapshots", () => {
 const homePage = async (query: Record<string, string> = {}) =>
   renderToStaticMarkup(await HomePage({ params: Promise.resolve({}), searchParams: Promise.resolve(query) } as never));
 
+const sectionOf = (html: string, id: string) => html.split(new RegExp(`<section [^>]*id="${id}"`))[1]?.split("</section>")[0];
+
 describe("task list page (/practice)", () => {
-  it("shows all 7 tasks, each linking to its own practice page, in order", async () => {
+  afterEach(() => {
+    caller.attempts = [];
+  });
+
+  it("shows all 7 Part 2 tasks, each linking to its own practice page, in order", async () => {
     const html = await homePage();
     const hrefs = [...html.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
     expect(hrefs).toEqual(tasks.map((t) => t.id));
     for (const task of tasks) expect(html).toContain(`>${task.title.replace(/'/g, "&#x27;")}<`);
-    expect(html.match(/1 min preparation · 2 min speaking/g)).toHaveLength(7);
   });
 
-  it("groups them under Part 2, the section the dashboard's Part 2 tile opens (/practice#part-2)", async () => {
+  it("all four parts, in exam order (1.1, 1.2, 2, 3); the Part 2 section is the one the dashboard's Part 2 tile opens", async () => {
     const html = await homePage();
-    const section = html.split(/<section [^>]*id="part-2"/)[1]?.split("</section>")[0];
-    expect(section, "Part 2 section").toBeDefined();
+    const ids = [...html.matchAll(/<section [^>]*id="(part-[^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toEqual(["part-1-1", "part-1-2", "part-2", "part-3"]);
+    const section = sectionOf(html, "part-2");
     expect(section).toContain("Part 2 · Long turn");
     expect(section!.match(/href="\/practice\/speaking\//g)).toHaveLength(7);
-    expect(html).not.toContain('id="part-1-1"'); // no section for a part without tasks
+  });
+
+  it("the timing is said once per part, in its header, never on each row", async () => {
+    const html = await homePage();
+    expect(html.match(/1 min to prepare · 2 min to speak/g)).toHaveLength(2); // Part 2 and Part 3
+    expect(sectionOf(html, "part-1-1")).toContain("3 questions · 30 s each");
+    expect(sectionOf(html, "part-1-2")).toContain("3 questions · 45 s for the first, 30 s for the others");
+    expect(html).not.toContain("preparation · ");
+  });
+
+  it("real page: parts that are not live say Coming soon and link to no task (their pages are a 404)", async () => {
+    const html = await homePage();
+    for (const id of ["part-1-1", "part-1-2", "part-3"]) {
+      const section = sectionOf(html, id)!;
+      expect(section).toContain("Coming soon.");
+      expect(section).not.toContain("<a ");
+    }
+    expect(sectionOf(html, "part-2")).not.toContain("Coming soon");
+  });
+
+  it("mock mode: the parts that are not live list their tasks too, opening their mock pages, under Coming soon", async () => {
+    const html = await homePage({ mock: "1" });
+    expect(sectionOf(html, "part-1-1")).toContain('href="/practice/speaking/a2-part1-1-daily-life?mock=1"');
+    expect(sectionOf(html, "part-1-2")).toContain('href="/practice/speaking/b1-part1-2-shopping?mock=1"');
+    expect(sectionOf(html, "part-3")).toMatch(/href="\/practice\/part3\/c1-part3-[^"?]+\?mock=1"/);
+    for (const id of ["part-1-1", "part-1-2", "part-3"]) expect(sectionOf(html, id)).toContain("You can try the demo below; it is not scored.");
+  });
+
+  it("first visit: one tag, 'Start here', on the recommended first task; nothing claims exam frequency", async () => {
+    const html = await homePage();
+    expect(html.match(/data-testid="task-tag"/g)).toHaveLength(1);
+    expect(sectionOf(html, "part-2")!.split('data-testid="task-tag"')[0]).toContain("Advice from someone");
+    expect(html).toMatch(/data-testid="task-tag"[^>]*>Start here</);
+    expect(html).not.toMatch(/frequent|common|popular|often/i);
+  });
+
+  it("mock mode (the demo student has practised): 'Try next' on Practise next's task, and 'Practised dd.mm.yy' on practised tasks", async () => {
+    const html = await homePage({ mock: "1" });
+    expect(html.match(/data-testid="task-tag"[^>]*>Try next</g)).toHaveLength(1);
+    expect(html).not.toContain("Start here");
+    expect(html).toMatch(/Practised \d\d\.\d\d\.\d\d/);
   });
 
   it("no demo label on the real list; in mock mode (?mock=1) the label, and every task opens its brief in mock mode", async () => {
     expect(await homePage()).not.toContain('data-testid="demo-label"');
     const html = await homePage({ mock: "1" });
     expect(html).toContain('data-testid="demo-label"');
-    const hrefs = [...html.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
+    const hrefs = [...sectionOf(html, "part-2")!.matchAll(/href="\/practice\/speaking\/([^"]+)"/g)].map((m) => m[1]);
     expect(hrefs).toEqual(tasks.map((t) => `${t.id}?mock=1`));
   });
 });

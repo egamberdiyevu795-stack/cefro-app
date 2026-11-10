@@ -211,6 +211,8 @@ export interface TaskInfo {
 }
 
 export interface PractiseNext {
+  /** The task to practise (the task list tags its row "Try next"). */
+  taskId: string;
   title: string;
   partLabel: string;
   minutes: number;
@@ -274,6 +276,7 @@ function isInProgress(a: HistoryAttempt): boolean {
 function describe(task: TaskInfo) {
   const part = examPartOf(task);
   return {
+    taskId: task.id,
     title: task.title,
     partLabel: part ? examPartLabel(part) : `Part ${task.part}`,
     minutes: Math.round((task.preparationSeconds + task.speakingSeconds) / 60),

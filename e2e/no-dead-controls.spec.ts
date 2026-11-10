@@ -68,7 +68,7 @@ async function deadControls(page: Page): Promise<string[]> {
   });
 }
 
-/** "Coming soon" outside the exam-part tiles. */
+/** "Coming soon" outside the exam-part tiles, the home page's part list and the task list's part status (all from PART_LIVE). */
 async function comingSoonOutsidePartTiles(page: Page): Promise<number> {
   return page.evaluate(() => {
     let count = 0;
@@ -77,7 +77,7 @@ async function comingSoonOutsidePartTiles(page: Page): Promise<number> {
       if (!/coming soon/i.test(node.textContent ?? "")) continue;
       const el = node.parentElement;
       if (el?.closest("script, style, template")) continue;
-      if (el?.closest('[data-testid="part-tile"], [data-testid="exam-status"]')) continue;
+      if (el?.closest('[data-testid="part-tile"], [data-testid="exam-status"], [data-testid="part-status"]')) continue;
       count += 1;
     }
     return count;

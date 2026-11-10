@@ -31,6 +31,7 @@ Pilot consent (`claude/consent-pilot`) comes **right after `claude/project-threa
 `claude/pilot-consent` and `claude/consent-plan-j0ky8m`: merge it instead of those two.
 `claude/p2-read-qs` (Part 2 questions read aloud) comes **right after `claude/consent-pilot`** and contains it.
 `claude/practice-list` (task list restyle) comes **right after `claude/p2-read-qs`** and contains it.
+`claude/project-thread-e59hcb` (all four parts on the task list) comes **right after `claude/practice-list`** and contains it.
 
 ### Why merge commits for 1–6 (and 10–11)
 
@@ -515,6 +516,24 @@ Added on this branch, on top of `claude/part3`:
   `practice-machine.test.ts` (the intro phase), `e2e/part3.spec.ts` (both real introductions; a Part 3 run where
   preparation and recording run out by themselves). Other browser specs serve a 0.2 s silent file for the
   introductions (`e2e/short-intro.ts`).
+
+## Right after `claude/practice-list`: `claude/project-thread-e59hcb` (all four parts on the task list, no migration)
+
+It is `claude/practice-list` plus the owner's feedback on the task list (2026-11-10). Merge commit, no squash. (Branch
+name set by the session: 21 characters after `claude/`, one over the rule; the Preview address is still under
+Vercel's limit and not shortened.) Preview (mock mode):
+`https://cefro-app-mgm6-git-claude-project-thread-e59hcb-crm-b915.vercel.app/practice?mock=1`.
+
+- `/practice` shows **all four parts in exam order** (1.1, 1.2, 2, 3). Parts that are not live (`PART_LIVE`) say
+  "Coming soon": no task rows on the real page, their mock pages in mock mode. `PART_LIVE` is unchanged.
+- The timing is said **once per part** under its title ("1 min to prepare · 2 min to speak"; Part 1 "3 questions ·
+  30 s each" / "45 s for the first, 30 s for the others"), not on every row.
+- One grey tag from the student's own history: "Start here" (no attempts yet) or "Try next" on the task the
+  dashboard's Practise next picks; "Practised dd.mm.yy" under practised tasks. `PractiseNext` gains `taskId`.
+  The real page now reads the caller's attempts (`findCurrentUserId`, `listAttemptHistory`, like the dashboard);
+  mock mode uses the demo student and reads nothing.
+- Tests: `part2-tasks.test.ts` (order, timing once, Coming soon, mock links, tags), `e2e/no-dead-controls.spec.ts`
+  (the task list's "Coming soon" line is allowed, like the part tiles).
 
 ## Right after `claude/p2-read-qs`: `claude/practice-list` (task list restyle, no migration)
 

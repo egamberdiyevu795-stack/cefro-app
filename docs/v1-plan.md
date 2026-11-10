@@ -1,7 +1,7 @@
 # CEFRO Version 1: plan for students and teachers
 
-Status: **draft, 2026-11-10. Asadbek answered Q1–Q4 and Q7 the same day (Decisions log at the end); the plan below
-follows those answers. Q6, Q8, Q9 and Q10 are still open. Nothing in this plan is built yet.** Planning only: no app code, no migration, no model call was made to write it.
+Status: **draft, 2026-11-10. Asadbek answered Q1–Q8 and Q10 the same day (Decisions log at the end); the plan below
+follows those answers. Only Q9 (teacher comment) is still open. Nothing in this plan is built yet.** Planning only: no app code, no migration, no model call was made to write it.
 Cut from `claude/project-thread-e59hcb`.
 
 Read with: `docs/teacher-plan.md` (Teacher view, built in mock mode), `docs/consent-design.md` (under-18 consent,
@@ -301,10 +301,7 @@ recordings" switch.** What stays, because it is already built or costs nothing:
 6. **First name only** for under-18s in "Name your teacher sees", and nobody under 14 until the lawyer answers
    (decided earlier).
 
-**One open point (Asadbek's call, Q10):** I recommend the parent message (`docs/pilot-parent-message.md`, not sent
-yet) still says in one sentence that the child's teacher can listen to the recordings. It is a text change to a
-message that needs a native speaker's check anyway, so it costs nothing, and it is the one thing a parent would be
-upset to learn later. Nothing new is built for parents either way.
+**Parent message (Q10, decided: no change).** `docs/pilot-parent-message.md` is not changed for teacher listening.
 
 The lawyer list (`docs/lawyer-questions.md`) should still get: "Can a teacher (not the parent) listen to a minor's
 recording with the parent's consent?" That is a question, not a build step.
@@ -316,31 +313,35 @@ on the step before it. Sizes: S ≈ one chat, M ≈ one long chat, L ≈ may nee
 
 | # | Step | What it delivers | Needs | Size |
 | --- | --- | --- | --- | --- |
-| 1 | **Part 3 real recording** | Upload and scoring route, consent lock, real result; `PART_LIVE["3"]` stays off | — | M |
-| 2 | **Full mock runner** | `full_mock` session, the 4 parts back to back with intros, resume after a break, uploads during the next intro; works on a laptop screen as well as a phone | Step 1 | L |
+| 1 | **Part 3 real recording** | Upload and scoring route (real evaluator wired in, mock evaluator in tests), consent lock, real result; `PART_LIVE["3"]` stays off | — | M |
+| 2 | **Full mock runner** | `full_mock` session, the 4 parts back to back with intros, resume after a break, uploads during the next intro; each part is sent for AI scoring as it uploads; works on a laptop screen as well as a phone | Step 1 | L |
 | 3 | **Official scale check** (docs only) | Collect what UZBMB officially publishes about the speaking score and level boundaries (sources linked, quoted exactly), so the mock result follows the official scale as far as it is public | — | S |
-| 4 | **Mock result** | Mock result page (each part: transcript, recording, level), History rows and filter. The overall level follows step 3; while scoring is off it shows the teacher's level | Steps 2, 3 | M |
-| 5 | **Teacher: all parts, mocks and audio** | New share text, T3/T4 updates, T6 student's mock page with player (speed control, no download), ratings per part, `teacherCanHear` | Step 4 | M |
-| 6 | **Exam laptop mode** | Class PIN on the Share screen, Start exam laptop, T7 list and PIN pad, one-mock pass, end screen, End exam laptop, two laptops on one class, T8 class mock results | Step 5 | L |
-| 7 | **Pilot switch-on checklist** | Speech-to-text key, parent message checked, `TEACHER_LIVE` and part switches on in Production, consent recorded, `CONSENT_REQUIRED=true`, a dry run with Asadbek on two laptops | Steps 1–6 | S |
-| 8 | **AI scoring on** (when there is credit) | Live check on `gemini-3.8-flash`, feedback-review fixes, overall AI level on the mock result | Credit | M |
-| 9 | **Transcript with mistakes and better versions** | Evaluator output gets the sentence list (own sentences only, Q2); mock evaluators fill it; result page underlines and expands; the "found word for word" check | Step 8 for real data (screens can be built on mock data earlier) | M |
+| 4 | **Mock result, two levels** | Mock result page: each part's transcript, recording, **AI band** and **teacher's band** side by side ("CEFRO: B2 · Your teacher: B2"); overall AI level by code from the official scale (step 3); History rows and filter. When AI scoring can't run, the AI side says "AI score not ready yet" and the teacher's level still shows | Steps 2, 3 | M |
+| 5 | **Transcript with mistakes and better versions** | Evaluator output gets the sentence list (own sentences only, Q2), the real prompt updated (not live-tested), mock evaluators fill it; result page underlines and expands; the "found word for word" check | Step 4 | M |
+| 6 | **Teacher: all parts, mocks and audio** | New share text, T3/T4 updates, T6 student's mock page with player (speed control, no download), AI band next to Agree / Choose level per part, `teacherCanHear` | Step 4 | M |
+| 7 | **Exam laptop mode** | Class PIN on the Share screen, Start exam laptop, T7 list and PIN pad, one-mock pass, end screen, End exam laptop, two laptops on one class, T8 class mock results | Step 6 | L |
+| 8 | **Pilot switch-on checklist** | Speech-to-text key, `TEACHER_LIVE` and part switches on in Production, consent recorded, `CONSENT_REQUIRED=true`, a dry run with Asadbek on two laptops | Steps 1–7 | S |
+| 9 | **AI scoring live** (when there is credit) | No new building: top up Gemini, live check on `gemini-3.8-flash` with the anchors, feedback-review fixes, then the AI side of every result fills in, including attempts already recorded in the pilot (re-score button for the owner) | Credit | S–M |
 
-### First pilot (decided: Q1)
+### First pilot (decided: Q1, changed by Asadbek on 2026-11-10)
 
-**Steps 1–7, scoring off.** One teacher, about 10 students, one or two laptops in quiet rooms. Students sit the full
-mock in class (or single parts at home); the teacher listens with the transcript and gives the level (Choose level);
-the student sees their transcript and the teacher's level. This replaces the YouTube + phone routine without Gemini
-credit, and gives us real teacher-marked recordings to test our scoring against later (step 8).
+**Steps 1–8. AI scoring and teacher marking are both built now, side by side** (Asadbek: build AI scoring along the
+way, not later). One teacher (Azamat, at our language centre), about 10 students, one or two laptops in quiet rooms.
+
+- Every answer goes to AI scoring as soon as it is uploaded. **Without Gemini credit**, the AI side shows "AI score not
+  ready yet" and nothing breaks; the teacher's level carries the pilot.
+- The teacher listens with the transcript and the AI's feedback beside it, and gives Agree or their own level.
+- The student sees their transcript, the AI's feedback (when ready) and the teacher's level, labelled
+  "Your teacher: B2", next to the app's level, never instead of it (Q6).
+- When credit arrives (step 9), we only switch it on: no rebuild. Pilot answers already recorded can be re-scored, so
+  we get AI vs teacher levels on the same answers, which is exactly the check we need before any launch.
 
 **What it still needs:** speech-to-text for the transcript (an OpenAI key, or Gemini transcription; a small cost per
-minute of audio), and Q6 answered (the student seeing the teacher's level).
-
-Better versions (step 9) come right after AI scoring is on. Their screens can be built on mock data before that.
+minute of audio), and Gemini credit for the AI side.
 
 ## 9. Questions for Asadbek
 
-**Q1 (answered: recording + teacher marking first). Pilot with AI scoring, or recording + teacher marking first?** Recommended: **recording + teacher marking first**
+**Q1 (answered, then changed: both AI scoring and teacher marking built now). Pilot with AI scoring, or recording + teacher marking first?** Recommended: **recording + teacher marking first**
 if credit is still short. It solves the teacher's problem today and gives us real marked answers to check our scoring.
 AI scoring switches on when there is credit.
 
@@ -358,13 +359,13 @@ add the question to the lawyer list.
 **Q5 (settled by Q4: one tap). One Share tap for everything, or a separate "Share recordings" switch?** Recommended: **one tap** in V1. Simpler
 for students; the parent consent already decides it for under-18s.
 
-**Q6. Does the student see the teacher's level?** Teacher plan says no in v1. In a class it would be natural, and the
+**Q6 (answered: yes). Does the student see the teacher's level?** Teacher plan says no in v1. In a class it would be natural, and the
 cheap pilot (Q1) needs it. Recommended: **yes, labelled "Your teacher: B2"**, next to the app's level, never instead.
 
 **Q7 (answered: one student at a time on one laptop, or two laptops in two rooms; section 6). Classroom setup:** is "each student on their own phone, with headphones" realistic in the classes you know?
 If not, we design the shared-laptop flow properly instead of just not breaking it.
 
-**Q8. Who is the first pilot teacher**, and how many students (we planned about 10)? Are any under 14? (Not invited
+**Q8 (answered: Azamat, a teacher at our language centre). Who is the first pilot teacher**, and how many students (we planned about 10)? Are any under 14? (Not invited
 until the lawyer answers.)
 
 **Q9. Teacher written comment?** Teachers grade by hand today and probably write notes. A one-line comment per mock is
@@ -373,8 +374,7 @@ teacher.
 
 ---
 
-**Q10. One sentence in the parent message about teachers listening?** (section 7) Recommended: **yes**, nothing
-else for parents.
+**Q10 (answered: no). One sentence in the parent message about teachers listening?** (section 7)
 
 ## Decisions log
 
@@ -385,3 +385,8 @@ Asadbek, 2026-11-10:
 - **Q3:** the mock shows an estimated level, following the official UZBMB scale as closely as it is published.
 - **Q4:** teachers can listen to recordings. No extra parent information, access log or teacher terms needed.
 - **Q7:** in class, one student at a time on one laptop; two laptops in two separate rooms to go faster.
+- **Q6:** the student sees the teacher's level, next to the app's level.
+- **Q8:** first pilot teacher: Azamat, at our language centre.
+- **Q10:** no sentence about teacher listening in the parent message.
+- **Change to Q1:** build AI scoring now, alongside teacher marking, even though it can't run without credit yet. The
+  pilot shows both; the AI side fills in when credit arrives.

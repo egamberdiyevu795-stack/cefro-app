@@ -201,11 +201,14 @@ test("a saved date that has passed: no countdown, 'When is your next exam?', and
 
 test("slow connection: the date picker and Save wait until the page is ready, and a date picked then is saved", async ({ page }) => {
   await page.goto("/dashboard"); // compiled once, so only the delay below is slow
-  // Slow 3G, roughly: the HTML arrives, the page's scripts take 4 s more.
+  // Slow connection: the HTML arrives, the page's scripts are held back until the test lets them through (a fixed delay
+  // raced the checks below on a slow machine: the page could become ready before the last "disabled" check ran).
   let delayed = 0;
+  let releaseScripts!: () => void;
+  const scriptsHeld = new Promise<void>((resolve) => (releaseScripts = resolve));
   await page.route("**/_next/static/chunks/**", async (route) => {
     delayed += 1;
-    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    await scriptsHeld;
     await route.continue();
   });
   const navigations: string[] = [];
@@ -221,6 +224,7 @@ test("slow connection: the date picker and Save wait until the page is ready, an
   await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Skip" })).toBeDisabled();
   expect(delayed).toBeGreaterThan(0);
+  releaseScripts();
 
   // As soon as the page is ready the controls work, and the date picked is the date saved.
   const exam = dayFromToday(57);

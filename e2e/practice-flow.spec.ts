@@ -435,10 +435,13 @@ for (const [name, url] of [
 ] as const) {
   test(`slow connection: the ${name}'s Start preparation is disabled until the page is ready, then works`, async ({ page }) => {
     await page.goto(url); // compiled once, so only the delay below is slow
+    // The page's scripts are held back until the checks below are done (a fixed delay raced them on a slow machine).
     let delayed = 0;
+    let releaseScripts!: () => void;
+    const scriptsHeld = new Promise<void>((resolve) => (releaseScripts = resolve));
     await page.route("**/_next/static/chunks/**", async (route) => {
       delayed += 1;
-      await new Promise((resolve) => setTimeout(resolve, 4_000));
+      await scriptsHeld;
       await route.continue();
     });
     await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -449,6 +452,7 @@ for (const [name, url] of [
     await expect(start).toBeDisabled();
     if (name === "retry brief") await expect(page.getByRole("button", { name: "Practise without the goal" })).toBeDisabled();
     expect(delayed).toBeGreaterThan(0);
+    releaseScripts();
 
     await expect(start).toBeEnabled({ timeout: 30_000 });
     await page.unroute("**/_next/static/chunks/**");

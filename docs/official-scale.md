@@ -11,6 +11,13 @@ until someone reads the uzbmb.uz documents listed in section 4.
 
 ---
 
+## Update 2026-11-11: UZBMB's own documents read
+
+Asadbek downloaded three files from uzbmb.uz in a browser and sent them; they were read in full (kept outside the repo,
+in the project files, `uzbmb/`). **Most of sections 2 and 3 below are now settled by section 1.4.** What is still open
+is one table: how the four speaking marks (0–21 raw) become a 0–75 speaking score (section 1.4, item 4). The page
+that should hold it is listed on uzbmb.uz as "Ko‘p darajali format gapirish ko‘nikmasini baholash reyting shkalasi".
+
 ## 1. Officially published (read and quoted from the source)
 
 All quotes are from lex.uz (the Ministry of Justice's national legal database), read on 2026-11-11 in the current
@@ -119,7 +126,64 @@ force on 01.03.2022"); Resolution No. 73 (Annex 2, point 1) repealed it. It desc
 
 ---
 
+### 1.4 UZBMB's own documents (read 2026-11-11 from files downloaded by Asadbek)
+
+**A. "Chet tilini bilish darajasini baholash ko‘p darajali test formati uchun baholash mezonlari"**
+(`https://uzbmb.uz/upload/file/pdf/Multilevel-bm.pdf`; approved by UZBMB's Scientific-Methodological Council on
+16.03.2023, applied from the March 2023 exams).
+
+1. **Every skill is on a 0–75 scale.** Listening and reading: Rasch ability → standard score `T = Z × 10 + 50`, capped
+   at 75 "because no C2 tasks exist" (all results at +2.5 and above count as 75). Writing and speaking: "Yozma ish va
+   gapirish bo‘limlarining har birida maksimal ball 75 balldan iborat." ("Writing and speaking each have a maximum of
+   75 points.")
+2. **Speaking gets one combined mark over its three task types:** "Gapirish ko‘nikmasida esa topshiriqlarning 3 turi
+   bo‘yicha umumlashgan baho qo‘yiladi." ("In speaking, a combined mark is given across the 3 task types.")
+3. **Experts' marks are averaged, then converted with a table** ("Ekspertlar tomonidan qo‘yilgan ballarning o‘rta
+   arifmetigi quyidagi shkala bo‘yicha yakuniy bahoga aylantiriladi"). The table printed there runs from raw
+   **0–36.0 → 0–75** (e.g. 20.6–21.0 → 51, 28.1–29.0 → 65, 36 → 75). Raw 36 is writing's maximum (task 1 = 12,
+   task 2 = 24), so this table fits **writing** and the pre-2026 speaking marking; it does not fit the new speaking
+   rubric below (maximum 21).
+4. **The level comes from the average of the four skills:** "testning 4 bo‘limi bo‘yicha o‘rtacha ball hisoblanadi va
+   yakuniy natijalar quyidagi shkala bo‘yicha e’lon qilinadi" ("the average score of the 4 sections is calculated and
+   the final results are announced on this scale"):
+
+   | Daraja (level) | Umumiy ball (score) |
+   | --- | --- |
+   | C1 | 65–75 |
+   | B2 | 51–64 |
+   | B1 | 38–50 |
+   | B1dan quyi (below B1) | 0–37 |
+
+   This matches the one boundary confirmed on lex.uz (B2 = at least 51, section 1.2).
+
+**B. "Ko‘p darajali (multilevel) imtihonlarning gapirish bo‘limi uchun baholash mezonlari" — new format**
+(`https://uzbmb.uz/upload/file/pdf/phone/yangi_format_uzbek_rus.pdf`, Uzbek and Russian).
+
+5. **Four marks, one per question group:** Questions 1–3 **0–5** (5 = "above A2"), Questions 4–6 **0–5** (5 = "above
+   B1"), Question 7 **0–5** (5 = "above B2"), Question 8 **0–6** (5 = C1, 6 = "above C1"). So the raw speaking
+   maximum is **5 + 5 + 5 + 6 = 21**.
+6. **This is exactly our structure:** Part 1.1 = Q1–3, Part 1.2 = Q4–6, Part 2 = Q7, Part 3 = Q8, with the same band
+   ranges (our rubrics `multilevel_q1_3`, `multilevel_q4_6`, `multilevel_q7`, `multilevel_q8`). Nothing in the exam
+   format changed that our app must follow.
+7. **Memorised answers score 0:** band 0 includes "barcha javoblar mavzudan butunlay tashqarida (masalan, yodlangan
+   javoblar, taxminlar)" ("all answers fully off topic, e.g. memorised answers, guesses"). This supports V1 decision
+   Q2 (no rewritten model answers).
+
+**C. "C1 Gapirish ko‘nikmasini baholash mezoni"** (`C1_baholash(gap).pdf`): a 0–6 grid on five criteria (vocabulary,
+grammar, fluency and coherence, communicative effectiveness, pronunciation) for the **single-level C1** exam, not the
+multilevel test. Not used for the mock level.
+
+**Still missing:** the official conversion of the new raw speaking total (0–21) to the 0–75 speaking score. The
+uzbmb.uz speaking page (screenshot, 11.11.26) lists it as a separate document, "Ko‘p darajali format gapirish
+ko‘nikmasini baholash reyting shkalasi" ("rating scale for multilevel speaking"), next to "Gapirish ko‘nikmasini
+baholashning yangi formati".
+
 ## 2. What teachers commonly believe but we could not confirm from a source we read
+
+**Update 2026-11-11:** settled by section 1.4: the 0–75 scale (confirmed), the level bands 0–37 / 38–50 / 51–64 /
+65–75 (confirmed), the average of the four skills (confirmed), per-part speaking marks (confirmed: 0–5, 0–5, 0–5,
+0–6), the new format (read: same structure as ours). The 120-point total is not used by UZBMB's own document. Kept
+below as the record of what was believed before.
 
 These ideas circulate on prep sites, in Telegram channels and in classrooms. Some search-engine snippets **attribute**
 them to uzbmb.uz PDFs (section 4), but we could not open those PDFs, so they stay unconfirmed here.
@@ -139,6 +203,9 @@ conflicts with the 0–75 belief. This is one more reason not to show any number
 ---
 
 ## 3. Unknown (not found anywhere official that we could read)
+
+**Update 2026-11-11:** items 1, 2, 4 and 6 are settled by section 1.4; item 3 is settled except the raw 0–21 → 0–75
+speaking conversion; item 5 (a level per skill on the certificate) and item 7 (official Telegram channel) stay open.
 
 1. **The multilevel score-to-level table itself** (item 6 says UZBMB publishes it on its website): the B1 and C1
    boundaries, and whether there is a "below B1" result.
@@ -186,23 +253,19 @@ be changed from "estimate" to "follows the official table".
 
 ---
 
-## 5. Recommendation for the mock result page (step 4)
+## 5. Recommendation for the mock result page (step 4) — updated 2026-11-11
 
-**What we can honestly show today:** a **speaking level estimate (B1 / B2 / C1, or "Below B1")** and **no score**.
+**The official path, used as far as it is published:**
 
-Reasons:
+1. Our four part bands are the official four speaking marks (section 1.4, item 6). Their sum is the official raw
+   speaking total, **0–21**.
+2. **Raw 0–21 → speaking score 0–75: official table still missing** (section 1.4, "Still missing"). Until it is read,
+   the app does **not** convert and shows **no score**.
+3. **Score → level: official** (section 1.4, item 4): C1 65–75, B2 51–64, B1 38–50, below B1 0–37. Once step 2 is
+   known, the mock shows "Speaking: 58 / 75 · B2 (estimate)" through this table, all in one swappable function.
 
-- Our mock tests **speaking only**. The certificate level combines four skills (section 1.1), so the page must never
-  look like a certificate level.
-- The official table and the speaking points scale are not confirmed (section 3). Any number (for example "54 / 75")
-  would be made up and would look official. Only "B2 = at least 51 overall" is confirmed, and that is the overall
-  score of four skills.
-- Our four part bands already carry CEFR labels taken from the official descriptors: Part 1.1 aims at A2, Part 1.2 at
-  B1, Part 2 at B2 and Part 3 at C1 (`multilevel_q1_3`, `multilevel_q4_6`, `multilevel_q7`, `multilevel_q8` rubrics).
-  A level can be read from them with a plain rule, without inventing a scale.
-
-**Suggested rule (in code, ours, not UZBMB's; to be replaced once the table is read).** Use the highest level that
-its own part supports:
+**Until the conversion is read, step 4 keeps the interim rule below** (ours, in one pure function, swapped for
+"sum → official conversion → official level table" when the rating scale is read):
 
 | Estimated level | When |
 | --- | --- |
@@ -211,25 +274,26 @@ its own part supports:
 | B1 | Part 2 band 1–2 (B1), or Part 1.2 band ≥ 3 ("Lower B1" or above) |
 | Below B1 | None of the above |
 
-If a part has no AI band yet ("AI score not ready yet"), show no overall estimate until every part needed by the rule
-is scored, and say "Estimate when all parts are scored". The teacher's level (Q6) sits beside it as today.
+If a part has no AI band yet ("AI score not ready yet"), show no overall estimate and say "Estimate when all parts are
+scored". The teacher's level (V1 Q6) sits beside it.
 
 **The line under the level:**
 
 > **Speaking only. An estimate from this mock, not an official UZBMB score.**
 
-Uzbek and Russian versions need a native check before the pilot, like the parent message:
+It stays even after the official conversion is used: the level is still our AI's marks, not an examiner's, and the
+certificate level averages four skills. Uzbek and Russian versions need a native check before the pilot:
 
 - Uzbek (draft): "Faqat gapirish. Bu mock natijasiga koʻra taxminiy daraja, UZBMB rasmiy bali emas."
 - Russian (draft): "Только говорение. Оценка по этому пробному экзамену, а не официальный балл UZBMB."
 
-**Do not show:** a 0–75 or 0–30 score, "Passed" / "Failed", "Certificate level", or the band boundaries from
-section 2 as if they were official.
+**Do not show:** "Passed" / "Failed", "Certificate level", or any 0–75 number before the official raw-to-75 table is
+read.
 
 ---
 
 ## 6. Decision needed
 
-**Q (for Asadbek):** can you open the uzbmb.uz links in section 4 in a browser and send the files, or the exact
-table? Until then, step 4 builds the estimate above with the line "Speaking only. An estimate from this mock, not an
-official UZBMB score."
+**Q (for Asadbek):** send the uzbmb.uz document "Ko‘p darajali format gapirish ko‘nikmasini baholash reyting
+shkalasi" (on the speaking page, under "Gapirish ko‘nikmasini baholashning yangi formati"). With it the mock can show
+an estimated speaking score out of 75 through the official tables.

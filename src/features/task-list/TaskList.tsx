@@ -60,10 +60,21 @@ export function timingText(task: Timed): string {
 /**
  * The task list (`/practice`, the Practice tab) on the design system: a page heading, then one card per exam part, in
  * exam order (1.1, 1.2, 2, 3; `id="part-2"`: the dashboard's part tile and the Account page's "Go to Part 2" open it).
- * The part's timing is said once, under its title, not on every row. Each row is a link to the task's brief. No black
- * button: choosing a task is the page, as on the Lessons list; the brief's "Start preparation" is the next black button.
+ * The part's timing is said once, under its title, not on every row. Each row is a link to the task's brief. The "Full
+ * mock exam" card above the parts holds the page's one black button (when the mock is open or a demo; "Coming soon" has none):
+ * choosing a single task is the page itself, as on the Lessons list; the brief's "Start preparation" is the next black button.
  */
-export function TaskList({ parts, top }: { parts: TaskListPart[]; /** Above the heading: the demo label in mock mode. */ top?: React.ReactNode }) {
+export function TaskList({
+  parts,
+  top,
+  mockCard,
+}: {
+  parts: TaskListPart[];
+  /** Above the heading: the demo label in mock mode. */
+  top?: React.ReactNode;
+  /** Between the heading and the parts: the "Full mock exam" card, the page's one black button (features/full-mock). */
+  mockCard?: React.ReactNode;
+}) {
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="task-list">
       {top}
@@ -71,6 +82,7 @@ export function TaskList({ parts, top }: { parts: TaskListPart[]; /** Above the 
         <h1 className="text-title font-medium tracking-[-0.01em] text-fg">Practice</h1>
         <p className="mt-1 text-body text-fg-muted">Choose a task. Speak under exam timing, see your own words quoted, fix one thing and try again.</p>
       </div>
+      {mockCard}
       {parts.map(({ part, name, level, note, timing, status, sample, tasks }) => {
         const anchor = examPartAnchor(part);
         return (

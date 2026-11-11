@@ -57,6 +57,13 @@
       "when": 1794103250945,
       "tag": "0007_pilot_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794402069499,
+      "tag": "0008_full_mock",
+      "breakpoints": true
     }
   ]
 }

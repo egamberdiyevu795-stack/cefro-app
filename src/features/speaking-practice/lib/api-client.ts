@@ -162,3 +162,24 @@ export function fetchTaskAttempts(taskId: string): Promise<{ attempts: AttemptSu
 export function attemptAudioUrl(attemptId: string): string {
   return `/api/speaking/attempts/${encodeURIComponent(attemptId)}/audio`;
 }
+
+/** The full mock exam (docs/v1-plan.md, section 3.2), as the server describes it. */
+export interface MockExamView {
+  id: string;
+  status: "in_progress" | "finished" | "not_finished";
+  createdAt: string;
+  finishedAt: string | null;
+  parts: { part: "1.1" | "1.2" | "2" | "3"; attemptId: string | null; taskId: string | null; taskTitle: string | null; attemptStatus: string | null }[];
+  nextPart: "1.1" | "1.2" | "2" | "3" | null;
+  expiresAt: string;
+}
+
+/** Start a full mock, or get the one already in progress (`resumed`). Safe to repeat. */
+export function startMockExam(): Promise<{ mock: MockExamView; resumed: boolean }> {
+  return request("/api/mock-exams", { method: "POST", retries: 2 });
+}
+
+/** Mark the mock finished once all four parts were sent. Safe to repeat. */
+export function finishMockExam(mockId: string): Promise<{ mock: MockExamView }> {
+  return request(`/api/mock-exams/${encodeURIComponent(mockId)}/finish`, { method: "POST", retries: 3 });
+}

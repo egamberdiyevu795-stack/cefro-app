@@ -22,6 +22,7 @@ import { useDeadline } from "@/features/speaking-practice/hooks/useDeadline";
 import { playChime, primeChime, releaseChime } from "@/features/speaking-practice/lib/chime";
 import { CuePlayer } from "@/features/speaking-practice/lib/cue-player";
 import type { PartIntro } from "@/domain/speaking/question-sequence";
+import type { EmbeddedPart } from "@/features/speaking-practice/lib/mock-embed";
 import { isEarlyFinish, type RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
 import { nextPart3Key, part3RealPracticeHref, part3ResultHref } from "./links";
 import { Part3BriefCard, Part3IntroCard, Part3PreparationCard, Part3RecordingCard, StatementCard, canToggle } from "./screens";
@@ -65,7 +66,10 @@ export function Part3Practice({
   mode = "mock",
   lock = null,
   retryAttemptId = null,
+  embedded = null,
 }: {
+  /** Inside the full mock: starts by itself, hands its recording and ticked points to the mock's runner, opens no result. */
+  embedded?: EmbeddedPart | null;
   task: PublicArgumentTask;
   /** "mock": `?mock=1`, nothing sent. "real": uploads and scores (the page only renders this when Part 3 is live). */
   mode?: "mock" | "real";
@@ -90,11 +94,12 @@ export function Part3Practice({
   const [chosen, setChosen] = useState<PointId[]>([...initialChosen]);
   const [earlyWarning, setEarlyWarning] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  const isReal = mode === "real";
+  const isReal = mode === "real" && !embedded;
   const level = useAudioLevel(recorder.stream, phase.kind === "recording");
 
-  const prepMs = task.preparationSeconds * 1000 * timeScale;
-  const speakMs = task.speakingSeconds * 1000 * timeScale;
+  const scale = embedded?.timeScale ?? timeScale;
+  const prepMs = task.preparationSeconds * 1000 * scale;
+  const speakMs = task.speakingSeconds * 1000 * scale;
   const cuePlayerRef = useRef<CuePlayer | null>(null);
   const unmountedRef = useRef(false);
   useEffect(() => {
@@ -116,7 +121,7 @@ export function Part3Practice({
     setPageError(null);
     primeChime();
     cuePlayerRef.current?.stop();
-    const player = new CuePlayer(new Audio());
+    const player = new CuePlayer(embedded?.audio ?? new Audio());
     cuePlayerRef.current = player;
     const spoken = player.play(intro.audio);
     if (!(await recorder.requestMicrophone())) {
@@ -130,7 +135,20 @@ export function Part3Practice({
     await playChime();
     if (unmountedRef.current) return;
     setPhase({ kind: "preparing", endsAt: Date.now() + prepMs });
-  }, [lock, recorder, intro.audio, prepMs]);
+  }, [lock, recorder, intro.audio, prepMs, embedded]);
+
+  // Inside the full mock the part starts by itself, as if its Start had just been tapped (the mock's own Start tap
+  // unlocked the sound). A timer, so a development double-mount starts it once.
+  const startRef = useRef(startPart);
+  useEffect(() => {
+    startRef.current = startPart;
+  });
+  const isEmbedded = embedded !== null;
+  useEffect(() => {
+    if (!isEmbedded) return;
+    const timer = setTimeout(() => void startRef.current(), 0);
+    return () => clearTimeout(timer);
+  }, [isEmbedded]);
 
   const startingRef = useRef(false);
   const startRecording = useCallback(async () => {
@@ -182,6 +200,17 @@ export function Part3Practice({
     const recording = await recorder.stop();
     if (timeUp) await playChime();
     finishingRef.current = false;
+    if (embedded) {
+      recorder.releaseStream();
+      if (!recording) {
+        setPageError("Your recording didn't save. Check your microphone and try again.");
+        recorder.discard();
+        setPhase({ kind: "brief" });
+        return;
+      }
+      embedded.onRecorded({ blob: recording.blob, durationMs: recording.durationMs, mimeType: recording.mimeType, chosenPoints: chosen });
+      return;
+    }
     if (isReal) {
       if (!recording) {
         setPageError("Your recording didn't save. Check your microphone and try again.");
@@ -196,7 +225,7 @@ export function Part3Practice({
     recorder.discard();
     recorder.releaseStream();
     router.push(part3ResultHref(nextPart3Key(task.id, chosen, retryOf), { scoring: true }));
-  }, [recorder, router, task.id, chosen, retryOf, isReal, submit]);
+  }, [recorder, router, task.id, chosen, retryOf, isReal, submit, embedded]);
 
   const deadline = phase.kind === "preparing" || phase.kind === "recording" ? phase.endsAt : null;
   const remainingMs = useDeadline(deadline, () => {
@@ -306,7 +335,7 @@ export function Part3Practice({
 
   return (
     <div className="space-y-4">
-      {!isReal && <DemoLabel variant="mode" className="bg-card" />}
+      {!isReal && !embedded && <DemoLabel variant="mode" className="bg-card" />}
       {pageError && <InlineNotice title="Something went wrong.">{pageError}</InlineNotice>}
       {content}
     </div>

@@ -118,8 +118,11 @@ as the current grey square, back link to the dashboard). One column, max 672 px,
   (`practiseNext`: an unmet goal first, then a task never practised, then the one practised least recently). "Start
   here" before any attempt (the recommended first task, "Advice from someone"), "Try next" after. Live parts only.
   No label or order claims how often a task comes up in the exam: there is no such data.
-- **No black button.** Choosing a task is the page (as on Lessons); the brief's "Start preparation" is the next black
-  control. No price, "free", rating or level claims.
+- **The "Full mock exam" card** sits between the heading and the part cards and holds **the page's one black button**
+  (`MockExamCard`, `features/full-mock/screens.tsx`): "Start mock exam" (all four parts live), "Continue your mock" (one is in
+  progress), "Try the demo mock" (mock mode, keeps `?mock=1`), or, before the real mock is open, only the text "**Coming
+  soon.**" with no button. Choosing a single task stays plain rows (as on Lessons); the brief's "Start preparation" is the next
+  black control. No price, "free", rating or level claims.
 - **Unchanged behaviour:** same URL, same 7 Part 2 tasks in the same order, same links (`practiceHref`); the consent lock is
   on the brief (a locked student still sees the list and opens the locked brief). The real page checks the server
   configuration on every request (it used to come from the `(site)` layout). `?mock=1`: no check, the demo account,
@@ -899,3 +902,38 @@ result page is not an error screen (`FailedResult` with `aiPending`, `AiPendingR
 - **Checks, real Part 3 flow:** `src/app/api/part3-attempts.test.ts`, `e2e/part3-real.spec.ts` (`npm run test:e2e:part3`: the
   whole loop at 390 px, at most one black control per screen, no text under 11 px, AA contrast, no horizontal scroll).
 
+## Full mock exam (`/practice/mock`, `claude/full-mock`)
+
+Step 2 of `docs/v1-plan.md`: Parts 1.1, 1.2, 2 and 3 back to back in one practice session (`kind` "full_mock"). Built from
+`components/ds` and the tokens only; each part is **the single-part flow unchanged** (same spoken introduction, chimes,
+preparation and speaking times), played by the same components with an `embedded` prop (`features/speaking-practice/lib/mock-embed.ts`).
+
+- **Open only when all four parts are live** (`fullMockLive()` in `config/features.ts`), or on a test server that sets
+  `CEFRO_TEST_FULL_MOCK_LIVE=1` (`next dev` only, ignored in production builds and on Vercel). Otherwise `/practice` says "Coming
+  soon." with no button and `/practice/mock` and `POST /api/mock-exams` answer 404. `?mock=1` always works: no account, no database,
+  no API call, the first task of each part, and "Mock finished" links to each part's demo result. `?mock=1&timeScale=0.05` (browser
+  tests) shortens Parts 1 and 3.
+- **Start screen** ("Full mock exam", or "Continue your mock" when parts are saved): one line on length and "You can't pause between
+  parts", the four parts (saved ones ticked), the grey microphone check, and the **one black button**, "Start mock" / "Continue mock".
+  With a consent lock the lock text replaces the check and the button. The tap makes the mock's one audio element and unlocks sound
+  for every later part (phones only play sound a tap unlocked).
+- **While a part runs:** the part's own screens, no brief, no result between parts, and above them a **thin "Part 2 of 4" line**
+  (`MockProgressLine`: `text-label` plus four segments). Black buttons are the part's own (none on intro and preparation, "Finish" while
+  recording).
+- **Sending:** each part is sent the moment it ends, in the background, while the next introduction plays (`upload-queue.ts`: one
+  idempotency key per part, waits when the server is busy with earlier answers, resends when back online). After the last part the page
+  waits until all four arrived (`MockSendingCard`: one row per part "Sending…/Sent/Not sent"; the black "Send again" only for a part
+  that can still be sent), closes the mock and opens `/practice/mock/<id>`. "AI score not ready yet" applies per part, on each part's own
+  result page.
+- **"Mock finished"** (`MockFinishedCard`; no overall result yet, that is step 4): "Mock finished", one row per part linking to its
+  own result (`/result/<attempt id>`), and the one black button "Back to Practice". A mock closed after 24 hours says "Mock not
+  finished", the parts it has keep their links, the others say "Not done". Owner only (404 for anyone else).
+- **Dashboard:** a mock in progress puts "**Continue your mock**" on top of Home (`ContinueMockCard`); its "Continue" is then the
+  page's one black button and Practise next / Start practice go grey.
+- **Resume and the 24 hours:** which parts are done is the session's attempts. "Continue" plays only the parts not saved, in exam
+  order. A mock older than 24 hours becomes `not_finished` (set when it is next read or written to); its finished parts keep their results.
+- **Layout:** one column, max 672 px, on phone and laptop; the parts keep their own two-column laptop layouts.
+- **Checks:** `domain/speaking/full-mock.test.ts` (order, resume, 24-hour rule, task picker), `features/full-mock/*.test.ts`
+  (runner state, upload queue), `app/api/mock-exams.test.ts` (routes, consent lock, cross-user, resume, 24 hours, cards),
+  `server/db/migrations.test.ts` (0008), `e2e/full-mock.spec.ts` (the whole mock in mock mode at 390 px with the AA / 11 px / one-black
+  audit, a laptop-width pass, "Coming soon").

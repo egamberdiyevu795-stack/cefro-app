@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { DemoLabel } from "@/components/ds";
-import { FEATURE_FLAGS, PART_LIVE, allFlags, type FeatureFlags } from "@/config/features";
+import { FEATURE_FLAGS, PART_LIVE, allFlags, fullMockLive, type FeatureFlags } from "@/config/features";
 import { listAllSpeakingTasks } from "@/content/speaking";
 import { listArgumentTasks } from "@/content/speaking/part3";
 import { EXAM_PART_IDS, examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { PART_NAMES, practiseNext } from "@/features/dashboard/progress";
-import { isMockQuery } from "@/features/demo/demo-mode";
+import { isMockQuery, mockLink } from "@/features/demo/demo-mode";
+import { MockExamCard, type MockCardState } from "@/features/full-mock/screens";
 import { formatDate } from "@/features/history/view-model";
 import { part3PracticeHref, part3RealPracticeHref } from "@/features/part3/links";
 import { AppShell } from "@/features/shell/AppShell";
@@ -18,6 +19,7 @@ import { listAttemptHistory } from "@/server/attempts/attempt-service";
 import { assertServerConfigured } from "@/server/config/boot-check";
 import { demoAttempts } from "@/server/demo/demo-data";
 import { findCurrentUserId } from "@/server/identity/current-user";
+import { findInProgressMock } from "@/server/sessions/mock-service";
 
 export const metadata: Metadata = { title: "Practice" };
 
@@ -41,6 +43,10 @@ const PART_LEVELS: Record<ExamPartId, string> = { "1.1": "A2", "1.2": "B1", "2":
  * and the black "Start preparation" are. A part that is not live says "Coming soon": on the real page with no task
  * (its pages are a 404); in mock mode with its tasks, which open their mock pages (Part 1: the question-by-question
  * flow; Part 3: the Part 3 demo). No black button here.
+ *
+ * The "Full mock exam" card sits above the parts and holds the page's one black button (docs/v1-plan.md, step 2): "Start mock
+ * exam" while all four parts are live (`fullMockLive`), "Continue your mock" when one is in progress, "Try the demo mock" in mock
+ * mode, and only the text "Coming soon." (no button) before the real mock is open.
  *
  * "Start here" / "Try next": one live task is tagged, the one the dashboard's Practise next picks (`practiseNext`, from
  * the student's own attempts: an unmet goal first, then a task never practised, then the one practised least
@@ -111,9 +117,19 @@ export default async function PracticePage(props: PageProps<"/practice">) {
     };
   });
 
+  const live = fullMockLive();
+  const inProgress = !mock && live && userId ? await findInProgressMock(userId) : null;
+  const mockState: MockCardState = mock
+    ? { kind: "demo", href: mockLink("/practice/mock", true), soon: !live }
+    : !live
+      ? { kind: "soon" }
+      : inProgress
+        ? { kind: "continue", href: "/practice/mock", done: inProgress.parts.filter((p) => p.attemptId).map((p) => p.part) }
+        : { kind: "start", href: "/practice/mock" };
+
   return (
     <AppShell flags={flags} account={mock ? "mock" : "real"} activeHref="/practice">
-      <TaskList parts={parts} top={mock && <DemoLabel variant="mode" className="justify-self-start bg-card" />} />
+      <TaskList parts={parts} top={mock && <DemoLabel variant="mode" className="justify-self-start bg-card" />} mockCard={<MockExamCard state={mockState} />} />
     </AppShell>
   );
 }

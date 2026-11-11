@@ -24,6 +24,7 @@ test.beforeEach(async ({ context }) => {
 async function audit(page: Page, blacks: number) {
   // A hovered button's colour is a color-mix() the contrast check can't read: keep the pointer off the controls.
   await page.mouse.move(0, 0);
+  await page.waitForTimeout(300); // a button the pointer just left is still fading from its hover colour
   await expect(page.locator(BLACK)).toHaveCount(blacks);
   const report = await page.evaluate(() => {
     const rgb = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number);

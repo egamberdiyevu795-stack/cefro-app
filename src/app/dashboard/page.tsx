@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { DemoLabel, Sidebar, TopBar, TopBarLink, cx } from "@/components/ds";
-import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
+import { FEATURE_FLAGS, allFlags, fullMockLive, type FeatureFlags } from "@/config/features";
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { getArgumentTask } from "@/content/speaking/part3";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
@@ -9,6 +9,7 @@ import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { AccountTab } from "@/features/dashboard/AccountTab";
 import { ExamDate } from "@/features/dashboard/ExamDate";
+import { ContinueMockCard } from "@/features/full-mock/screens";
 import { demoAttempts, demoExamDate, demoHref, demoTranscript } from "@/server/demo/demo-data";
 import { isMockQuery, mockLink } from "@/features/demo/demo-mode";
 import { navItemsFor } from "@/features/dashboard/mock-data";
@@ -36,6 +37,7 @@ import { toHistoryRows } from "@/features/history/view-model";
 import { getAttemptViewForUser, listAttemptHistory } from "@/server/attempts/attempt-service";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
+import { findInProgressMock } from "@/server/sessions/mock-service";
 import { findCurrentUserId } from "@/server/identity/current-user";
 import { asDemoTeacher, isDemoTeacherQuery, teacherLinks } from "@/features/teacher/links";
 import { YourClassesCard } from "@/features/teacher/sections";
@@ -70,6 +72,8 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *   no link: the only "Coming soon" on any page). No control on this page does nothing (no search, bell, Mock exam,
  *   period filter or attempt row menu: removed before launch).
  * `?flags=off` previews the page with every flag off.
+ * A full mock in progress (docs/v1-plan.md, step 2; only while the real mock is open) puts "Continue your mock" on top of
+ * Home: its "Continue" is then the page's one black button, and Practise next / Start practice are grey.
  *
  * `?mock=1` (mock mode): the demo student (server/demo/demo-data.ts) instead of the caller's own data, through the
  * same code. No database, no cookie read, no API call (the exam date changes only on the page); works with no
@@ -96,6 +100,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
     : demoTeacher
       ? [classSummary(DEMO_CLASS, await demoClassStudents(now))]
       : await Promise.all((await listOwnClasses(userId!)).map(async (c) => classSummary(c, (await classWithStudents(userId!, c.id)).students)));
+  const mockInProgress = !mock && userId && fullMockLive() ? await findInProgressMock(userId) : null;
+  const quietNext = isTeacher || mockInProgress !== null;
   const teacherHref = (path: string) => (demoTeacher ? asDemoTeacher(path) : path);
   const attempts: HistoryAttempt[] = demoTeacher ? [] : mock ? await demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
   const stored = demoTeacher ? { examDate: null, examDateSkippedAt: null } : mock ? demoExamDate(now) : userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
@@ -174,9 +180,17 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 className="order-first lg:col-span-2"
               />
             )}
+            {mockInProgress && (
+              <ContinueMockCard
+                href="/practice/mock"
+                done={mockInProgress.parts.filter((p) => p.attemptId).map((p) => p.part)}
+                quiet={isTeacher}
+                className="order-first lg:col-span-2"
+              />
+            )}
             {view === "returning" && summary && fix && next ? (
               <>
-                <PractiseNextCard next={next} quiet={isTeacher} className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
+                <PractiseNextCard next={next} quiet={quietNext} className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")} />
                 {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
                 <ProgressCard
                   progress={summary}
@@ -190,7 +204,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               </>
             ) : (
               <>
-                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={isTeacher} className="lg:col-span-2" />
+                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={quietNext} className="lg:col-span-2" />
                 {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}

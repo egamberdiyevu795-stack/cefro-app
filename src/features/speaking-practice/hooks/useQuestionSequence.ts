@@ -45,7 +45,10 @@ export function useQuestionSequence({
   timeScale = 1,
   onFinished,
   onAudioFailure,
+  audio,
 }: {
+  /** The full mock's one audio element, unlocked by its Start tap (otherwise each part makes its own in `start()`). */
+  audio?: HTMLAudioElement;
   task: QuestionSequenceTask;
   timeScale?: number;
   onFinished: (result: QuestionSequenceResult) => void;
@@ -150,12 +153,12 @@ export function useQuestionSequence({
 
   const start = useCallback(() => {
     // Everything that needs the student's tap happens here.
-    cuePlayerRef.current = new CuePlayer(new Audio());
+    cuePlayerRef.current = new CuePlayer(audio ?? new Audio());
     primeChime();
     recorderRef.current = requestRecorder();
     playCue(0, task.intro ? "intro" : "question");
     dispatch({ type: "start" });
-  }, [requestRecorder, playCue, task.intro]);
+  }, [requestRecorder, playCue, task.intro, audio]);
 
   // Play the cue the current step needs (the first one was already started by the tap).
   useEffect(() => {

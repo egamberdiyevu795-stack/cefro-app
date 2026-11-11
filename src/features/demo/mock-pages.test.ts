@@ -92,7 +92,7 @@ describe("mock pages on a Preview with no configuration", () => {
     expect(markup).toContain('href="/practice/speaking/b2-part2-advice-from-someone?mock=1"');
     expect(markup).toContain('aria-label="Main"'); // the five tabs
     expect(markup).toMatch(/<a [^>]*href="\/practice\?mock=1"[^>]*aria-current="page"|<a [^>]*aria-current="page"[^>]*href="\/practice\?mock=1"/);
-    expect(markup.match(BLACK) ?? []).toHaveLength(0); // choosing a task is the page; the brief has the black Start
+    expect(markup.match(BLACK) ?? []).toHaveLength(1); // the "Full mock exam" card is the page's one black button; choosing a single task is not
     expect(markup).not.toMatch(SMALL);
     expectMockLinksOnly(markup);
   });

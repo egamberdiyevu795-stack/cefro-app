@@ -727,3 +727,27 @@ which should wait for the live anchor run (docs/part3-plan.md, section 11). Step
   `features.test.ts`, more in `from-attempt.test.ts`, `provider-config.test.ts`, `api-routes.test.ts`;
   `e2e/part3-real.spec.ts` (390 px, AA contrast).
 
+## After `claude/p3-real`: `claude/full-mock` (full mock exam runner, migration 0008)
+
+Cut from `claude/p3-real` (`c5fa288`), so it comes **after it**, merge commit, no squash. Branch name: `claude/full-mock` (9 characters
+after `claude/`). Step 2 of docs/v1-plan.md's build order. **One additive database migration, `0008_full_mock`**, no new Production
+variable, no model call. Nothing here is live until all four `PART_LIVE` switches are on: `/practice` says "Coming soon." and the real
+mock routes answer 404 (`?mock=1` works regardless).
+
+- **Migration 0008:** `practice_sessions` gets nullable `status` (`in_progress` / `finished` / `not_finished`) and `finished_at`, plus one
+  index on `(user_id, kind, status)`. `kind` is plain text in the database, so the new value `full_mock` needs no SQL. Single-task rows keep
+  both columns null. Run `npm run db:migrate` (or let the deploy do it) before the code is live.
+- **Runner:** `/practice/mock` ("Before you start" / "Continue your mock", Parts 1.1 → 1.2 → 2 → 3, "Part N of 4" line, sent in the
+  background while the next intro plays), `/practice/mock/[sessionId]` ("Mock finished", owner only). Routes: `POST /api/mock-exams` (start or
+  resume), `GET /api/mock-exams/[mockId]`, `POST /api/mock-exams/[mockId]/finish`.
+- **Rules:** `domain/speaking/full-mock.ts` (order, resume, 24 hours, task picker), `server/sessions/mock-service.ts`. An upload carrying a
+  mock's `sessionId` is accepted for any of the four parts while the mock is open, even if that part is not live on its own; a part is taken once;
+  a closed or expired mock takes nothing. Consent lock = the recording lock.
+- **Entry:** "Full mock exam" card on `/practice` (the page's one black button), "Continue your mock" on the dashboard.
+- **Test-only switch:** `CEFRO_TEST_FULL_MOCK_LIVE=1` (`next dev` only) opens the real mock on a test server; no config uses it yet.
+- **Shared code touched (small, additive `embedded` prop):** `PracticeExperience`, `Part1Experience`, `Part3Practice`,
+  `useQuestionSequence` (optional `audio`), `api-client` (two functions), `attempt-service` (`createAttempt`: mock-session rule),
+  `TaskList` (`mockCard` slot), the dashboard page, `features.ts` (`fullMockLive`). Single-part behaviour is unchanged.
+- **Tests:** `full-mock.test.ts`, `runner-machine.test.ts`, `upload-queue.test.ts`, `mock-exams.test.ts`, migration 0008 tests,
+  `e2e/full-mock.spec.ts`; `mock-pages.test.ts` now expects the one black button on `/practice`.
+

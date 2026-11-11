@@ -3,6 +3,7 @@ import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { getAnySpeakingTask } from "@/content/speaking";
+import { fullMockLive } from "@/config/features";
 import { isTaskLive as isPartLive } from "@/config/part-live";
 import type { AnySpeakingTask } from "@/domain/speaking/any-task";
 import { isArgumentTask } from "@/domain/speaking/any-task";
@@ -14,6 +15,7 @@ import { assertOwnedOrNotFound, ownsResource } from "@/server/identity/authoriza
 import { newId } from "@/server/ids";
 import { assertCanSubmitAttempt } from "@/server/limits/usage-limits";
 import { logger } from "@/server/logging/logger";
+import { assertMockAcceptsPart, findOwnedMockSession } from "@/server/sessions/mock-service";
 import { createPracticeSession, resolveOwnedSessionId } from "@/server/sessions/session-service";
 import { getAudioStorage } from "@/server/storage";
 import * as repo from "./attempt-repository";
@@ -67,9 +69,14 @@ async function findResubmittedAttempt(userId: string, clientAttemptId: string | 
  * Audio is written to storage BEFORE the database row, so an attempt never
  * points at audio that does not exist.
  */
-export async function createAttempt(input: CreateAttemptInput, options: { isLive?: PartLiveRule } = {}): Promise<AttemptView> {
+export async function createAttempt(input: CreateAttemptInput, options: { isLive?: PartLiveRule; fullMockLive?: boolean } = {}): Promise<AttemptView> {
   const task = getAnySpeakingTask(input.taskId);
-  if (!task || !(options.isLive ?? isTaskLive)(task)) throw new HttpError(404, "task_not_found", "This task does not exist.");
+  if (!task) throw new HttpError(404, "task_not_found", "This task does not exist.");
+  // A recording that belongs to one of the caller's full mocks needs the mock to be open (all four parts live), not
+  // each part on its own; every other recording needs its own part to be live.
+  const mockSession = await findOwnedMockSession(input.userId, input.sessionId);
+  const taskLive = (options.isLive ?? isTaskLive)(task);
+  if (!taskLive && !(mockSession && (options.fullMockLive ?? fullMockLive()))) throw new HttpError(404, "task_not_found", "This task does not exist.");
   if (input.clientAttemptId && !UUID_PATTERN.test(input.clientAttemptId)) {
     throw new HttpError(400, "invalid_fields", "The upload was missing information.");
   }
@@ -91,6 +98,9 @@ export async function createAttempt(input: CreateAttemptInput, options: { isLive
   if (sniffAudioContainer(input.audio) !== containerForMime(baseMime)) {
     throw new HttpError(415, "unsupported_audio", "This file doesn't look like a valid recording.");
   }
+
+  // A mock that ended, ran out of its 24 hours, or already has this part takes nothing more.
+  if (mockSession) await assertMockAcceptsPart(mockSession, task.id);
 
   // Cost protection comes before anything is stored or any provider is called.
   await assertCanSubmitAttempt(input.userId);

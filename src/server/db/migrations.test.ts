@@ -222,6 +222,30 @@ describe("pilot consent migration (0007)", () => {
   });
 });
 
+describe("full mock migration (0008)", () => {
+  it("is additive: two nullable practice_sessions columns and one index, nothing dropped or rewritten", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0008_full_mock.sql"), "utf8");
+    expect(sql).toContain("ALTER TABLE `practice_sessions` ADD `status` text;");
+    expect(sql).toContain("ALTER TABLE `practice_sessions` ADD `finished_at` text;");
+    expect(sql).toContain("CREATE INDEX `practice_sessions_user_kind_idx`");
+    expect(sql).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME|NOT NULL/i);
+  });
+
+  it("upgrades a 0007 database: existing sessions stay single_task with no status, and a full_mock row can be written", async () => {
+    const file = path.join(tempDir(), "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(8));
+    await old.client.executeMultiple("INSERT INTO users (id, kind) VALUES ('u1', 'anonymous'); INSERT INTO practice_sessions (id, user_id) VALUES ('s1', 'u1');");
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT id, kind, status, finished_at FROM practice_sessions")).toEqual([{ id: "s1", kind: "single_task", status: null, finished_at: null }]);
+    await client.execute("INSERT INTO practice_sessions (id, user_id, kind, status) VALUES ('m1', 'u1', 'full_mock', 'in_progress')");
+    expect(await query(client, "SELECT kind, status FROM practice_sessions WHERE id = 'm1'")).toEqual([{ kind: "full_mock", status: "in_progress" }]);
+    client.close();
+  });
+});
+
 describe("upgrading a database created by an earlier release", () => {
   /** Rows as the pre-Stage-3 application wrote them (migrations 0000 and 0001 only). */
   async function seedOldDatabase(file: string) {

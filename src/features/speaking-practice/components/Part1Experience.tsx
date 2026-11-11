@@ -12,6 +12,7 @@ import { useAudioLevel } from "../hooks/useAudioLevel";
 import { useQuestionSequence, type QuestionSequenceResult, type SequenceFailure } from "../hooks/useQuestionSequence";
 import { setAnalyticsSession, track as trackEvent } from "../lib/analytics";
 import { ApiError, fetchAttempt, startSession, submitRecording } from "../lib/api-client";
+import type { EmbeddedPart } from "../lib/mock-embed";
 import { demoScoringHref, retryGoalOf, type RetryGoal } from "../lib/practice-flow";
 import { Part1BriefCard, Part1IntroCard, Part1QuestionCard, Part1SendingCard, PicturesCard } from "./part1-screens";
 import { InlineNotice, MicrophoneState, RecordingLockedState, RetryGoalLoading, UploadFailedCard, type MicrophoneStateKind } from "./screens";
@@ -41,7 +42,10 @@ export function Part1Experience({
   retryAttemptId = null,
   lock = null,
   timeScale = 1,
+  embedded = null,
 }: {
+  /** Inside the full mock: starts by itself, hands its recording to the mock's runner, opens no session or result. */
+  embedded?: EmbeddedPart | null;
   /** Pilot consent: why this caller may not record (null: they may). Locked: the brief shows the lock, no Start. */
   lock?: RecordingLock | null;
   task: PublicSpeakingTask;
@@ -56,6 +60,7 @@ export function Part1Experience({
   const [goalLoading, setGoalLoading] = useState(Boolean(retryAttemptId) && !initialRetryOf);
   const [run, setRun] = useState(0);
   const isMock = mock !== null;
+  const sendsNothing = isMock || Boolean(embedded?.mock);
 
   // Opened from "Retry with this goal": load that attempt's goal (a failed load starts without it, never stuck).
   useEffect(() => {
@@ -78,7 +83,7 @@ export function Part1Experience({
   // One practice session per visit (real mode only), as on Part 2.
   const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (isMock) return;
+    if (sendsNothing || embedded) return;
     let cancelled = false;
     startSession()
       .then(({ sessionId }) => {
@@ -91,7 +96,7 @@ export function Part1Experience({
     return () => {
       cancelled = true;
     };
-  }, [isMock, task.id]);
+  }, [sendsNothing, embedded, task.id]);
 
   return (
     <div className="space-y-4">
@@ -106,7 +111,8 @@ export function Part1Experience({
         retryOfId={retryOf?.id ?? null}
         mock={mock}
         sessionIdRef={sessionIdRef}
-        timeScale={isMock ? timeScale : 1}
+        timeScale={embedded ? (embedded.timeScale ?? 1) : isMock ? timeScale : 1}
+        embedded={embedded}
         onDropGoal={retryOf ? () => setRetryOf(null) : undefined}
         onRestart={() => setRun((n) => n + 1)}
         lock={lock}
@@ -135,7 +141,9 @@ function Part1Run({
   timeScale,
   onDropGoal,
   onRestart,
+  embedded,
 }: {
+  embedded: EmbeddedPart | null;
   task: PublicSpeakingTask;
   sequence: QuestionSequenceTask;
   goal: RetryGoal | null;
@@ -151,7 +159,8 @@ function Part1Run({
   const router = useRouter();
   const ready = useHydrated();
   const isMock = mock !== null;
-  const track: typeof trackEvent = useCallback((...args) => (isMock ? undefined : trackEvent(...args)), [isMock]);
+  const sendsNothing = isMock || Boolean(embedded?.mock);
+  const track: typeof trackEvent = useCallback((...args) => (sendsNothing ? undefined : trackEvent(...args)), [sendsNothing]);
   const [upload, setUpload] = useState<{ kind: "sending" } | { kind: "failed"; message: string } | null>(null);
   const resultRef = useRef<(QuestionSequenceResult & { url: string; key: string }) | null>(null);
   // The same recording, for rendering "Download a copy" after a failed upload.
@@ -182,6 +191,16 @@ function Part1Run({
   const onFinished = useCallback(
     (result: QuestionSequenceResult) => {
       track("recording_completed", { taskId: task.id, properties: { durationMs: Math.round(result.recording.durationMs), mimeType: result.recording.mimeType } });
+      if (embedded) {
+        // Inside the full mock: the runner uploads it (or, in mock mode, drops it) while the next part begins.
+        embedded.onRecorded({
+          blob: result.recording.blob,
+          durationMs: result.recording.durationMs,
+          mimeType: result.recording.mimeType,
+          questionOffsetsMs: result.offsetsMs,
+        });
+        return;
+      }
       if (mock) {
         // Mock mode: nothing is uploaded; the demo "Scoring…" takes over.
         router.push(demoScoringHref(task.id, retryOfId && mock.demoRetry ? mock.demoRetry : null));
@@ -192,7 +211,7 @@ function Part1Run({
       setSaved({ url, mimeType: result.recording.mimeType });
       void send();
     },
-    [mock, router, task.id, retryOfId, send, track],
+    [mock, embedded, router, task.id, retryOfId, send, track],
   );
 
   const onAudioFailure = useCallback(
@@ -201,7 +220,7 @@ function Part1Run({
     [task.id, track],
   );
 
-  const { state, phase, remainingMs, start, stream, recorderState } = useQuestionSequence({ task: sequence, timeScale, onFinished, onAudioFailure });
+  const { state, phase, remainingMs, start, stream, recorderState } = useQuestionSequence({ task: sequence, timeScale, onFinished, onAudioFailure, audio: embedded?.audio });
   const level = useAudioLevel(stream, phase.kind === "question" && phase.step.kind === "speaking");
   const audioFailedAt = useMemo(() => new Set(state.audioFailures.filter((f) => f.cue === "question").map((f) => f.index)), [state.audioFailures]);
 
@@ -211,6 +230,19 @@ function Part1Run({
     if (retryOfId) track("retry_started", { taskId: task.id, attemptId: retryOfId });
     track("recording_started", { taskId: task.id, properties: { isRetry: Boolean(retryOfId) } });
   };
+
+  // Inside the full mock the part starts by itself, as if its Start had just been tapped (the mock's own Start tap
+  // unlocked the sound). A timer, so a development double-mount starts it once.
+  const beginRef = useRef(begin);
+  useEffect(() => {
+    beginRef.current = begin;
+  });
+  const isEmbedded = embedded !== null;
+  useEffect(() => {
+    if (!isEmbedded) return;
+    const timer = setTimeout(() => beginRef.current(), 0);
+    return () => clearTimeout(timer);
+  }, [isEmbedded]);
 
   // An unsent answer warns before the page is left.
   const unsent = phase.kind === "question" || (phase.kind === "finished" && upload?.kind !== "sending" && !isMock);

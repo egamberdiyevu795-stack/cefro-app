@@ -140,21 +140,28 @@ export const authVerifications = sqliteTable(
 );
 
 /**
- * One sitting of practice. Today every session covers a single task ("single_task"); the table exists
- * so that several responses can later belong to one exam-style session without renaming attempts.
- * Created by the server only; its id is also the correlation key on analytics events.
+ * One sitting of practice. A session is either one task ("single_task") or a full mock exam ("full_mock": Parts 1.1,
+ * 1.2, 2 and 3 back to back, one attempt per part, docs/v1-plan.md section 3.2). Created by the server only; its id is
+ * also the correlation key on analytics events.
+ *
+ * `status` and `finished_at` exist for full mocks only (migration 0008); a single_task row keeps both null. A mock is
+ * "in_progress" until its fourth part is uploaded ("finished") or 24 hours pass ("not_finished"; its finished parts keep
+ * their results). Which parts are done is not stored here: it is the session's attempts (`speaking_attempts.session_id`).
  */
 export const practiceSessions = sqliteTable(
   "practice_sessions",
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull().references(() => users.id),
-    kind: text("kind", { enum: ["single_task"] }).notNull().default("single_task"),
+    kind: text("kind", { enum: ["single_task", "full_mock"] }).notNull().default("single_task"),
+    status: text("status", { enum: ["in_progress", "finished", "not_finished"] }),
+    finishedAt: text("finished_at"),
     ...timestamps,
   },
+  // The only query by user is the mock's: "this user's full mocks, and the one in progress".
+  (table) => [index("practice_sessions_user_kind_idx").on(table.userId, table.kind, table.status)],
 );
-// No secondary indexes on practice_sessions or analytics_events.session_id yet: nothing queries by them.
-// Add one with the first query that needs it.
+// No secondary index on analytics_events.session_id yet: nothing queries by it. Add one with the first query that needs it.
 
 /**
  * Snapshot of each task version that has been attempted. Task content is

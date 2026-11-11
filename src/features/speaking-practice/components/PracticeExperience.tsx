@@ -20,6 +20,7 @@ import { PART2_INTRO } from "@/content/speaking/part-intro-audio";
 import { part2QuestionAudioPath } from "@/content/speaking/part2-question-audio";
 import { initialRetryGoalLoad, pendingRequest, RETRY_GOAL_TIMEOUT_MS, retryGoalLoadReducer } from "../lib/retry-goal-load";
 import { demoScoringHref, isEarlyFinish, mockScoringHref, retryGoalOf, scoringStep, type MockAttemptKey } from "../lib/practice-flow";
+import type { EmbeddedPart } from "../lib/mock-embed";
 import {
   AttemptsCard,
   BriefCard,
@@ -66,7 +67,13 @@ export function PracticeExperience({
   initialRetryOf = null,
   retryAttemptId = null,
   lock = null,
+  embedded = null,
 }: {
+  /**
+   * Inside the full mock: the part starts by itself (no brief), hands its recording to the mock's runner instead of
+   * uploading it, and opens no session, history or result of its own. Everything else is this page's flow, unchanged.
+   */
+  embedded?: EmbeddedPart | null;
   /**
    * Pilot consent: why this caller may not record (null: they may). Decided on the server (CONSENT_REQUIRED and the
    * account's consent); the upload and scoring routes refuse on their own too. Locked: the brief shows the task and the
@@ -89,8 +96,9 @@ export function PracticeExperience({
   const { phase } = state;
   const router = useRouter();
   const isMock = mock !== null;
-  // Mock mode sends nothing, analytics included.
-  const track: typeof trackEvent = useCallback((...args) => (isMock ? undefined : trackEvent(...args)), [isMock]);
+  // Mock mode sends nothing, analytics included (inside the full mock's mock mode too: `embedded.mock`).
+  const sendsNothing = isMock || Boolean(embedded?.mock);
+  const track: typeof trackEvent = useCallback((...args) => (sendsNothing ? undefined : trackEvent(...args)), [sendsNothing]);
   const recorder = useAudioRecorder();
   // The brief's buttons wait for the page's scripts (a tap before then did nothing).
   const ready = useHydrated();
@@ -98,7 +106,7 @@ export function PracticeExperience({
 
   const [history, setHistory] = useState<AttemptSummary[]>([]);
   // Mock mode loads no history.
-  const [historyLoading, setHistoryLoading] = useState(!mock);
+  const [historyLoading, setHistoryLoading] = useState(!sendsNothing && !embedded);
   const [pageError, setPageError] = useState<string | null>(null);
   const [earlyWarning, setEarlyWarning] = useState(false);
   // A retry opened by id (?retry=<id>) has no goal until its attempt has loaded. Until then the brief offers no
@@ -114,19 +122,19 @@ export function PracticeExperience({
   // ── History ──────────────────────────────────────────────────────
   // Refresh after an attempt settles. Failures are ignored: the flow works without history.
   const loadHistory = useCallback(async () => {
-    if (isMock) return;
+    if (sendsNothing) return;
     try {
       setHistory((await fetchTaskAttempts(taskId)).attempts);
     } catch {
       // Non-critical.
     }
-  }, [taskId, isMock]);
+  }, [taskId, sendsNothing]);
 
   // One practice session per visit, issued by the server. If it cannot be created the practice flow
   // still works: the server then creates a session when the recording is submitted.
   const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (isMock) return;
+    if (sendsNothing || embedded) return;
     let cancelled = false;
     setAnalyticsSession(null);
     startSession()
@@ -141,11 +149,11 @@ export function PracticeExperience({
       cancelled = true;
       sessionIdRef.current = null;
     };
-  }, [taskId, isMock]);
+  }, [taskId, sendsNothing, embedded]);
 
   useEffect(() => {
     track("practice_opened", { taskId });
-    if (isMock) return;
+    if (sendsNothing || embedded) return;
     let cancelled = false;
     fetchTaskAttempts(taskId)
       .then(({ attempts }) => !cancelled && setHistory(attempts))
@@ -154,7 +162,7 @@ export function PracticeExperience({
     return () => {
       cancelled = true;
     };
-  }, [taskId, isMock, track]);
+  }, [taskId, sendsNothing, embedded, track]);
 
   // Opened from "Retry with this goal" (?retry=<id>): load that attempt, then show the brief with its goal. Each
   // request has a number; when the student tries again or starts without the goal, the older request is ignored
@@ -200,7 +208,7 @@ export function PracticeExperience({
     primeChime(); // inside the click, so the chime is allowed after the introduction and when preparation runs out
     cuePlayerRef.current?.stop();
     // The introduction and the read-out questions are longer than a Part 1 question: a longer watchdog.
-    const player = new CuePlayer(new Audio(), { ...DEFAULT_CUE_TIMEOUTS, maxMs: 60_000 });
+    const player = new CuePlayer(embedded?.audio ?? new Audio(), { ...DEFAULT_CUE_TIMEOUTS, maxMs: 60_000 });
     cuePlayerRef.current = player;
     const spoken = player.play(PART2_INTRO.audio);
     const ready = await recorder.requestMicrophone();
@@ -227,7 +235,20 @@ export function PracticeExperience({
     if (!read.ok) track("question_audio_failed", { taskId, properties: { cue: "questions", reason: read.reason } });
     dispatch({ type: "preparationStarted", now: Date.now(), preparationMs: task.preparationSeconds * 1000 });
     track("preparation_started", { taskId, properties: { isRetry: Boolean(retryOfId) } });
-  }, [lock, recorder, task, taskId, retryOfId, track]);
+  }, [lock, recorder, task, taskId, retryOfId, track, embedded]);
+
+  // Inside the full mock the part starts by itself, as if its Start had just been tapped (the mock's own Start tap
+  // unlocked the sound). A timer, so a development double-mount starts it once.
+  const startRef = useRef(startPreparation);
+  useEffect(() => {
+    startRef.current = startPreparation;
+  });
+  const isEmbedded = embedded !== null;
+  useEffect(() => {
+    if (!isEmbedded) return;
+    const timer = setTimeout(() => void startRef.current(), 0);
+    return () => clearTimeout(timer);
+  }, [isEmbedded]);
 
   // The start-of-speaking chime (whether preparation ran out or was skipped), then recording: the chime is not recorded.
   const startingRef = useRef(false);
@@ -263,6 +284,12 @@ export function PracticeExperience({
         taskId,
         properties: { durationMs: Math.round(recording.durationMs), reason, mimeType: recording.mimeType },
       });
+      if (embedded) {
+        // Inside the full mock: the runner uploads it (or, in mock mode, drops it) while the next part begins.
+        recorder.releaseStream();
+        embedded.onRecorded({ blob: recording.blob, durationMs: recording.durationMs, mimeType: recording.mimeType });
+        return;
+      }
       if (mock) {
         // Mock mode: nothing is uploaded. The microphone goes off and the mock "Scoring…" takes over.
         recorder.discard();
@@ -277,7 +304,7 @@ export function PracticeExperience({
       }
       void submitRef.current(recording);
     },
-    [recorder, taskId, track, mock, router, state.retryOf],
+    [recorder, taskId, track, mock, router, state.retryOf, embedded],
   );
 
   // "Finish" very early asks first; the recording keeps running while the warning is open.

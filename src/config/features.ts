@@ -47,6 +47,21 @@ function part3LiveForTests(): boolean {
 }
 
 /**
+ * The full mock exam (docs/v1-plan.md, section 3.2) plays Parts 1.1, 1.2, 2 and 3 back to back, so its real flow is open
+ * only when ALL four parts are live (`PART_LIVE`), or on a test server that sets CEFRO_TEST_FULL_MOCK_LIVE=1 (like Part 3's
+ * switch: `next dev` on a developer machine or CI only, ignored when `NODE_ENV=production` or `VERCEL` is set). Anything
+ * else: "Coming soon" on the task list, and the mock's routes answer 404. Mock mode (`?mock=1`) works either way.
+ * Turning the real mock on is the owner's decision; it needs no switch of its own.
+ */
+export function fullMockLive(live: Readonly<Record<ExamPartId, boolean>> = PART_LIVE): boolean {
+  return Object.values(live).every(Boolean) || fullMockLiveForTests();
+}
+
+function fullMockLiveForTests(): boolean {
+  return process.env.CEFRO_TEST_FULL_MOCK_LIVE === "1" && process.env.NODE_ENV !== "production" && !process.env.VERCEL;
+}
+
+/**
  * Release switch for the Teacher view (docs/teacher-plan.md). Off until parent consent for under-18s exists (plan
  * section 7): every real teacher page and API, and the student's Join / Share / Leave, answer 404. Mock mode
  * (`?mock=1`, the demo teacher and class DEMO42) works either way. Not a preview flag: `?flags=off` leaves it alone.

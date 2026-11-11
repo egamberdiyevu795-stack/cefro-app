@@ -812,11 +812,13 @@ Built from docs/teacher-plan.md. Real pages and APIs are a 404 while `TEACHER_LI
   `?mock=1` links, nothing read from the database, cookies or identity; real pages 404) and `e2e/teacher-view.spec.ts`
   (the whole loop at 390 px with a WCAG AA contrast check on every text).
 
-## Part 3 (mock mode only)
+## Part 3 (mock mode, and the real flow behind `PART_LIVE["3"]`)
 
-Part 3 (official Question 8, balanced argument, target C1, band 0–6; docs/part3-plan.md) is built **in mock mode
-only**. `PART_LIVE["3"]` stays off: the dashboard tile and the home page keep "Coming soon", and every Part 3 page is a
-404 without `?mock=1`.
+Part 3 (official Question 8, balanced argument, target C1, band 0–6; docs/part3-plan.md) is built in mock mode and,
+since `claude/p3-real`, as a real flow (record, upload, score, stored result). `PART_LIVE["3"]` stays off: the
+dashboard tile and the home page keep "Coming soon", and every real Part 3 page is a 404 (the mock pages need
+`?mock=1`). **Real flow, only while `PART_LIVE["3"]` is on (tests turn it on):** see
+[Part 3, real flow](#part-3-real-flow-claudep3-real). Everything below describes the screens; they are the same in both.
 
 - **Addresses:** topics `/practice/part3?mock=1`; a topic `/practice/part3/<task id>?mock=1` (`&retry=<demo key>` for a
   retry); a result `/result/part3?demo=<key>&mock=1` (`&state=scoring&next=1`: Scoring… first). Demo keys:
@@ -856,3 +858,44 @@ only**. `PART_LIVE["3"]` stays off: the dashboard tile and the home page keep "C
 - **Checks:** `src/features/part3/part3.test.ts` (every screen: black buttons, no text under 11 px; pages only in mock
   mode, only `?mock=1` links, nothing real touched), `e2e/part3.spec.ts` (the loop at 390 px with AA contrast, no
   horizontal scroll, no API call; 404 without `?mock=1`; "Coming soon" kept).
+
+## Part 3, real flow (`claude/p3-real`)
+
+The same screens as the mock Part 3 above, with real data behind them; `?mock=1` is unchanged. Only while
+`PART_LIVE["3"]` is on (otherwise a 404).
+
+- **Addresses:** the topics are Part 3's card on `/practice` (real links, no `mock=1`; `/practice/part3` redirects
+  there); a topic `/practice/part3/<task id>` (`?retry=<attempt id>` for a retry of the caller's own attempt: goal and
+  points come from the stored result); the result `/result/<attempt id>` (owner only, 404 otherwise).
+- **Practice:** no demo label; Finish uploads the recording with the ticked points and opens `/result/<id>` ("Scoring…" on
+  the way). A failed upload keeps the recording in the tab (the Part 2 "upload failed" card: black "Try sending again",
+  quiet "Download a copy" and "Record again"; sent again by itself when back online). Leaving while recording or
+  sending asks first. The consent lock (`CONSENT_REQUIRED`) replaces the microphone check and Start on the brief, as in
+  Part 2.
+- **Result:** the Part 3 result (points, biggest fix, words from the list, skills, answer) with, in "Your answer", the
+  recording's player and the 30-day deletion note, or "Recording deleted on …" after it. Not a demo: no demo label.
+  The black button is "Retry with this goal" (`/practice/part3/<task>?retry=<id>`).
+- **History and dashboard:** a Part 3 attempt is a History row ("Part 3", its level as the main value, "Band n · label"
+  under it), the "Part 3" filter appears once one exists, and the dashboard lists it in Recent attempts and fills the
+  Part 3 tile's band. The dashboard's level and skills still come from Part 2 answers only (Part 3 is on the C1 ladder).
+
+### AI score not ready yet (Parts 1, 2 and 3)
+
+When AI scoring can't run (no key, no credit, a provider error) **after** the recording and transcript were saved, the
+result page is not an error screen (`FailedResult` with `aiPending`, `AiPendingResult` in `features/result/sections.tsx`):
+
+- Card: "Your result · <task>", the heading **"AI score not ready yet"** (`data-testid="ai-not-ready"`), one calm line
+  ("Your recording and what you said are saved. The AI score isn't available right now, so there is no band yet.").
+- Under it, the transcript and the recording's player (with its deletion note): nothing is lost.
+- Actions: the black **"Check again"** (scores the saved recording, no new answer needed; "Checking…" while it runs) and the
+  quiet "Record again". After the 30 days the recording is gone, so there is nothing to score again: only the black
+  "Record again". A failed "Check again" shows the usual "That didn't work" line.
+- A failure before the transcript exists (transcription) keeps its own error screen. One black button, no colour for
+  status, text 12–15 px, `fg` on `card`.
+- The teacher's attempt page says "AI score not ready yet" too.
+- **Checks:** `features/result/from-attempt.test.ts` (Parts 1.1, 1.2, 2 and 3, several failure codes, one black
+  button, no text under 11 px), `server/attempts/part3-pipeline.test.ts`, `e2e/part3-real.spec.ts` (no-key server, Part 3
+  and Part 2, at 390 px with AA contrast).
+- **Checks, real Part 3 flow:** `src/app/api/part3-attempts.test.ts`, `e2e/part3-real.spec.ts` (`npm run test:e2e:part3`: the
+  whole loop at 390 px, at most one black control per screen, no text under 11 px, AA contrast, no horizontal scroll).
+

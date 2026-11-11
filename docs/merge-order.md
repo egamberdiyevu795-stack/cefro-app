@@ -694,3 +694,36 @@ Cut from `claude/project-thread-e59hcb`. **Documents only**: `docs/v1-plan.md` (
 teachers: gap analysis, full mock, better versions, teacher audio, classroom mock, consent, build order, questions for
 Asadbek) and this entry. No app code, no migration, no environment variable. Merge any time after it, merge commit,
 no squash.
+
+## After `claude/project-thread-8yy31h`: `claude/p3-real` (Part 3 real recording and scoring, no migration)
+
+Cut from `claude/project-thread-8yy31h` (`1c6ecbf`), so it comes **after it**, merge commit, no squash. Branch name:
+`claude/p3-real` (7 characters after `claude/`). **No database migration**, no new Production variable, no model call.
+`PART_LIVE["3"]` stays `false`: every real Part 3 page answers 404 and the upload refuses until the owner switches it on,
+which should wait for the live anchor run (docs/part3-plan.md, section 11). Step 1 of docs/v1-plan.md's build order.
+
+- **Real Part 3 attempts, like Part 2:** create attempt, upload audio (with the ticked points), process (transcribe +
+  Part 3 evaluator), stored result (schema version 4, `kind: "multilevel_q8"`), the real `/result/[attemptId]` for
+  Part 3 (owner only), real practice page, task-list links, History rows and filter, dashboard (Recent attempts, tile
+  band, a Part 3 biggest fix). `AnySpeakingTask` = Part 1/2 task | Part 3 task, only where the flow needs both.
+- **Real providers wired for Part 3:** Gemini and Anthropic ask for the Part 3 schema when the rubric is
+  `multilevel-q8`; Part 2's prompt hash and provider schema are unchanged. Part 3 prompt fingerprint fixture
+  (`src/server/evaluation/q8-fingerprint.ts`, `test/fixtures/q8-model-output-schema.json`). The Part 3 prompt has
+  **never been sent to a model**.
+- **"AI score not ready yet" (Parts 1, 2, 3):** scoring that can't run after the transcript was saved no longer shows an
+  error; the recording and transcript stay and the page offers "Check again". The upload route and the pages' server
+  check no longer require the scoring key (`assertServerConfigured` skips it; **`/api/health` and the boot log still
+  fail without it**, so deploys are unchanged).
+- **Consent and audio:** the same `CONSENT_REQUIRED` lock; Part 3 audio is covered by the 30-day deletion and by
+  "Delete my account" (no new table).
+- **Test-only switch:** `CEFRO_TEST_PART3_LIVE=1` turns Part 3 on in `next dev` only (ignored when `NODE_ENV=production`
+  or `VERCEL` is set), used by `playwright.part3.config.ts` / `npm run test:e2e:part3`. The main browser config ignores
+  `e2e/part3-real.spec.ts`. **`.github/workflows/ci.yml` gets one new step** for it.
+- **Shared code touched:** `attempt-service`, `attempt-processing`, `attempt-repository`, `attempt-views`, `stored.ts`
+  (`parseStoredEvaluation` knows version 4), `history.ts` (`BandedResult`), the Gemini / Anthropic models,
+  `provider-config` and `boot-check` (scoring option), `FailedResult` (the AI-pending screen), the result view model
+  (`aiPending`, `goalOutcomeOf`), the dashboard `progress.ts`, `features.ts`, the teacher view model (typing only).
+- **Tests:** `part3-pipeline.test.ts`, `part3-attempts.test.ts`, `part3-providers.test.ts`, `q8-fingerprint.test.ts`,
+  `features.test.ts`, more in `from-attempt.test.ts`, `provider-config.test.ts`, `api-routes.test.ts`;
+  `e2e/part3-real.spec.ts` (390 px, AA contrast).
+

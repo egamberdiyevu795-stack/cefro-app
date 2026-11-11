@@ -1,8 +1,9 @@
 # Part 3 plan: official Question 8 (balanced argument, target C1, band 0–6)
 
-Status: **plan closed; built in mock mode on `claude/part3`** (see [section 10](#10-built-on-claudepart3)). All
+Status: **plan closed; built in mock mode on `claude/part3` ([section 10](#10-built-on-claudepart3)); the real
+recording and scoring flow is built on `claude/p3-real` ([section 11](#11-the-real-flow-built-on-claudep3-real)).** All
 decisions are recorded in [section 5](#5-decisions). Part 3 stays off (`PART_LIVE["3"] = false`) until the live
-anchor run.
+anchor run: the real pages exist but answer 404 while the switch is off.
 
 Part 3 reuses the Part 2 design ([`ARCHITECTURE.md` › AI evaluation](ARCHITECTURE.md#ai-evaluation)): **the model
 judges, with exact quotes; code computes the band.** What changes is *what* is judged. Part 2 counts answered
@@ -646,9 +647,11 @@ review (decision 6).
 
 ### Part 3: what the plan says and this branch does not do yet
 
-1. **`SpeakingTask` is not a union yet** (section 1). Part 3 tasks are their own type (`BalancedArgumentTask`) in their
-   own registry, so no Part 2 code, stored snapshot or API changed while Part 3 is off. The union comes with the real
-   attempt flow.
+1. ~~**`SpeakingTask` is not a union yet** (section 1).~~ **Done on `claude/p3-real`, as far as needed** (see section 11).
+   `AnySpeakingTask = SpeakingTask | BalancedArgumentTask` (`src/domain/speaking/any-task.ts`, narrowed by `taskType`)
+   is what the attempts API, the processing pipeline, the task snapshot and the result page work on.
+   `SpeakingTask` and `BalancedArgumentTask` themselves did not change, so no Part 2 code, stored snapshot or API
+   changed. Part 2 and Part 1 code keeps asking for the plain `SpeakingTask` (`getSpeakingTask`).
 2. **The shared ladder refactor is not done** (decision 1, section 7). Part 3 has its own ladder and best-fit function
    (`domain/evaluation/q8/levels.ts`, the same arithmetic); Part 2's `FEATURE_LEVELS`, scorer and stored results are
    untouched. The Part 3 config is its own schema (`q8/rubric-config.ts`), not a union inside `rubric-config.ts`.
@@ -660,10 +663,75 @@ review (decision 6).
 5. **Biggest fix for "no point addressed":** section 4 lists `section_coverage` before `feature` on ties, but anchor 0
    expects the feature fix. Applied as: `section_coverage` when coverage is one side, or none with language at B1 or
    above; below-B1 language with nothing addressed gets the feature fix (anchor 0).
-6. **No real model and no audio step for Part 3.** The Part 3 prompt is written but has never been sent to a model
-   (no Gemini calls on this branch); the Gemini and Anthropic providers are still hard-wired to Part 2's schema. The
-   audio step judges on Part 2's ladder, so Part 3 results have pronunciation "not assessed" and are provisional.
-7. **No real attempt flow:** no attempts API, storage, History, dashboard band or teacher view for Part 3, and no
-   prompt fingerprint fixture. The pages are mock-only and 404 without `?mock=1`.
+6. **Real model wired, no audio step, not live-tested.** ~~The Gemini and Anthropic providers are hard-wired to Part 2's
+   schema.~~ **Done on `claude/p3-real`:** both providers now ask for the Part 3 output schema (`q8ModelOutputSchema`)
+   when the input's rubric is `multilevel-q8` (Part 2's schema and prompt hash are byte-for-byte unchanged), and
+   `evaluateArgument` runs on their reply (tested with a fake HTTP client: no model is called). The Part 3 prompt has
+   **still never been sent to a model** (no Gemini calls on this branch): the live anchor run is still required before
+   Part 3 goes live. The audio step still judges on Part 2's ladder, so Part 3 results have pronunciation "not assessed"
+   and are provisional. A Part 3 prompt fingerprint now exists (`q8-fingerprint.ts`, pinned by
+   `q8-fingerprint.test.ts` and `test/fixtures/q8-model-output-schema.json`).
+7. ~~**No real attempt flow.**~~ **Done on `claude/p3-real` (section 11):** attempts API, storage, History, dashboard,
+   `/result/[attemptId]`, the consent lock and the 30-day audio deletion all cover Part 3, and a prompt fingerprint
+   fixture exists. Still open: the teacher view for Part 3 (teacher plan, `docs/v1-plan.md` step 6) and a Part 3
+   lesson link. The real pages answer 404 while `PART_LIVE["3"]` is off (their mock pages are unchanged).
 8. **The student chooses points in the app** (not in the plan): during the minute of preparation they tick two per
    side. The choice is stored with the result (`chosen_points`) for feedback only; the evaluator judges what was said.
+   **In the real flow** the ticked points are sent with the upload, kept with the attempt until transcription, and stored
+   in the result as `chosen_points` (normalised to list order; unknown, repeated or more than two per side are dropped
+   and the answer is still scored).
+
+---
+
+## 11. The real flow, built on `claude/p3-real`
+
+Part 3 now works for real, the same way as Part 2, behind `PART_LIVE["3"]` (still **false**: every real Part 3 page
+answers 404 and the upload route refuses with `task_not_found` until the owner turns it on). `?mock=1` is unchanged.
+
+**What it does**
+
+- **Attempts:** `POST /api/speaking/attempts` accepts a Part 3 task (`taskId`, the audio, `durationMs`,
+  `chosenPoints` = a JSON list such as `["F1","F2","A1","A2"]`, `previousAttemptId` for a retry). Create attempt → store
+  audio → process (transcribe → `evaluateArgument` → stored result). The result is stored with schema version **4**
+  (`Q8_EVALUATION_SCHEMA_VERSION`; Part 1/2 stay on 3), `kind: "multilevel_q8"`, evaluator `argument-evaluator/0.1.0` and
+  the Part 3 prompt hash. No migration: the task snapshot, attempt, recording, transcript and evaluation tables are
+  unchanged (the ticked points wait in the attempt's `metrics` JSON, as Part 1's question offsets do).
+- **Pages:** `/practice/part3/<task id>` (real when live: brief, spoken introduction, preparation with the ticks,
+  recording, upload; `?retry=<attempt id>` reads the caller's own attempt on the server), the topics on `/practice`
+  (real links), `/result/[attemptId]` (the Part 3 result with the recording player and the 30-day note, owner only,
+  404 for everyone else), History (Part 3 rows and filter) and the dashboard (Recent attempts, the Part 3 tile's band,
+  a Part 3 biggest fix with its real retry link). `/practice/part3` (topics) redirects to the task list when live.
+- **Consent:** exactly Part 2's lock: `CONSENT_REQUIRED`, guests never record, `consent_status` must be `granted`, on the
+  upload and on re-scoring a stored answer; the practice page shows the lock.
+- **Audio:** deleted 30 days after scoring (or failure) by the same daily job; the transcript and result stay. "Delete my
+  account" removes Part 3 attempts, results, transcripts, recordings and the audio files (no new table).
+- **AI score not ready yet (Parts 1, 2 and 3):** when AI scoring can't run (no key, no credit, a provider error) after the
+  transcript was saved, the attempt keeps its recording and transcript, and the result page says **"AI score not ready
+  yet"** (transcript, recording player, black "Check again" that scores the saved recording, quiet "Record again"),
+  not an error. A failure before the transcript exists (transcription) is still the usual error screen. The upload
+  route and the page gate no longer require the scoring key (the health check and the boot log still do, so a deploy
+  without it still fails its health check).
+
+**Done differently from the plan, and why**
+
+1. `SpeakingTask` is not changed into a union; a separate `AnySpeakingTask` union is used where the flow needs both
+   (decision: smallest change, no Part 2 type, snapshot or test moves).
+2. Part 3 results get **schema version 4**, not 3: a stored row says which Zod schema reads it, and Part 1/2 rows and
+   `parseStoredEvaluation` for version 3 are untouched.
+3. Part 3 has its own result component (`Part3AttemptResult`) instead of widening Part 2's `AttemptResult`, so Part 2's
+   result page cannot change.
+4. The History and dashboard types widened to `BandedResult = MultilevelResult | Q8Result`; the dashboard's level and
+   skills still use Part 2 answers only (Part 3 is on the C1 ladder), and Part 3 shows only as its own tile band, rows and
+   biggest fix. The teacher view still shows Part 2 only.
+5. **Tests turn Part 3 on** with a mocked `PART_LIVE` in unit tests and, for the browser, a test-only environment switch
+   (`CEFRO_TEST_PART3_LIVE=1`, ignored in production builds and on Vercel, `src/config/features.ts`) on a dedicated
+   server (`playwright.part3.config.ts`, `npm run test:e2e:part3`).
+
+**Tests:** `src/server/attempts/part3-pipeline.test.ts` (create/upload/process/store, chosen points, retry, the release
+rule, "AI score not ready yet" for Parts 1.1, 1.2, 2 and 3, 30-day audio, delete account),
+`src/app/api/part3-attempts.test.ts` (cross-user access on every route, consent lock, pages, History, dashboard, task
+list), `src/server/evaluation/part3-providers.test.ts` and `q8-fingerprint.test.ts`, more in `from-attempt.test.ts`,
+`provider-config.test.ts`, `api-routes.test.ts` and `src/config/features.test.ts`; `e2e/part3-real.spec.ts` at 390 px.
+
+**Still open before Part 3 can go live:** the live anchor run on the real model (the prompt has never been sent), the
+audio step on the C1 ladder, a decision on the teacher view for Part 3, and the owner's switch.

@@ -24,15 +24,23 @@ import { logger } from "@/server/logging/logger";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-export async function assertCanSubmitAttempt(userId: string, now = Date.now()): Promise<void> {
+/**
+ * A full mock sends four parts in about fifteen minutes, each scored as soon as it arrives, so its uploads may have more
+ * answers processing at once than ordinary practice. Only uploads that belong to one of the caller's full_mock sessions get
+ * this; the hourly, daily and global limits still apply to them, and a higher LIMIT_CONCURRENT_PROCESSING_PER_USER is kept.
+ */
+export const MOCK_CONCURRENT_PROCESSING_PER_USER = 4;
+
+export async function assertCanSubmitAttempt(userId: string, now = Date.now(), options: { fullMock?: boolean } = {}): Promise<void> {
   const env = getEnv();
+  const concurrentLimit = options.fullMock ? Math.max(env.LIMIT_CONCURRENT_PROCESSING_PER_USER, MOCK_CONCURRENT_PROCESSING_PER_USER) : env.LIMIT_CONCURRENT_PROCESSING_PER_USER;
 
   const inProgress = await repo.countInProgressAttempts(
     userId,
     new Date(now - PROCESSING_STALE_AFTER_MS).toISOString(),
     new Date(now - UPLOAD_STALE_AFTER_MS).toISOString(),
   );
-  if (inProgress >= env.LIMIT_CONCURRENT_PROCESSING_PER_USER) {
+  if (inProgress >= concurrentLimit) {
     throw new HttpError(429, "too_many_in_progress", "Your earlier answers are still being checked. Please wait for the feedback, then try again.", 30);
   }
 

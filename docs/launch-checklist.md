@@ -257,3 +257,4 @@ Before inviting any pilot tester (`docs/consent-design.md`, section 2b):
    The laptop already runs on its own device session (the teacher's login is signed out of that browser while the exam runs, and every other page and
    API answers 404), so a student who types another address reaches nothing; full-screen or kiosk mode keeps the address bar out of sight as well.
 8. **Migration `0010_exam_laptop`** (additive: two tables, three nullable columns). Same steps as section 5; the counts become 11 migrations.
+9. **Before the pilot dry run,** test the real full mock on a phone (iOS Safari): microphone permission must survive all four parts and the spoken intros must play.

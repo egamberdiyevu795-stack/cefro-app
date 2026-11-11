@@ -239,6 +239,11 @@ describe("POST /api/speaking/attempts: upload size and validation", () => {
     expect(fs.readdirSync(storageDir)).toHaveLength(0);
   });
 
+  it("the upload checks only what recording and transcription need: a missing AI scoring key keeps the recording", async () => {
+    await postAttempt(post("/api/speaking/attempts", { body: uploadForm() }));
+    expect(validateProviderConfig).toHaveBeenCalledWith(expect.anything(), { scoring: false });
+  });
+
   it("enforces the submission limits with their stable error codes", async () => {
     await seedUsers(db, USER);
     // Two answers still being processed (the default concurrent limit).

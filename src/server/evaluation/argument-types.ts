@@ -18,9 +18,9 @@ export interface ArgumentEvaluationInput {
 }
 
 /**
- * A Part 3 model backend: the Part 2 `EvaluationModel` contract with a Part 3 input. Only the mock implements it in
- * this branch; the Gemini and Anthropic models are hard-wired to the Part 2 output schema and are not wired for
- * Part 3 until the live anchor run (Part 3 is not live).
+ * A Part 3 model backend: the Part 2 `EvaluationModel` contract with a Part 3 input. The mock, Gemini and Anthropic
+ * models all implement it (the real providers pick the Part 3 output schema from the input's rubric). No model has
+ * been called with the Part 3 prompt yet: it still needs the live anchor run before `PART_LIVE["3"]` is switched on.
  */
 export interface ArgumentEvaluationModel {
   readonly provider: string;

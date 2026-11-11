@@ -1,4 +1,6 @@
+import type { AnySpeakingTask } from "@/domain/speaking/any-task";
 import type { SpeakingTask } from "@/domain/speaking/task";
+import { getArgumentTask } from "./part3";
 import { b2Part2AdviceFromSomeone } from "./b2/part-2-advice-from-someone";
 import { b2Part2ATradition } from "./b2/part-2-a-tradition";
 import { b2Part2GoalYouSet } from "./b2/part-2-goal-you-set";
@@ -41,4 +43,12 @@ export function listAllSpeakingTasks(): readonly SpeakingTask[] {
 
 export function getSpeakingTask(id: string): SpeakingTask | undefined {
   return TASKS.find((task) => task.id === id) ?? PART1_SPEAKING_TASKS.find((task) => task.id === id);
+}
+
+/**
+ * Any task, Part 3 included (`AnySpeakingTask`): what the attempts API and the result page look up, so a Part 3
+ * attempt goes through the same flow as Part 2. Callers that only know Part 1 / Part 2 keep `getSpeakingTask`.
+ */
+export function getAnySpeakingTask(id: string): AnySpeakingTask | undefined {
+  return getSpeakingTask(id) ?? getArgumentTask(id);
 }

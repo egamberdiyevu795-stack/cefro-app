@@ -56,7 +56,12 @@ export function validateExplicitProviders(raw: Record<string, string | undefined
     }));
 }
 
-export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
+/**
+ * `scoring: false` leaves out the scoring provider (EVALUATION_PROVIDER and its key): the upload route uses it, because
+ * a recording must be kept and transcribed even when AI scoring can't run (no key, no credit); the result page then
+ * says "AI score not ready yet" and scoring runs later from the saved recording.
+ */
+export function validateProviderConfig(env: ServerEnv, options: { scoring?: boolean } = {}): ConfigProblem[] {
   const problems: ConfigProblem[] = [...validateExplicitProviders()];
   const production = env.NODE_ENV === "production";
 
@@ -83,16 +88,18 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
     problems.push({ variable: "GEMINI_API_KEY", message: "required when AUDIO_ASSESSMENT=gemini" });
   }
 
-  switch (env.EVALUATION_PROVIDER) {
-    case "gemini":
-      if (!env.GEMINI_API_KEY) problems.push({ variable: "GEMINI_API_KEY", message: "required when EVALUATION_PROVIDER=gemini" });
-      break;
-    case "anthropic":
-      if (!env.ANTHROPIC_API_KEY) problems.push({ variable: "ANTHROPIC_API_KEY", message: "required when EVALUATION_PROVIDER=anthropic" });
-      break;
-    case "mock":
-      if (production) problems.push({ variable: "EVALUATION_PROVIDER", message: "the mock evaluator is development-only and is refused in production" });
-      break;
+  if (options.scoring !== false) {
+    switch (env.EVALUATION_PROVIDER) {
+      case "gemini":
+        if (!env.GEMINI_API_KEY) problems.push({ variable: "GEMINI_API_KEY", message: "required when EVALUATION_PROVIDER=gemini" });
+        break;
+      case "anthropic":
+        if (!env.ANTHROPIC_API_KEY) problems.push({ variable: "ANTHROPIC_API_KEY", message: "required when EVALUATION_PROVIDER=anthropic" });
+        break;
+      case "mock":
+        if (production) problems.push({ variable: "EVALUATION_PROVIDER", message: "the mock evaluator is development-only and is refused in production" });
+        break;
+    }
   }
 
   // The Speech Activity Guard decodes audio with ffmpeg. Running without it would let silent recordings reach the

@@ -2,10 +2,12 @@ import "server-only";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { HistoryAttempt } from "@/domain/speaking/history";
-import { getSpeakingTask } from "@/content/speaking";
+import { getAnySpeakingTask } from "@/content/speaking";
 import { isTaskLive as isPartLive } from "@/config/part-live";
+import type { AnySpeakingTask } from "@/domain/speaking/any-task";
+import { isArgumentTask } from "@/domain/speaking/any-task";
+import { validChosenPoints } from "@/domain/speaking/argument-task";
 import { validQuestionOffsets } from "@/domain/speaking/metrics";
-import type { SpeakingTask } from "@/domain/speaking/task";
 import { trackServerEvent } from "@/server/analytics/track";
 import { HttpError } from "@/server/errors";
 import { assertOwnedOrNotFound, ownsResource } from "@/server/identity/authorization";
@@ -39,13 +41,15 @@ export interface CreateAttemptInput {
   clientAttemptId?: string | null;
   /** Part 1 (one recording per part): the start of each question's speaking window, in recording time. */
   questionOffsetsMs?: unknown;
+  /** Part 3: the points the student ticked on the preparation screen. Feedback only; the evaluator judges what was said. */
+  chosenPoints?: unknown;
 }
 
 /**
- * Real attempts only for parts that are live (`PART_LIVE`). Part 1.1 and 1.2 are not yet: their tasks open only in
+ * Real attempts only for parts that are live (`PART_LIVE`). Part 1.1, 1.2 and 3 are not yet: their tasks open only in
  * mock mode, which never uploads. Tests pass their own rule.
  */
-export type PartLiveRule = (task: SpeakingTask) => boolean;
+export type PartLiveRule = (task: AnySpeakingTask) => boolean;
 export const isTaskLive: PartLiveRule = isPartLive;
 
 /** The attempt already created for this idempotency key, or undefined. Someone else's id is a conflict. */
@@ -64,7 +68,7 @@ async function findResubmittedAttempt(userId: string, clientAttemptId: string | 
  * points at audio that does not exist.
  */
 export async function createAttempt(input: CreateAttemptInput, options: { isLive?: PartLiveRule } = {}): Promise<AttemptView> {
-  const task = getSpeakingTask(input.taskId);
+  const task = getAnySpeakingTask(input.taskId);
   if (!task || !(options.isLive ?? isTaskLive)(task)) throw new HttpError(404, "task_not_found", "This task does not exist.");
   if (input.clientAttemptId && !UUID_PATTERN.test(input.clientAttemptId)) {
     throw new HttpError(400, "invalid_fields", "The upload was missing information.");
@@ -105,9 +109,11 @@ export async function createAttempt(input: CreateAttemptInput, options: { isLive
   }
 
   // Part 1: offsets that don't fit the task (count, order, length) are dropped; the answer is still scored.
-  const questionOffsetsMs = task.delivery
+  const questionOffsetsMs = !isArgumentTask(task) && task.delivery
     ? validQuestionOffsets(input.questionOffsetsMs, task.prompts.length, Math.round(input.durationMs))
     : null;
+  // Part 3: ticked points that don't fit the task (unknown ids, repeats, more than two per side) are dropped too.
+  const chosenPoints = isArgumentTask(task) ? validChosenPoints(input.chosenPoints) : null;
 
   const attemptId = input.clientAttemptId ?? newId();
   const storage = getAudioStorage();
@@ -135,6 +141,7 @@ export async function createAttempt(input: CreateAttemptInput, options: { isLive
     previousAttemptId: input.previousAttemptId,
     retryFocus,
     questionOffsetsMs,
+    chosenPoints,
     recording: {
       storageProvider: storage.provider,
       storageKey,

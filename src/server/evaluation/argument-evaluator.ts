@@ -3,24 +3,34 @@ import { decideDependence, measurePromptOverlap } from "@/domain/evaluation/mult
 import { scoreQ8Band } from "@/domain/evaluation/q8/band-scoring";
 import { q8ModelOutputSchema, type Q8ModelOutput } from "@/domain/evaluation/q8/model-output";
 import { deriveQ8RetryFocus, type Q8Result } from "@/domain/evaluation/q8/result";
+import { Q8_EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/stored";
 import { ProviderError } from "@/server/errors";
 import { logger } from "@/server/logging/logger";
 import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
+import { computeQ8PromptHash } from "./q8-fingerprint";
 import { buildQ8EvaluationPrompt, buildQ8RevisionRequest } from "./prompts/q8-evaluation";
 import { applyQ8QualityGate, type Q8QualityReport, type Q8QualityViolation } from "./q8-quality-gate";
 
-/** Version of the Part 3 evaluation (prompt, gate and post-processing). Stored with every Part 3 result. */
-export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.1.0";
+import { ARGUMENT_EVALUATOR_VERSION } from "./versions";
+export { ARGUMENT_EVALUATOR_VERSION };
 
 export interface ArgumentEvaluation {
   result: Q8Result;
   evaluatorVersion: string;
   rubricVersion: string;
+  /** Part 3 results are stored with their own schema version (`Q8_EVALUATION_SCHEMA_VERSION`). */
+  schemaVersion: number;
+  /** The Part 3 prompt fingerprint (q8-fingerprint.ts), the same "h2" contract as Part 2's. */
+  promptHash: string;
   provider: string;
   model: string;
+  modelConfig: Record<string, string | number | boolean>;
   isDevelopmentProvider: boolean;
   latencyMs: number;
   modelCalls: number;
+  /** Across the model calls; null when the provider reports none (the mock). */
+  inputTokens: number | null;
+  outputTokens: number | null;
   quality: Q8QualityReport & { rejectedDrafts: Q8QualityViolation[][] };
 }
 
@@ -37,14 +47,19 @@ const MAX_MODEL_CALLS = 2;
 export async function evaluateArgument(input: ArgumentEvaluationInput, model: ArgumentEvaluationModel): Promise<ArgumentEvaluation> {
   const startedAt = Date.now();
   const prompt = buildQ8EvaluationPrompt(input);
+  const promptHash = computeQ8PromptHash(input, prompt);
   const rejectedDrafts: Q8QualityViolation[][] = [];
   let accepted: { output: Q8ModelOutput; report: Q8QualityReport; provider: string; model: string; calls: number } | null = null;
   let lastError: ProviderError | undefined;
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
 
   for (let call = 1; call <= MAX_MODEL_CALLS && !accepted; call++) {
     const previous = rejectedDrafts.at(-1);
     const request = previous ? { system: prompt.system, user: `${prompt.user}\n\n${buildQ8RevisionRequest(previous)}` } : prompt;
     const raw = await model.evaluate(request, input);
+    inputTokens = sumNullable(inputTokens, raw.inputTokens);
+    outputTokens = sumNullable(outputTokens, raw.outputTokens);
     const parsed = q8ModelOutputSchema.safeParse(typeof raw.output === "string" ? safeJson(raw.output) : raw.output);
     if (!parsed.success) {
       const message = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
@@ -124,13 +139,22 @@ export async function evaluateArgument(input: ArgumentEvaluationInput, model: Ar
     result,
     evaluatorVersion: ARGUMENT_EVALUATOR_VERSION,
     rubricVersion: input.rubric.version,
+    schemaVersion: Q8_EVALUATION_SCHEMA_VERSION,
+    promptHash,
     provider: accepted.provider,
     model: accepted.model,
+    modelConfig: { ...model.config, audioAssessment: "off:disabled" },
     isDevelopmentProvider: model.isDevelopmentProvider,
     latencyMs: Date.now() - startedAt,
     modelCalls: accepted.calls,
+    inputTokens,
+    outputTokens,
     quality: { ...accepted.report, rejectedDrafts },
   };
+}
+
+function sumNullable(a: number | null, b: number | null): number | null {
+  return a === null && b === null ? null : (a ?? 0) + (b ?? 0);
 }
 
 function safeJson(text: string): unknown {

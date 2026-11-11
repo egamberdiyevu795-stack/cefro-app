@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { DemoLabel, Sidebar, TopBar, TopBarLink, cx } from "@/components/ds";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
+import { getArgumentTask } from "@/content/speaking/part3";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
 import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt } from "@/domain/speaking/history";
@@ -114,7 +115,12 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
       : userId
         ? ((await getAttemptViewForUser(userId, latestScored.id)).transcript?.text ?? "")
         : "";
-  const builtFix = dashboardFix(attempts, { prompts: (id) => getSpeakingTask(id)?.prompts ?? [], transcript, target });
+  const builtFix = dashboardFix(attempts, {
+    prompts: (id) => getSpeakingTask(id)?.prompts ?? [],
+    transcript,
+    target,
+    argumentPoints: (id) => getArgumentTask(id)?.points,
+  });
   const fix = builtFix && { ...builtFix, retryHref: link(builtFix.retryHref) };
   const builtNext = practiseNext(attempts, tasks);
   const next = builtNext && { ...builtNext, href: link(builtNext.href) };

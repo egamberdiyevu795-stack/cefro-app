@@ -3,14 +3,18 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { FEATURE_FLAGS } from "@/config/features";
 import { getSpeakingTask } from "@/content/speaking";
+import { getArgumentTask } from "@/content/speaking/part3";
+import { toPublicArgumentTask } from "@/domain/speaking/argument-task";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import { toPublicTask } from "@/domain/speaking/task";
+import { Part3AttemptResult } from "@/features/part3/Part3AttemptResult";
 import { AttemptResult } from "@/features/result/AttemptResult";
 import { AppShell } from "@/features/shell/AppShell";
 import { getAttemptViewForUser } from "@/server/attempts/attempt-service";
 import { assertServerConfigured } from "@/server/config/boot-check";
 import { HttpError } from "@/server/errors";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
 import { findCurrentUserId } from "@/server/identity/current-user";
 
 export const metadata: Metadata = { title: "Your result" };
@@ -38,9 +42,25 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
   const userId = await findCurrentUserId();
   const attempt = userId ? await ownAttempt(userId, attemptId) : null;
   if (!userId || !attempt) notFound();
+  const previous = attempt.previousAttemptId ? await ownAttempt(userId, attempt.previousAttemptId) : null;
+
+  // Part 3 (balanced argument) has its own result page; the attempt, owner check and polling are the same.
+  const argumentTask = getArgumentTask(attempt.taskId);
+  if (argumentTask) {
+    return (
+      <AppShell flags={FEATURE_FLAGS} account="real">
+        <Part3AttemptResult
+          initial={attempt}
+          previous={previous}
+          task={toPublicArgumentTask(argumentTask)}
+          bandLabels={getArgumentRubric(argumentTask).config.bands.map(({ band, label }) => ({ band, label }))}
+        />
+      </AppShell>
+    );
+  }
+
   const speakingTask = getSpeakingTask(attempt.taskId);
   if (!speakingTask) notFound();
-  const previous = attempt.previousAttemptId ? await ownAttempt(userId, attempt.previousAttemptId) : null;
 
   return (
     <AppShell flags={FEATURE_FLAGS} account="real">

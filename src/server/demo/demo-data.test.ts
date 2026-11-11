@@ -6,7 +6,7 @@ import { examDateState } from "@/domain/exam-date";
 import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import { dashboardFix, dashboardView, partTiles, practiseNext, progress, scoredAttempts } from "@/features/dashboard/progress";
 import { buildHistoryView, toHistoryRows } from "@/features/history/view-model";
-import { compareWithPrevious, resultPageState } from "@/features/result/view-model";
+import { goalOutcomeOf, resultPageState } from "@/features/result/view-model";
 import { demoPracticeKey, demoScoringHref } from "@/features/speaking-practice/lib/practice-flow";
 import {
   DEMO_ATTEMPT_IDS,
@@ -79,7 +79,7 @@ describe("the demo student", () => {
     const original = attempts.find((a) => a.id === retry.previousAttemptId)!;
     expect(retry.taskId).toBe(original.taskId);
     expect(original.result!.retry_focus[0].objective).toMatch(/^Answer question 3/);
-    expect(compareWithPrevious(original.result!, retry.result!).goal).toBe("met");
+    expect(goalOutcomeOf(original.result!, retry.result!)).toBe("met");
     expect(toHistoryRows([retry], attempts)[0].retry?.goal).toBe("Goal met");
   });
 
@@ -102,8 +102,10 @@ describe("demo results match their task", () => {
       }
       // The result is the one the attempt row shows, judged on the attempt's own three questions.
       expect(source.evaluation?.result).toEqual(attempt.result);
-      expect(attempt.result!.assessment.questions.map((q) => q.id)).toEqual(task.prompts.map((_, i) => i + 1));
-      for (const focus of attempt.result!.retry_focus) {
+      const result = attempt.result!;
+      if (result.kind !== "multilevel") throw new Error(`demo attempt ${attempt.id} is not a Part 2 result`);
+      expect(result.assessment.questions.map((q) => q.id)).toEqual(task.prompts.map((_, i) => i + 1));
+      for (const focus of result.retry_focus) {
         const quoted = /^Answer question (\d) [^"]*"(.*)"$/.exec(focus.objective);
         if (quoted) expect(quoted[2]).toBe(task.prompts[Number(quoted[1]) - 1]);
       }

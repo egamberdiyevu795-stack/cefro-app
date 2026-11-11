@@ -15,6 +15,9 @@ const executablePath =
 
 export default defineConfig({
   testDir: "e2e",
+  // Part 3's real flow needs PART_LIVE["3"] on: it runs on its own servers (playwright.part3.config.ts), so every
+  // other spec keeps seeing Part 3 as "Coming soon".
+  testIgnore: ["part3-real.spec.ts"],
   timeout: 90_000,
   // `next dev` compiles each route on first use. On a cold CI runner the first test waits for the account API to
   // compile, which can exceed the default 5 s assertion timeout (seen on CI as a failure of the very first test only).

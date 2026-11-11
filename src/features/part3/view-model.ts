@@ -238,6 +238,15 @@ export function buildPart3View(
   };
 }
 
+/**
+ * The Biggest fix card for a stored Part 3 result, from the result and its transcript alone (the dashboard's card;
+ * the result page builds the same view inside `buildPart3View`).
+ */
+export function part3BiggestFix(result: Q8Result, task: Pick<PublicArgumentTask, "points">, transcript: string): FixView {
+  const pieces = markCopied(transcript, result.overlap.copied_spans);
+  return fixView(result, task, sentencesWithCopies(transcript, pieces));
+}
+
 /** The sentences of the transcript that contain a copied run, as the student said them. */
 function sentencesWithCopies(transcript: string, pieces: { text: string; copied: boolean }[]): string[] {
   if (!pieces.some((p) => p.copied)) return [];

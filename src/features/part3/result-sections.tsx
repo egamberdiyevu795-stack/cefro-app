@@ -1,6 +1,8 @@
 import { Card, CardHeader, DeltaLabel, DemoLabel, Icon, Notice, PillButton, cx, styles, type IconName } from "@/components/ds";
-import { BandMeter } from "@/features/result/sections";
+import { audioRetentionNote } from "@/domain/audio-retention";
+import { BandMeter, type AnswerAudio } from "@/features/result/sections";
 import { formatDuration } from "@/features/result/view-model";
+import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
 import { GOAL_TEXT, type Part3ResultView, type PointVerdict, type SideView } from "./view-model";
 
 /*
@@ -13,13 +15,24 @@ import { GOAL_TEXT, type Part3ResultView, type PointVerdict, type SideView } fro
 
 const VERDICT_ICON: Record<PointVerdict, IconName> = { developed: "check", stated: "partly", not_used: "cross", misread: "cross" };
 
-export function Part3ScoredResult({ view, retryHref, demo }: { view: Part3ResultView; retryHref: string; demo: boolean }) {
+export function Part3ScoredResult({
+  view,
+  retryHref,
+  demo,
+  audio = null,
+}: {
+  view: Part3ResultView;
+  retryHref: string;
+  demo: boolean;
+  /** A real attempt's stored recording: a player, or the retention note once it is deleted. Mock results have none. */
+  audio?: AnswerAudio | null;
+}) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.7fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <ResultCard view={view} demo={demo} className="order-1 lg:order-none" />
         <FixCard view={view} retryHref={retryHref} className="order-3 lg:order-none" />
-        <AnswerCard view={view} className="order-6 lg:order-none" />
+        <AnswerCard view={view} audio={audio} className="order-6 lg:order-none" />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <PointsCard view={view} className="order-2 lg:order-none" />
@@ -236,8 +249,9 @@ function SkillsCard({ view, className }: { view: Part3ResultView; className?: st
   );
 }
 
-function AnswerCard({ view, className }: { view: Part3ResultView; className?: string }) {
+function AnswerCard({ view, audio, className }: { view: Part3ResultView; audio: AnswerAudio | null; className?: string }) {
   const anyCopied = view.transcript.some((p) => p.copied);
+  const retentionNote = audio ? audioRetentionNote({ deletedAt: audio.deletedAt ?? null, deletesAt: audio.deletesAt ?? null }) : null;
   return (
     <Card aria-labelledby="answer-title" className={className}>
       <CardHeader
@@ -250,6 +264,16 @@ function AnswerCard({ view, className }: { view: Part3ResultView; className?: st
           </span>
         }
       />
+      {audio && (
+        <div className="mb-4">
+          {!audio.deletedAt && <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />}
+          {retentionNote && (
+            <p data-testid="audio-retention" className={cx("text-label text-fg-muted", !audio.deletedAt && "mt-2")}>
+              {retentionNote}
+            </p>
+          )}
+        </div>
+      )}
       <p className="text-caption text-fg-muted">Transcript</p>
       <p className="mt-1 text-body text-fg" data-testid="transcript">
         {view.transcript.map((piece, i) =>

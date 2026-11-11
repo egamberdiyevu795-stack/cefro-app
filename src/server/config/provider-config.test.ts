@@ -14,7 +14,7 @@ vi.mock("./env", () => ({
 const logs = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() }));
 vi.mock("@/server/logging/logger", () => ({ logger: logs }));
 
-import { assertServerConfigured, checkProvidersAtBoot, isServerConfigured } from "./boot-check";
+import { assertServerConfigured, checkProvidersAtBoot, isServerConfigured, serverConfigProblems } from "./boot-check";
 import { INSECURE_DEV_AUTH_SECRET } from "@/server/auth/secret";
 import { describeProviderMode, validateAuthConfig, validateDatabaseConfig, validateExplicitProviders, validateProviderConfig } from "./provider-config";
 
@@ -25,6 +25,14 @@ describe("validateProviderConfig", () => {
   it("accepts a complete real configuration (Gemini evaluation + OpenAI transcription)", () => {
     expect(validateProviderConfig(env({ OPENAI_API_KEY: "k", GEMINI_API_KEY: "k" }))).toEqual([]);
     expect(describeProviderMode(env({}))).toEqual({ transcription: "openai", evaluation: "gemini", mode: "real" });
+  });
+
+  it("a missing SCORING key is not a recording problem: the upload keeps the recording (scoring: false)", () => {
+    const noScoringKey = env({ OPENAI_API_KEY: "k", EVALUATION_PROVIDER: "anthropic" });
+    expect(validateProviderConfig(noScoringKey).map((p) => p.variable)).toEqual(["ANTHROPIC_API_KEY"]);
+    expect(validateProviderConfig(noScoringKey, { scoring: false })).toEqual([]);
+    // Recording and transcription must still be configured.
+    expect(validateProviderConfig(env({ EVALUATION_PROVIDER: "anthropic" }), { scoring: false }).map((p) => p.variable)).toEqual(["OPENAI_API_KEY"]);
   });
 
   it("names the missing variable for each real provider", () => {
@@ -137,6 +145,21 @@ describe("assertServerConfigured (enforced per route: API wrapper, app pages, he
     expect(thrown).toMatchObject({ status: 503, code: "service_not_configured" });
     expect(JSON.stringify(thrown)).not.toContain("sk-do-not-print");
     expect(String((thrown as Error).message)).not.toContain("sk-do-not-print");
+  });
+
+  it("a missing AI SCORING key does not stop recording, transcripts or result pages in production; the health check still fails", () => {
+    // Everything is set except the scoring provider's key: the app still records and shows results ("AI score not ready yet").
+    state.env = env({ NODE_ENV: "production", OPENAI_API_KEY: "k", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com" });
+    expect(() => assertServerConfigured()).not.toThrow();
+    expect(isServerConfigured({ scoring: false })).toBe(true);
+    // The health check (isServerConfigured() with no option) and the boot log keep the full list, so a deploy without a
+    // scoring key fails its health check and is reported loudly.
+    expect(isServerConfigured()).toBe(false);
+    expect(serverConfigProblems().map((p) => p.variable)).toEqual(["GEMINI_API_KEY"]);
+    expect(serverConfigProblems({ scoring: false })).toEqual([]);
+    // A missing transcription key still refuses: without it there is no transcript to keep.
+    state.env = env({ NODE_ENV: "production", AUTH_SECRET: "x".repeat(40), APP_URL: "https://app.example.com", GEMINI_API_KEY: "k" });
+    expect(() => assertServerConfigured()).toThrow(/not available/);
   });
 
   it("refuses in production when the environment cannot be parsed", () => {

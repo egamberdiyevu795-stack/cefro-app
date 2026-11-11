@@ -2,8 +2,9 @@ import "server-only";
 import { and, count, desc, eq, gte, inArray, lt, max, or, sql } from "drizzle-orm";
 import type { RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptStatus, FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
+import type { AnySpeakingTask } from "@/domain/speaking/any-task";
+import type { PointId } from "@/domain/speaking/argument-task";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
-import type { SpeakingTask } from "@/domain/speaking/task";
 import { getDb } from "@/server/db/client";
 import { evaluations, recordings, speakingAttempts, speakingTasks, transcripts } from "@/server/db/schema";
 import { newId, nowIso } from "@/server/ids";
@@ -18,7 +19,7 @@ export type RecordingRow = typeof recordings.$inferSelect;
 export type TranscriptRow = typeof transcripts.$inferSelect;
 export type EvaluationRow = typeof evaluations.$inferSelect;
 
-export async function ensureTaskSnapshot(task: SpeakingTask): Promise<void> {
+export async function ensureTaskSnapshot(task: AnySpeakingTask): Promise<void> {
   const db = await getDb();
   await db
     .insert(speakingTasks)
@@ -39,11 +40,13 @@ export async function insertAttemptWithRecording(input: {
   userId: string;
   /** The practice session this response belongs to (null only in tests of legacy rows). */
   sessionId: string | null;
-  task: SpeakingTask;
+  task: AnySpeakingTask;
   previousAttemptId: string | null;
   retryFocus: RetryFocusItem[] | null;
   /** Part 1: where each question's speaking window starts in the recording (kept in `metrics` until transcription). */
   questionOffsetsMs?: number[] | null;
+  /** Part 3: the points the student ticked (kept in `metrics` the same way; feedback only). */
+  chosenPoints?: PointId[] | null;
   recording: {
     storageProvider: string;
     storageKey: string;
@@ -73,8 +76,16 @@ export async function insertAttemptWithRecording(input: {
         attemptNumber: (current?.value ?? 0) + 1,
         previousAttemptId: input.previousAttemptId,
         retryFocus: input.retryFocus,
-        // No migration: the offsets wait in the metrics column, and transcription adds the speech metrics to them.
-        ...(input.questionOffsetsMs ? { metrics: { questionOffsetsMs: input.questionOffsetsMs } } : {}),
+        // No migration: the offsets (and Part 3's ticked points) wait in the metrics column, and transcription adds
+        // the speech metrics to them.
+        ...(input.questionOffsetsMs || input.chosenPoints?.length
+          ? {
+              metrics: {
+                ...(input.questionOffsetsMs ? { questionOffsetsMs: input.questionOffsetsMs } : {}),
+                ...(input.chosenPoints?.length ? { chosenPoints: input.chosenPoints } : {}),
+              },
+            }
+          : {}),
         status: "uploaded",
         createdAt: now,
         updatedAt: now,

@@ -1,0 +1,548 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "points": {
+   "minItems": 6,
+   "maxItems": 6,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "enum": [
+       "F1",
+       "F2",
+       "F3",
+       "A1",
+       "A2",
+       "A3"
+      ]
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "developed",
+       "restated",
+       "not_addressed",
+       "misread"
+      ],
+      "description": "developed: the student explains the point with at least one reason, example or consequence of their own that SUPPORTS it. restated: the point is mentioned (read, paraphrased or named) but nothing is added in its support. not_addressed: not mentioned. misread: presented on the wrong side or with a meaning the point does not have."
+     },
+     "rebutted": {
+      "type": "boolean",
+      "description": "true when the student states this point only to argue against it ('Some people say X, but…')."
+     },
+     "evidence": {
+      "type": "string",
+      "description": "Exact substring of the transcript where the point is made, or ''."
+     },
+     "development_evidence": {
+      "type": "string",
+      "description": "Exact substring with the student's own reason or example SUPPORTING this point, or '' unless developed. A rebuttal is never this point's development."
+     },
+     "note": {
+      "type": "string",
+      "description": "One short sentence for the student about this point."
+     },
+     "model_answer": {
+      "type": "string",
+      "description": "For restated / not_addressed points: 1–2 sentences (at most 40 words) developing it at C1, on this point only. '' otherwise."
+     }
+    },
+    "required": [
+     "id",
+     "status",
+     "rebutted",
+     "evidence",
+     "development_evidence",
+     "note",
+     "model_answer"
+    ],
+    "additionalProperties": false
+   },
+   "description": "Exactly F1, F2, F3, A1, A2, A3, in this order."
+  },
+  "own_points": {
+   "maxItems": 4,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "side": {
+      "type": "string",
+      "enum": [
+       "for",
+       "against"
+      ]
+     },
+     "evidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact substring: an argument of the student's own that is not on the list."
+     },
+     "note": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "side",
+     "evidence",
+     "note"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "prompt_dependence": {
+   "type": "object",
+   "properties": {
+    "level": {
+     "type": "string",
+     "enum": [
+      "own_development",
+      "heavily_dependent",
+      "reads_prompts"
+     ]
+    },
+    "evidence": {
+     "maxItems": 4,
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Exact substrings that show reading or leaning on the prompt text; [] for own_development."
+    },
+    "note": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "level",
+    "evidence",
+    "note"
+   ],
+   "additionalProperties": false
+  },
+  "coherent_and_sustained": {
+   "type": "boolean",
+   "description": "false when the answer is a list of fragments rather than a connected argument."
+  },
+  "conclusion": {
+   "type": "string",
+   "enum": [
+    "weighed",
+    "one_sided",
+    "none"
+   ],
+   "description": "Feedback only; no band effect."
+  },
+  "features": {
+   "type": "object",
+   "properties": {
+    "grammar": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "C1",
+        "above_C1"
+       ]
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript. Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt, about ONE issue. Examples on another topic."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it. A skill, never a set phrase."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "vocabulary": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "C1",
+        "above_C1"
+       ]
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript. Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt, about ONE issue. Examples on another topic."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it. A skill, never a set phrase."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "fluency": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "C1",
+        "above_C1"
+       ]
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript. Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt, about ONE issue. Examples on another topic."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it. A skill, never a set phrase."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "cohesion": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "C1",
+        "above_C1"
+       ]
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript. Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt, about ONE issue. Examples on another topic."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it. A skill, never a set phrase."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "pronunciation": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "C1",
+        "not_assessed"
+       ],
+       "description": "Up to C1 only, never above_C1. not_assessed when judging from a transcript."
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript. Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt, about ONE issue. Examples on another topic."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it. A skill, never a set phrase."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "required": [
+    "grammar",
+    "vocabulary",
+    "fluency",
+    "cohesion",
+    "pronunciation"
+   ],
+   "additionalProperties": false
+  },
+  "memorized_or_irrelevant": {
+   "type": "boolean"
+  },
+  "errors": {
+   "maxItems": 8,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "quote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact substring of the transcript containing the error."
+     },
+     "correction": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The same words, corrected. Keep the student's meaning."
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "grammar",
+       "vocabulary"
+      ]
+     },
+     "pattern": {
+      "type": "string",
+      "description": "The name of the error pattern in error_patterns this error belongs to (copied exactly), or an empty string for a one-off error."
+     }
+    },
+    "required": [
+     "quote",
+     "correction",
+     "type",
+     "pattern"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "error_patterns": {
+   "maxItems": 4,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short name of a repeated error type, e.g. 'Missing -s after he/she/it'."
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "grammar",
+       "vocabulary"
+      ]
+     },
+     "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence explaining the rule, with a short correct example."
+     },
+     "how_to_fix": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One concrete habit for the next attempt that prevents this error."
+     }
+    },
+    "required": [
+     "name",
+     "type",
+     "rule",
+     "how_to_fix"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "strengths": {
+   "maxItems": 2,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "feature": {
+      "type": "string",
+      "enum": [
+       "grammar",
+       "vocabulary",
+       "fluency",
+       "cohesion"
+      ]
+     },
+     "quote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact substring that shows C1-or-better language for this feature."
+     },
+     "note": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "feature",
+     "quote",
+     "note"
+    ],
+    "additionalProperties": false
+   },
+   "description": "0-2 strengths, only for features judged C1 or above_C1."
+  },
+  "retry_review": {
+   "anyOf": [
+    {
+     "type": "object",
+     "properties": {
+      "objectives": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "objective": {
+          "type": "string",
+          "minLength": 1
+         },
+         "outcome": {
+          "type": "string",
+          "enum": [
+           "achieved",
+           "partly_achieved",
+           "not_achieved"
+          ]
+         },
+         "evidence": {
+          "type": "string",
+          "minLength": 1
+         }
+        },
+        "required": [
+         "objective",
+         "outcome",
+         "evidence"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "summary": {
+       "type": "string",
+       "minLength": 1,
+       "description": "Honest comparison with the previous attempt. Never invent improvement."
+      }
+     },
+     "required": [
+      "objectives",
+      "summary"
+     ],
+     "additionalProperties": false
+    },
+    {
+     "type": "null"
+    }
+   ]
+  }
+ },
+ "required": [
+  "points",
+  "own_points",
+  "prompt_dependence",
+  "coherent_and_sustained",
+  "conclusion",
+  "features",
+  "memorized_or_irrelevant",
+  "errors",
+  "error_patterns",
+  "strengths",
+  "retry_review"
+ ],
+ "additionalProperties": false
+}

@@ -27,6 +27,8 @@ export interface SpeechMetrics {
    */
   questionOffsetsMs?: number[];
   questionSeconds?: number[];
+  /** Part 3: the points the student ticked on the preparation screen ("F1".."A3"). Feedback only, like the offsets. */
+  chosenPoints?: string[];
 }
 
 /**

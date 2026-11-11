@@ -82,4 +82,16 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  */
 export const EVALUATOR_VERSION = "speaking-evaluator/3.5.0";
 
+/**
+ * Version of the Part 3 evaluation (prompt, gate and post-processing; argument-evaluator.ts). Stored with every
+ * Part 3 result, next to its own schema version (`Q8_EVALUATION_SCHEMA_VERSION`) and prompt hash (q8-fingerprint.ts).
+ *
+ * History
+ * - argument-evaluator/0.1.0 — Part 3 built in mock mode (docs/part3-plan.md): judgements + quotes, Q8 quality gate
+ *   with one regeneration, prompt overlap + dependence decision, deterministic 0–6 band, retry goals. The prompt is
+ *   written but NOT live-tested: no model has been called with it. The real attempt flow stores results with this
+ *   version; the live anchor run (plan section 8) must happen before `PART_LIVE["3"]` is switched on.
+ */
+export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.1.0";
+
 export { EVALUATION_SCHEMA_VERSION };

@@ -79,6 +79,24 @@ export const ARGUMENT_INSTRUCTIONS = [
 /** How many points a student chooses on each side. */
 export const POINTS_PER_SIDE = 2;
 
+/**
+ * The points a student ticked, as an upload sends them: unique known ids, at most two per side, normalised to list
+ * order. Null for anything else (the attempt is still accepted: the choice is feedback only, the evaluator judges
+ * what was said).
+ */
+export function validChosenPoints(value: unknown): PointId[] | null {
+  if (!Array.isArray(value) || value.length > POINT_IDS.length) return null;
+  if (!value.every((id) => (POINT_IDS as readonly unknown[]).includes(id))) return null;
+  if (new Set(value).size !== value.length) return null;
+  const points = POINT_IDS.filter((id) => value.includes(id));
+  if (pointsPerSide(points, "for") > POINTS_PER_SIDE || pointsPerSide(points, "against") > POINTS_PER_SIDE) return null;
+  return points;
+}
+
+function pointsPerSide(points: readonly PointId[], side: Side): number {
+  return points.filter((id) => sideOf(id) === side).length;
+}
+
 /** Everything wrong with a task's shape (empty when it is valid). Checked by the content tests. */
 export function argumentTaskProblems(task: BalancedArgumentTask): string[] {
   const problems: string[] = [];

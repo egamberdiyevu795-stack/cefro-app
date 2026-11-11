@@ -32,8 +32,19 @@ export const PART_LIVE: Record<ExamPartId, boolean> = {
   "1.1": false,
   "1.2": false,
   "2": true,
-  "3": false,
+  "3": part3LiveForTests(),
 };
+
+/**
+ * Part 3 is NOT live: its value is `false` in the product, on Vercel and in production builds, whatever is set. Only a
+ * test server (`next dev` on a developer machine or CI, started by playwright.part3.config.ts with
+ * CEFRO_TEST_PART3_LIVE=1) can turn it on, so the real Part 3 pages can be driven in a browser. The unit tests mock
+ * `PART_LIVE` instead. Turning Part 3 on for real is a decision for the owner, after the live anchor run
+ * (docs/part3-plan.md).
+ */
+function part3LiveForTests(): boolean {
+  return process.env.CEFRO_TEST_PART3_LIVE === "1" && process.env.NODE_ENV !== "production" && !process.env.VERCEL;
+}
 
 /**
  * Release switch for the Teacher view (docs/teacher-plan.md). Off until parent consent for under-18s exists (plan

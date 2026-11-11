@@ -129,6 +129,8 @@ export function submitRecording(input: {
   clientAttemptId: string;
   /** Part 1: the start of each question's speaking window in the one recording (ms). */
   questionOffsetsMs?: readonly number[] | null;
+  /** Part 3: the points the student ticked on the preparation screen ("F1".."A3"). Feedback only. */
+  chosenPoints?: readonly string[] | null;
 }): Promise<{ attempt: AttemptView }> {
   const form = new FormData();
   const extension = input.audio.type.includes("mp4") ? "mp4" : input.audio.type.includes("ogg") ? "ogg" : "webm";
@@ -139,6 +141,7 @@ export function submitRecording(input: {
   if (input.sessionId) form.append("sessionId", input.sessionId);
   form.append("clientAttemptId", input.clientAttemptId);
   if (input.questionOffsetsMs?.length) form.append("questionOffsetsMs", JSON.stringify(input.questionOffsetsMs));
+  if (input.chosenPoints?.length) form.append("chosenPoints", JSON.stringify(input.chosenPoints));
   // Safe to resend thanks to clientAttemptId; slow mobile uploads get a generous timeout per try.
   return request("/api/speaking/attempts", { method: "POST", body: form, timeoutMs: 180_000, retries: 4 });
 }

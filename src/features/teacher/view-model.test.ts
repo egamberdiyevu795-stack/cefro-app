@@ -19,6 +19,7 @@ function result(fix: MultilevelResult["scoring"]["biggest_fix"], opts: { q3?: st
   const level = opts.level ?? "B1";
   const feature = { level, evidence: [], note: "", how_to_improve: "", how_to_check: "" };
   return {
+    kind: "multilevel", // every stored result has it (the schema's literal); Part 3 results are "multilevel_q8"
     part: 2,
     scoring: { band: opts.band ?? 2, band_max: 5, label: "Higher B1", target_band: 3, zero_reason: null, biggest_fix: fix, on_topic_count: 2, provisional: true },
     assessment: {

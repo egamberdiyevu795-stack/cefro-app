@@ -1,6 +1,14 @@
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
+import type { Q8Result } from "@/domain/evaluation/q8/result";
 import type { AttemptStatus, FailureCode } from "./attempt";
 import type { ExamPartId } from "./exam-part";
+
+/**
+ * A stored result with a Part band: Part 1/2 (`kind: "multilevel"`) or Part 3 (`kind: "multilevel_q8"`). Both carry
+ * `scoring` (band, band_max, label, target_band, zero_reason, provisional) and `retry_focus`, which is all the lists
+ * read; everything else is narrowed by `kind`.
+ */
+export type BandedResult = MultilevelResult | Q8Result;
 
 /**
  * One of the student's attempts, as the History page and the dashboard's Recent attempts read it. Built on the server
@@ -21,6 +29,6 @@ export interface HistoryAttempt {
   recordingDurationMs: number;
   /** The attempt this one retries (null for a first attempt). */
   previousAttemptId: string | null;
-  /** The stored Multilevel result of a completed attempt; null otherwise, and for results scored with the old method. */
-  result: MultilevelResult | null;
+  /** The stored Multilevel result (Part 1/2 or Part 3) of a completed attempt; null otherwise, and for results scored with the old method. */
+  result: BandedResult | null;
 }

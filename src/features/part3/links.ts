@@ -67,6 +67,15 @@ export function part3PracticeHref(taskId: string, options: { retry?: string } = 
   return `${PART3_LIST_HREF}/${encodeURIComponent(taskId)}?${params}`;
 }
 
+/**
+ * The REAL Part 3 practice page (`PART_LIVE["3"]` on): `/practice/part3/<task id>`, with `?retry=<attempt id>` for a
+ * retry of the student's own attempt. No `mock=1`: nothing here is a demo.
+ */
+export function part3RealPracticeHref(taskId: string, options: { retry?: string } = {}): string {
+  const query = options.retry ? `?${new URLSearchParams({ retry: options.retry })}` : "";
+  return `${PART3_LIST_HREF}/${encodeURIComponent(taskId)}${query}`;
+}
+
 export function part3ResultHref(key: string, options: { scoring?: boolean } = {}): string {
   const params = new URLSearchParams({ demo: key });
   if (options.scoring) {

@@ -4,12 +4,11 @@
  * browser-safe; the same functions serve the demo teacher (mock mode) and real classes.
  */
 import { FEATURE_LABELS, LEVEL_LABELS, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
-import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
-import type { HistoryAttempt } from "@/domain/speaking/history";
+import type { BandedResult, HistoryAttempt } from "@/domain/speaking/history";
 import { LEVEL_WINDOW, overallLevel, scoredAttempts, skillLevels, type ScoredAttempt, type SkillLevels } from "@/features/dashboard/progress";
 import { formatDate, toHistoryRows, type HistoryRow } from "@/features/history/view-model";
 import { lessonForResult } from "@/features/lessons/choose";
-import { GOAL_LABEL, compareWithPrevious, type BandLabel } from "@/features/result/view-model";
+import { GOAL_LABEL, goalOutcomeOf, type BandLabel } from "@/features/result/view-model";
 
 /** One student as their teacher sees them: the name they chose for this class and their shared attempts, newest first. */
 export interface SharedStudent {
@@ -25,7 +24,7 @@ export interface SharedStudent {
 /** The level from shared attempts only: the dashboard's rule (middle of the last 3 scored answers per skill). */
 export function studentSkills(attempts: readonly HistoryAttempt[]): SkillLevels | null {
   const scored = scoredAttempts(attempts);
-  return scored.length ? skillLevels(scored.slice(0, LEVEL_WINDOW).map((a) => a.result)) : null;
+  return scored.length ? skillLevels(scored.slice(0, LEVEL_WINDOW).map((a) => a.result)) : null; // Part 3 answers are skipped by skillLevels
 }
 
 export function studentLevel(attempts: readonly HistoryAttempt[]): FeatureLevel | null {
@@ -53,7 +52,14 @@ const QUESTION_VERDICT: Record<string, string> = {
   on_topic: "Answered",
 };
 
-export function fixKeyOf(result: MultilevelResult): FixKey {
+export function fixKeyOf(result: BandedResult): FixKey {
+  if (result.kind === "multilevel_q8") {
+    // Part 3: counted by what the fix is about (the teacher sees the detail on the attempt page).
+    const fix = result.scoring.biggest_fix;
+    if (fix.kind === "feature") return { key: `feature:${fix.feature}`, label: FEATURE_LABELS[fix.feature] };
+    const labels = { own_words: "Own words", prompt_dependence: "Words from the list", section_coverage: "Both sides not covered", point_development: "Points not developed" } as const;
+    return { key: `p3:${fix.kind}`, label: `Part 3 · ${labels[fix.kind]}` };
+  }
   const fix = result.scoring.biggest_fix;
   if (fix.kind === "feature") return { key: `feature:${fix.feature}`, label: FEATURE_LABELS[fix.feature] };
   if (fix.kind === "question_coverage") {
@@ -90,7 +96,7 @@ export function commonProblems(students: readonly SharedStudent[], top = 3): Com
     const a = latestScored(s.attempts);
     return a ? [a.result] : [];
   });
-  const groups = new Map<string, { label: string; results: MultilevelResult[] }>();
+  const groups = new Map<string, { label: string; results: BandedResult[] }>();
   for (const result of latest) {
     const { key, label } = fixKeyOf(result);
     const group = groups.get(key) ?? { label, results: [] };
@@ -102,7 +108,8 @@ export function commonProblems(students: readonly SharedStudent[], top = 3): Com
     .sort((a, b) => b.g.results.length - a.g.results.length || a.order - b.order)
     .slice(0, top)
     .map(({ g }) => {
-      const lesson = lessonForResult(g.results[0]);
+      const first = g.results[0];
+      const lesson = first.kind === "multilevel" ? lessonForResult(first) : null; // no approved Part 3 lessons
       return { label: g.label, count: g.results.length, of: latest.length, lesson: lesson ? { slug: lesson.slug, title: lesson.title } : null };
     });
 }
@@ -130,7 +137,7 @@ export function retryGoalOf(attempts: readonly HistoryAttempt[]): StudentRow["re
   const latest = latestScored(attempts);
   const previous = latest?.previousAttemptId ? attempts.find((a) => a.id === latest.previousAttemptId) : undefined;
   if (!latest || !previous?.result) return "—";
-  const goal = compareWithPrevious(previous.result, latest.result).goal;
+  const goal = goalOutcomeOf(previous.result, latest.result);
   return goal ? GOAL_LABEL[goal] : "—";
 }
 

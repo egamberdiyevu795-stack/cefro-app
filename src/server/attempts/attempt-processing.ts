@@ -1,13 +1,18 @@
 import "server-only";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
+import { isArgumentTask } from "@/domain/speaking/any-task";
+import { validChosenPoints } from "@/domain/speaking/argument-task";
 import type { FailureCode, ProcessingStage } from "@/domain/speaking/attempt";
 import { computeSpeechMetrics, withQuestionTimes, type SpeechMetrics } from "@/domain/speaking/metrics";
-import { getSpeakingTask } from "@/content/speaking";
+import { getAnySpeakingTask } from "@/content/speaking";
 import { getEnv } from "@/server/config/env";
 import { trackServerEvent } from "@/server/analytics/track";
 import { ProviderError } from "@/server/errors";
-import { evaluateSpeaking, getAudioAssessor, getEvaluationModel } from "@/server/evaluation";
+import { evaluateArgument, evaluateSpeaking, getArgumentEvaluationModel, getAudioAssessor, getEvaluationModel } from "@/server/evaluation";
+import type { ArgumentEvaluation } from "@/server/evaluation/argument-evaluator";
+import type { SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
 import { logger } from "@/server/logging/logger";
 import { AudioNotFoundError, getAudioStorage } from "@/server/storage";
 import { getSpeechGuard } from "@/server/audio/speech-guard";
@@ -35,6 +40,11 @@ function isComputedMetrics(value: unknown): value is SpeechMetrics {
 function storedOffsets(value: unknown): number[] | null {
   const offsets = (value as { questionOffsetsMs?: unknown } | null)?.questionOffsetsMs;
   return Array.isArray(offsets) && offsets.every((n) => typeof n === "number") ? offsets : null;
+}
+
+/** Part 3: the ticked points waiting in the attempt's metrics (as the offsets do), revalidated on the way out. */
+function storedChosenPoints(value: unknown) {
+  return validChosenPoints((value as { chosenPoints?: unknown } | null)?.chosenPoints);
 }
 
 /**
@@ -74,7 +84,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
   let transcriptionMs: number | null = null;
 
   try {
-    const task = getSpeakingTask(attempt.taskId);
+    const task = getAnySpeakingTask(attempt.taskId);
     if (!task) throw new Error(`Task ${attempt.taskId} no longer exists`);
     const recording = await repo.findRecording(attemptId);
     if (!recording) throw new ProviderError("audio_unavailable", "Recording row missing", { retryable: false });
@@ -128,6 +138,9 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
 
       // Part 1: the time used per question comes from the offsets the browser sent (one recording per part).
       metrics = withQuestionTimes(computeSpeechMetrics(output.text, recording.durationMs, task.speakingSeconds), offsets, recording.durationMs);
+      // Part 3: the ticked points waited in the metrics column; keep them with the computed metrics (feedback only).
+      const chosenPoints = storedChosenPoints(attempt.metrics);
+      if (chosenPoints?.length) metrics = { ...metrics, chosenPoints };
       if (metrics.wordCount < minTranscriptWords(task)) {
         throw new ProviderError("transcription_empty", `Only ${metrics.wordCount} words recognised`, {
           retryable: false,
@@ -153,30 +166,60 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
     stage = "evaluation";
     stageStartedAt = Date.now();
     await repo.setAttemptStatus(attemptId, "evaluating");
-    const model = getEvaluationModel();
-    const audioAssessor = getAudioAssessor();
-    await trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
-
-    const evaluationInput = {
-      task,
-      rubric: getSpeakingRubric(task),
-      transcript: transcript.text,
-      metrics,
-      audio: {
-        storageProvider: recording.storageProvider,
-        storageKey: recording.storageKey,
-        mimeType: recording.mimeType,
-        durationMs: recording.durationMs,
-      },
-      previousAttempt: await loadPreviousAttemptContext(attempt),
+    const audioRef = {
+      storageProvider: recording.storageProvider,
+      storageKey: recording.storageKey,
+      mimeType: recording.mimeType,
+      durationMs: recording.durationMs,
     };
-    // The audio step needs the recording; when it cannot be read, pronunciation is simply not assessed.
-    const recordingAudio = audioAssessor ? await readAudio(recording.storageKey).catch(() => null) : null;
-    const evaluation = await withDeadline(
-      evaluateSpeaking(evaluationInput, model, { deadlineAt, audioAssessor, audio: recordingAudio }),
-      deadlineAt,
-      "evaluation",
-    );
+    const previousAttempt = await loadPreviousAttemptContext(attempt);
+
+    let evaluation: SpeakingEvaluation | ArgumentEvaluation;
+    let requestedModel: string;
+    if (isArgumentTask(task)) {
+      // Part 3 (official Question 8): the same pipeline shape, with the Part 3 evaluator and rubric. No audio step
+      // yet: pronunciation is not assessed and the result is provisional (docs/part3-plan.md, section 7).
+      const model = getArgumentEvaluationModel();
+      requestedModel = model.model;
+      await trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
+      evaluation = await withDeadline(
+        evaluateArgument(
+          {
+            task,
+            rubric: getArgumentRubric(task),
+            transcript: transcript.text,
+            metrics,
+            chosenPoints: storedChosenPoints(metrics) ?? [],
+            audio: audioRef,
+            previousAttempt,
+          },
+          model,
+        ),
+        deadlineAt,
+        "evaluation",
+      );
+    } else {
+      const model = getEvaluationModel();
+      requestedModel = model.model;
+      const audioAssessor = getAudioAssessor();
+      await trackServerEvent({ name: "evaluation_started", ...context, properties: { provider: model.provider, model: model.model } });
+
+      const evaluationInput = {
+        task,
+        rubric: getSpeakingRubric(task),
+        transcript: transcript.text,
+        metrics,
+        audio: audioRef,
+        previousAttempt,
+      };
+      // The audio step needs the recording; when it cannot be read, pronunciation is simply not assessed.
+      const recordingAudio = audioAssessor ? await readAudio(recording.storageKey).catch(() => null) : null;
+      evaluation = await withDeadline(
+        evaluateSpeaking(evaluationInput, model, { deadlineAt, audioAssessor, audio: recordingAudio }),
+        deadlineAt,
+        "evaluation",
+      );
+    }
 
     const processingDurationMs = Date.now() - runStartedAt;
     const qualityWarnings = evaluation.quality.violations.map((v) => v.code);
@@ -189,7 +232,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       promptHash: evaluation.promptHash,
       provider: evaluation.provider,
       model: evaluation.model,
-      modelConfig: { requestedModel: model.model, ...evaluation.modelConfig },
+      modelConfig: { requestedModel, ...evaluation.modelConfig },
       modelCalls: evaluation.modelCalls,
       qualityReport: {
         warnings: evaluation.quality.violations,

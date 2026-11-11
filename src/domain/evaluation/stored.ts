@@ -5,10 +5,17 @@ import {
   type LegacyEvaluationResult,
 } from "./schema";
 import { multilevelResultSchema, type MultilevelResult } from "./multilevel/result";
+import { q8ResultSchema, type Q8Result } from "./q8/result";
 
-/** A stored evaluation as the app reads it: the current Multilevel result, or an older analytic one. */
-export type StoredEvaluation = MultilevelResult | LegacyEvaluation;
+/** A stored evaluation as the app reads it: the current Multilevel result (Part 1/2 or Part 3), or an older analytic one. */
+export type StoredEvaluation = MultilevelResult | Q8Result | LegacyEvaluation;
 export type LegacyEvaluation = LegacyEvaluationResult & { kind: "legacy" };
+
+/**
+ * Part 3 results (`kind: "multilevel_q8"`) are stored with their own schema version, so a stored row says which Zod
+ * schema reads it; Part 1/2 rows keep version 3 and are untouched.
+ */
+export const Q8_EVALUATION_SCHEMA_VERSION = 4;
 
 /** Anything the next attempt can be asked to focus on: both generations carry the same two fields. */
 export interface RetryFocusItem {
@@ -22,6 +29,10 @@ export interface RetryFocusItem {
  * converted into a band. Returns null if the stored JSON is unreadable.
  */
 export function parseStoredEvaluation(schemaVersion: number, data: unknown): StoredEvaluation | null {
+  if (schemaVersion === Q8_EVALUATION_SCHEMA_VERSION) {
+    const parsed = q8ResultSchema.safeParse(data);
+    return parsed.success ? parsed.data : null;
+  }
   if (schemaVersion === 3) {
     const parsed = multilevelResultSchema.safeParse(data);
     return parsed.success ? parsed.data : null;
@@ -39,6 +50,11 @@ export function parseStoredEvaluation(schemaVersion: number, data: unknown): Sto
 
 export function isMultilevel(evaluation: StoredEvaluation): evaluation is MultilevelResult {
   return evaluation.kind === "multilevel";
+}
+
+/** A Part 3 (official Question 8) result. */
+export function isMultilevelQ8(evaluation: StoredEvaluation): evaluation is Q8Result {
+  return evaluation.kind === "multilevel_q8";
 }
 
 function upgradeV1(v1: EvaluationResultV1): LegacyEvaluationResult {

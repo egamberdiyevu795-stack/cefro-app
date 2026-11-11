@@ -20,6 +20,8 @@ const fieldsSchema = z.object({
   clientAttemptId: z.string().uuid().optional(),
   /** Part 1: JSON array of the start of each question's speaking window (ms, recording time). */
   questionOffsetsMs: z.string().max(200).optional(),
+  /** Part 3: JSON array of the points the student ticked ("F1".."A3"). Feedback only. */
+  chosenPoints: z.string().max(100).optional(),
 });
 
 /** The audio limit plus room for the multipart framing and the small text fields. */
@@ -31,9 +33,10 @@ const MAX_BODY_BYTES = MAX_AUDIO_BYTES + 64 * 1024;
  * background; the client polls GET /api/speaking/attempts/:id for progress.
  */
 export const POST = withErrorHandling(async (request: Request) => {
-  // Fail before buffering anything when the server cannot evaluate answers (the student keeps the
-  // recording in the browser and can send it again once this is fixed).
-  if (validateProviderConfig(getEnv()).length > 0) {
+  // Fail before buffering anything when the server cannot record and transcribe answers (the student keeps the
+  // recording in the browser and can send it again once this is fixed). A missing AI SCORING key is not one: the
+  // recording and transcript are kept and the result page says "AI score not ready yet" (scoring: false).
+  if (validateProviderConfig(getEnv(), { scoring: false }).length > 0) {
     throw new HttpError(
       503,
       "service_not_configured",
@@ -59,6 +62,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     sessionId: form.get("sessionId") || undefined,
     clientAttemptId: form.get("clientAttemptId") || undefined,
     questionOffsetsMs: form.get("questionOffsetsMs") || undefined,
+    chosenPoints: form.get("chosenPoints") || undefined,
   });
   if (!fields.success) throw new HttpError(400, "invalid_fields", "The upload was missing information.");
 
@@ -71,7 +75,8 @@ export const POST = withErrorHandling(async (request: Request) => {
     previousAttemptId: fields.data.previousAttemptId ?? null,
     sessionId: fields.data.sessionId ?? null,
     clientAttemptId: fields.data.clientAttemptId ?? null,
-    questionOffsetsMs: parseOffsets(fields.data.questionOffsetsMs),
+    questionOffsetsMs: parseJsonField(fields.data.questionOffsetsMs),
+    chosenPoints: parseJsonField(fields.data.chosenPoints),
   });
 
   // A resent recording returns the existing attempt; claiming is a no-op unless it never started processing.
@@ -80,7 +85,7 @@ export const POST = withErrorHandling(async (request: Request) => {
   return Response.json({ attempt: claimed ? { ...attempt, status: "processing" } : attempt }, { status: 201 });
 });
 
-function parseOffsets(value: string | undefined): unknown {
+function parseJsonField(value: string | undefined): unknown {
   if (!value) return null;
   try {
     return JSON.parse(value);

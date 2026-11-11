@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, CardHeader, DemoLabel, PillButton } from "@/components/ds";
 import { FEATURE_FLAGS, PART_LIVE, allFlags, type FeatureFlags } from "@/config/features";
 import { listArgumentTasks } from "@/content/speaking/part3";
@@ -10,13 +10,17 @@ import { AppShell } from "@/features/shell/AppShell";
 export const metadata: Metadata = { title: "Part 3 demo" };
 
 /*
- * The Part 3 topics, mock mode only (`?mock=1`). Part 3 is not live (`PART_LIVE["3"]`): the dashboard and the home
- * page say "Coming soon", and without ?mock=1 this page is a 404. There is no real Part 3 flow yet (no attempts API,
- * no real evaluator wiring), so the page stays mock-only even if the switch is turned on; a test checks both.
+ * The Part 3 topics in mock mode (`?mock=1`). Without ?mock=1 this page is a 404 while Part 3 is not live
+ * (`PART_LIVE["3"]`: the dashboard and the home page say "Coming soon"), and, once it is live, sends the student to
+ * Part 3's card on the task list.
  */
 export default async function Part3ListPage(props: PageProps<"/practice/part3">) {
   const query = await props.searchParams;
-  if (!isMockQuery(query)) notFound();
+  if (!isMockQuery(query)) {
+    // Real: the topics are Part 3's card on the task list, once Part 3 is live; otherwise there is no page.
+    if (PART_LIVE["3"]) redirect("/practice#part-3");
+    notFound();
+  }
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
   return (
     <AppShell flags={flags} account="mock">

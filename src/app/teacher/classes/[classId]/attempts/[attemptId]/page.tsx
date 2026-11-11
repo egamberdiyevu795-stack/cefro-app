@@ -73,10 +73,14 @@ export default async function TeacherAttemptPage(props: PageProps<"/teacher/clas
             {attempt.studentName} · {task.title}
           </p>
           <h1 id="attempt-title" className="mt-2 text-title font-medium tracking-[-0.01em] text-fg">
-            {state.kind === "scoring" ? "Scoring…" : "This answer wasn't scored"}
+            {state.kind === "scoring" ? "Scoring…" : state.kind === "failed" && state.aiPending ? "AI score not ready yet" : "This answer wasn't scored"}
           </h1>
           <p className="mt-2 text-body text-fg-muted">
-            {state.kind === "scoring" ? "Its result appears here once it is scored." : "There is no band to rate. The student can record it again."}
+            {state.kind === "scoring"
+              ? "Its result appears here once it is scored."
+              : state.kind === "failed" && state.aiPending
+                ? "The AI score isn't available yet. The recording and transcript are saved."
+                : "There is no band to rate. The student can record it again."}
           </p>
         </Card>
       )}

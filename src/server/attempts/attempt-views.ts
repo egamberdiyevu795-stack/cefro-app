@@ -105,7 +105,7 @@ export function toHistoryAttempt(
     failureCode: attempt.status === "failed" ? toFailureCode(attempt.failureCode) : null,
     recordingDurationMs: row.recordingDurationMs ?? 0,
     previousAttemptId: attempt.previousAttemptId,
-    result: parsed && parsed.kind === "multilevel" ? parsed : null,
+    result: parsed && (parsed.kind === "multilevel" || parsed.kind === "multilevel_q8") ? parsed : null,
   };
 }
 
@@ -113,7 +113,7 @@ export function toHistoryAttempt(
 function bandOf(evaluation: EvaluationRow | undefined): AttemptSummary["band"] {
   if (!evaluation) return null;
   const parsed = parseStoredEvaluation(evaluation.schemaVersion, evaluation.result);
-  if (!parsed || parsed.kind !== "multilevel") return null;
+  if (!parsed || (parsed.kind !== "multilevel" && parsed.kind !== "multilevel_q8")) return null;
   const { band, band_max, label, provisional } = parsed.scoring;
   return { band, bandMax: band_max, label, provisional };
 }

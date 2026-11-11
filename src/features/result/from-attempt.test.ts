@@ -111,7 +111,7 @@ describe("comparison and error screens (design system)", () => {
 
   it("scoring failed: 'Try again' is black when the recording can be scored again, 'Record again' when it should be re-recorded", () => {
     const failed = (code: "evaluation_failed" | "audio_unavailable") =>
-      renderToStaticMarkup(createElement(FailedResult, { state: { kind: "failed", task, failure: { stage: "evaluation", code } }, recordHref: noop, onTryAgain: noop }));
+      renderToStaticMarkup(createElement(FailedResult, { state: { kind: "failed", task, failure: { stage: "evaluation", code }, aiPending: false, transcript: null, durationMs: 0 }, recordHref: noop, onTryAgain: noop }));
     for (const code of ["evaluation_failed", "audio_unavailable"] as const) {
       const html = failed(code);
       expect(blacks(html)).toBe(1);
@@ -119,6 +119,38 @@ describe("comparison and error screens (design system)", () => {
     }
     expect(failed("evaluation_failed")).toMatch(/bg-primary text-on-primary[^"]*"[^>]*>(<svg[\s\S]*?<\/svg>)?Try again/);
     expect(failed("audio_unavailable")).toMatch(/bg-primary text-on-primary[^"]*"[^>]*>(<svg[\s\S]*?<\/svg>)?Record again/);
+  });
+
+  it("AI scoring could not run after the transcript was saved: 'AI score not ready yet', not an error (Parts 1, 2 and 3)", () => {
+    for (const taskId of ["b2-part2-advice-from-someone", "a2-part1-1-daily-life", "b1-part1-2-shopping"]) {
+      const t = { ...task, id: taskId, part: taskId.startsWith("b2") ? 2 : 1 };
+      for (const code of ["provider_not_configured", "provider_rate_limited", "evaluation_failed", "evaluation_invalid_output"] as const) {
+        const state = resultPageState({
+          task: t,
+          status: "failed",
+          failure: { stage: "evaluation", code },
+          recordingDurationMs: 61_000,
+          transcript: "I like to spend my weekends with my family.",
+          evaluation: null,
+          bandLabels,
+        });
+        expect(state).toMatchObject({ kind: "failed", aiPending: true });
+        if (state.kind !== "failed") continue;
+        const html = renderToStaticMarkup(createElement(FailedResult, { state, recordHref: noop, onTryAgain: noop }));
+        expect(html).toContain("AI score not ready yet");
+        expect(html).toContain("I like to spend my weekends with my family.");
+        expect(html).not.toMatch(/went wrong|couldn.t prepare|error/i);
+        expect(blacks(html)).toBe(1);
+        expect(html).not.toMatch(SMALL);
+      }
+    }
+  });
+
+  it("a failure before the transcript exists (transcription) or without one is still an error screen", () => {
+    const base = { task, status: "failed" as const, recordingDurationMs: 1000, evaluation: null, bandLabels };
+    expect(resultPageState({ ...base, failure: { stage: "transcription", code: "transcription_failed" }, transcript: null })).toMatchObject({ aiPending: false });
+    expect(resultPageState({ ...base, failure: { stage: "evaluation", code: "evaluation_failed" }, transcript: null })).toMatchObject({ aiPending: false });
+    expect(resultPageState({ ...base, failure: { stage: null, code: "processing_stalled" }, transcript: "some words" })).toMatchObject({ aiPending: false });
   });
 
   it("upload failed and notices: one black button each", () => {

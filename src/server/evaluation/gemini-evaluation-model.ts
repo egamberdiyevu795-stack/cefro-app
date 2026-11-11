@@ -1,7 +1,9 @@
 import "server-only";
 import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { q8ModelOutputSchema } from "@/domain/evaluation/q8/model-output";
 import { ProviderError } from "@/server/errors";
+import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
 
@@ -50,18 +52,19 @@ const REFUSAL_FINISH_REASONS = new Set<string>([
  * independent code in `speaking-evaluator.ts`. API-side schema enforcement is
  * a convenience and is never trusted.
  */
-export class GeminiEvaluationModel implements EvaluationModel {
+export class GeminiEvaluationModel implements EvaluationModel, ArgumentEvaluationModel {
   readonly provider = "gemini";
   readonly isDevelopmentProvider = false;
   readonly config: Record<string, string | number | boolean>;
   private readonly client: GoogleGenAI;
-  /** The response schema per rubric (its own levels, statuses and features), built once. */
+  /** The response schema per rubric (its own levels, statuses and features; Part 3 its own shape), built once. */
   private readonly schemas = new Map<string, ReturnType<typeof toGeminiJsonSchema>>();
-  private responseSchemaFor(input: EvaluationInput) {
+  private responseSchemaFor(input: EvaluationInput | ArgumentEvaluationInput) {
     const key = input?.rubric?.id ?? "default";
     let schema = this.schemas.get(key);
     if (!schema) {
-      schema = toGeminiJsonSchema(providerOutputSchema(input?.rubric?.config));
+      // Part 3 (official Question 8) has its own output shape; every other rubric is Part 2's shape on its own ladder.
+      schema = toGeminiJsonSchema(key === "multilevel-q8" ? q8ModelOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config));
       this.schemas.set(key, schema);
     }
     return schema;
@@ -88,7 +91,7 @@ export class GeminiEvaluationModel implements EvaluationModel {
     return this.options.model;
   }
 
-  async evaluate(prompt: EvaluationPrompt, input: EvaluationInput): Promise<ModelEvaluationOutput> {
+  async evaluate(prompt: EvaluationPrompt, input: EvaluationInput | ArgumentEvaluationInput): Promise<ModelEvaluationOutput> {
     // Transcript-only evaluation: the prompt has everything; the input only picks the rubric's response schema.
     const responseSchema = this.responseSchemaFor(input);
 

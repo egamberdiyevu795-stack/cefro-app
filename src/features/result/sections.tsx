@@ -557,15 +557,21 @@ export function FailedResult({
   isRetrying = false,
   retryError = null,
   demo = false,
+  audio,
 }: {
   state: Extract<ResultPageState, { kind: "failed" }>;
   /** Mock data: the "Demo result" label. Never for a real attempt. */
   demo?: boolean;
+  /** The stored recording, shown with the transcript when AI scoring is not ready (the answer is never lost). */
+  audio?: AnswerAudio | null;
   recordHref?: ActionTarget;
   onTryAgain?: (() => void) | null;
   isRetrying?: boolean;
   retryError?: string | null;
 }) {
+  if (state.aiPending) {
+    return <AiPendingResult state={state} recordHref={recordHref} audio={audio} onTryAgain={onTryAgain} isRetrying={isRetrying} retryError={retryError} demo={demo} />;
+  }
   const copy = describeFailure(state.failure);
   const canTryAgain = Boolean(onTryAgain) && copy.canRetryProcessing;
   const tryAgainFirst = canTryAgain && !copy.suggestReRecord;
@@ -611,5 +617,68 @@ export function BackLink({ mock = false, href, label = "Dashboard" }: { mock?: b
       <Icon name="chevronDown" size={14} className="rotate-90" />
       {label}
     </Link>
+  );
+}
+
+
+/**
+ * AI scoring could not run (no key, no credit, a provider error) but the recording and transcript are saved. Not an
+ * error screen: "AI score not ready yet", the transcript and the recording, and "Check again" (the saved recording is
+ * scored when the AI scorer is available). Docs: v1-plan.md, "AI scoring and teacher marking are built side by side".
+ */
+function AiPendingResult({
+  state,
+  recordHref,
+  audio,
+  onTryAgain,
+  isRetrying,
+  retryError,
+  demo,
+}: {
+  state: Extract<ResultPageState, { kind: "failed" }>;
+  recordHref?: ActionTarget;
+  audio?: AnswerAudio | null;
+  onTryAgain?: (() => void) | null;
+  isRetrying: boolean;
+  retryError: string | null;
+  demo: boolean;
+}) {
+  const canCheck = Boolean(onTryAgain);
+  return (
+    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4">
+      <Card aria-labelledby="result-title" data-testid="ai-not-ready">
+        {demo && <DemoLabel className="mb-3" />}
+        <p className="text-caption text-fg-muted">Your result · {state.task.title}</p>
+        <h1 id="result-title" className="mt-2 text-title font-medium tracking-[-0.01em] text-fg">
+          AI score not ready yet
+        </h1>
+        <p className="mt-2 text-body text-fg">
+          Your recording and what you said are saved. The AI score isn&rsquo;t available right now, so there is no band yet.
+          {canCheck ? " Check again in a little while: your recording is scored without recording a new answer." : ""}
+        </p>
+        {retryError && (
+          <p role="alert" className="mt-3 rounded-tile bg-well p-3 text-body text-fg">
+            <span className="font-semibold">That didn&rsquo;t work.</span> {retryError}
+          </p>
+        )}
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          {canCheck ? (
+            <>
+              <PillAction onClick={onTryAgain!} icon="retry" disabled={isRetrying} className="w-full sm:w-auto">
+                {isRetrying ? "Checking…" : "Check again"}
+              </PillAction>
+              <Action target={recordHref ?? practiceHref(state.task)} variant="quiet" icon="mic" className="w-full sm:w-auto">
+                Record again
+              </Action>
+            </>
+          ) : (
+            <Action target={recordHref ?? practiceHref(state.task)} icon="mic" className="w-full sm:w-auto">
+              Record again
+            </Action>
+          )}
+        </div>
+      </Card>
+      <AnswerCard transcript={state.transcript} durationMs={state.durationMs} audio={audio} empty="No transcript." />
+    </div>
   );
 }

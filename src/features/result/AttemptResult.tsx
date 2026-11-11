@@ -178,6 +178,7 @@ export function AttemptResult({
           state={view}
           recordHref={recordAgain}
           onTryAgain={attempt.audio?.deletedAt ? undefined : () => void restart()}
+          audio={audio}
           isRetrying={isRestarting}
           retryError={restartError}
         />

@@ -5,7 +5,7 @@
  */
 import { EXAM_PART_IDS, examPartLabel, isExamPartId, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt } from "@/domain/speaking/history";
-import { compareWithPrevious, GOAL_LABEL } from "@/features/result/view-model";
+import { GOAL_LABEL, goalOutcomeOf } from "@/features/result/view-model";
 
 /** Rows shown at first; each "Show more" adds this many. */
 export const PAGE_SIZE = 20;
@@ -153,7 +153,7 @@ function scoredBand(a: HistoryAttempt) {
 
 function goalOf(previous: HistoryAttempt | undefined, current: HistoryAttempt): "Goal met" | "Not yet" | null {
   if (!previous?.result || !scoredBand(current)) return null;
-  const goal = compareWithPrevious(previous.result, current.result!).goal;
+  const goal = goalOutcomeOf(previous.result, current.result!);
   return goal ? GOAL_LABEL[goal] : null;
 }
 

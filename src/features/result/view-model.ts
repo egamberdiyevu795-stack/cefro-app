@@ -11,6 +11,7 @@ import { FEATURES, FEATURE_LABELS, LEVEL_LABELS, ladderOf, levelValue, type Feat
 import { featureLevels, type MultilevelResult, type MultilevelRetryFocus } from "@/domain/evaluation/multilevel/result";
 import { examPartLabel, examPartOfResult, firstQuestionNumberOfResult } from "@/domain/speaking/exam-part";
 import type { AttemptFailure, AttemptStatus } from "@/domain/speaking/attempt";
+import type { BandedResult } from "@/domain/speaking/history";
 import type { PublicSpeakingTask } from "@/domain/speaking/task";
 import type { SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 
@@ -49,7 +50,18 @@ export type ResultPageState =
       goal: string | null;
     }
   | { kind: "not_scored"; task: ResultSource["task"]; reason: "too_short" | "no_speech"; transcript: string | null; wordCount: number | null; durationMs: number }
-  | { kind: "failed"; task: ResultSource["task"]; failure: AttemptFailure | null }
+  | {
+      kind: "failed";
+      task: ResultSource["task"];
+      failure: AttemptFailure | null;
+      /**
+       * Scoring could not run (no key, no credit, a provider error) AFTER the recording and transcript were saved: the
+       * page says "AI score not ready yet" instead of an error, shows the transcript and keeps the recording.
+       */
+      aiPending: boolean;
+      transcript: string | null;
+      durationMs: number;
+    }
   | { kind: "scored"; view: ResultView };
 
 /** Which page to show for an attempt. */
@@ -65,7 +77,14 @@ export function resultPageState(source: ResultSource): ResultPageState {
     if (source.failure?.code === "transcription_empty") {
       return { kind: "not_scored", task, reason: "no_speech", transcript: source.transcript, wordCount: null, durationMs: source.recordingDurationMs };
     }
-    return { kind: "failed", task, failure: source.failure };
+    return {
+      kind: "failed",
+      task,
+      failure: source.failure,
+      aiPending: Boolean(source.transcript?.trim()) && source.failure?.stage === "evaluation",
+      transcript: source.transcript,
+      durationMs: source.recordingDurationMs,
+    };
   }
   const result = source.evaluation.result;
   if (result.scoring.zero_reason === "too_short") {
@@ -441,6 +460,20 @@ export function compareWithPrevious(prev: MultilevelResult, current: MultilevelR
     }
   }
   return { previousBand: prev.scoring.band, band: current.scoring.band, goal, goalText: focus?.objective ?? null };
+}
+
+/**
+ * Did a retry meet its goal, for any pair of banded results? Part 1/2 pairs are judged as the result page judges them
+ * (`compareWithPrevious`); Part 3 pairs by the Part 3 evaluator's own retry review (the only check Part 3 stores,
+ * as its result page reads it); a mixed pair (the task kind changed) can't be judged.
+ */
+export function goalOutcomeOf(prev: BandedResult, current: BandedResult): RetryComparison["goal"] {
+  if (prev.kind === "multilevel" && current.kind === "multilevel") return compareWithPrevious(prev, current).goal;
+  if (prev.kind === "multilevel_q8" && current.kind === "multilevel_q8") {
+    const outcome = current.assessment.retry_review?.objectives[0]?.outcome;
+    return outcome === "achieved" ? "met" : outcome === "partly_achieved" ? "partly" : outcome === "not_achieved" ? "not_met" : null;
+  }
+  return null;
 }
 
 /** Two answers for the student: met, or not yet. "Partly" is still "Not yet", with a quieter note that it is close. */

@@ -24,26 +24,34 @@ import { logger } from "@/server/logging/logger";
  * Development and tests: problems are logged, nothing is refused (mock providers and test overrides are legitimate).
  */
 
-/** Every configuration problem of this server, or [] when it can serve students. */
-export function serverConfigProblems(): ConfigProblem[] {
+/**
+ * Every configuration problem of this server, or [] when it can serve students.
+ *
+ * `scoring: false` leaves out the AI scoring provider (EVALUATION_PROVIDER and its key). Routes and pages are gated
+ * without it: a recording is kept and transcribed, and a result page opens, even when AI scoring can't run; the result
+ * then says "AI score not ready yet" and scoring runs later from the saved recording (docs/v1-plan.md: AI scoring and
+ * teacher marking are built side by side, and the AI side fills in later). The health check and the boot log keep the
+ * full list, so a deploy without a scoring key still fails its health check and is reported loudly.
+ */
+export function serverConfigProblems(options: { scoring?: boolean } = {}): ConfigProblem[] {
   let env;
   try {
     env = getEnv();
   } catch {
     return [{ variable: "(environment)", message: "invalid server configuration (see .env.example)" }];
   }
-  return [...validateProviderConfig(env), ...validateAuthConfig(env)];
+  return [...validateProviderConfig(env, options), ...validateAuthConfig(env)];
 }
 
 /** Are the routes that use providers or sign-in allowed to run? Always yes outside production. */
-export function isServerConfigured(): boolean {
+export function isServerConfigured(options: { scoring?: boolean } = {}): boolean {
   let production: boolean;
   try {
     production = getEnv().NODE_ENV === "production";
   } catch {
     production = process.env.NODE_ENV === "production";
   }
-  return !production || serverConfigProblems().length === 0;
+  return !production || serverConfigProblems(options).length === 0;
 }
 
 /**
@@ -51,7 +59,8 @@ export function isServerConfigured(): boolean {
  * misconfigured server refuses with 503; elsewhere it never throws. Details go to the log by `checkProvidersAtBoot`.
  */
 export function assertServerConfigured(): void {
-  if (isServerConfigured()) return;
+  // Without the scoring provider the server still records, transcribes and shows results (see serverConfigProblems).
+  if (isServerConfigured({ scoring: false })) return;
   throw new HttpError(503, "service_not_configured", "CEFRO is not available right now. Please try again later.", 300);
 }
 

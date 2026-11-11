@@ -9,7 +9,7 @@ import type { HistoryAttempt } from "@/domain/speaking/history";
 import { PART_NAMES, practiseNext } from "@/features/dashboard/progress";
 import { isMockQuery } from "@/features/demo/demo-mode";
 import { formatDate } from "@/features/history/view-model";
-import { part3PracticeHref } from "@/features/part3/links";
+import { part3PracticeHref, part3RealPracticeHref } from "@/features/part3/links";
 import { AppShell } from "@/features/shell/AppShell";
 import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
 import { byFrequency, sampleFrequency, showSampleFrequency } from "@/features/task-list/sample-frequency";
@@ -85,7 +85,7 @@ export default async function PracticePage(props: PageProps<"/practice">) {
       status === "soon"
         ? []
         : part === "3"
-          ? listArgumentTasks().map((t) => ({ id: t.id, title: t.title, href: part3PracticeHref(t.id) }))
+          ? listArgumentTasks().map((t) => ({ id: t.id, title: t.title, href: live && !mock ? part3RealPracticeHref(t.id) : part3PracticeHref(t.id) }))
           : speaking
               .filter((t) => examPartOf(t) === part)
               .map((t) => {

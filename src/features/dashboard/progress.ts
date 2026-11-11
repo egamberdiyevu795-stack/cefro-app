@@ -9,19 +9,22 @@ import { bestFitLevel } from "@/domain/evaluation/multilevel/band-scoring";
 import { FEATURES, FEATURE_LABELS, FEATURE_LEVELS, LEVEL_LABELS, ladderOf, levelValue, type Feature, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import { featureLevels } from "@/domain/evaluation/multilevel/result";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
+import { Q8_LEVELS } from "@/domain/evaluation/q8/levels";
+import type { ArgumentPoint } from "@/domain/speaking/argument-task";
 import { EXAM_PART_IDS, examPartLabel, examPartListHref, examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
-import type { HistoryAttempt } from "@/domain/speaking/history";
+import type { BandedResult, HistoryAttempt } from "@/domain/speaking/history";
 import type { RadarAxis } from "@/components/ds/RadarChart";
 import { PART_LIVE } from "@/config/features";
 import { formatDate } from "@/features/history/view-model";
-import { biggestFix, compareWithPrevious, type BiggestFixView } from "@/features/result/view-model";
+import { part3BiggestFix } from "@/features/part3/view-model";
+import { biggestFix, goalOutcomeOf, type BiggestFixView } from "@/features/result/view-model";
 
 /** How many recent scored answers the level and skills are based on. */
 export const LEVEL_WINDOW = 3;
 /** How many recent scored answers "Still in X of your last N answers" looks at. */
 export const STILL_IN_WINDOW = 4;
 
-export type ScoredAttempt = HistoryAttempt & { result: MultilevelResult };
+export type ScoredAttempt = HistoryAttempt & { result: BandedResult };
 
 /** The student's scored attempts, newest first. */
 export function scoredAttempts(attempts: readonly HistoryAttempt[]): ScoredAttempt[] {
@@ -47,11 +50,13 @@ export function middleLevel(levels: readonly FeatureLevel[]): FeatureLevel | nul
 
 /**
  * Per skill, the middle value of the answers that assessed it (pronunciation is often not assessed: those are
- * skipped). Only answers on Part 2's scale (below B1 … above B2) count: the dashboard's level is a B2-target level, and
- * a Part 1 level (A1, A2 …) is on another ladder.
+ * skipped). Only answers on Part 2's scale (below B1 … above B2) count: the dashboard's level is a B2-target level,
+ * and a Part 1 level (A1, A2 …) or a Part 3 level (C1 ladder) is on another ladder.
  */
-export function skillLevels(results: readonly MultilevelResult[]): SkillLevels {
-  const onScale = results.filter((r) => ladderOf(Object.values(featureLevels(r.assessment))) === FEATURE_LEVELS);
+export function skillLevels(results: readonly BandedResult[]): SkillLevels {
+  const onScale = results
+    .filter((r): r is MultilevelResult => r.kind === "multilevel")
+    .filter((r) => ladderOf(Object.values(featureLevels(r.assessment))) === FEATURE_LEVELS);
   return Object.fromEntries(
     FEATURES.map((feature) => {
       const assessed = onScale.flatMap((r) => {
@@ -163,20 +168,50 @@ export interface DashboardFix {
  */
 export function dashboardFix(
   attempts: readonly HistoryAttempt[],
-  context: { prompts: (taskId: string) => readonly string[]; transcript: string; target: FeatureLevel },
+  context: {
+    prompts: (taskId: string) => readonly string[];
+    transcript: string;
+    target: FeatureLevel;
+    /** Part 3: a task's FOR / AGAINST points, for a Part 3 biggest fix. Without it a Part 3 latest answer has no card. */
+    argumentPoints?: (taskId: string) => readonly ArgumentPoint[] | undefined;
+  },
 ): DashboardFix | null {
   const scored = scoredAttempts(attempts);
   const latest = scored[0];
   if (!latest) return null;
-  const fix = latest.result.scoring.biggest_fix;
   const window = scored.slice(0, STILL_IN_WINDOW);
+
+  // Part 3 latest answer: its own fix card and retry link. "Still in" is only defined for a language feature
+  // (coverage and dependence are judged per topic): the same Part 3 feature below C1 in the window's Part 3 answers.
+  if (latest.result.kind === "multilevel_q8") {
+    const points = context.argumentPoints?.(latest.taskId);
+    if (!points) return null;
+    const fix = latest.result.scoring.biggest_fix;
+    const hasProblem = (a: ScoredAttempt): boolean => {
+      if (fix.kind !== "feature" || a.result.kind !== "multilevel_q8") return false;
+      const level = a.result.assessment.features[fix.feature]?.level;
+      return level !== undefined && level !== "not_assessed" && Q8_LEVELS.indexOf(level) < Q8_LEVELS.indexOf("C1");
+    };
+    const count = window.filter(hasProblem).length;
+    const view = part3BiggestFix(latest.result, { points }, context.transcript);
+    return {
+      fix: { ...view, quoteKind: view.quoteKind === "student" ? "student" : "question" },
+      taskTitle: latest.title,
+      retryHref: `/practice/part3/${latest.taskId}?retry=${latest.id}`,
+      stillIn: fix.kind === "feature" && window.length > 1 && hasProblem(latest) ? { count, of: window.length } : null,
+    };
+  }
+
+  const latestResult = latest.result;
+  const fix = latestResult.scoring.biggest_fix;
 
   const hasProblem = (a: ScoredAttempt): boolean => {
     const r = a.result;
+    if (r.kind !== "multilevel") return false;
     if (fix.kind === "feature") {
       // Levels compare only on one scale: a Part 1 answer and a Part 2 answer never share "the same problem".
-      if (r.rubric_id !== latest.result.rubric_id) return false;
-      const ladder = ladderOf(Object.values(featureLevels(latest.result.assessment)));
+      if (r.rubric_id !== latestResult.rubric_id) return false;
+      const ladder = ladderOf(Object.values(featureLevels(latestResult.assessment)));
       const target = ladder === FEATURE_LEVELS ? context.target : ladder[2];
       const level = r.assessment.features[fix.feature]?.level;
       return level !== undefined && level !== "not_assessed" && levelValue(level as FeatureLevel, ladder) < levelValue(target, ladder);
@@ -191,7 +226,7 @@ export function dashboardFix(
   const count = window.filter(hasProblem).length;
 
   return {
-    fix: biggestFix(latest.result, context.prompts(latest.taskId), context.transcript),
+    fix: biggestFix(latestResult, context.prompts(latest.taskId), context.transcript),
     taskTitle: latest.title,
     retryHref: `/practice/speaking/${latest.taskId}?retry=${latest.id}`,
     // Shown only when the latest answer still has the problem (else "still" would be untrue), and there is history.
@@ -248,7 +283,7 @@ export function practiseNext(attempts: readonly HistoryAttempt[], tasks: readonl
   const latestScored = scoredAttempts(attempts)[0];
   if (latestScored?.previousAttemptId) {
     const original = byId.get(latestScored.previousAttemptId);
-    const goal = original?.result ? compareWithPrevious(original.result, latestScored.result).goal : null;
+    const goal = original?.result ? goalOutcomeOf(original.result, latestScored.result) : null;
     if (goal === "partly" || goal === "not_met") {
       const next = retryOf(latestScored, "Your goal isn't met yet");
       if (next) return next;

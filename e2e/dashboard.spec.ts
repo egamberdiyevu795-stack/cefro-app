@@ -107,7 +107,14 @@ test("new student: the first visit, with the exam date question; saving a date s
   await expect(page).toHaveURL(/\/practice#part-2$/);
   const part2 = page.getByRole("region", { name: "Part 2 · Long turn" });
   await expect(part2).toBeVisible();
-  await expect(part2.getByRole("link", { name: /Start practice/ })).toHaveCount(7);
+  // Since the task-list restyle every task is one row linked by its title, in the task list's order.
+  const part2Tasks = ["Advice from someone", "An important decision", "A goal you set", "Working in a team", "Trying and failing", "A tradition", "A happy day"];
+  const rows = part2.getByTestId("task-link");
+  await expect(rows).toHaveCount(part2Tasks.length);
+  for (const [i, title] of part2Tasks.entries()) {
+    await expect(rows.nth(i)).toContainText(title);
+    await expect(part2.getByRole("link", { name: new RegExp(title) })).toHaveAttribute("href", /^\/practice\/speaking\/b2-part2-/);
+  }
   await page.goto("/dashboard");
 
   // A date in the past can't be saved.

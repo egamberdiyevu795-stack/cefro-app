@@ -751,3 +751,10 @@ mock routes answer 404 (`?mock=1` works regardless).
 - **Tests:** `full-mock.test.ts`, `runner-machine.test.ts`, `upload-queue.test.ts`, `mock-exams.test.ts`, migration 0008 tests,
   `e2e/full-mock.spec.ts`; `mock-pages.test.ts` now expects the one black button on `/practice`.
 
+## After `claude/full-mock`: `claude/scale-check` (docs only)
+
+Cut from `claude/full-mock`, so it comes **after it**, merge commit, no squash. Branch name: `claude/scale-check`
+(11 characters after `claude/`). Step 3 of docs/v1-plan.md's build order. **Documents only**: `docs/official-scale.md`
+(what lex.uz officially says about the multilevel exam, what is only believed, what is unknown, and the
+recommendation for the mock result page) and this entry. No app code, no migration, no environment variable.
+**Partial:** the uzbmb.uz documents could not be read from the sandbox (listed in its section 4).

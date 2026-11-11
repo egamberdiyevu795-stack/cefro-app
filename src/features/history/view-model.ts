@@ -4,7 +4,9 @@
  * dashboard's Recent attempts, so both show the same rows.
  */
 import { EXAM_PART_IDS, examPartLabel, isExamPartId, type ExamPartId } from "@/domain/speaking/exam-part";
-import type { HistoryAttempt } from "@/domain/speaking/history";
+import type { MockStatus } from "@/domain/speaking/full-mock";
+import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
+import { estimateSpeakingLevel, type PartBands } from "@/domain/speaking/mock-level";
 import { GOAL_LABEL, goalOutcomeOf } from "@/features/result/view-model";
 
 /** Rows shown at first; each "Show more" adds this many. */
@@ -16,7 +18,8 @@ export const CHART_MAX_POINTS = 20;
 /** Dates are shown in the exam's time zone (Uzbekistan), the same for every reader. */
 const TIME_ZONE = "Asia/Tashkent";
 
-export type HistoryFilter = "all" | ExamPartId;
+/** "all", "mocks" (the mock exams only) or one part (every attempt of it, mock parts included). */
+export type HistoryFilter = "all" | "mocks" | ExamPartId;
 
 /** What a row shows where the level goes. There is no Passed/Failed: only a level, "Scoring…" or "Not scored". */
 export type RowOutcome =
@@ -37,6 +40,8 @@ export interface HistoryRow {
   outcome: RowOutcome;
   /** A retry of an earlier attempt: whether it met the goal it was given ("Goal met" / "Not yet"), once scored. */
   retry: { goal: "Goal met" | "Not yet" | null } | null;
+  /** A full mock exam is one row ("Mock exam · B2 · 11.11.26", its `title`), opening the mock result. Null for an attempt. */
+  mock: { status: MockStatus; caption: string } | null;
 }
 
 export interface FilterOption {
@@ -79,44 +84,125 @@ export interface HistoryView {
   chart: BandChart | null;
 }
 
+/** `?part=mock` shows the mock exams only. */
+const MOCKS_PARAM = "mock";
+
 /** Reads `?part=` and `?show=` (untrusted query values). */
 export function parseHistoryQuery(query: Record<string, string | string[] | undefined>): { filter: HistoryFilter; show: number } {
   const part = typeof query.part === "string" ? query.part : undefined;
   const requested = typeof query.show === "string" ? Number.parseInt(query.show, 10) : NaN;
   const show = Number.isFinite(requested) && requested > PAGE_SIZE ? Math.ceil(requested / PAGE_SIZE) * PAGE_SIZE : PAGE_SIZE;
-  return { filter: isExamPartId(part) ? part : "all", show: Math.min(show, 10_000) };
+  return { filter: part === MOCKS_PARAM ? "mocks" : isExamPartId(part) ? part : "all", show: Math.min(show, 10_000) };
 }
 
 export function historyHref(filter: HistoryFilter, show = PAGE_SIZE): string {
   const params = new URLSearchParams();
-  if (filter !== "all") params.set("part", filter);
+  if (filter !== "all") params.set("part", filter === "mocks" ? MOCKS_PARAM : filter);
   if (show > PAGE_SIZE) params.set("show", String(show));
   const query = params.toString();
   return query ? `/history?${query}` : "/history";
 }
 
-export function buildHistoryView(attempts: readonly HistoryAttempt[], options: { filter: HistoryFilter; show: number }): HistoryView {
+export function buildHistoryView(
+  attempts: readonly HistoryAttempt[],
+  options: { filter: HistoryFilter; show: number },
+  mocks: readonly HistoryMock[] = [],
+): HistoryView {
   const tried = new Set(attempts.flatMap((a) => (a.part ? [a.part] : [])));
-  // A part the student has not tried (an old link, a typed URL) shows everything instead of an empty list.
-  const filter: HistoryFilter = options.filter !== "all" && tried.has(options.filter) ? options.filter : "all";
+  // A part the student has not tried, or "Mock exams" with no mock (an old link, a typed URL), shows everything instead of an empty list.
+  const wanted = options.filter;
+  const filter: HistoryFilter = wanted === "all" ? "all" : wanted === "mocks" ? (mocks.length > 0 ? "mocks" : "all") : tried.has(wanted) ? wanted : "all";
   const filters: FilterOption[] = [
     { id: "all", label: "All", href: historyHref("all"), active: filter === "all" },
+    ...(mocks.length > 0 ? [{ id: "mocks" as const, label: "Mock exams", href: historyHref("mocks"), active: filter === "mocks" }] : []),
     ...EXAM_PART_IDS.filter((p) => tried.has(p)).map((p) => ({ id: p, label: examPartLabel(p), href: historyHref(p), active: filter === p })),
   ];
 
-  const matching = filter === "all" ? attempts : attempts.filter((a) => a.part === filter);
-  const rows = toHistoryRows(matching.slice(0, options.show), attempts);
-  const moreHref = matching.length > options.show ? historyHref(filter, options.show + PAGE_SIZE) : null;
+  // A mock's four parts are one row, so under "All" they are not listed again as loose attempts. A part's own filter lists
+  // every attempt of that part, mock parts included (they are the student's progress in that part).
+  const mockIds = new Set(mocks.map((m) => m.id));
+  const isMockPart = (a: HistoryAttempt) => a.sessionId != null && mockIds.has(a.sessionId);
+  const mockRows = mocks.map((m) => mockRow(m, attempts.filter((a) => a.sessionId === m.id)));
+  const attemptRows = (list: readonly HistoryAttempt[]) => toHistoryRows(list, attempts);
 
-  const chartPart = filter !== "all" ? filter : (attempts.find((a) => a.part)?.part ?? null);
+  let matching: number;
+  let rows: HistoryRow[];
+  if (filter === "mocks") {
+    matching = mockRows.length;
+    rows = mockRows.slice(0, options.show);
+  } else if (filter === "all") {
+    const loose = attempts.filter((a) => !isMockPart(a));
+    matching = loose.length + mockRows.length;
+    // Both lists are newest first; merge them by time.
+    const looseRows = attemptRows(loose);
+    rows = [...looseRows, ...mockRows].sort((x, y) => (x.createdAt < y.createdAt ? 1 : x.createdAt > y.createdAt ? -1 : 0)).slice(0, options.show);
+  } else {
+    const ofPart = attempts.filter((a) => a.part === filter);
+    matching = ofPart.length;
+    const shown = ofPart.slice(0, options.show);
+    // A part that was played inside a mock says so, so the same part never looks like two kinds of practice.
+    rows = attemptRows(shown).map((row, i) => (isMockPart(shown[i]) ? { ...row, partLabel: `${row.partLabel} · Mock exam` } : row));
+  }
+  const moreHref = matching > options.show ? historyHref(filter, options.show + PAGE_SIZE) : null;
+
+  const chartPart = filter !== "all" && filter !== "mocks" ? filter : (attempts.find((a) => a.part)?.part ?? null);
   return {
-    total: attempts.length,
+    total: attempts.length + mocks.length,
     filter,
     filters,
-    matching: matching.length,
+    matching,
     rows,
     moreHref,
     chart: chartPart ? bandChart(attempts, chartPart) : null,
+  };
+}
+
+/** The part bands of a mock, read from its own attempts (a part that is not scored has none: too short, failed, still scoring, not done). */
+function mockBands(parts: readonly HistoryAttempt[]): PartBands {
+  const bands: PartBands = {};
+  for (const a of parts) {
+    if (a.part && bands[a.part] == null) bands[a.part] = scoredBand(a)?.band ?? null;
+  }
+  return bands;
+}
+
+/**
+ * One mock as one row: "Mock exam · B2 · 11.11.26". Not finished mocks say "Not finished" and name the parts they have; a mock
+ * with a part still being scored says "Scoring…"; a mock whose estimate cannot be given says "Estimate not ready yet". Never a
+ * score, never Passed / Failed.
+ */
+function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): HistoryRow {
+  const date = formatDate(mock.createdAt);
+  const estimate = estimateSpeakingLevel(mockBands(parts));
+  const scoring = parts.some((a) => outcomeOf(a).kind === "scoring");
+  const done = EXAM_PART_IDS.filter((p) => parts.some((a) => a.part === p));
+  const state =
+    mock.status === "not_finished"
+      ? "Not finished"
+      : mock.status === "in_progress"
+        ? "In progress"
+        : estimate.kind === "ready"
+          ? estimate.level
+          : scoring
+            ? "Scoring…"
+            : "Estimate not ready yet";
+  const caption =
+    mock.status === "finished"
+      ? "Speaking only · 4 parts"
+      : done.length > 0
+        ? `Finished: ${done.map(examPartLabel).join(", ")}`
+        : "No part finished";
+  return {
+    id: mock.id,
+    href: `/practice/mock/${encodeURIComponent(mock.id)}`,
+    title: `Mock exam · ${state} · ${date}`,
+    partLabel: null,
+    date,
+    createdAt: mock.createdAt,
+    durationMs: 0,
+    outcome: { kind: "not_scored" },
+    retry: null,
+    mock: { status: mock.status, caption },
   };
 }
 
@@ -135,6 +221,7 @@ export function toHistoryRows(attempts: readonly HistoryAttempt[], all: readonly
       durationMs: a.recordingDurationMs,
       outcome: outcomeOf(a),
       retry: a.previousAttemptId ? { goal: goalOf(previous, a) } : null,
+      mock: null,
     };
   });
 }

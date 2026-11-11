@@ -925,9 +925,7 @@ preparation and speaking times), played by the same components with an `embedded
   waits until all four arrived (`MockSendingCard`: one row per part "Sending…/Sent/Not sent"; the black "Send again" only for a part
   that can still be sent), closes the mock and opens `/practice/mock/<id>`. "AI score not ready yet" applies per part, on each part's own
   result page.
-- **"Mock finished"** (`MockFinishedCard`; no overall result yet, that is step 4): "Mock finished", one row per part linking to its
-  own result (`/result/<attempt id>`), and the one black button "Back to Practice". A mock closed after 24 hours says "Mock not
-  finished", the parts it has keep their links, the others say "Not done". Owner only (404 for anyone else).
+- **The end of a mock** is the **mock result page** (below), at `/practice/mock/<id>`; in mock mode it opens the demo mock result.
 - **Dashboard:** a mock in progress puts "**Continue your mock**" on top of Home (`ContinueMockCard`); its "Continue" is then the
   page's one black button and Practise next / Start practice go grey.
 - **Resume and the 24 hours:** which parts are done is the session's attempts. "Continue" plays only the parts not saved, in exam
@@ -937,3 +935,29 @@ preparation and speaking times), played by the same components with an `embedded
   (runner state, upload queue), `app/api/mock-exams.test.ts` (routes, consent lock, cross-user, resume, 24 hours, cards),
   `server/db/migrations.test.ts` (0008), `e2e/full-mock.spec.ts` (the whole mock in mock mode at 390 px with the AA / 11 px / one-black
   audit, a laptop-width pass, "Coming soon").
+
+## Mock result (`/practice/mock/[id]`, `claude/mock-result`)
+
+Step 4 of `docs/v1-plan.md`; replaces "Mock finished". Wording from `docs/official-scale.md` section 5. Components in `features/mock-result`.
+
+- **Top card:** "CEFRO: B2" (36 px level) and, **beside it** when a teacher rated, "Your teacher: B2" (never instead of it), then the exact line
+  "Speaking only. An estimate from this mock, not an official UZBMB score." Never a 0-75 / 0-30 score, Passed / Failed or "certificate level".
+- **The level rule is one pure function**, `estimateSpeakingLevel` in `domain/speaking/mock-level.ts` (own tests). C1: Part 3 band 5+ and Part 2 band 3+;
+  B2: Part 2 band 3+ or Part 3 band 3+; B1: Part 2 band 1+ or Part 1.2 band 3+; else Below B1. Parts 1.2, 2 and 3 must have a band, else
+  "Estimate not ready yet" (with the reason: "Part 2 is still being scored", "Part 3 has no AI score yet", "Part 3 was not done"): never a guess.
+  Part 1.1 shows in its row but is not read. Swap this function when UZBMB's table is read; nothing else changes.
+- **Teacher level:** read, never written, from `teacher_ratings` per attempt (own mock's attempts only). Each row shows "Your teacher: B2" when that
+  part was rated; the top shows it only when the parts the rule needs are all rated (same rule on the teacher's bands, until step 6 stores a mock-level
+  rating). Empty until the teacher screens write ratings.
+- **Rows:** one per part: level, "Band 3 · Lower B2", "See details" to the part's own result. While scoring: "Scoring Part 2…"; otherwise "AI score
+  not ready yet", "Too short to rate", "Not done". The page polls `GET /api/mock-exams/[id]/result` every 3 s until nothing is scoring.
+- **Biggest fix across the mock:** the fix of the part furthest below its own target band (tie: earlier part), with its "Retry with this goal" and "Learn how"
+  link where they exist. Hidden ("appears when every part is scored") while any part is scoring.
+- **One black button:** "Retry with this goal"; "Back to Practice" is black only when there is no retry. Phone one column; laptop two columns (level and rows | fix).
+- **Not finished** (24 h): a note, the parts it has keep their results, the others say "Not done".
+- **History:** a mock is one row "Mock exam · B2 · 11.11.26" (or "· Not finished ·", "· Scoring… ·", "· Estimate not ready yet ·") opening the result; pills
+  All · Mock exams · 1.1 · 1.2 · 2 · 3 (Mock exams only once there is a mock, like parts). A mock's parts are not listed again under All; a part's own
+  filter lists them marked "Part 2 · Mock exam".
+- **`/practice/mock/demo-mock?mock=1`:** demo mock from demo answers through the real evaluators. Switches: `state=scoring|unfinished|pending`, `teacher=1`.
+- **Checks:** `domain/speaking/mock-level.test.ts`, `features/mock-result/view-model.test.ts`, `features/history/view-model.test.ts`,
+  `app/api/mock-result.test.ts` (route, cross-user, teacher, 24 h, page, History), `e2e/mock-result.spec.ts` (390 px and 1280 px, audit), `e2e/full-mock.spec.ts`.

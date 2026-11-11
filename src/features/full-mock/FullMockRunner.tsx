@@ -7,7 +7,7 @@ import { useHydrated } from "@/components/ds/useHydrated";
 import type { RecordingLock } from "@/domain/consent";
 import type { ExamPartId } from "@/domain/speaking/exam-part";
 import { Part3Practice } from "@/features/part3/Part3Practice";
-import { nextPart3Key, part3ResultHref } from "@/features/part3/links";
+import { DEMO_MOCK_HREF } from "@/features/mock-result/links";
 import { Part1Experience } from "@/features/speaking-practice/components/Part1Experience";
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
 import { InlineNotice, RecordingLockedState } from "@/features/speaking-practice/components/screens";
@@ -15,10 +15,9 @@ import { setAnalyticsSession } from "@/features/speaking-practice/lib/analytics"
 import { ApiError, finishMockExam, startMockExam } from "@/features/speaking-practice/lib/api-client";
 import { primeChime } from "@/features/speaking-practice/lib/chime";
 import type { EmbeddedPart, EmbeddedRecording } from "@/features/speaking-practice/lib/mock-embed";
-import { demoPracticeKey } from "@/features/speaking-practice/lib/practice-flow";
 import type { MockPartPlan } from "./plan";
 import { currentPart, initialRunState, runReducer } from "./runner-machine";
-import { MockFinishedCard, MockProgressLine, MockSendingCard, MockStartCard, type FinishedPartRow } from "./screens";
+import { MockProgressLine, MockSendingCard, MockStartCard } from "./screens";
 import { createUnlockedAudio } from "./unlock-audio";
 import { MockUploads, type UploadJob } from "./upload-queue";
 
@@ -36,8 +35,8 @@ function newClientAttemptId(): string {
  * page plays it (spoken introduction, chimes, preparation and speaking times), with no result in between and a thin
  * "Part 2 of 4" line above. Real mode: the Start tap creates (or resumes) the mock's session; each part is sent the moment
  * it ends, in the background, while the next introduction plays (upload-queue.ts); after the last part the page waits until
- * every part has arrived, closes the mock and opens its "Mock finished" page. Mock mode (`?mock=1`): nothing is sent or
- * stored, no account is needed, and "Mock finished" links to each part's demo result.
+ * every part has arrived, closes the mock and opens its mock result page. Mock mode (`?mock=1`): nothing is sent or
+ * stored, no account is needed, and the end opens the demo mock result (demo answers).
  */
 export function FullMockRunner({
   plans,
@@ -60,7 +59,6 @@ export function FullMockRunner({
   const [state, dispatch] = useReducer(runReducer, finished, initialRunState);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [demoHrefs, setDemoHrefs] = useState<Partial<Record<ExamPartId, string>>>({});
   const [finishError, setFinishError] = useState<string | null>(null);
   const [finishTry, setFinishTry] = useState(0);
 
@@ -99,11 +97,7 @@ export function FullMockRunner({
       const planned = plans.find((p) => p.part === ended);
       if (!planned) return;
       if (mock) {
-        const href =
-          planned.kind === "argument"
-            ? part3ResultHref(nextPart3Key(planned.task.id, recording.chosenPoints ?? [], null))
-            : `/result?${new URLSearchParams({ demo: demoPracticeKey(planned.task.id, null), mock: "1" })}`;
-        setDemoHrefs((current) => ({ ...current, [ended]: href }));
+        // Mock mode: nothing is sent. The demo mock result at the end uses its own demo answers.
       } else if (sessionId) {
         const job: UploadJob = {
           part: ended,
@@ -129,6 +123,7 @@ export function FullMockRunner({
     if (state.phase !== "sending") return;
     if (mock) {
       dispatch({ type: "allSent" });
+      router.push(DEMO_MOCK_HREF);
       return;
     }
     const mockId = sessionId;
@@ -189,8 +184,7 @@ export function FullMockRunner({
   } else if (state.phase === "playing") {
     content = <InlineNotice title="This part isn't available.">Please go back to Practice and try again.</InlineNotice>;
   } else if (state.phase === "done" && mock) {
-    const rows: FinishedPartRow[] = plans.map((p) => ({ part: p.part, href: demoHrefs[p.part] ?? null, title: p.task.title }));
-    content = <MockFinishedCard status="finished" parts={rows} practiceHref="/practice?mock=1" />;
+    content = <InlineNotice title="Mock finished">Opening the demo mock result…</InlineNotice>;
   } else {
     content = (
       <MockSendingCard

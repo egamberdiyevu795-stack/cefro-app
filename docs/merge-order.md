@@ -758,3 +758,11 @@ Cut from `claude/full-mock`, so it comes **after it**, merge commit, no squash. 
 (what lex.uz officially says about the multilevel exam, what is only believed, what is unknown, and the
 recommendation for the mock result page) and this entry. No app code, no migration, no environment variable.
 **Partial:** the uzbmb.uz documents could not be read from the sandbox (listed in its section 4).
+
+## After `claude/scale-check`: `claude/mock-result` (mock result and History for mocks, no migration)
+
+Cut from `claude/scale-check`, so it comes **after it** (and so after `claude/full-mock`), merge commit, no squash. Step 4 of docs/v1-plan.md.
+No migration, no environment variable, no Gemini call. New: `domain/speaking/mock-level.ts` (the level rule), `features/mock-result/*`,
+`server/sessions/mock-result.ts`, `mock-history.ts`, `server/demo/demo-mock.ts`, `GET /api/mock-exams/[mockId]/result`. Changed: the `/practice/mock/[id]`
+page (was "Mock finished"; `MockFinishedCard` removed), the runner's mock-mode end, History (view model, rows, `?part=mock`), `HistoryAttempt.sessionId`
+(optional). Reads `teacher_ratings`, never writes. Shared code touched: `history/view-model.ts`, `history/sections.tsx`, `api-client.ts`, `attempt-views.ts`.

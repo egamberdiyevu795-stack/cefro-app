@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import { listSpeakingTasks } from "@/content/speaking";
 import { examPartOf } from "@/domain/speaking/exam-part";
-import type { HistoryAttempt } from "@/domain/speaking/history";
+import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
 import { HistoryContent } from "./sections";
 import { buildHistoryView, formatDate, levelOfBand, PAGE_SIZE, parseHistoryQuery, toHistoryRows, type HistoryView } from "./view-model";
@@ -231,5 +231,89 @@ describe("with the 7 real Part 2 tasks", () => {
     for (const t of tasks) expect(html).toContain(t.title);
     expect((html.match(BLACK) ?? []).length).toBe(0);
     expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
+  });
+});
+
+describe("mock exams in History", () => {
+  /** A part of a mock: a saved result with its band set (the list reads only the band, its label and why a band is 0). */
+  const part = (mockId: string, p: HistoryAttempt["part"], band: number | null, over: Partial<HistoryAttempt> = {}) => {
+    const base = result("A2-b1-all-three");
+    return attempt({
+      day: 10,
+      part: p,
+      sessionId: mockId,
+      title: `Task ${p}`,
+      result: band === null ? null : { ...base, scoring: { ...base.scoring, band, label: ["Below B1", "Lower B1", "Higher B1", "Lower B2", "Higher B2", "Above B2"][band] } },
+      ...(band === null ? { status: "failed" as const, failureCode: "evaluation_failed" as const } : {}),
+      ...over,
+    });
+  };
+  const mock = (id: string, over: Partial<HistoryMock> = {}): HistoryMock => ({ id, status: "finished", createdAt: new Date(Date.UTC(2026, 10, 11, 9)).toISOString(), ...over });
+  const withMocks = (list: HistoryAttempt[], mocks: HistoryMock[], query: Record<string, string> = {}) => buildHistoryView(newestFirst(list), parseHistoryQuery(query), mocks);
+  const finished = (id: string) => [part(id, "1.1", 3), part(id, "1.2", 3), part(id, "2", 3), part(id, "3", 4)];
+
+  it("is one row, 'Mock exam · B2 · 11.11.26', that opens the mock result; its parts are not listed again under All", () => {
+    const loose = attempt({ day: 3 });
+    const v = withMocks([...finished("m1"), loose], [mock("m1")]);
+    expect(v.rows.map((r) => r.title)).toEqual(["Mock exam · B2 · 11.11.26", loose.title]);
+    expect(v.rows[0]).toMatchObject({ href: "/practice/mock/m1", mock: { status: "finished", caption: "Speaking only · 4 parts" } });
+    expect(v.rows[1].href).toBe(`/result/${loose.id}`);
+    expect(v.matching).toBe(2);
+    expect(v.total).toBe(6);
+  });
+
+  it("has the pills All · Mock exams · 1.1 · 1.2 · 2 · 3, 'Mock exams' only once there is a mock", () => {
+    const v = withMocks(finished("m1"), [mock("m1")]);
+    expect(v.filters.map((f) => f.label)).toEqual(["All", "Mock exams", "Part 1.1", "Part 1.2", "Part 2", "Part 3"]);
+    expect(v.filters[1].href).toBe("/history?part=mock");
+    expect(withMocks([attempt({ day: 1 })], []).filters.map((f) => f.label)).toEqual(["All", "Part 2"]);
+  });
+
+  it("'Mock exams' lists the mocks only; a part lists every attempt of it, the mock's part included and marked", () => {
+    const loose = attempt({ day: 3 });
+    const list = [...finished("m1"), loose];
+    const mocksOnly = withMocks(list, [mock("m1")], { part: "mock" });
+    expect(mocksOnly.filter).toBe("mocks");
+    expect(mocksOnly.rows.map((r) => r.title)).toEqual(["Mock exam · B2 · 11.11.26"]);
+    const two = withMocks(list, [mock("m1")], { part: "2" });
+    expect(two.rows.map((r) => [r.href.startsWith("/result/"), r.partLabel])).toEqual([[true, "Part 2 · Mock exam"], [true, "Part 2"]]);
+    expect(two.chart).toBeNull(); // two scored attempts of the part: below the chart's threshold
+    // "Mock exams" with no mock is just All (an old link).
+    expect(withMocks([loose], [], { part: "mock" }).filter).toBe("all");
+  });
+
+  it("a mock that was not finished says 'Not finished' and lists the parts it has", () => {
+    const v = withMocks([part("m1", "1.1", 3), part("m1", "2", 3)], [mock("m1", { status: "not_finished" })]);
+    expect(v.rows[0].title).toBe("Mock exam · Not finished · 11.11.26");
+    expect(v.rows[0].mock?.caption).toBe("Finished: Part 1.1, Part 2");
+    expect(withMocks([], [mock("m2", { status: "not_finished" })]).rows[0].mock?.caption).toBe("No part finished");
+    expect(withMocks([], [mock("m3", { status: "in_progress" })]).rows[0].title).toBe("Mock exam · In progress · 11.11.26");
+  });
+
+  it("says 'Scoring…' while a part is still scored and 'Estimate not ready yet' when a needed part has no band, never a guess", () => {
+    const scoringPart = part("m1", "3", 4, { status: "evaluating", result: null });
+    expect(withMocks([part("m1", "1.2", 3), part("m1", "2", 3), scoringPart], [mock("m1")]).rows[0].title).toBe("Mock exam · Scoring… · 11.11.26");
+    const noBand = part("m1", "3", null);
+    expect(withMocks([part("m1", "1.2", 3), part("m1", "2", 3), noBand], [mock("m1")]).rows[0].title).toBe("Mock exam · Estimate not ready yet · 11.11.26");
+    // Too short to rate is band 0 but not a rating.
+    const base = result("A2-b1-all-three");
+    const tooShort = part("m1", "3", 0, { result: { ...base, scoring: { ...base.scoring, band: 0, zero_reason: "too_short" } } });
+    expect(withMocks([part("m1", "1.2", 3), part("m1", "2", 3), tooShort], [mock("m1")]).rows[0].title).toContain("Estimate not ready yet");
+  });
+
+  it("uses the same rule as the mock result page, newest first among other rows", () => {
+    const older = attempt({ day: 1 });
+    const v = withMocks([...finished("m1"), ...[part("m2", "1.2", 1), part("m2", "2", 1), part("m2", "3", 1)], older], [mock("m2", { createdAt: new Date(Date.UTC(2026, 10, 12, 9)).toISOString() }), mock("m1")]);
+    expect(v.rows.map((r) => r.title)).toEqual(["Mock exam · B1 · 12.11.26", "Mock exam · B2 · 11.11.26", older.title]);
+  });
+
+  it("renders a mock row with one black button at most (none), no text under 11 px, and no score or Passed / Failed", () => {
+    const html = render(withMocks([...finished("m1"), attempt({ day: 1 })], [mock("m1"), mock("m2", { status: "not_finished", createdAt: new Date(Date.UTC(2026, 10, 2)).toISOString() })]));
+    expect(html).toContain("Mock exam · B2 · 11.11.26");
+    expect(html).toContain("Mock exam · Not finished · 02.11.26");
+    expect(html).toContain("Mock exams");
+    expect((html.match(BLACK) ?? []).length).toBe(0);
+    expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
+    expect(html).not.toMatch(/\bpassed\b|\bfailed\b|certificate/i);
   });
 });

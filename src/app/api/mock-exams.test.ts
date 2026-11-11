@@ -372,7 +372,7 @@ describe("cross-user access", () => {
       expect(read.status, who).toBe(404);
       expect((await json(read)).error.code).toBe("mock_not_found");
       expect((await finish(mock.id)).status, who).toBe(404);
-      await expect(MockFinishedPage({ params: Promise.resolve({ sessionId: mock.id }) } as never)).rejects.toThrow();
+      await expect(MockFinishedPage({ params: Promise.resolve({ sessionId: mock.id }), searchParams: Promise.resolve({}) } as never)).rejects.toThrow();
       // Borrowing the mock's id in an upload does not put the recording into it: Part 1.1 is not live for them, so it is refused...
       const borrowed = await upload("1.1", mock.id);
       expect(borrowed.response.status, who).toBe(404);
@@ -395,21 +395,24 @@ describe("cross-user access", () => {
     expect((await readMock("11111111-1111-4111-8111-111111111111")).status).toBe(404);
   });
 
-  it("the Mock finished page opens for its owner with a link to each part's own result", async () => {
+  it("the mock result page opens for its owner with a row linking to each part's own result", async () => {
     as(browsers.alice);
     const { mock } = await startMock();
     const ids: string[] = [];
     for (const part of ["1.1", "1.2", "2", "3"] as const) ids.push((await upload(part, mock.id)).body.attempt.id);
     await finish(mock.id);
-    const page = (await MockFinishedPage({ params: Promise.resolve({ sessionId: mock.id }) } as never)) as React.ReactElement<{ children: React.ReactElement<{ status: string; parts: { part: string; href: string | null }[] }> }>;
-    expect(page.props.children.props.status).toBe("finished");
-    expect(page.props.children.props.parts.map((p) => [p.part, p.href])).toEqual(["1.1", "1.2", "2", "3"].map((part, i) => [part, `/result/${ids[i]}`]));
+    const page = (await MockFinishedPage({ params: Promise.resolve({ sessionId: mock.id }), searchParams: Promise.resolve({}) } as never)) as React.ReactElement<{
+      children: React.ReactElement<{ initial: { status: string; parts: { part: string; detailHref: string | null }[] } }>;
+    }>;
+    const { initial } = page.props.children.props;
+    expect(initial.status).toBe("finished");
+    expect(initial.parts.map((p) => [p.part, p.detailHref])).toEqual(["1.1", "1.2", "2", "3"].map((part, i) => [part, `/result/${ids[i]}`]));
   });
 
-  it("a mock in progress sends the finished page back to the runner", async () => {
+  it("a mock in progress sends the result page back to the runner", async () => {
     as(browsers.alice);
     const { mock } = await startMock();
-    await expect(MockFinishedPage({ params: Promise.resolve({ sessionId: mock.id }) } as never)).rejects.toThrow(/NEXT_REDIRECT/);
+    await expect(MockFinishedPage({ params: Promise.resolve({ sessionId: mock.id }), searchParams: Promise.resolve({}) } as never)).rejects.toThrow(/NEXT_REDIRECT/);
   });
 });
 

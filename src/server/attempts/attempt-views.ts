@@ -105,6 +105,7 @@ export function toHistoryAttempt(
     failureCode: attempt.status === "failed" ? toFailureCode(attempt.failureCode) : null,
     recordingDurationMs: row.recordingDurationMs ?? 0,
     previousAttemptId: attempt.previousAttemptId,
+    sessionId: attempt.sessionId ?? null,
     result: parsed && (parsed.kind === "multilevel" || parsed.kind === "multilevel_q8") ? parsed : null,
   };
 }

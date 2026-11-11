@@ -1,6 +1,5 @@
-import Link from "next/link";
-import { Card, CardHeader, Icon, PillAction, PillButton, cx, styles } from "@/components/ds";
-import { MOCK_PARTS, mockProgressLabel, type MockStatus } from "@/domain/speaking/full-mock";
+import { Card, CardHeader, Icon, PillAction, PillButton, cx } from "@/components/ds";
+import { MOCK_PARTS, mockProgressLabel } from "@/domain/speaking/full-mock";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
 import { PART_NAMES } from "@/features/dashboard/progress";
 import { MicCheck } from "@/features/speaking-practice/components/MicCheck";
@@ -9,7 +8,7 @@ import type { UploadState } from "./upload-queue";
 /*
  * The full mock's own screens on the design system (docs/design-system.md, "Full mock exam"). The parts themselves are the
  * single-part screens, unchanged. One black button per screen: "Start mock" / "Continue mock" (start), none while a part
- * runs (the part's own), "Send again" (a part that did not reach the server), "Back to Practice" (finished).
+ * runs (the part's own), "Send again" (a part that did not reach the server). The finished mock is the mock result page (features/mock-result).
  */
 
 /** The thin line above a running part: "Part 2 of 4", with four segments. Not interactive. */
@@ -174,63 +173,6 @@ export function MockSendingCard({
           </PillButton>
         </div>
       )}
-    </Card>
-  );
-}
-
-export interface FinishedPartRow {
-  part: ExamPartId;
-  /** The part's own result page; null when the part was not done. */
-  href: string | null;
-  title: string | null;
-}
-
-/**
- * "Mock finished": no overall result yet (that is the next step of the plan), just each part's own result page. A mock that
- * ran out of its 24 hours says "Mock not finished"; the parts it has keep their results.
- */
-export function MockFinishedCard({ status, parts, practiceHref }: { status: Exclude<MockStatus, "in_progress">; parts: readonly FinishedPartRow[]; practiceHref: string }) {
-  const finished = status === "finished";
-  return (
-    <Card aria-labelledby="mock-finished-title" className="mx-auto w-full max-w-2xl" data-testid="mock-finished" data-status={status}>
-      <p className="flex items-center gap-2 text-label font-semibold text-fg">
-        <Icon name="check" size={16} className="text-fg-subtle" />
-        {finished ? "All four parts sent" : "Closed after 24 hours"}
-      </p>
-      <h1 id="mock-finished-title" className="mt-3 text-stat font-light tracking-[-0.03em] text-fg">
-        {finished ? "Mock finished" : "Mock not finished"}
-      </h1>
-      <p className="mt-3 text-body text-fg">
-        {finished
-          ? "Each part is scored on its own. Open a part to see its result."
-          : "This mock took longer than 24 hours, so it is closed. The parts you finished keep their results."}
-      </p>
-      <ul className="mt-5 divide-y divide-line" data-testid="mock-results">
-        {parts.map(({ part, href, title }) => (
-          <li key={part}>
-            {href ? (
-              <Link href={href} className={cx("flex min-h-14 items-center gap-3 py-2.5 hover:text-fg", styles.FOCUS_RING)} data-testid="mock-result-link" data-part={part}>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-body font-semibold text-fg">{examPartLabel(part)} · {PART_NAMES[part]}</span>
-                  {title && <span className="block text-caption text-fg-muted">{title}</span>}
-                </span>
-                <span className="shrink-0 text-label font-medium text-fg">See result</span>
-                <Icon name="chevronDown" size={16} className="-rotate-90 text-fg-subtle" />
-              </Link>
-            ) : (
-              <div className="flex min-h-14 items-center gap-3 py-2.5" data-part={part}>
-                <span className="min-w-0 flex-1 text-body font-semibold text-fg">{examPartLabel(part)} · {PART_NAMES[part]}</span>
-                <span className="shrink-0 text-label text-fg-muted">Not done</span>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-      <div className="mt-5">
-        <PillButton href={practiceHref} size="lg" className="w-full sm:w-auto">
-          Back to Practice
-        </PillButton>
-      </div>
     </Card>
   );
 }

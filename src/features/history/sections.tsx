@@ -53,10 +53,12 @@ export function PartFilter({ options }: { options: readonly FilterOption[] }) {
 }
 
 function AttemptsCard({ view, className }: { view: HistoryView; className?: string }) {
-  const count = `${view.matching} ${view.matching === 1 ? "attempt" : "attempts"}`;
+  const mocksOnly = view.filter === "mocks";
+  const noun = mocksOnly ? (view.matching === 1 ? "mock exam" : "mock exams") : view.matching === 1 ? "attempt" : "attempts";
+  const count = `${view.matching} ${noun}`;
   return (
     <Card aria-labelledby="history-title" className={className}>
-      <CardHeader id="history-title" title="Your attempts" action={<span className="text-label text-fg-muted">{count}</span>} />
+      <CardHeader id="history-title" title={mocksOnly ? "Your mock exams" : "Your attempts"} action={<span className="text-label text-fg-muted">{count}</span>} />
       <ul className="-my-1">
         {view.rows.map((row, i) => (
           <AttemptRow key={row.id} row={row} tone={((i % 4) + 1) as 1 | 2 | 3 | 4} />
@@ -83,6 +85,7 @@ const ROW_COLUMNS = "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1.6fr
  * right with its band under it. Wider: the date gets its own column.
  */
 export function AttemptRow({ row, tone, menu }: { row: HistoryRow; tone: 1 | 2 | 3 | 4; menu?: React.ReactNode }) {
+  if (row.mock) return <MockHistoryRow row={row} mock={row.mock} tone={tone} menu={menu} />;
   return (
     <li className="flex items-center gap-1">
       <Link
@@ -104,6 +107,31 @@ export function AttemptRow({ row, tone, menu }: { row: HistoryRow; tone: 1 | 2 |
           <Outcome row={row} />
           <span className="hidden text-label text-fg-muted sm:block sm:text-right">{row.date}</span>
         </span>
+      </Link>
+      {menu}
+    </li>
+  );
+}
+
+/**
+ * A full mock exam: one row, "Mock exam · B2 · 11.11.26", that opens the mock result. The line under it names what the mock
+ * is ("Speaking only · 4 parts") or, for one that was not finished, the parts it has ("Finished: Part 1.1, Part 2").
+ */
+function MockHistoryRow({ row, mock, tone, menu }: { row: HistoryRow; mock: NonNullable<HistoryRow["mock"]>; tone: 1 | 2 | 3 | 4; menu?: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-1" data-testid="history-mock" data-status={mock.status}>
+      <Link
+        href={row.href}
+        className={cx("-mx-2 flex min-w-0 flex-1 items-center gap-3 rounded-tile px-2 py-2.5 transition-colors hover:bg-well", styles.FOCUS_RING)}
+      >
+        <Thumb tone={tone} size={30}>
+          <Icon name="mic" size={14} />
+        </Thumb>
+        <span className="min-w-0 flex-1">
+          <span className="block text-body font-semibold text-fg">{row.title}</span>
+          <span className="block text-caption text-fg-muted">{mock.caption}</span>
+        </span>
+        <Icon name="chevronDown" size={16} className="-rotate-90 shrink-0 text-fg-subtle" />
       </Link>
       {menu}
     </li>

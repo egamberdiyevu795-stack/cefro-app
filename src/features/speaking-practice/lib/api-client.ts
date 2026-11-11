@@ -1,4 +1,5 @@
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
+import type { MockResultSource } from "@/features/mock-result/part-source";
 
 /**
  * Typed browser-side client for the speaking API. Every failure becomes an
@@ -182,4 +183,9 @@ export function startMockExam(): Promise<{ mock: MockExamView; resumed: boolean 
 /** Mark the mock finished once all four parts were sent. Safe to repeat. */
 export function finishMockExam(mockId: string): Promise<{ mock: MockExamView }> {
   return request(`/api/mock-exams/${encodeURIComponent(mockId)}/finish`, { method: "POST", retries: 3 });
+}
+
+/** The mock result page's data (the four parts, each "scoring" until it has a band). Owner only. */
+export function fetchMockResult(mockId: string): Promise<{ result: MockResultSource }> {
+  return request(`/api/mock-exams/${encodeURIComponent(mockId)}/result`, { retries: 1 });
 }

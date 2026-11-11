@@ -4,7 +4,7 @@ import { shortPartIntros } from "./short-intro";
 /*
  * The full mock exam in MOCK MODE at 390 px (docs/v1-plan.md, step 2): /practice card → "Before you start" → Parts 1.1, 1.2, 2,
  * 3 back to back with their real spoken-intro flow (intros shortened, as in the other specs), a thin "Part N of 4" line, no
- * result in between → "Mock finished" with a link to each part's demo result. Nothing is sent: no /api call at all.
+ * result in between → the demo mock result, a row for each part linking to its demo result. Nothing is sent: no /api call at all.
  * Every screen: at most one black button, no text under 11 px, AA contrast, no horizontal scroll. Then a laptop-width pass.
  */
 const BLACK = ":is(a, button).bg-primary.text-on-primary";
@@ -60,7 +60,7 @@ async function audit(page: Page, blacks: number) {
   expect(report.low).toEqual([]);
 }
 
-test("the whole mock in mock mode: four parts back to back, progress line, no result between, Mock finished", async ({ page }) => {
+test("the whole mock in mock mode: four parts back to back, progress line, no result between, then the mock result", async ({ page }) => {
   const api: string[] = [];
   page.on("request", (r) => {
     const url = new URL(r.url());
@@ -121,16 +121,17 @@ test("the whole mock in mock mode: four parts back to back, progress line, no re
   await finish.click();
   await page.getByRole("button", { name: "Finish anyway" }).click();
 
-  // Mock finished: no scoring screen in between; one link per part, one black button.
-  await expect(page.getByRole("heading", { name: "Mock finished" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByTestId("mock-result-link")).toHaveCount(4);
+  // The end opens the demo mock result (demo answers): no scoring screen in between, one row per part, one black button.
+  await expect(page).toHaveURL(/\/practice\/mock\/demo-mock\?mock=1/, { timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Your estimated speaking level" })).toBeVisible();
+  await expect(page.getByTestId("part-details")).toHaveCount(4);
   await audit(page, 1);
-  const hrefs = await page.getByTestId("mock-result-link").evaluateAll((els) => els.map((el) => el.getAttribute("href")));
+  const hrefs = await page.getByTestId("part-details").evaluateAll((els) => els.map((el) => el.getAttribute("href")));
   expect(hrefs.every((h) => h?.includes("mock=1"))).toBe(true);
   expect(hrefs[3]).toMatch(/^\/result\/part3\?demo=p3\..*F1F2A1A2/);
 
-  // Each link opens that part's own (demo) result.
-  await page.getByTestId("mock-result-link").nth(2).click();
+  // Each row opens that part's own (demo) result.
+  await page.getByTestId("part-details").nth(2).click();
   await expect(page.getByRole("heading", { name: /^Part 2 · / })).toBeVisible({ timeout: 20_000 });
 
   expect(api).toEqual([]);

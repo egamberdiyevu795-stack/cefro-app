@@ -103,7 +103,7 @@ export async function createAttempt(input: CreateAttemptInput, options: { isLive
   if (mockSession) await assertMockAcceptsPart(mockSession, task.id);
 
   // Cost protection comes before anything is stored or any provider is called.
-  await assertCanSubmitAttempt(input.userId);
+  await assertCanSubmitAttempt(input.userId, Date.now(), { fullMock: mockSession !== null });
 
   // Retry: the previous attempt must be the user's own, for the same task, and evaluated.
   let retryFocus: RetryFocusItem[] | null = null;

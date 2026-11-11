@@ -78,6 +78,24 @@ describe("submission limits", () => {
     expect(await code(() => assertCanSubmitAttempt(U, NOW + 20 * MIN))).toBeNull();
   });
 
+  it("lets a full mock have up to 4 answers processing at once, while ordinary practice keeps the configured 2", async () => {
+    const processing = () => seedAttempt(db, { userId: U, attemptNumber: n++, status: "evaluating", processingStartedAt: ago(10_000), createdAt: ago(60_000) });
+    await processing();
+    await processing();
+    // Two processing: ordinary practice is at its limit, a mock upload is not.
+    expect(await code(() => assertCanSubmitAttempt(U, NOW))).toMatchObject({ code: "too_many_in_progress" });
+    expect(await code(() => assertCanSubmitAttempt(U, NOW, { fullMock: true }))).toBeNull();
+    await processing();
+    expect(await code(() => assertCanSubmitAttempt(U, NOW, { fullMock: true }))).toBeNull();
+    // Four processing: the mock limit too.
+    await processing();
+    expect(await code(() => assertCanSubmitAttempt(U, NOW, { fullMock: true }))).toMatchObject({ code: "too_many_in_progress", status: 429 });
+    // Another user is unaffected, and the other limits still apply to mock uploads (hourly limit is 4 here).
+    expect(await code(() => assertCanSubmitAttempt(V, NOW, { fullMock: true }))).toBeNull();
+    for (let i = 0; i < 4; i++) await done(V, (i + 1) * 10 * MIN);
+    expect(await code(() => assertCanSubmitAttempt(V, NOW, { fullMock: true }))).toMatchObject({ code: "hourly_limit_reached" });
+  });
+
   it("has a global ceiling that does not depend on who is asking", async () => {
     // Ten different anonymous identities, each well within their own limits.
     for (let i = 0; i < 10; i++) {

@@ -253,3 +253,4 @@ Before inviting any pilot tester (`docs/consent-design.md`, section 2b):
    copy we control; the provider's own abuse-monitoring copy (55 days) we can't delete.
 6. **Before sending the parent message:** native check of the Uzbek and Russian, the lawyer's answer on data location
    (lawyer question 1, still open), and steps 1 to 3 done.
+7. **Before the pilot dry run,** test the real full mock on a phone (iOS Safari): microphone permission must survive all four parts and the spoken intros must play.

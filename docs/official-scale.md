@@ -141,8 +141,8 @@ force on 01.03.2022"); Resolution No. 73 (Annex 2, point 1) repealed it. It desc
 3. **Experts' marks are averaged, then converted with a table** ("Ekspertlar tomonidan qo‘yilgan ballarning o‘rta
    arifmetigi quyidagi shkala bo‘yicha yakuniy bahoga aylantiriladi"). The table printed there runs from raw
    **0–36.0 → 0–75** (e.g. 20.6–21.0 → 51, 28.1–29.0 → 65, 36 → 75). Raw 36 is writing's maximum (task 1 = 12,
-   task 2 = 24), so this table fits **writing** and the pre-2026 speaking marking; it does not fit the new speaking
-   rubric below (maximum 21).
+   task 2 = 24), so this table fits **writing**; it does not fit the new speaking rubric below (maximum 21), and
+   applying it to speaking would be our guess.
 4. **The level comes from the average of the four skills:** "testning 4 bo‘limi bo‘yicha o‘rtacha ball hisoblanadi va
    yakuniy natijalar quyidagi shkala bo‘yicha e’lon qilinadi" ("the average score of the 4 sections is calculated and
    the final results are announced on this scale"):

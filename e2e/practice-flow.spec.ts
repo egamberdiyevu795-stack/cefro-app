@@ -444,7 +444,8 @@ for (const [name, url] of [
       await scriptsHeld;
       await route.continue();
     });
-    await page.goto(url, { waitUntil: "domcontentloaded" });
+    // "commit": return when the response starts, not when the held scripts have loaded ("domcontentloaded" waits for them).
+    await page.goto(url, { waitUntil: "commit" });
 
     // Before the scripts run, a tap did nothing at all (no microphone prompt, no sign): now the button says so.
     const start = page.getByRole("button", { name: "Start preparation" });

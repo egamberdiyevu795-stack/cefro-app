@@ -215,7 +215,8 @@ test("slow connection: the date picker and Save wait until the page is ready, an
   page.on("request", (request) => {
     if (request.isNavigationRequest()) navigations.push(request.url());
   });
-  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  // "commit": return when the response starts, not when the held scripts have loaded ("domcontentloaded" waits for them).
+  await page.goto("/dashboard", { waitUntil: "commit" });
 
   // Before the scripts run: shown, but nothing can be picked or sent (no plain form submit, no value React misses).
   const picker = page.getByLabel("When is your exam?");

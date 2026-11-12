@@ -116,8 +116,8 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   await expect(page.getByTestId("join-code")).toHaveText("DEMO42");
   await expect(page.getByTestId("student-row")).toHaveCount(6);
   await audit(page, 1);
-  await page.getByTestId("student-row").filter({ hasText: "Jasur" }).click();
-  await expect(page.getByRole("heading", { name: "Jasur" })).toBeVisible();
+  await page.getByTestId("student-row").filter({ hasText: "Madina" }).click();
+  await expect(page.getByRole("heading", { name: "Madina" })).toBeVisible();
   await audit(page, 1);
   await page.getByRole("link", { name: "Open latest attempt" }).click();
   await expect(page.getByTestId("app-verdict")).toHaveText(/^CEFRO: Part 2 · Band \d · /);

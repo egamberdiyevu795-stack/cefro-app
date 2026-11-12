@@ -17,7 +17,7 @@ carries the pilot**. When credit arrives, the AI side fills in later (`docs/v1-p
 | # | What | Who | Where |
 | --- | --- | --- | --- |
 | 1 | The code is merged into `main` and deployed to Production. **You have not decided this yet.** The exact order is in `docs/merge-order.md`, section "Pilot-ready: the exact merge order". | You | `docs/merge-order.md` |
-| 2 | The open items are closed: the parent message checked by a native speaker (and its "Teachers see nothing" line fixed), the lawyer's answers, the Piper credit, the iPhone test. | You, with a native speaker and a lawyer | `docs/launch-checklist.md`, section 12 |
+| 2 | The open items are closed: the parent message checked by a native speaker (the new teacher sentence and the "only your child and me" line), the lawyer's answers, the iPhone test (the Piper credit is now on the Credits page). | You, with a native speaker and a lawyer | `docs/launch-checklist.md`, section 12 |
 | 3 | You hold a written "yes" from every parent (under 18) or from the student (18+). | You | `docs/pilot-parent-message.md` |
 | 4 | Nobody in the pilot is under 14. | You | `docs/consent-design.md`, section 0 |
 | 5 | You did the 30-minute dry run with a friend and it passed. | You and a friend | `docs/pilot-dry-run.md` |
@@ -177,7 +177,7 @@ node scripts/set-consent.mjs student@example.com granted --teacher-sharing
 
    `--teacher-sharing` is what lets Azamat see their results and listen to recordings. Leave it out and the student can
    practise but **cannot** join a class. Expected: a line saying consent was recorded. It stores the date and which text
-   they agreed to (`pilot-parent-message-2026-11-08`).
+   they agreed to (`pilot-parent-message-2026-11-12`).
 4. The student's **Account** page now says "Consent recorded on …".
 
 To lock someone again at once (data is kept): 
@@ -196,9 +196,10 @@ node scripts/delete-account.mjs student@example.com
 node scripts/delete-account.mjs student@example.com --yes
 ```
 
-**Stop and read:** `docs/pilot-parent-message.md` currently tells parents **"Teachers see nothing"** (in all three
-languages), but in this pilot a teacher listens. Do not send that message, or record `--teacher-sharing` on it, until you
-have decided what to do (`docs/launch-checklist.md`, section 12, item 1).
+**Before you send the parent message:** its teacher sentence was rewritten on 2026-11-12 (version
+`pilot-parent-message-2026-11-12`). The Uzbek and Russian versions of that sentence are marked **[NEEDS NATIVE CHECK]**, and "Who
+sees it: only your child and me" just above it now reads oddly next to it. Parents who agreed to the older version (no teacher) need the
+new message before you record `--teacher-sharing` for them (`docs/launch-checklist.md`, section 12, item 1).
 
 ---
 

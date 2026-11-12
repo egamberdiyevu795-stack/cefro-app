@@ -442,8 +442,8 @@ describe("scripts/set-consent.mjs (the owner's script)", () => {
     ]).run();
     expect(await row(fileDb, "alice@example.com")).toEqual({ s: null, at: null, t: false, v: null });
 
-    expect(run("Alice@Example.com", "granted").out).toMatch(/consent granted \(pilot-parent-message-2026-11-08\), recording unlocked; teacher sharing off/);
-    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: false, v: "pilot-parent-message-2026-11-08" });
+    expect(run("Alice@Example.com", "granted").out).toMatch(/consent granted \(pilot-parent-message-2026-11-12\), recording unlocked; teacher sharing off/);
+    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: false, v: "pilot-parent-message-2026-11-12" });
     expect(run("alice@example.com", "granted", "--notice", "pilot-parent-message-2026-12-01").code).toBe(0);
     expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", v: "pilot-parent-message-2026-12-01" });
     expect(run("alice@example.com", "granted", "--teacher-sharing").out).toMatch(/teacher sharing on/);
@@ -451,7 +451,7 @@ describe("scripts/set-consent.mjs (the owner's script)", () => {
     expect(run("alice@example.com", "withdrawn").out).toMatch(/node scripts\/delete-account\.mjs alice@example\.com/);
     const withdrawn = await row(fileDb, "alice@example.com");
     // Withdrawn keeps the version that was agreed (a record), and tells the owner how to delete the account.
-    expect(withdrawn).toMatchObject({ s: "withdrawn", t: false, v: "pilot-parent-message-2026-11-08" });
+    expect(withdrawn).toMatchObject({ s: "withdrawn", t: false, v: "pilot-parent-message-2026-11-12" });
     expect(Date.parse(withdrawn.at!)).toBeGreaterThan(Date.now() - 60_000);
     // Bob untouched.
     expect(await row(fileDb, "bob@example.com")).toEqual({ s: null, at: null, t: false, v: null });

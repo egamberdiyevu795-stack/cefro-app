@@ -74,7 +74,7 @@ Whether this is enough is lawyer question 2.
 - **How it is recorded (built):** owner scripts, run by hand from Asadbek's own machine (they refuse to run on Vercel):
   - `node scripts/set-consent.mjs <email> granted [--teacher-sharing] [--notice <version>]` unlocks recording. It
     stores the date and **which text was agreed** (`consent_notice_version`, default the current parent message,
-    `pilot-parent-message-2026-11-08`). Teacher sharing stays off unless `--teacher-sharing` (the Teacher view is off
+    `pilot-parent-message-2026-11-12`). Teacher sharing stays off unless `--teacher-sharing` (the Teacher view is off
     in the pilot anyway).
   - `node scripts/set-consent.mjs <email> withdrawn` locks recording and teacher sharing again **at once**. The data is
     kept, so a mistaken withdrawal can be undone.

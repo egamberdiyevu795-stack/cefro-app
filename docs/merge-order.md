@@ -107,7 +107,7 @@ Older notes in this file that say "merge `project-thread-krzvuk`" or "`p2-read-q
 - **Other `project-thread-*` branches** are in the chain: `mz2ndw` (22), `e59hcb` (25), `8yy31h` (26).
 
 To re-check after `main` moves, for every branch: `git merge-base --is-ancestor origin/claude/<branch> origin/claude/pilot-ready && echo in || echo NOT IN`.
-Only the three above should print `NOT IN`.
+Only the three above and `full-mock` should print `NOT IN` (`full-mock` because its last commit is in `pilot-ready` as a cherry-pick with a different hash; the same patch, so it needs no merge).
 
 ### Then, in this order (owner's decision each time)
 

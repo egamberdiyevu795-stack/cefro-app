@@ -1,13 +1,16 @@
 # Pilot: message to a parent
 
-**Draft, version `pilot-parent-message-2026-11-12b`. NOT SENT.** For the pilot only (about 10 known testers, nobody
+**Draft, version `pilot-parent-message-2026-11-12c`. NOT SENT.** For the pilot only (about 10 known testers, nobody
 under 14). Asadbek sends it by message (or prints it), fills in `[...]`, and keeps the parent's reply. Then he records
 consent with `node scripts/set-consent.mjs <email> granted` (`docs/consent-design.md`, section 2b), which stores this
 version. If the text changes, change the version here and in `scripts/set-consent.mjs` (`CURRENT_NOTICE`).
 
-**Change 2026-11-12 (version `pilot-parent-message-2026-11-12b`, was `…-2026-11-08`):** owner decision: the sentence "Teachers see nothing" is
-**deleted** in all three languages and **not replaced**. The message now says nothing about teachers at all. Anyone who agreed to an older
-version did not agree to teacher listening either way: the message must be settled (see below) before `--teacher-sharing` is recorded.
+**Changes 2026-11-12 (owner decisions; version now `pilot-parent-message-2026-11-12c`, was `…-2026-11-08`):** two sentences are
+**deleted** in all three languages and **not replaced**: "Teachers see nothing" and "Who sees it: only your child and me." (Uzbek
+"Kim ko'radi: faqat farzandingiz va men.", Russian "Кто видит: только ваш ребёнок и я."). The message now says nothing about who sees or
+hears the recordings: it still says what is kept, that recordings go to the AI service for scoring, where the data is stored, and the
+30-day deletion. Anyone who agreed to an older version agreed to a different text: settle the message (see below) before recording
+consent on it, and before `--teacher-sharing` for anyone.
 
 Before sending:
 
@@ -17,10 +20,8 @@ Before sending:
   set (`docs/launch-checklist.md`, section 11). Don't send the message before that is live.
 - The 30 days are for **CEFRO's own copy**. The AI service may keep request data for a while under its own terms (for
   Gemini, its abuse-monitoring page says 55 days); the message says so and promises nothing about that copy.
-- **The message says nothing about teachers** (the "Teachers see nothing" sentence was deleted, not replaced). But the pilot's teacher listens
-  to recordings. **"Who sees it: only your child and me" still stands** and is now untrue once a child joins a class. It does not say
-  "teachers see nothing", so it was not removed, but **decide whether to reword it** and whether the lawyer must see the teacher-listening
-  question first (`docs/lawyer-questions.md`, question 13).
+- **The message no longer says who sees or hears the recordings** (both sentences above deleted, not replaced). The pilot's teacher
+  listens to recordings; whether the message must say so is lawyer question 13 (`docs/lawyer-questions.md`).
 - No price and no "free" claim (owner's rule until the pricing is decided): the word was removed from all three texts.
 
 ---
@@ -38,8 +39,7 @@ aytadi.
 **Nima saqlanadi:** ovozli yozuvlar, ularning matni (transkript), natijalar (ball va izohlar) va kirish uchun
 elektron pochta manzili.
 
-**Kim ko'radi:** faqat farzandingiz va men. Yozuvlar baholash uchun sun'iy intellekt xizmatiga ([provayder])
-yuboriladi. Ma'lumotlar O'zbekistondan tashqaridagi serverlarda saqlanadi [CHECK].
+Yozuvlar baholash uchun sun'iy intellekt xizmatiga ([provayder]) yuboriladi. Ma'lumotlar O'zbekistondan tashqaridagi serverlarda saqlanadi [CHECK].
 
 **Qancha saqlanadi:** bizdagi ovozli yozuvlar baholangandan keyin 30 kun o'tib o'chiriladi [CHECK]. Matn va natijalar
 akkaunt o'chirilguncha saqlanadi. Sun'iy intellekt xizmati so'rov ma'lumotlarini o'z qoidalariga ko'ra cheklangan
@@ -69,8 +69,7 @@ Asadbek, [telefon yoki Telegram]
 **Что сохраняется:** голосовые записи, их текст (расшифровка), результаты (баллы и комментарии) и адрес электронной
 почты для входа.
 
-**Кто видит:** только ваш ребёнок и я. Записи отправляются на оценку в сервис искусственного интеллекта
-([провайдер]). Данные хранятся на серверах за пределами Узбекистана [CHECK].
+Записи отправляются на оценку в сервис искусственного интеллекта ([провайдер]). Данные хранятся на серверах за пределами Узбекистана [CHECK].
 
 **Сколько хранится:** наша копия голосовых записей удаляется через 30 дней после оценки [CHECK]. Текст и результаты
 хранятся, пока аккаунт не удалён. Сервис искусственного интеллекта может по своим правилам хранить данные запросов
@@ -99,8 +98,7 @@ questions out loud; AI scores the answer and says what to fix.
 **What is kept:** voice recordings, their text (transcript), results (scores and feedback), and an email address to
 sign in.
 
-**Who sees it:** only your child and me. Recordings are sent to an AI service ([provider]) to be scored. The data is
-stored on servers outside Uzbekistan [CHECK].
+Recordings are sent to an AI service ([provider]) to be scored. The data is stored on servers outside Uzbekistan [CHECK].
 
 **How long:** we delete our copy of the voice recordings 30 days after scoring [CHECK]. Text and results are kept
 until the account is deleted. The AI service may keep request data for a limited time under its own rules (for

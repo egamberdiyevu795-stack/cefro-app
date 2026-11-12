@@ -17,7 +17,7 @@ carries the pilot**. When credit arrives, the AI side fills in later (`docs/v1-p
 | # | What | Who | Where |
 | --- | --- | --- | --- |
 | 1 | The code is merged into `main` and deployed to Production. **You have not decided this yet.** The exact order is in `docs/merge-order.md`, section "Pilot-ready: the exact merge order". | You | `docs/merge-order.md` |
-| 2 | The open items are closed: the parent message checked by a native speaker (and the "only your child and me" line), the lawyer's answers, the iPhone test (the Piper credit is now on the Credits page). | You, with a native speaker and a lawyer | `docs/launch-checklist.md`, section 12 |
+| 2 | The open items are closed: the parent message checked by a native speaker (it no longer says who sees the recordings), the lawyer's answers, the iPhone test (the Piper credit is now on the Credits page). | You, with a native speaker and a lawyer | `docs/launch-checklist.md`, section 12 |
 | 3 | You hold a written "yes" from every parent (under 18) or from the student (18+). | You | `docs/pilot-parent-message.md` |
 | 4 | Nobody in the pilot is under 14. | You | `docs/consent-design.md`, section 0 |
 | 5 | You did the 30-minute dry run with a friend and it passed. | You and a friend | `docs/pilot-dry-run.md` |
@@ -177,7 +177,7 @@ node scripts/set-consent.mjs student@example.com granted --teacher-sharing
 
    `--teacher-sharing` is what lets Azamat see their results and listen to recordings. Leave it out and the student can
    practise but **cannot** join a class. Expected: a line saying consent was recorded. It stores the date and which text
-   they agreed to (`pilot-parent-message-2026-11-12b`).
+   they agreed to (`pilot-parent-message-2026-11-12c`).
 4. The student's **Account** page now says "Consent recorded on …".
 
 To lock someone again at once (data is kept): 
@@ -196,10 +196,11 @@ node scripts/delete-account.mjs student@example.com
 node scripts/delete-account.mjs student@example.com --yes
 ```
 
-**Before you send the parent message:** on 2026-11-12 the sentence "Teachers see nothing" was **deleted** from all three languages (version
-`pilot-parent-message-2026-11-12b`); the message now says nothing about teachers. But the line "Who sees it: only your child and me" still
-stands and is untrue once a child joins Azamat's class. Settle that (and lawyer question 13) before you record `--teacher-sharing` for
-anyone, and note that nobody who agreed to an older version has agreed to teacher listening (`docs/launch-checklist.md`, section 12, item 1).
+**Before you send the parent message:** on 2026-11-12 (owner decisions) the sentences "Teachers see nothing" and "Who sees it: only your
+child and me" were **deleted** from all three languages, not replaced (version `pilot-parent-message-2026-11-12c`). The message no longer
+says who sees or hears the recordings. Whether it must say that the teacher listens is lawyer question 13: settle it, and the native Uzbek
+and Russian check, before you record consent on this message or `--teacher-sharing` for anyone (`docs/launch-checklist.md`, section 12,
+item 1). Nobody who agreed to an older version has agreed to teacher listening.
 
 ---
 

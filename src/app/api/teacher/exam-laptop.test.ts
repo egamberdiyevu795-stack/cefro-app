@@ -48,6 +48,21 @@ import { GET as getRoster } from "../exam-laptop/[mockId]/roster/route";
 import { POST as postUnlock } from "../exam-laptop/[mockId]/unlock/route";
 import { GET as getResults } from "./classes/[classId]/exam/[mockId]/results/route";
 import { GET as getExam, POST as postExam } from "./classes/[classId]/exam/route";
+import { GET as getAttemptRoute } from "./classes/[classId]/attempts/[attemptId]/route";
+import { GET as getTeacherAudio } from "./classes/[classId]/attempts/[attemptId]/audio/route";
+import { PUT as putAttemptRating } from "./classes/[classId]/attempts/[attemptId]/rating/route";
+import { POST as postCode } from "./classes/[classId]/code/route";
+import { GET as getClassRoute } from "./classes/[classId]/route";
+import { GET as getMockRoute } from "./classes/[classId]/mocks/[mockId]/route";
+import { PUT as putMockRating } from "./classes/[classId]/mocks/[mockId]/rating/route";
+import { GET as getStudentRoute } from "./classes/[classId]/students/[memberId]/route";
+import { GET as getTeacherClasses } from "./classes/route";
+import AttemptPage from "@/app/teacher/classes/[classId]/attempts/[attemptId]/page";
+import MockPage from "@/app/teacher/classes/[classId]/mocks/[mockId]/page";
+import ResultsPage from "@/app/teacher/classes/[classId]/exam/[classMockId]/page";
+import StartPage from "@/app/teacher/classes/[classId]/exam/page";
+import ClassPage from "@/app/teacher/classes/[classId]/page";
+import AccountPage from "@/app/profile/page";
 import { POST as postClose } from "./classes/[classId]/close/route";
 import { DELETE as deleteStudent } from "./classes/[classId]/students/[memberId]/route";
 import { POST as postClass } from "./classes/route";
@@ -554,6 +569,59 @@ describe("the device session", () => {
     expect((await getExam(req("/x"), ctx({ classId: w.classId }))).status).toBe(200);
     // ... a new login session (the spare one plus this one); the device never held a login.
     expect(await db.select().from(authSessions).where(eq(authSessions.userId, w.teacherId)).all()).toHaveLength(2);
+  });
+});
+
+describe("what a device session can NOT reach", () => {
+  it("every teacher route answers 404 (the same as a stranger), whatever the class, attempt or mock", async () => {
+    const w = await world();
+    const passId = await pass(w);
+    const mock = (await read(await startMockWith(w, passId))).mock.id as string;
+    const attemptId = (await upload(w, "2", mock, passHeaders(passId))).body.attempt.id as string;
+    const c = { classId: w.classId };
+    const calls: [string, () => Promise<Response>][] = [
+      ["GET teacher classes", () => getTeacherClasses(req("/x"), ctx({}))],
+      ["POST teacher classes", () => postClass(req("/x", "POST", { name: "Sneaky" }), ctx({}))],
+      ["GET class (T3)", () => getClassRoute(req("/x"), ctx(c))],
+      ["POST close class", () => postClose(req("/x", "POST"), ctx(c))],
+      ["POST reset code", () => postCode(req("/x", "POST"), ctx(c))],
+      ["GET student (T4)", () => getStudentRoute(req("/x"), ctx({ ...c, memberId: w.aliceMember }))],
+      ["DELETE student", () => deleteStudent(req("/x", "DELETE"), ctx({ ...c, memberId: w.aliceMember }))],
+      ["GET attempt (T5)", () => getAttemptRoute(req("/x"), ctx({ ...c, attemptId }))],
+      ["PUT attempt rating", () => putAttemptRating(req("/x", "PUT", { agrees: true }), ctx({ ...c, attemptId }))],
+      ["GET teacher recording", () => getTeacherAudio(req("/x"), ctx({ ...c, attemptId }))],
+      ["GET mock (T6)", () => getMockRoute(req("/x"), ctx({ ...c, mockId: mock }))],
+      ["PUT mock rating", () => putMockRating(req("/x", "PUT", { agrees: true }), ctx({ ...c, mockId: mock }))],
+      ["GET results (T8)", () => getResults(req("/x"), resultsCtx(w))],
+      ["GET Start page data", () => getExam(req("/x"), ctx(c))],
+      ["POST Start", () => postExam(req("/x", "POST", { mode: "different", laptopId: L1, room: "Room 1" }), ctx(c))],
+      ["GET the student's own recording", () => getMyAudio(req("/x"), ctx({ attemptId }))],
+      ["GET the student's attempt", () => getAttempt(req("/x"), ctx({ attemptId }))],
+      ["GET the student's mock result", () => getMockResult(req("/x"), ctx({ mockId: mock }))],
+    ];
+    actAs(await dev(w, L1));
+    for (const [name, call] of calls) expect((await call()).status, name).toBe(404);
+    // And nothing changed.
+    expect((await db.select().from(classMocks).all())).toHaveLength(1);
+    expect(await db.select().from(classMembers).all()).toHaveLength(2);
+  });
+
+  it("T5, T6, T8, the Start page, T3 and the Account page are the 404 page (not found)", async () => {
+    const w = await world();
+    const passId = await pass(w);
+    const mock = (await read(await startMockWith(w, passId))).mock.id as string;
+    const attemptId = (await upload(w, "2", mock, passHeaders(passId))).body.attempt.id as string;
+    const p = (params: Record<string, string>) => ({ params: Promise.resolve(params), searchParams: Promise.resolve({}) }) as never;
+    actAs(await dev(w, L1));
+    const pages: [string, () => Promise<unknown>][] = [
+      ["T3", () => ClassPage(p({ classId: w.classId }))],
+      ["Start", () => StartPage(p({ classId: w.classId }))],
+      ["T5", () => AttemptPage(p({ classId: w.classId, attemptId }))],
+      ["T6", () => MockPage(p({ classId: w.classId, mockId: mock }))],
+      ["T8", () => ResultsPage(p({ classId: w.classId, classMockId: w.classMockId }))],
+      ["Account", () => AccountPage(p({}))],
+    ];
+    for (const [name, render] of pages) await expect(render(), name).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404|NEXT_NOT_FOUND/);
   });
 });
 

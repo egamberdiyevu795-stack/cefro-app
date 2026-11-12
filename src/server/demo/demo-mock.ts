@@ -187,10 +187,10 @@ export function demoMockPartHref(href: string): string | null {
 
 /**
  * The demo student's one finished mock for History: the mock and its four parts as History attempts (real stored results of
- * the demo answers), newest first. Four days before `now`, so it sits among the demo attempts.
+ * the demo answers), newest first. Two days before `now`, so it sits among the demo attempts (and in the dashboard's latest four).
  */
 export async function demoMockHistory(now: Date): Promise<{ mocks: HistoryMock[]; attempts: HistoryAttempt[] }> {
-  const createdAt = new Date(now.getTime() - 5 * 24 * 3_600_000).toISOString();
+  const createdAt = new Date(now.getTime() - 2 * 24 * 3_600_000).toISOString();
   const attempts: HistoryAttempt[] = [];
   for (const part of [...MOCK_PARTS].reverse()) {
     const key = part === "3" ? DEMO_PART3_KEY : demoPracticeKey(DEMO_TASKS[part], null);

@@ -7,7 +7,7 @@ import { examPartOf } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
 import { HistoryContent } from "./sections";
-import { buildHistoryView, formatDate, levelOfBand, PAGE_SIZE, parseHistoryQuery, toHistoryRows, type HistoryView } from "./view-model";
+import { buildHistoryView, formatDate, levelOfBand, PAGE_SIZE, parseHistoryQuery, recentRows, toHistoryRows, type HistoryView } from "./view-model";
 
 /** A saved live evaluator result (band 2 for A2 run 1, band 4 for A4 run 1, band 3 for A3 run 1, band 5 for A5). */
 function result(anchor: string, run = 1): MultilevelResult {
@@ -315,5 +315,26 @@ describe("mock exams in History", () => {
     expect((html.match(BLACK) ?? []).length).toBe(0);
     expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
     expect(html).not.toMatch(/\bpassed\b|\bfailed\b|certificate/i);
+  });
+});
+
+describe("the dashboard's recent rows with mocks", () => {
+  const at = (day: number) => new Date(Date.UTC(2026, 10, day, 9)).toISOString();
+  const partOf = (p: HistoryAttempt["part"], band: number) => {
+    const base = result("A2-b1-all-three");
+    return attempt({ day: 12, part: p, sessionId: "m1", result: { ...base, scoring: { ...base.scoring, band, label: ["Below B1", "Lower B1", "Higher B1", "Lower B2", "Higher B2", "Above B2"][band] } } });
+  };
+  it("shows a mock as one row, newest first among the loose attempts, and never its parts", () => {
+    const older = attempt({ day: 3 });
+    const newer = attempt({ day: 14 });
+    const parts = [partOf("1.1", 3), partOf("1.2", 3), partOf("2", 3), partOf("3", 4)];
+    const rows = recentRows(newestFirst([older, newer, ...parts]), [{ id: "m1", status: "finished", createdAt: at(12) }], 4);
+    expect(rows.map((r) => r.title)).toEqual([newer.title, "Mock exam · B2 · 12.11.26", older.title]);
+    expect(rows[1].href).toBe("/practice/mock/m1");
+    expect(rows.some((r) => parts.some((p) => r.id === p.id))).toBe(false);
+  });
+  it("is the plain attempt rows when there is no mock, and keeps the count", () => {
+    const list = newestFirst([1, 2, 3, 4, 5].map((day) => attempt({ day })));
+    expect(recentRows(list, [], 4)).toEqual(toHistoryRows(list.slice(0, 4), list));
   });
 });

@@ -147,3 +147,14 @@ test.describe("at laptop width", () => {
     await audit(page, 0);
   });
 });
+
+test("the dashboard's Recent attempts shows the mock as one row opening the mock result", async ({ page }) => {
+  await page.goto("/dashboard?mock=1");
+  const recent = page.getByRole("region", { name: "Recent attempts" });
+  const row = recent.getByRole("link", { name: /^Mock exam · (B1|B2|C1|Below B1) · \d\d\.\d\d\.\d\d/ });
+  await expect(row).toHaveCount(1);
+  await expect(recent.getByRole("link", { name: /Part 3/ })).toHaveCount(0); // its parts are not listed loose
+  await row.click();
+  await expect(page).toHaveURL(/\/practice\/mock\/demo-mock\?mock=1/);
+  await expect(page.getByRole("heading", { name: "Your estimated speaking level" })).toBeVisible();
+});

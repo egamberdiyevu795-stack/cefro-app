@@ -134,8 +134,7 @@ export function buildHistoryView(
     const loose = attempts.filter((a) => !isMockPart(a));
     matching = loose.length + mockRows.length;
     // Both lists are newest first; merge them by time.
-    const looseRows = attemptRows(loose);
-    rows = [...looseRows, ...mockRows].sort((x, y) => (x.createdAt < y.createdAt ? 1 : x.createdAt > y.createdAt ? -1 : 0)).slice(0, options.show);
+    rows = mergeRows(attemptRows(loose), mockRows).slice(0, options.show);
   } else {
     const ofPart = attempts.filter((a) => a.part === filter);
     matching = ofPart.length;
@@ -155,6 +154,21 @@ export function buildHistoryView(
     moreHref,
     chart: chartPart ? bandChart(attempts, chartPart) : null,
   };
+}
+
+const newestFirstRows = (x: HistoryRow, y: HistoryRow) => (x.createdAt < y.createdAt ? 1 : x.createdAt > y.createdAt ? -1 : 0);
+/** Attempt rows and mock rows in one list, newest first. */
+const mergeRows = (attemptRows: HistoryRow[], mockRows: HistoryRow[]) => [...attemptRows, ...mockRows].sort(newestFirstRows);
+
+/**
+ * The dashboard's "Recent attempts": the latest `count` rows, a mock as ONE row ("Mock exam · B2 · 12.11.26", opening the mock
+ * result) instead of its loose parts, exactly as History's "All" lists them. `attempts` is newest first, as `listAttemptHistory` returns.
+ */
+export function recentRows(attempts: readonly HistoryAttempt[], mocks: readonly HistoryMock[], count: number): HistoryRow[] {
+  const mockIds = new Set(mocks.map((m) => m.id));
+  const loose = attempts.filter((a) => !(a.sessionId != null && mockIds.has(a.sessionId)));
+  const mockRows = mocks.map((m) => mockRow(m, attempts.filter((a) => a.sessionId === m.id)));
+  return mergeRows(toHistoryRows(loose, attempts), mockRows).slice(0, count);
 }
 
 /** The part bands of a mock, read from its own attempts (a part that is not scored has none: too short, failed, still scoring, not done). */

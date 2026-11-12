@@ -6,7 +6,7 @@ import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { getArgumentTask } from "@/content/speaking/part3";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
 import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
-import type { HistoryAttempt } from "@/domain/speaking/history";
+import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { AccountTab } from "@/features/dashboard/AccountTab";
 import { ExamDate } from "@/features/dashboard/ExamDate";
 import { ContinueMockCard } from "@/features/full-mock/screens";
@@ -33,8 +33,10 @@ import {
   Wordmark,
   type ExamPartTileView,
 } from "@/features/dashboard/sections";
-import { toHistoryRows } from "@/features/history/view-model";
+import { recentRows } from "@/features/history/view-model";
 import { getAttemptViewForUser, listAttemptHistory } from "@/server/attempts/attempt-service";
+import { DEMO_MOCK_HREF, demoMockHistory } from "@/server/demo/demo-mock";
+import { listMockHistory } from "@/server/sessions/mock-history";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
 import { findInProgressMock } from "@/server/sessions/mock-service";
@@ -132,7 +134,13 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const next = builtNext && { ...builtNext, href: link(builtNext.href) };
   const tiles: ExamPartTileView[] = partTiles(attempts).map((t) => ({ ...t, part: t.partLabel, href: t.href && link(t.href) }));
   const view = dashboardView(attempts);
-  const recent = toHistoryRows(attempts.slice(0, RECENT_ATTEMPT_COUNT), attempts).map((row) => ({ ...row, href: link(row.href) }));
+  // Recent attempts: a mock is one row opening the mock result, like History (its parts still count in the numbers above).
+  const demoMock = mock && !demoTeacher ? await demoMockHistory(now) : null;
+  const mocks: HistoryMock[] = demoTeacher ? [] : demoMock ? demoMock.mocks : userId ? await listMockHistory(userId) : [];
+  const recent = recentRows(demoMock ? [...attempts, ...demoMock.attempts] : attempts, mocks, RECENT_ATTEMPT_COUNT).map((row) => ({
+    ...row,
+    href: row.mock ? (mock ? DEMO_MOCK_HREF : row.href) : link(row.href),
+  }));
 
   const today = todayIn(now);
   const exam = examDateState(stored, now);

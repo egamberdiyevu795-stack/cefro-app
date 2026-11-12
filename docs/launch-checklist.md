@@ -218,7 +218,7 @@ Real pages (signed in), after the merge:
   the one black button is **"Go to Part 2"** (the Part 2 task list) under a card titled "Practise Part 2", with the
   lesson's own "Remember:" line. That wording is reused from the Account page; **for the owner's review**
   (`src/features/lessons/no-result.ts`). Opened from a result ("Learn how") the lesson is unchanged.
-- **Teacher view:** off (`TEACHER_LIVE = false`): real teacher pages and Join / Share / Leave are 404.
+- **Teacher view:** off by default (`TEACHER_LIVE`, false unless the owner sets `TEACHER_LIVE=true` in Vercel, `docs/pilot-runbook.md`): real teacher pages and Join / Share / Leave are 404.
 - **Part 1 player:** not merged (`/dev/part1-player` is 404 in production anyway).
 - **Pronunciation:** "not assessed" and every band provisional if `GEMINI_API_KEY` is missing or `AUDIO_ASSESSMENT=off`.
 - **Start-of-speaking chime:** two soft sine tones (E5 then A5, 0.5 s) made with the Web Audio API in
@@ -258,3 +258,31 @@ Before inviting any pilot tester (`docs/consent-design.md`, section 2b):
    API answers 404), so a student who types another address reaches nothing; full-screen or kiosk mode keeps the address bar out of sight as well.
 8. **Migration `0010_exam_laptop`** (additive: two tables, three nullable columns). Same steps as section 5; the counts become 11 migrations.
 9. **Before the pilot dry run,** test the real full mock on a phone (iOS Safari): microphone permission must survive all four parts and the spoken intros must play.
+
+## 12. Open before the pilot (checked 2026-11-12 on `claude/pilot-ready`)
+
+Nothing below was answered or done by Claude: the repository holds no answer for any of it, and none is assumed. Who does
+each is in the third column. The pilot steps themselves are in `docs/pilot-runbook.md`; the rehearsal is `docs/pilot-dry-run.md`.
+
+| # | Open item | What was found | Who |
+| --- | --- | --- | --- |
+| 1 | **Parent message: native Uzbek and Russian check, and one line that is now wrong.** | `docs/pilot-parent-message.md` says it is **not sent** and its Uzbek and Russian have **not been checked**. It also says "Teachers see nothing" / "O'qituvchilar hech narsani ko'rmaydi" / "Учителя ничего не видят" and "only your child and me". In the pilot Azamat listens to recordings, and consent is recorded with `--teacher-sharing`. (`docs/v1-plan.md` Q10 decided "no new sentence about teacher listening". Claude does not read that as a decision to keep a sentence that now says the opposite, but it is your call.) | **You** decide the wording; a **native speaker** of each language checks it; the **lawyer** for the `[CHECK]` marks. Then Claude updates the text, its version line and `CURRENT_NOTICE` in `scripts/set-consent.mjs` together. |
+| 2 | **"Speaking only" line in Uzbek and Russian.** | The app shows the English line ("Speaking only. An estimate from this mock, not an official UZBMB score."). The Uzbek and Russian versions exist only as **drafts** in `docs/official-scale.md`, section 5, and say they need a native check before the pilot. They are not in the app. | A **native speaker** checks the two drafts; **you** decide whether the pilot app needs them (the rest of the app stays English, `docs/consent-design.md` section 0); then Claude adds them. |
+| 3 | **Piper / LibriTTS CC BY 4.0 credit on a public page.** | The spoken questions and introductions use Piper with the LibriTTS voice (speaker 6426, CC BY 4.0). The credit is only in `public/audio/speaking/part1|part2|part3/README.md` and in the audio JSON; **no page a student or parent can open shows it**. | **You** decide where it goes (for example a "Credits" link in the footer) and check the wording against the licence; Claude builds the page. |
+| 4 | **Phone test of the full mock on iOS (Safari).** | No record that it was ever run on a real iPhone. Microphone permission must survive all four parts and the spoken introductions must play. (`docs/AI_EVALUATION_QUALITY.md` notes Safari records MP4/AAC, less clearly accepted by speech-to-text than Chrome's WebM.) | **You**, on an iPhone. The dry run (`docs/pilot-dry-run.md`) can include it. |
+| 5 | **Lawyer's questions.** | All 13 in `docs/lawyer-questions.md` are open (no answer is recorded anywhere). Question 13 (a teacher listening to a minor's recording) was added today. Most pilot-relevant: 1 data location (asked first), 2 parent confirmation, 3 age, 5 controller, 7 audio retention, 8 teachers, 12 provider retention, 13 teacher listening. | **You**, with a lawyer. |
+| 6 | **Speech-to-text account.** | Gemini credit is near zero, so speech-to-text should be OpenAI (`TRANSCRIPTION_PROVIDER=openai`). It has not been run on real learner speech in this chain (`npm run eval:transcription`). The dry run puts one real recording through it. | **You** create the key and add credit; the dry run checks it. |
+| 7 | **Turso backup before migrating.** | Migrations 0005 to 0010 are not applied to the production database (the production release runs `main`: 0000 to 0004). | **You**, before `npm run db:migrate`. |
+| 8 | **Gemini request logging off** (only if a Gemini key is used). | Section 11, item 5. | **You**, in Google AI Studio. |
+| 9 | **The dry run** on a Vercel Preview with a **separate test database**. | Not done. | **You and a friend**. |
+
+Not needed before the pilot (AI scoring is allowed to be off): the live Gemini checks in section 6 and measuring the
+real cost of a mock. They come with `docs/v1-plan.md` step 9, when credit exists. Part 3's AI prompt has never been
+tested with a real model, which is acceptable only while AI scoring is off.
+
+## 13. Switches that need no commit (added on `claude/pilot-ready`)
+
+`PART_1_1_LIVE`, `PART_1_2_LIVE`, `PART_2_LIVE`, `PART_3_LIVE`, `FULL_MOCK_LIVE` and `TEACHER_LIVE` are read from the environment
+(`src/config/features.ts`, tests in `src/config/features.test.ts`). Defaults are unchanged: all off except Part 2. Set them in
+Vercel Production, then Redeploy. `docs/pilot-runbook.md` section 1 lists them with `CONSENT_REQUIRED` and `CRON_SECRET`. The
+`CEFRO_TEST_*` switches are still ignored in production builds and on Vercel.

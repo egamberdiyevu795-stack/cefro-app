@@ -1,7 +1,125 @@
 # Merge order
 
-Checked 2026-11-06 against `main` at `b597b4f` (Merge PR #6). **Nothing has been merged.** Every branch below starts
+Checked 2026-11-06 against `main` at `b597b4f` (Merge PR #6). **Nothing has been merged.** (The first section below, "Pilot-ready", is the current plan, 2026-11-12.) Every branch below starts
 from that `main` (none is behind it), and every check here was a dry run in a throwaway worktree.
+
+## Pilot-ready: the exact merge order (2026-11-12, `claude/pilot-ready`)
+
+**The owner has not decided to merge. Nothing has been merged, pushed to `main`, migrated or deployed.** This section is the
+plan for the day the owner decides. It **replaces the order in "Safe order" below for everything after
+`claude/launch-cleanup`**: the older order (`project-thread-krzvuk`, `p2-read-qs`) no longer merges cleanly, see "Not merged".
+Everything older in this file is history and stays as it was.
+
+**State checked 2026-11-12.** `main` is `b597b4f` (PR #6) and **no unmerged branch is behind it** (the five branches already in `main` are its ancestors; every other one is 0 behind).
+`claude/exam-laptop` (`e41ccef`) is 168 commits ahead of `main` and contains `main`. `claude/pilot-ready` is
+`claude/exam-laptop` plus the commits below, so it is the tip of the whole chain.
+
+### Route A: one merge (recommended: one review, one deploy)
+
+```bash
+git fetch origin
+git checkout main && git pull --ff-only origin main
+git merge --no-ff origin/claude/pilot-ready
+```
+
+`main` is an ancestor of `claude/pilot-ready`, so this cannot conflict. It brings in every branch in the table below
+except the three "Not merged" ones (checked with `git merge-base --is-ancestor`). Keep the merge commit; never squash
+(see "Why merge commits"). Before the push: set the repository variable `CEFRO_AUTO_DEPLOY` to `false`
+(`docs/launch-checklist.md`, section 3), so production moves once, at the end, stage by stage.
+
+### Route B: the same result in 33 reviewable merges
+
+Each one `git merge --no-ff --no-edit origin/claude/<branch>` on `main`, in this order. **Verified 2026-11-12 by replaying
+the whole list with git plumbing (`git merge-tree` and `git commit-tree`: no branch, working tree or ref touched): every
+step is conflict-free, and after step 32 the tree is byte-identical to `claude/exam-laptop`** (`fcdc81a…`).
+
+| # | Branch | Tip | What it adds | Migration |
+| --- | --- | --- | --- | --- |
+| 1 | `compassionate-johnson-odu08r` | `4edee53` | PR #5: Part 2 task "Advice from someone", evaluator 3.5.0 | |
+| 2 | `friendly-darwin-l73xx9` | `66b46f3` | saved live evaluator outputs (test data) | |
+| 3 | `design-system-dashboard` | `73d1e5d` | design system, mocked dashboard, feature flags | |
+| 4 | `sharp-fermi-qol4ym` | `31965d8` | result prototype (contains 2 and 3) | |
+| 5 | `part2-practice-flow` | `405f33c` | Part 2 practice screens | |
+| 6 | `real-result-page` | `98e9a48` | real attempts on the result page | |
+| 7 | `history-page` | `9cc45fd` | History, real recent attempts | |
+| 8 | `dashboard-real-data` | `54f68ac` | dashboard on real data, exam date | **0005** `exam_date` |
+| 9 | `cefro-part-2-tasks-yfr6x5` | `a2a6a54` | six new Part 2 tasks | |
+| 10 | `review-dashboard-real-data-4jikaa` | `99a0ed1` | dashboard fixes | |
+| 11 | `mock-mode-vercel-preview-8uzlim` | `9925072` | `?mock=1` everywhere (contains the `mock` alias) | |
+| 12 | `upbeat-ride-2eymyu` | `241fedc` | teaching plan (docs) | |
+| 13 | `wave1-lesson-drafts` | `ce36cf2` | first lesson drafts (docs) | |
+| 14 | `lessons` | `90980bd` | lessons in the app (contains `lessons-adi79w`) | |
+| 15 | `profile-settings` | `f01e5d4` | Profile and Settings | |
+| 16 | `teacher-plan-v7fp7j` | `244a7ec` | teacher plan (contains 15) | |
+| 17 | `teacher-view-kd6wdk` | `ee7b793` | Teacher view v1 | **0006** `teachers` |
+| 18 | `entry-pages` | `96395d2` | signed-out pages (contains `entry-pages-jgh558`) | |
+| 19 | `landing` | `b528b15` | signed-out pages redesign | |
+| 20 | `integration-chgcwb` | `ced5367` | launch checklist (docs) | |
+| 21 | `launch-cleanup` | `2880d95` | no dead controls, chime in code | |
+| 22 | `project-thread-mz2ndw` | `17048b1` | Part 1.1/1.2 and Part 3 in mock mode (contains `part1`, `part1-plan`, `part1-player`, `part3`, `lucid-euler-460531`, `sleepy-hypatia-rp7db1`) | |
+| 23 | `consent-pilot` | `c375515` | pilot consent, 30-day audio deletion (contains `pilot-consent`, `consent-plan-j0ky8m`) | **0007** `pilot_consent` |
+| 24 | `practice-list` | `eb0e257` | Part 2 questions read aloud, task list restyle | |
+| 25 | `project-thread-e59hcb` | `c333416` | all four parts on the task list | |
+| 26 | `project-thread-8yy31h` | `1c6ecbf` | docs (V1 plan) | |
+| 27 | `p3-real` | `c5fa288` | Part 3 real recording and scoring | |
+| 28 | `scale-check` | `7be3144` | official scale (docs); **contains the full mock runner** (`full-mock`'s first commit) | **0008** `full_mock` |
+| 29 | `mock-result` | `0d56c45` | mock result page, History rows | |
+| 30 | `better-versions` | `e20251d` | transcript with mistakes and better versions | |
+| 31 | `teacher-v1` | `0ef29a6` | teacher sees all parts, mocks, recordings | **0009** `teacher_v1` |
+| 32 | `exam-laptop` | `e41ccef` | exam laptop mode | **0010** `exam_laptop` |
+| 33 | **`pilot-ready`** | this branch | environment switches, the full-mock concurrency fix, Start-exam-laptop guard, pilot docs | none |
+
+Steps 12 and 13 may go any time before 14; 26 is docs only.
+
+### What `claude/pilot-ready` adds on top of `claude/exam-laptop`
+
+1. **`src/config/features.ts`:** `PART_1_1_LIVE`, `PART_1_2_LIVE`, `PART_2_LIVE`, `PART_3_LIVE`, `FULL_MOCK_LIVE`, `TEACHER_LIVE` read from the environment (defaults unchanged). Tests in `src/config/features.test.ts`.
+2. **`26f0f16` from `claude/full-mock`, cherry-picked (`-x`):** up to 4 answers may be processing at once for a **full mock** upload (ordinary practice keeps 2). **It was missing from the chain**: `claude/scale-check` was cut from the commit before it, so a mock's four uploads could hit "your earlier answers are still being checked" (429). One doc conflict (the launch-checklist item numbers) was resolved by keeping both items. After step 33, `claude/full-mock` needs no merge of its own: the same patch is already in.
+3. **Start exam laptop is refused** (409 `mock_not_live`, and the page says why) while the full mock is off, so a class never reaches a "not found" at Start mock.
+4. Two wording fixes (`No PIN yet. Set one on your phone: Account, Your classes.`; the "Coming soon" line on the mock card), `.env.example`, `docs/pilot-runbook.md`, `docs/pilot-dry-run.md`, `docs/launch-checklist.md` sections 12 and 13, lawyer question 13.
+
+### Not merged, on purpose (three branch tips)
+
+These are not inside `claude/exam-laptop`. Each adds only a few commits on top of what the chain already has, and **each now
+conflicts** when merged onto it (`git merge-tree`, 2026-11-12):
+
+| Branch | Extra commits | Touches | Result of a trial merge onto `pilot-ready` |
+| --- | --- | --- | --- |
+| `project-thread-krzvuk` | 4: CI install retry and job timeout (`8dc8938`, `4e74eda`, `a22fa19`), a dashboard e2e timing fix (`509e1a4`) | `.github/workflows/ci.yml`, `e2e/dashboard.spec.ts` | **conflicts** in both files. (Merged at its own position, after `launch-cleanup`, it is clean but then makes `practice-list` conflict, which is why Route B skips it.) |
+| `p2-read-qs` | 2: slow-connection e2e timing (`84eee96`, `f8aff35`) | `e2e/dashboard.spec.ts`, `e2e/practice-flow.spec.ts` | **conflicts** in both files |
+| `project-thread-kjt5f0` | 1: launch-cleanup review (`dfaf76f`) | `chime.ts` (the chain already has the same fix), two test files, `docs/launch-checklist.md`, `e2e/profile-settings.spec.ts` | **conflicts** in `e2e/profile-settings.spec.ts` and `test/evaluation-samples/part2-new-task-anchors.test.ts` |
+
+Recommendation: **do not merge them.** They touch only CI, test and doc files (and a `chime.ts` fix the chain has). Claude did not
+judge whether their test changes are still wanted; if the owner wants, a separate small task can port the useful ones.
+Older notes in this file that say "merge `project-thread-krzvuk`" or "`p2-read-qs` right after `consent-pilot`" are superseded by this section.
+
+### Every branch, accounted for
+
+- **Already in `main`** (0 commits ahead; safe to delete when the owner decides): `happy-mendel-ork3dh`, `faster-feedback`,
+  `amazing-cray-jl6imi`, `multilevel-q7-evaluator`, `fix-live-pipeline-version-check`. `tender-cori-4yhp24` equals `main`.
+- **Merged by a step above:** 1 to 33.
+- **Inside a later step, never merged on their own:** `part1`, `part1-plan`, `part1-player`, `part3`, `lucid-euler-460531`,
+  `sleepy-hypatia-rp7db1` (inside 22); `pilot-consent`, `consent-plan-j0ky8m` (inside 23); `mock` (a preview alias, inside 11);
+  `lessons-adi79w` (inside 14); `entry-pages-jgh558` (inside 18); `full-mock` (its runner inside 28, its last commit inside 33).
+  The three the older notes call "never merge" (`entry-pages-jgh558`, `lessons-adi79w`, `mock`) are ancestors of the chain, so they come in as history
+  without you doing anything.
+- **Not merged:** `project-thread-krzvuk`, `p2-read-qs`, `project-thread-kjt5f0` (above).
+- **Other `project-thread-*` branches** are in the chain: `mz2ndw` (22), `e59hcb` (25), `8yy31h` (26).
+
+To re-check after `main` moves, for every branch: `git merge-base --is-ancestor origin/claude/<branch> origin/claude/pilot-ready && echo in || echo NOT IN`.
+Only the three above should print `NOT IN`.
+
+### Then, in this order (owner's decision each time)
+
+1. Backup the Turso database. Set `CEFRO_AUTO_DEPLOY=false`. Push `main`.
+2. **Migrate** (`npm run db:migrate -- --require-remote`, or the `migrate` stage of "Deploy production"): five pending, `0005` to `0010`
+   (the database has 0000 to 0004 per `docs/launch-checklist.md`, section 1). Expect `11 migrations`.
+3. **Set the Vercel variables** (`docs/pilot-runbook.md`, section 1).
+4. **Deploy** (the `deploy` stage). The health step is red without a scoring key; that is expected (runbook, 1d).
+5. The rehearsal (`docs/pilot-dry-run.md`) can run **before** step 1 on a Preview with its own test database.
+6. Re-arm `CEFRO_AUTO_DEPLOY=true` only when the owner wants pushes to deploy again.
+
+---
 
 ## Safe order
 

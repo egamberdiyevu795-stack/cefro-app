@@ -37,3 +37,9 @@ private person. Bring: `docs/consent-design.md`, `docs/privacy-notice-draft.md`,
     this acceptable for minors' voices? Must the notice name the provider and its retention period, and is our wording
     ("we delete our copy after 30 days; the AI service may keep request data for a limited time") enough? Do we need a
     data processing agreement with the provider?
+13. **Teacher listening to a minor's recording.** In the pilot a teacher (Azamat, at our language centre) can listen to a
+    student's recording, for as long as it exists (30 days after scoring), when the student has shared it with that
+    teacher and, for an under-18, a parent agreed to teacher sharing (`docs/v1-plan.md`, section 7). Can a teacher (not the
+    parent) listen to a minor's recording on the parent's consent? Does the parent's message have to say so? (The current
+    message says "Teachers see nothing": it has to change or this has to be answered first.) Added 2026-11-12 on
+    `claude/pilot-ready`.

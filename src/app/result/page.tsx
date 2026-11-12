@@ -5,6 +5,7 @@ import { cx, styles } from "@/components/ds";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
 import { toPublicTask } from "@/domain/speaking/task";
+import { demoYourTeacher } from "@/server/demo/demo-mock";
 import { demoResultHref, demoResultSource, demoResultSpec } from "@/server/demo/demo-data";
 import { isMockQuery, withMock } from "@/features/demo/demo-mode";
 import { lessonForResult, lessonHref, type LessonSource } from "@/features/lessons/choose";
@@ -40,7 +41,7 @@ export default async function ResultPage(props: PageProps<"/result">) {
   const query = await props.searchParams;
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
   const demoKey = typeof query.demo === "string" ? query.demo : null;
-  if (demoKey) return demoResult({ demoKey, scoring: query.state === "scoring", next: query.next === "1", flags });
+  if (demoKey) return demoResult({ demoKey, scoring: query.state === "scoring", next: query.next === "1", flags, teacher: query.teacher === "1" });
   if (!isMockQuery(query)) notFound();
   const selection = selectMock(query);
 
@@ -73,7 +74,7 @@ export default async function ResultPage(props: PageProps<"/result">) {
 }
 
 /** A demo result of mock mode, for its own task: a demo attempt, or the result of a mock practice. */
-async function demoResult({ demoKey, scoring, next, flags }: { demoKey: string; scoring: boolean; next: boolean; flags: FeatureFlags }) {
+async function demoResult({ demoKey, scoring, next, flags, teacher }: { demoKey: string; scoring: boolean; next: boolean; flags: FeatureFlags; teacher: boolean }) {
   const spec = demoResultSpec(demoKey);
   const source = await demoResultSource(demoKey, { scoring });
   if (!spec || !source) notFound();
@@ -83,10 +84,12 @@ async function demoResult({ demoKey, scoring, next, flags }: { demoKey: string; 
   // "Retry with this goal": a retry of this result. "Record again": the same practice again (a retry stays a retry).
   const retryHref = practiceHref(task.id, { mock: true, retry: demoKey });
   const recordHref = practiceHref(task.id, { mock: true, ...(spec.previous ? { retry: spec.previous } : {}) });
+  // `teacher=1`: the demo teacher has rated this result (one band above the app's): "Your teacher: B2" beside CEFRO's band.
+  const yourTeacher = teacher && state.kind === "scored" ? demoYourTeacher(state.view.band, source.bandLabels) : null;
   return (
     <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} retryHref={retryHref} lesson={lesson} demo />
+        <ScoredResult view={state.view} task={task} retryHref={retryHref} lesson={lesson} demo yourTeacher={yourTeacher} />
       ) : state.kind === "scoring" ? (
         <ScoringResult state={state} demo />
       ) : state.kind === "not_scored" ? (

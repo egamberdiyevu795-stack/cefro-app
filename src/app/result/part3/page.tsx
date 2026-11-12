@@ -10,6 +10,7 @@ import { AutoAdvance } from "@/features/result/AutoAdvance";
 import { ScoringResult } from "@/features/result/sections";
 import { AppShell } from "@/features/shell/AppShell";
 import { part3DemoEvaluation, part3DemoSpec, part3DemoTranscriptFor } from "@/server/demo/part3-demo";
+import { demoYourTeacher } from "@/server/demo/demo-mock";
 import { durationOf } from "@/server/demo/demo-data";
 import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
 
@@ -61,7 +62,12 @@ export default async function Part3ResultPage(props: PageProps<"/result/part3">)
   });
   return (
     <AppShell flags={flags} account="mock">
-      <Part3ScoredResult view={view} retryHref={part3PracticeHref(task.id, { retry: key })} demo />
+      <Part3ScoredResult
+        view={view}
+        retryHref={part3PracticeHref(task.id, { retry: key })}
+        demo
+        yourTeacher={query.teacher === "1" ? demoYourTeacher(view.band, getArgumentRubric(spec.task).config.bands) : null}
+      />
     </AppShell>
   );
 }

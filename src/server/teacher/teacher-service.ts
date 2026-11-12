@@ -9,6 +9,7 @@ import type { BandedResult, HistoryAttempt } from "@/domain/speaking/history";
 import { toPublicArgumentTask } from "@/domain/speaking/argument-task";
 import { toPublicTask } from "@/domain/speaking/task";
 import { memberScope, memberSeesAttempt, memberSeesMock, teacherSafeShownName } from "@/domain/teacher/rules";
+import { part3TranscriptFixes } from "@/features/teacher/part3-fixes";
 import { buildTranscriptFixes } from "@/features/result/transcript-fixes";
 import { appEstimate, teacherMockHeader, type TeacherListen, type TeacherMockPartView, type TeacherMockRating, type TeacherMockView } from "@/features/teacher/mock-view";
 import type { SharedStudent, TeacherRating } from "@/features/teacher/view-model";
@@ -240,7 +241,7 @@ async function partOfMock(teacherId: string, classId: string, part: ExamPartId, 
     band: source.band,
     bands,
     transcript: text,
-    fixes: text && result ? buildTranscriptFixes(text, result.assessment.sentence_fixes) : null,
+    fixes: text && result ? (argument && isMultilevelQ8(result) ? part3TranscriptFixes(result, toPublicArgumentTask(argument), text, bands) : buildTranscriptFixes(text, result.assessment.sentence_fixes)) : null,
     listen: await listenFor(teacherId, classId, attemptId, recording),
     rating: rating ? (rating.agrees ? { agrees: true } : { agrees: false, band: rating.teacherBand ?? 0 }) : null,
   };

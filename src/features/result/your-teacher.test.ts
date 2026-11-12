@@ -47,3 +47,13 @@ describe("Your teacher on the student's result", () => {
     expect(renderToStaticMarkup(createElement(AttemptResult, { initial, previous: null, task, bandLabels }))).not.toContain("Your teacher");
   });
 });
+
+describe("the demo switch teacher=1", () => {
+  it("gives one band above the app's, capped at the top band, as a level", async () => {
+    const { demoYourTeacher } = await import("@/server/demo/demo-mock");
+    const labels = [{ band: 0, label: "Below B1" }, { band: 1, label: "Lower B1" }, { band: 2, label: "Higher B1" }, { band: 3, label: "Lower B2" }, { band: 4, label: "Higher B2" }, { band: 5, label: "Above B2" }];
+    expect(demoYourTeacher(2, labels)).toBe("B2");
+    expect(demoYourTeacher(1, labels)).toBe("B1");
+    expect(demoYourTeacher(5, labels)).toBe("Above B2"); // capped: the top band itself
+  });
+});

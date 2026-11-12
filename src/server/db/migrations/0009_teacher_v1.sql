@@ -1,4 +1,4 @@
--- cefro:reviewed: written by Claude for docs/v1-plan.md step 6 (owner review still pending at merge). The unique index is on teacher_mock_ratings, a table this migration creates (empty, unknown to the previous release, so it cannot collide). The two class_members columns are nullable with no default needed (old code never writes them; null = old wording not upgraded, card not answered). Additive only.
+-- cefro:reviewed: reviewed and approved by Asadbek, 2026-11-12. Additive only: new table teacher_mock_ratings (unique index on a table this migration creates) and two nullable class_members columns.
 CREATE TABLE `teacher_mock_ratings` (
 	`id` text PRIMARY KEY NOT NULL,
 	`session_id` text NOT NULL,

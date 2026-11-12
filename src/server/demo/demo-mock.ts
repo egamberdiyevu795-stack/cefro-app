@@ -29,6 +29,7 @@ import { lessonHref } from "@/features/lessons/choose";
 import { DEMO_MOCK_HREF, DEMO_MOCK_ID } from "@/features/mock-result/links";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
+import { part3TranscriptFixes } from "@/features/teacher/part3-fixes";
 import { buildTranscriptFixes } from "@/features/result/transcript-fixes";
 import type { TeacherMockPartView, TeacherMockView } from "@/features/teacher/mock-view";
 
@@ -294,7 +295,12 @@ export async function demoTeacherMock(
       band: source.band,
       bands,
       transcript: text,
-      fixes: text && result && "assessment" in result ? buildTranscriptFixes(text, result.assessment.sentence_fixes) : null,
+      fixes:
+        text && result && "assessment" in result
+          ? part === "3" && result.kind === "multilevel_q8"
+            ? part3TranscriptFixes(result, toPublicArgumentTask(getArgumentTask(view.taskId)!), text, bands)
+            : buildTranscriptFixes(text, result.assessment.sentence_fixes)
+          : null,
       listen: { state: "playable", src: DEMO_RECORDING.src, durationMs: DEMO_RECORDING.durationMs },
       rating: null,
     });
@@ -305,4 +311,11 @@ export async function demoTeacherMock(
 /** The demo AttemptView of one part (transcript and real stored result), or null. */
 export async function demoPartView(part: ExamPartId): Promise<AttemptView | null> {
   return (await demoViews())[part]?.view ?? null;
+}
+
+/** The level the demo teacher gives a single result in `teacher=1` mode: one band above the app's (capped), as in the demo mock. */
+export function demoYourTeacher(band: number, labels: readonly { band: number; label: string }[]): string | null {
+  const top = Math.max(...labels.map((l) => l.band));
+  const given = Math.min(band + 1, top);
+  return teacherRatingOf({ agrees: given === band, teacherBand: given === band ? null : given, appBand: band }, labels)?.level ?? null;
 }

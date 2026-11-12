@@ -207,3 +207,31 @@ test("an old membership gets one 'Share recordings too?' card with two grey butt
   await expect(page.getByTestId("share-more-done")).toContainText("now also sees every part, your mocks and your recordings from now on");
   expect(calls).toEqual([]);
 });
+
+test("T6: Part 3's card shows the same transcript view as the T5 Part 3 page (the dotted underline for copied words is unit-tested: the demo answers copy nothing)", async ({ page }) => {
+  await page.goto(T6);
+  const card = page.locator('[data-testid=mock-part][data-part="3"]');
+  await expect(card.getByTestId("transcript-fixes")).toBeVisible();
+  const marks = await card.locator("mark").count();
+  await page.goto("/teacher/classes/demo-class/attempts/aziza-p3?mock=1&as=teacher");
+  expect(await page.locator("mark").count()).toBe(marks);
+});
+
+test("demo: 'Your teacher' beside CEFRO's band on a single-part result (teacher=1), never instead of it; absent without the switch", async ({ page }) => {
+  for (const url of ["/result?mock=1&demo=demo-6", "/result/part3?mock=1&demo=" + encodeURIComponent((await part3Key(page)) ?? "")]) {
+    await page.goto(`${url}&teacher=1`);
+    const line = page.getByTestId("your-teacher");
+    await expect(line).toHaveText(/^CEFRO: .+ · Your teacher: (Below B1|B1|B2|C1|Above B2)$/);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Band");
+    await audit(page, 1);
+    await page.goto(url);
+    await expect(page.getByTestId("your-teacher")).toHaveCount(0);
+  }
+});
+
+/** A Part 3 demo key, read from the demo dashboard's own link to a Part 3 result. */
+async function part3Key(page: Page): Promise<string | null> {
+  await page.goto("/practice/mock/demo-mock?mock=1");
+  const href = await page.locator("a[href*='/result/part3']").first().getAttribute("href");
+  return href ? new URL(href, "http://x").searchParams.get("demo") : null;
+}

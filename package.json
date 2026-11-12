@@ -22,6 +22,7 @@
     "test:e2e:preview": "next build && playwright test -c playwright.preview.config.ts",
     "eval:transcription:controlled": "vitest run --config vitest.live.config.mts test/live/transcription-validation.live.test.ts",
     "eval:pipeline": "vitest run --config vitest.live.config.mts test/live/full-pipeline.live.test.ts",
+    "test:e2e:exam-laptop": "playwright test -c playwright.exam-laptop.config.ts",
     "test:e2e:live": "playwright test -c playwright.live.config.ts",
     "db:migrate": "node scripts/migrate.mjs",
     "vercel-build": "next build"

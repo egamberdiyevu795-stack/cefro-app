@@ -30,6 +30,11 @@ export function TeacherMock({ mock, ratingUrl, mockRatingUrl, demo }: { mock: Te
             {header.statusText}
           </span>
           <span className="text-fg-muted">{header.date}</span>
+          {header.placeText && (
+            <span className="text-fg-muted" data-testid="mock-place">
+              {header.placeText}
+            </span>
+          )}
         </p>
         {header.note && <p className="mt-2 text-label text-fg-muted">{header.note}</p>}
         <p className="mt-4 text-caption text-fg-muted">Estimated speaking level (CEFRO)</p>

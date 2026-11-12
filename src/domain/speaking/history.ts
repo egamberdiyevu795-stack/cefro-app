@@ -44,4 +44,6 @@ export interface HistoryMock {
   id: string;
   status: MockStatus;
   createdAt: string;
+  /** Set when the mock was taken on a teacher's exam laptop ("In class"); null/absent = taken at home ("At home"). */
+  classMockId?: string | null;
 }

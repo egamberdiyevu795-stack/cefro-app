@@ -873,6 +873,33 @@ What changed in the Teacher view (details in `docs/teacher-plan.md`, section 10)
 - **Checks:** `features/teacher/teacher-pages.test.ts` (every screen: black buttons, 11 px, mock links only, nothing read from the database), `e2e/teacher-v1.spec.ts` (390 px:
   T6, player speed, deleted note, Part 3, T3, join link, the card; WCAG AA contrast on every text) and the updated `e2e/teacher-view.spec.ts`.
 
+### Exam laptop (`claude/exam-laptop`, step 7 of `docs/v1-plan.md`)
+
+Details and rules in `docs/teacher-plan.md`, section 11. Still mock mode only; `TEACHER_LIVE` stays false. Laptop width (1280 px) first, then 390 px.
+
+- **Mock addresses:** start `/teacher/classes/demo-class/exam?mock=1&as=teacher`; T7 `/teacher/classes/demo-class/exam/demo-class-mock/laptop?mock=1&as=teacher&room=Room+1`
+  (`&timeScale=0.05` shortens preparation and speaking, browser tests only); T8 `/teacher/classes/demo-class/exam/demo-class-mock?mock=1&as=teacher`. In the demo T7 every PIN is **1234** (the pad says so),
+  Dilnoza is "In progress (Room 2)", Aziza and Jasur are Done, Sardor has no PIN, Madina and Bekzod can start.
+- **One black button per screen:** T3 **Start exam laptop** (a `PillButton`, size `lg`; **Copy join code is grey now**); start page **Start exam laptop** (**Join and start exam laptop** when joining); T7 list **none**;
+  PIN pad **Continue** (disabled until 4 digits); "Hi {name}…" the mock's own **Start mock**; a part running: none; end screen **Back to the list**; Teacher options **none** (End exam laptop and End and close are grey);
+  T8 **Open first unrated** (none, with the line "Nothing left to rate.", when nothing is left); Share screen still **Share with this teacher**; the Account page keeps its own.
+- **T7 frame:** no `AppShell`: `bg-page`, a column of at most 56 rem, the wordmark as plain text (not a link) and "Class · Mock 3 · Room 1" (`text-label`, muted). **No link on the screen** (browser test: zero `a[href]`).
+  Names are 56 px tall tiles (`rounded-tile bg-well`, name `text-lead` semibold, state `text-caption` muted) in a 3-column grid at 1280 px, 2 at tablet, 1 on a phone; groups titled "Not started · 3" (`text-label`, muted).
+  A name that can't be tapped is a bordered `div` (not a disabled button): text only, never colour alone ("In progress (Room 2)", "Done", "No PIN yet. Set one on your phone.", "Locked. Ask your teacher.").
+- **PIN pad (`features/exam-laptop/PinPad.tsx`):** the student's name as the heading, four dots, a password field (so the keyboard works; digits never shown), a 3 x 4 pad of 56 px `bg-well` keys with
+  17 px digits ("Clear", "Delete" in 13 px), the black **Continue**, and a small "Back to the list". A wrong PIN: "That PIN isn't right. 4 tries left." (`role="alert"`).
+- **Teacher options** (quiet small text action, bottom right of T7): a card with a password field, "Unlock {name}" per locked student, and the two grey end buttons; every message is `role="alert"`.
+- **Class mocks card** (T3, `ClassMocksCard`): `Card` with rows like the students list (title semibold, "10.11.26 · 8 of 9 finished · Closed" `text-label` muted, chevron). **T8** (`ResultsView`): header with the
+  class, "Mock 3 · 10.11.26" and "2 of 6 finished"; a **Students** card (name and level at the left, the four bands as a muted `text-label` list, a grey small **Listen**); on laptop the common
+  problems card sits at the right (the T3 card, reused).
+- **Share screen / Account:** a **Class PIN** field (`type="password"`, `inputMode="numeric"`, 4 digits, 128 px wide, wide tracking, hint in `text-label`); under Your classes "Class PIN: set / not set yet" and a
+  small grey **Set PIN / Change PIN** opening a `well` card with a field and a grey **Save PIN**.
+- **In class / At home:** plain text beside the date on T6's header (`data-testid="mock-place"`), after the caption on History and T4 mock rows ("Speaking only · 4 parts · In class"), after the title on the
+  student's mock result. Never colour.
+- **New:** `PillAction` takes `testId` and `label`. No new colour, icon or token. Components: `features/exam-laptop/` (`ExamLaptop`, `PinPad`, `StartExam`, `ResultsView`, `ClassMocksCard`, `results-view.ts`, `laptop-id.ts`).
+- **Checks:** `e2e/exam-laptop.spec.ts` (every screen audited: one black control at most, no text under 11 px, AA contrast of every visible text, no horizontal scroll, at 1280 and 390 px; two students in a row on one
+  laptop; the lock; End; T8), `e2e/exam-laptop-real.spec.ts` (two laptops, real database).
+
 ## Part 3 (mock mode, and the real flow behind `PART_LIVE["3"]`)
 
 Part 3 (official Question 8, balanced argument, target C1, band 0–6; docs/part3-plan.md) is built in mock mode and,

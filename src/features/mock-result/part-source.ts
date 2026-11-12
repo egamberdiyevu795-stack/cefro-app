@@ -73,6 +73,8 @@ export interface MockResultSource {
   parts: MockPartSource[];
   /** The level a teacher gave the whole mock (docs/v1-plan.md, step 6); absent or null: not rated. Shown beside CEFRO's, never instead. */
   teacherLevel?: EstimatedLevel | null;
+  /** "In class" (taken on a teacher's exam laptop) or "At home". Absent: not said (the demo mock). */
+  place?: "in_class" | "at_home";
 }
 
 export const NOT_DONE_PART = (part: ExamPartId): MockPartSource => ({

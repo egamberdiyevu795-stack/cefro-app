@@ -2,6 +2,7 @@
  * T6 "Student's mock" as a teacher reads it (docs/v1-plan.md, section 5): the plain data the page draws, shared by the real
  * server (`teacher-service.ts`) and the demo teacher (`demo-mock.ts`). JSON-safe and browser-safe: no database, no provider.
  */
+import { placeLabel } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
 import { isMockLevel, type MockLevel } from "@/domain/teacher/rules";
 import type { MockStatus } from "@/domain/speaking/full-mock";
@@ -47,6 +48,8 @@ export interface TeacherMockView {
   finishedAt: string | null;
   parts: TeacherMockPartView[];
   rating: TeacherMockRating | null;
+  /** "In class" (on the exam laptop) or "At home"; absent: not said. */
+  place?: "in_class" | "at_home";
 }
 
 /** "Finished" · "In progress" · "Not finished" (closed after 24 hours). */
@@ -92,9 +95,11 @@ export interface TeacherMockHeader {
   line: typeof SPEAKING_ONLY_LINE;
   /** "You: Agree" / "You: B2" for the whole mock, when rated. */
   ratingText: string | null;
+  /** "In class" / "At home"; null when not said. */
+  placeText: string | null;
 }
 
-export function teacherMockHeader(mock: Pick<TeacherMockView, "createdAt" | "status" | "parts" | "rating">): TeacherMockHeader {
+export function teacherMockHeader(mock: Pick<TeacherMockView, "createdAt" | "status" | "parts" | "rating" | "place">): TeacherMockHeader {
   const estimate = appEstimate(mock.parts);
   const date = formatDate(mock.createdAt);
   return {
@@ -106,6 +111,7 @@ export function teacherMockHeader(mock: Pick<TeacherMockView, "createdAt" | "sta
     estimateText: estimate ?? ESTIMATE_NOT_READY,
     line: SPEAKING_ONLY_LINE,
     ratingText: mock.rating ? (mock.rating.agrees ? "You: Agree" : `You: ${mock.rating.level}`) : null,
+    placeText: mock.place ? placeLabel(mock.place) : null,
   };
 }
 

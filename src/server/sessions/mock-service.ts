@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { getAnySpeakingTask, listAllSpeakingTasks } from "@/content/speaking";
 import { listArgumentTasks } from "@/content/speaking/part3";
 import { examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
@@ -51,6 +51,8 @@ export interface MockView {
   nextPart: ExamPartId | null;
   /** When an in-progress mock runs out of time. */
   expiresAt: string;
+  /** Set when the mock was taken on a teacher's exam laptop ("In class"); null = at home. */
+  classMockId: string | null;
 }
 
 type SessionRow = typeof practiceSessions.$inferSelect;
@@ -117,6 +119,7 @@ function toView(row: SessionRow, finished: readonly (FinishedPart & { status: st
     }),
     nextPart: status === "in_progress" ? nextMockPart(finished) : null,
     expiresAt: new Date(Date.parse(row.createdAt) + MOCK_EXPIRES_AFTER_MS).toISOString(),
+    classMockId: row.classMockId,
   };
 }
 
@@ -127,14 +130,17 @@ export async function getMock(userId: string, mockId: string, now = Date.now()):
   return toView(row, await finishedPartsOf(row.id), now);
 }
 
-/** The caller's mock that is still in progress (the newest, after the 24-hour rule ran), or null. Reads only their rows. */
+/**
+ * The caller's mock that is still in progress (the newest, after the 24-hour rule ran), or null. Reads only their rows.
+ * A mock started on a teacher's exam laptop (`class_mock_id`) is never "continued" at home: it belongs to that class mock.
+ */
 export async function findInProgressMock(userId: string, now = Date.now()): Promise<MockView | null> {
   await expireStaleMocks(userId, now);
   const db = await getDb();
   const row = await db
     .select()
     .from(practiceSessions)
-    .where(and(eq(practiceSessions.userId, userId), eq(practiceSessions.kind, "full_mock"), eq(practiceSessions.status, "in_progress")))
+    .where(and(eq(practiceSessions.userId, userId), eq(practiceSessions.kind, "full_mock"), eq(practiceSessions.status, "in_progress"), isNull(practiceSessions.classMockId)))
     .orderBy(desc(practiceSessions.createdAt))
     .limit(1)
     .get();

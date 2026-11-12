@@ -63,11 +63,27 @@ export function isRetryable(error: unknown): boolean {
   return error.retryAfterSeconds == null || error.retryAfterSeconds * 1000 <= MAX_RETRY_AFTER_MS;
 }
 
+/**
+ * Exam laptop (docs/v1-plan.md section 6): while a student takes their mock on the teacher's laptop, every request carries the
+ * one-mock pass and the laptop's id. The server accepts them only on the mock's start and finish and the recording upload, and
+ * then acts as the student. Set when the laptop's mock starts, cleared when it ends; never set at home.
+ */
+let examPass: { passId: string; laptopId: string } | null = null;
+export function setExamPass(pass: { passId: string; laptopId: string } | null): void {
+  examPass = pass;
+}
+
 async function requestOnce<T>(input: string, init?: RequestOptions): Promise<T> {
   let response: Response;
   try {
+    const headers = new Headers(init?.headers);
+    if (examPass) {
+      headers.set("x-exam-pass", examPass.passId);
+      headers.set("x-exam-laptop", examPass.laptopId);
+    }
     response = await fetch(input, {
       ...init,
+      headers,
       credentials: "same-origin",
       signal: AbortSignal.timeout(init?.timeoutMs ?? 30_000),
     });

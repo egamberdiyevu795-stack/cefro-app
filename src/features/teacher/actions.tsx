@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PillAction, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import type { BandLabel } from "@/features/result/view-model";
+import { PIN_PROBLEM, isPin } from "@/domain/teacher/exam-laptop";
 import { MOCK_LEVELS, UPGRADE_TEXT, joinLinkPath } from "@/domain/teacher/rules";
 import type { TeacherMockRating } from "./mock-view";
 import { teacherHref, teacherLinks } from "./links";
@@ -537,6 +538,93 @@ export function ShareMoreCard({ memberId, teacherName, className, demo }: { memb
         </PillAction>
       </div>
       <Problem text={message} />
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------------------- class PIN (Account > Your classes) */
+
+/**
+ * "Class PIN: set / not set" and a small Set / Change PIN. The student types a new 4-digit PIN on their own device (the
+ * only way to reset it: the teacher can't see or change it). Saving also clears a lock. `demo`: nothing is sent.
+ */
+export function ClassPinControl({ memberId, hasPin, demo }: { memberId: string; hasPin: boolean; demo: boolean }) {
+  const ready = useHydrated();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pin, setPin] = useState("");
+  const [saved, setSaved] = useState(hasPin);
+  const [message, setMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!isPin(pin)) return setMessage(PIN_PROBLEM);
+    setBusy(true);
+    setMessage(null);
+    if (demo) {
+      setSaved(true);
+      setOpen(false);
+      setStatus("PIN saved. Demo mode: nothing was saved.");
+    } else {
+      const result = await send(`/api/classes/${encodeURIComponent(memberId)}/pin`, "PUT", { pin });
+      if (result.ok) {
+        setSaved(true);
+        setOpen(false);
+        setStatus("PIN saved.");
+        router.refresh();
+      } else setMessage(result.message);
+    }
+    setPin("");
+    setBusy(false);
+  };
+
+  return (
+    <div className="mt-2" data-testid="class-pin-control">
+      <p className="text-label text-fg-muted">
+        Class PIN: <span className="text-fg">{saved ? "set" : "not set yet"}</span>
+        {!open && (
+          <button type="button" onClick={() => setOpen(true)} disabled={!ready} className={cx(styles.SMALL_ACTION, "ml-2 min-h-9 px-2 disabled:opacity-60")} data-testid="class-pin-open">
+            {saved ? "Change PIN" : "Set PIN"}
+          </button>
+        )}
+      </p>
+      {open && (
+        <form method="post" onSubmit={(e) => void save(e)} noValidate className="mt-2 rounded-tile bg-well p-3" data-testid="class-pin-form">
+          <label htmlFor={`pin-${memberId}`} className="text-caption font-semibold text-fg">
+            New 4-digit PIN
+          </label>
+          <input
+            id={`pin-${memberId}`}
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            maxLength={4}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            className={cx(FIELD, "mt-1 w-32 tracking-[0.3em]")}
+            aria-describedby={`pin-note-${memberId}`}
+          />
+          <p id={`pin-note-${memberId}`} className="mt-1 text-label text-fg-muted">
+            You type it on your teacher&rsquo;s laptop. Your teacher can&rsquo;t see it.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <PillAction type="submit" variant="light" disabled={!ready || busy} className="min-h-9">
+              Save PIN
+            </PillAction>
+            <button type="button" onClick={() => { setOpen(false); setPin(""); setMessage(null); }} className={cx(styles.SMALL_ACTION, "min-h-9 px-2")}>
+              Cancel
+            </button>
+          </div>
+          <Problem text={message} />
+        </form>
+      )}
+      <p role="status" className="min-h-4 text-label text-fg">
+        {status}
+      </p>
     </div>
   );
 }

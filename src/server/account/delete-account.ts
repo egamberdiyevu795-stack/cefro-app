@@ -9,7 +9,9 @@ import {
   authVerifications,
   classMembers,
   classes,
+  classMocks,
   evaluations,
+  examPasses,
   practiceSessions,
   recordingBlobs,
   recordings,
@@ -37,6 +39,8 @@ export interface DeletionSummary {
   teacherRatings: number;
   /** A teacher's classes removed (`classes`). */
   classes: number;
+  /** Exam laptop rows removed (`exam_passes`, `class_mocks`). The PIN lives on the membership row and goes with it. */
+  examLaptopRows: number;
 }
 
 /**
@@ -108,6 +112,12 @@ export async function deleteAccount(userId: string): Promise<DeletionSummary> {
     ratingCount += (await tx.delete(teacherMockRatings).where(inArray(teacherMockRatings.teacherUserId, userIds)).run()).rowsAffected;
     if (ownClassIds.length) ratingCount += (await tx.delete(teacherMockRatings).where(inArray(teacherMockRatings.classId, ownClassIds)).run()).rowsAffected;
     if (sessionIds.length) ratingCount += (await tx.delete(teacherMockRatings).where(inArray(teacherMockRatings.sessionId, sessionIds)).run()).rowsAffected;
+    // Exam laptop (migration 0010): every pass the account holds as a student, every pass made in their classes, then the
+    // class mocks of their classes. Their mocks taken in class stay with the practice sessions below (deleted too).
+    const ownClassMockIds = ownClassIds.length ? (await tx.select({ id: classMocks.id }).from(classMocks).where(inArray(classMocks.classId, ownClassIds)).all()).map((row) => row.id) : [];
+    let examCount = (await tx.delete(examPasses).where(inArray(examPasses.studentUserId, userIds)).run()).rowsAffected;
+    if (ownClassMockIds.length) examCount += (await tx.delete(examPasses).where(inArray(examPasses.classMockId, ownClassMockIds)).run()).rowsAffected;
+    if (ownClassMockIds.length) examCount += (await tx.delete(classMocks).where(inArray(classMocks.id, ownClassMockIds)).run()).rowsAffected;
     let memberCount = (await tx.delete(classMembers).where(inArray(classMembers.studentUserId, userIds)).run()).rowsAffected;
     if (ownClassIds.length) memberCount += (await tx.delete(classMembers).where(inArray(classMembers.classId, ownClassIds)).run()).rowsAffected;
     const classCount = ownClassIds.length ? (await tx.delete(classes).where(inArray(classes.id, ownClassIds)).run()).rowsAffected : 0;
@@ -137,6 +147,7 @@ export async function deleteAccount(userId: string): Promise<DeletionSummary> {
       classMemberships: memberCount,
       teacherRatings: ratingCount,
       classes: classCount,
+      examLaptopRows: examCount,
     };
   });
 }

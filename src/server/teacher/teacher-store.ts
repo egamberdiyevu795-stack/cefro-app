@@ -25,10 +25,12 @@ import {
 } from "@/domain/teacher/rules";
 import { accountDisplayName, normaliseName } from "@/domain/account";
 import { getDb, type Db } from "@/server/db/client";
-import { classMembers, classes, practiceSessions, ratingPairs, recordings, speakingAttempts, speakingTasks, teacherMockRatings, teacherRatings, users } from "@/server/db/schema";
+import { classMembers, classMocks, classes, examPasses, practiceSessions, ratingPairs, recordings, speakingAttempts, speakingTasks, teacherMockRatings, teacherRatings, users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
 import { TEACHER_SHARING_LOCKED_MESSAGE, teacherSharingAllowed, teacherSharingConsentRecorded } from "@/server/consent/consent";
 import { newId, nowIso } from "@/server/ids";
+import { isPin, PIN_PROBLEM } from "@/domain/teacher/exam-laptop";
+import { hashPin } from "@/server/exam-laptop/pin";
 
 /*
  * The Teacher view's data (docs/teacher-plan.md, sections 3–5). Every function takes the caller's own user id (from
@@ -120,6 +122,8 @@ export async function closeClass(teacherId: string, classId: string): Promise<vo
   await db.transaction(async (tx) => {
     const open = await tx.select().from(classMembers).where(and(eq(classMembers.classId, classId), isNull(classMembers.endedAt))).all();
     for (const member of open) await endMembership(tx, member, "class_closed");
+    // Exam laptop: a closed class has no open class mock (no new PIN or mock can start).
+    await tx.update(classMocks).set({ closedAt: nowIso() }).where(and(eq(classMocks.classId, classId), isNull(classMocks.closedAt))).run();
     await tx.update(classes).set({ closedAt: nowIso() }).where(eq(classes.id, classId)).run();
   });
 }
@@ -179,7 +183,17 @@ async function endMembership(tx: Tx, member: MemberRow, endedBy: EndedBy): Promi
       .where(and(eq(teacherMockRatings.classId, member.classId), inArray(teacherMockRatings.sessionId, mockSessions.map((s) => s.id))))
       .run();
   }
-  await tx.update(classMembers).set({ endedAt: nowIso(), endedBy }).where(eq(classMembers.id, member.id)).run();
+  // Exam laptop (migration 0010): the class PIN and its failure counts go with the membership, and every pass this student
+  // holds for this class's class mocks ends at once (a laptop in the middle of their mock can't record any more).
+  const classMockIds = (await tx.select({ id: classMocks.id }).from(classMocks).where(eq(classMocks.classId, member.classId)).all()).map((row) => row.id);
+  if (classMockIds.length) {
+    await tx
+      .update(examPasses)
+      .set({ usedUpAt: nowIso() })
+      .where(and(eq(examPasses.studentUserId, member.studentUserId), inArray(examPasses.classMockId, classMockIds), isNull(examPasses.usedUpAt)))
+      .run();
+  }
+  await tx.update(classMembers).set({ endedAt: nowIso(), endedBy, pinHash: null, pinFailures: null }).where(eq(classMembers.id, member.id)).run();
 }
 
 /* -------------------------------------------------------------------------------------------------------- access */
@@ -358,11 +372,13 @@ export async function accountEmail(userId: string): Promise<string | null> {
  * The S2 tap ("Share with this teacher"): the first time anything is stored. `shared_at` is now; only attempts made
  * after it are shared. Null for a code that matches no open class. Already in the class: 409.
  */
-export async function shareWithClass(studentId: string, code: unknown, shownName: unknown): Promise<{ memberId: string } | null> {
+export async function shareWithClass(studentId: string, code: unknown, shownName: unknown, pin?: unknown): Promise<{ memberId: string } | null> {
   // Pilot consent: Share needs teacher-sharing consent (CONSENT_REQUIRED on), checked before anything is looked up.
   if (!(await teacherSharingAllowed(studentId))) throw new HttpError(403, "teacher_sharing_not_allowed", TEACHER_SHARING_LOCKED_MESSAGE);
   const problem = shownNameProblem(shownName);
   if (problem) throw new HttpError(400, "invalid_shown_name", problem);
+  // The class PIN for the exam laptop (optional here, asked for on the Share screen). Checked before anything is stored.
+  if (pin != null && !isPin(pin)) throw new HttpError(400, "invalid_pin", PIN_PROBLEM);
   const found = await classByCode(code);
   if (!found) return null;
   if (found.teacherUserId === studentId) throw new HttpError(400, "own_class", "This is your own class.");
@@ -373,9 +389,29 @@ export async function shareWithClass(studentId: string, code: unknown, shownName
   const memberId = newId();
   await db
     .insert(classMembers)
-    .values({ id: memberId, classId: found.id, studentUserId: studentId, shownName: normaliseName(shownName as string), sharedAt: nowIso(), shareTextVersion: SHARE_TEXT_VERSION })
+    .values({
+      id: memberId,
+      classId: found.id,
+      studentUserId: studentId,
+      shownName: normaliseName(shownName as string),
+      sharedAt: nowIso(),
+      shareTextVersion: SHARE_TEXT_VERSION,
+      pinHash: pin == null ? null : await hashPin(pin as string),
+    })
     .run();
   return { memberId };
+}
+
+/**
+ * The student sets (or changes) the class PIN for one of their own open memberships, on their own device. The teacher never
+ * sees it and can't reset it; a new PIN also clears any lock. 404 for anyone else's membership or an ended one.
+ */
+export async function setClassPin(studentId: string, memberId: string, pin: unknown): Promise<void> {
+  if (!isPin(pin)) throw new HttpError(400, "invalid_pin", PIN_PROBLEM);
+  const db = await getDb();
+  const member = await db.select({ id: classMembers.id }).from(classMembers).where(and(eq(classMembers.id, memberId), eq(classMembers.studentUserId, studentId), isNull(classMembers.endedAt))).get();
+  if (!member) throw notFound();
+  await db.update(classMembers).set({ pinHash: await hashPin(pin), pinFailures: null }).where(eq(classMembers.id, member.id)).run();
 }
 
 export interface Membership {
@@ -388,6 +424,8 @@ export interface Membership {
   endedBy: EndedBy | null;
   /** An old wording, not upgraded and not declined: the Account page shows "Share recordings too?" once. */
   needsUpgrade: boolean;
+  /** The student has set a class PIN (never the PIN or its hash). Only for a membership that is still open. */
+  hasPin: boolean;
 }
 
 /**
@@ -413,6 +451,7 @@ export async function listMemberships(studentId: string): Promise<Membership[]> 
       sharedAt: member.sharedAt,
       endedBy: member.endedBy ?? null,
       needsUpgrade: needsUpgradeAnswer(member),
+      hasPin: !member.endedBy && Boolean(member.pinHash),
     }));
 }
 

@@ -39,7 +39,10 @@ export function MockStartCard({
   error,
   ready,
   onStart,
+  greeting,
 }: {
+  /** Exam laptop: "Hi Aziza, this mock is saved to your account". Replaces the heading; nothing else changes. */
+  greeting?: string;
   /** Parts already saved (continuing); empty for a new mock. */
   done: readonly ExamPartId[];
   /** Shown instead of the start button: why this caller may not record. */
@@ -56,14 +59,16 @@ export function MockStartCard({
     <Card aria-labelledby="mock-start-title" className="mx-auto w-full max-w-2xl" data-testid="mock-start">
       <p className="text-caption text-fg-muted">Speaking · 4 parts</p>
       <h1 id="mock-start-title" className="mt-1 text-stat font-light tracking-[-0.03em] text-fg">
-        {resuming ? "Continue your mock" : "Full mock exam"}
+        {greeting ?? (resuming ? "Continue your mock" : "Full mock exam")}
       </h1>
       <p className="mt-3 text-body text-fg">
         {resuming
           ? `Your finished parts are saved. The mock goes on with ${next ? examPartLabel(next) : "the last part"}.`
           : "About 15 minutes, like the real exam. Find a quiet place and use headphones with a microphone if you can."}
       </p>
-      <p className="mt-2 text-body text-fg">You can&rsquo;t pause between parts, like the real exam. You see your results when it is over.</p>
+      <p className="mt-2 text-body text-fg">
+        {greeting ? "You can’t pause between parts, like the real exam. Your results will be on your phone." : "You can’t pause between parts, like the real exam. You see your results when it is over."}
+      </p>
 
       <ol className="mt-5 divide-y divide-line" data-testid="mock-parts">
         {MOCK_PARTS.map((part) => {

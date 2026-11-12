@@ -823,3 +823,29 @@ stays false, so the real pages and routes are a 404 and everything works only in
 - **Tests:** `server/teacher/teacher-access.test.ts`, `app/api/teacher/teacher-v1.test.ts`, `features/teacher/{teacher-pages,mock-view,view-model}.test.ts`,
   `features/result/your-teacher.test.ts`, `features/mock-result/view-model.test.ts`, `server/db/migrations.test.ts` (0009), `server/account/owner-delete-script.test.ts`,
   `app/api/teacher/teacher-routes.test.ts` (updated), `e2e/teacher-v1.spec.ts`, `e2e/teacher-view.spec.ts` (updated).
+
+## After `claude/teacher-v1`: `claude/exam-laptop` (exam laptop mode, **adds migration `0010`**)
+
+Cut from `claude/teacher-v1` (`0ef29a6`), so it comes **after it** (and so after `claude/better-versions`, `claude/mock-result`, `claude/scale-check` and `claude/full-mock`), merge commit, no squash.
+Branch name: `claude/exam-laptop` (11 characters after `claude/`). Step 7 of docs/v1-plan.md. **No Gemini call, no new Production variable.** Nothing is live: `TEACHER_LIVE` stays false, so the
+real pages and routes are a 404 and everything works only in `?mock=1` and in the tests.
+
+- **Migration 0010 (`0010_exam_laptop.sql`), additive:** new tables `class_mocks` and `exam_passes` (with their indexes and foreign keys), and three **nullable** columns:
+  `class_members.pin_hash`, `class_members.pin_failures`, `practice_sessions.class_mock_id`. Nothing is dropped, rewritten or made NOT NULL on an existing table; no unique index, so no
+  `cefro:reviewed` line is needed. Run `npm run db:migrate` (or let the deploy do it) before the code is live. A branch that adds a migration after this one must be `0011`.
+- **PIN:** a 4-digit class PIN set on the Share screen or under Account > Your classes (`PUT /api/classes/[memberId]/pin`), stored as a salted scrypt hash; 5 wrong PINs lock a student on one
+  laptop until the teacher unlocks (with their password); never in any response.
+- **Teacher:** T3's black button is now **Start exam laptop** (Copy join code is grey) and a **Class mocks** card; the start page (same paper / a different paper per student, join the open class
+  mock as "Room 2"); **T7** (not in the app frame: Tap your name, Not started / In progress (Room 2) / Done, PIN pad, "Hi Aziza", the full mock, "Done. Your results will be on your phone."); Teacher
+  options (unlock, End exam laptop, End and close the class mock: all need the password); **T8** class mock results (sorted by level, common problems of the mock, black **Open first unrated**, Listen).
+- **The pass:** a correct PIN gives one laptop a pass for one student (about 30 minutes, used up at the end screen); the three routes the mock uses (start, upload, finish) act as the student with it:
+  their account, their consent check, never the teacher's. Every other route ignores it.
+- **In class / At home:** on T6, T4's rows, the student's mock result and History's mock rows.
+- **Release switch:** `TEACHER_LIVE` can also be turned on by `CEFRO_TEST_TEACHER_LIVE=1` on a test server only (`next dev`, ignored in production builds and on Vercel), like Part 3's and the full mock's.
+  **`.github/workflows/ci.yml` gets one new step**, `npm run test:e2e:exam-laptop` (`playwright.exam-laptop.config.ts`, two laptops on a real throwaway database, mock providers); the main browser config ignores that spec.
+- **Shared code touched (small):** `FullMockRunner` (optional `laptop` prop: the pass, the greeting, `onDone` instead of opening the result), `MockStartCard` (`greeting`), `api-client.ts` (`setExamPass`:
+  two headers, only while a laptop's mock runs), `PillAction` (`testId`, `label`), `mock-service` (`MockView.classMockId`; `findInProgressMock` skips class mocks), `teacher-store`
+  (`shareWithClass(…, pin?)`, `setClassPin`, `endMembership`, `closeClass`), `delete-account.ts` **and `scripts/delete-account.mjs`**, `mock-history`, `HistoryMock.classMockId`, `mockRow`, `MockResult`,
+  `TeacherMock`, `JoinClass`, the Account page's classes card, the demo class (a third demo mock, Jasur's; Bekzod's is "At home"), `POST /api/mock-exams` (now reads its request), `playwright.config.ts` (ignores the real spec).
+- **Tests:** `domain/teacher/exam-laptop.test.ts`, `app/api/teacher/exam-laptop.test.ts`, `server/db/migrations.test.ts` (0010), `owner-delete-script.test.ts`, `app/api/account/account-routes.test.ts`,
+  `features/teacher/teacher-pages.test.ts` (updated), `app/api/mock-exams.test.ts` (passes a request), `e2e/exam-laptop.spec.ts`, `e2e/exam-laptop-real.spec.ts`.

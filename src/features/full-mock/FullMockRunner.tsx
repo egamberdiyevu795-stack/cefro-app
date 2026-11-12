@@ -12,7 +12,7 @@ import { Part1Experience } from "@/features/speaking-practice/components/Part1Ex
 import { PracticeExperience } from "@/features/speaking-practice/components/PracticeExperience";
 import { InlineNotice, RecordingLockedState } from "@/features/speaking-practice/components/screens";
 import { setAnalyticsSession } from "@/features/speaking-practice/lib/analytics";
-import { ApiError, finishMockExam, startMockExam } from "@/features/speaking-practice/lib/api-client";
+import { ApiError, finishMockExam, setExamPass, startMockExam } from "@/features/speaking-practice/lib/api-client";
 import { primeChime } from "@/features/speaking-practice/lib/chime";
 import type { EmbeddedPart, EmbeddedRecording } from "@/features/speaking-practice/lib/mock-embed";
 import type { MockPartPlan } from "./plan";
@@ -44,6 +44,7 @@ export function FullMockRunner({
   lock,
   mock,
   timeScale = 1,
+  laptop,
 }: {
   /** The four planned parts (a continued mock plays only the ones that are not saved yet). */
   plans: readonly MockPartPlan[];
@@ -53,6 +54,12 @@ export function FullMockRunner({
   mock: boolean;
   /** Mock mode, browser tests only: shortens preparation and speaking time (Parts 1 and 3). */
   timeScale?: number;
+  /**
+   * Exam laptop (T7): the student sits the mock on the teacher's laptop. `passId` / `laptopId` are sent with every request
+   * (the server then acts as the student), `greeting` heads "Before you start", and at the end the runner calls `onDone`
+   * instead of opening the result: nothing of the result is ever shown on the shared screen.
+   */
+  laptop?: { passId: string; laptopId: string; greeting: string; onDone: () => void };
 }) {
   const router = useRouter();
   const ready = useHydrated();
@@ -78,6 +85,7 @@ export function FullMockRunner({
     setAudio(createUnlockedAudio());
     primeChime();
     dispatch({ type: "begin" });
+    setExamPass(!mock && laptop ? { passId: laptop.passId, laptopId: laptop.laptopId } : null);
     if (mock) {
       dispatch({ type: "started", finished: [] });
       return;
@@ -85,7 +93,7 @@ export function FullMockRunner({
     startMockExam()
       .then(({ mock: session }) => {
         setSessionId(session.id);
-        setAnalyticsSession(session.id);
+        if (!laptop) setAnalyticsSession(session.id);
         dispatch({ type: "started", finished: session.parts.filter((p) => p.attemptId).map((p) => p.part) });
       })
       .catch((error) => dispatch({ type: "startFailed", message: error instanceof ApiError ? error.userMessage : "The mock could not be started. Please try again." }));
@@ -123,7 +131,8 @@ export function FullMockRunner({
     if (state.phase !== "sending") return;
     if (mock) {
       dispatch({ type: "allSent" });
-      router.push(DEMO_MOCK_HREF);
+      if (laptop) laptop.onDone();
+      else router.push(DEMO_MOCK_HREF);
       return;
     }
     const mockId = sessionId;
@@ -134,13 +143,17 @@ export function FullMockRunner({
         if (cancelled) return;
         setFinishError(null);
         dispatch({ type: "allSent" });
-        router.push(`/practice/mock/${encodeURIComponent(mockId)}`);
+        if (laptop) laptop.onDone();
+        else router.push(`/practice/mock/${encodeURIComponent(mockId)}`);
       })
       .catch((error) => !cancelled && setFinishError(error instanceof ApiError ? error.userMessage : "The mock could not be closed. Please try again."));
     return () => {
       cancelled = true;
     };
-  }, [state.phase, everySent, mock, router, finishTry, sessionId]);
+  }, [state.phase, everySent, mock, router, finishTry, sessionId, laptop]);
+
+  // The pass belongs to this one mock: it is dropped when the runner goes away (the end screen, a reload, leaving).
+  useEffect(() => () => setExamPass(null), []);
 
   // A part that failed because the device went offline is sent again as soon as it is back online.
   useEffect(() => {
@@ -172,6 +185,7 @@ export function FullMockRunner({
         error={state.error}
         ready={ready}
         onStart={start}
+        greeting={laptop?.greeting}
       />
     );
   } else if (state.phase === "playing" && plan && embedded && part) {
@@ -198,7 +212,7 @@ export function FullMockRunner({
 
   return (
     <div className="space-y-4">
-      {mock && <DemoLabel variant="mode" className="bg-card" />}
+      {mock && !laptop && <DemoLabel variant="mode" className="bg-card" />}
       {content}
     </div>
   );

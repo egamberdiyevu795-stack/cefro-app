@@ -66,4 +66,14 @@ function fullMockLiveForTests(): boolean {
  * section 7): every real teacher page and API, and the student's Join / Share / Leave, answer 404. Mock mode
  * (`?mock=1`, the demo teacher and class DEMO42) works either way. Not a preview flag: `?flags=off` leaves it alone.
  */
-export const TEACHER_LIVE = false;
+export const TEACHER_LIVE = teacherLiveForTests();
+
+/**
+ * The Teacher view is NOT live: `TEACHER_LIVE` is `false` in the product, on Vercel and in production builds, whatever is set.
+ * Only a test server (`next dev` on a developer machine or CI, started by playwright.exam-laptop.config.ts with
+ * CEFRO_TEST_TEACHER_LIVE=1, like Part 3's and the full mock's switches) can turn it on, so the real exam-laptop screens can be
+ * driven in a browser with a real database. The unit tests use `setTeacherLiveForTesting` instead.
+ */
+function teacherLiveForTests(): boolean {
+  return process.env.CEFRO_TEST_TEACHER_LIVE === "1" && process.env.NODE_ENV !== "production" && !process.env.VERCEL;
+}

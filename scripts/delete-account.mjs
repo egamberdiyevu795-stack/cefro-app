@@ -88,6 +88,10 @@ try {
   add(`DELETE FROM teacher_mock_ratings WHERE teacher_user_id IN (${u})`, userIds);
   if (ownClassIds.length) add(`DELETE FROM teacher_mock_ratings WHERE class_id IN (${marks(ownClassIds)})`, ownClassIds);
   add(`DELETE FROM teacher_mock_ratings WHERE session_id IN (SELECT id FROM practice_sessions WHERE user_id IN (${u}))`, userIds);
+  // Exam laptop (migration 0010): the account's passes as a student, the passes made in its classes, then those classes' class mocks.
+  add(`DELETE FROM exam_passes WHERE student_user_id IN (${u})`, userIds);
+  if (ownClassIds.length) add(`DELETE FROM exam_passes WHERE class_mock_id IN (SELECT id FROM class_mocks WHERE class_id IN (${marks(ownClassIds)}))`, ownClassIds);
+  if (ownClassIds.length) add(`DELETE FROM class_mocks WHERE class_id IN (${marks(ownClassIds)})`, ownClassIds);
   add(`DELETE FROM class_members WHERE student_user_id IN (${u})`, userIds);
   if (ownClassIds.length) add(`DELETE FROM class_members WHERE class_id IN (${marks(ownClassIds)})`, ownClassIds);
   if (ownClassIds.length) add(`DELETE FROM classes WHERE id IN (${marks(ownClassIds)})`, ownClassIds);

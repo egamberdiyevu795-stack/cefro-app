@@ -156,6 +156,11 @@ export const practiceSessions = sqliteTable(
     kind: text("kind", { enum: ["single_task", "full_mock"] }).notNull().default("single_task"),
     status: text("status", { enum: ["in_progress", "finished", "not_finished"] }),
     finishedAt: text("finished_at"),
+    /**
+     * Migration 0010. Set when the mock was taken on a teacher's exam laptop ("In class"); null = taken at home. A plain text
+     * id with no foreign key on purpose: it is a label that must survive its teacher's account being deleted.
+     */
+    classMockId: text("class_mock_id"),
     ...timestamps,
   },
   // The only query by user is the mock's: "this user's full mocks, and the one in progress".
@@ -387,6 +392,13 @@ export const classMembers = sqliteTable(
     allPartsFrom: text("all_parts_from"),
     /** Migration 0009. When the student answered "Not now" to that one-time card; the card is not shown again. */
     upgradeDeclinedAt: text("upgrade_declined_at"),
+    /**
+     * Migration 0010. The student's 4-digit class PIN for the exam laptop, hashed (scrypt, per-row salt; `server/exam-laptop/pin.ts`).
+     * Never sent to anyone, never shown, never logged. Null = no PIN yet (the student can't be picked on a laptop).
+     */
+    pinHash: text("pin_hash"),
+    /** Migration 0010. Wrong PINs per laptop, JSON `{"<laptop id>": n}`. 5 on one laptop lock the student there until the teacher unlocks. */
+    pinFailures: text("pin_failures"),
   },
   (table) => [
     uniqueIndex("class_members_open_uq").on(table.classId, table.studentUserId).where(sql`${table.endedAt} IS NULL`),
@@ -456,3 +468,51 @@ export const ratingPairs = sqliteTable("rating_pairs", {
   /** "YYYY-MM". */
   month: text("month").notNull(),
 });
+
+/**
+ * Exam laptop mode (docs/v1-plan.md section 6, migration 0010): one row per "Start exam laptop". Two laptops in two rooms
+ * share the open row of a class. `task_*` hold the one paper everyone sits; all four null = a different paper for each student.
+ */
+export const classMocks = sqliteTable(
+  "class_mocks",
+  {
+    id: text("id").primaryKey(),
+    classId: text("class_id").notNull().references(() => classes.id),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    title: text("title").notNull(),
+    task11: text("task_1_1"),
+    task12: text("task_1_2"),
+    task2: text("task_2"),
+    task3: text("task_3"),
+    openedAt: text("opened_at").notNull(),
+    /** Set by "End exam laptop > close": no new pass or mock can start. Never reopened. */
+    closedAt: text("closed_at"),
+    ...timestamps,
+  },
+  (table) => [index("class_mocks_class_idx").on(table.classId)],
+);
+
+/**
+ * The one-mock pass (docs/v1-plan.md section 6): a correct PIN gives ONE laptop the right to take one mock as ONE student, for
+ * about 30 minutes. Every recording made with it is saved to `student_user_id`'s account. The pass id is the secret the
+ * laptop's browser holds (an unguessable id, only ever sent to the teacher's own signed-in session). Ends at `used_up_at`
+ * (the end screen, a new pass for the same student, or End exam laptop) or `expires_at`.
+ */
+export const examPasses = sqliteTable(
+  "exam_passes",
+  {
+    id: text("id").primaryKey(),
+    classMockId: text("class_mock_id").notNull().references(() => classMocks.id),
+    studentUserId: text("student_user_id").notNull().references(() => users.id),
+    /** "Room 2": what the other laptop's list shows. */
+    deviceLabel: text("device_label").notNull(),
+    /** A random id the laptop made for itself (never shown): the pass works from that browser only. */
+    laptopId: text("laptop_id").notNull(),
+    /** The mock the pass started (null until the student taps Start mock). Plain text, no foreign key. */
+    sessionId: text("session_id"),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    usedUpAt: text("used_up_at"),
+  },
+  (table) => [index("exam_passes_class_mock_idx").on(table.classMockId), index("exam_passes_student_idx").on(table.studentUserId)],
+);

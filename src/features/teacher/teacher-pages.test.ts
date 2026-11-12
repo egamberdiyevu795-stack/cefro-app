@@ -133,14 +133,18 @@ describe("the demo teacher", () => {
     expect(markup).toContain("Goal met");
     expect(markup).toContain("Close class");
     expectScreen(markup, 1);
-    expect(markup).toMatch(/<button[^>]*bg-primary text-on-primary[^>]*>.*Copy join code/);
+    // The one black control is "Start exam laptop" (docs/v1-plan.md, T3); Copy join code and Copy join link are grey.
+    expect(markup).toMatch(/<a[^>]*bg-primary text-on-primary[^>]*href="\/teacher\/classes\/demo-class\/exam\?mock=1&amp;as=teacher"[^>]*>.*Start exam laptop/);
+    expect(markup).toMatch(/<button[^>]*bg-well[^>]*>.*Copy join code/);
+    expect(markup).toContain('data-testid="class-mocks"');
+    expect(markup).toContain("Mock 3");
+    expect(markup).toContain("2 of 6 finished");
     // The join link is a second, grey button; each student shows their last mock (level, date), and Sardor's Part 2-only note.
     expect(markup).toMatch(/<button[^>]*bg-well[^>]*>Copy join link/);
     expect(markup.match(/data-testid="last-mock"/g)).toHaveLength(6);
     expect(markup).toMatch(/Last mock: <\/span>(B1|B2|C1|Below B1|Not ready) · \d\d\.\d\d\.\d\d/);
     expect(markup).toMatch(/Last mock: <\/span>Not finished · \d\d\.\d\d\.\d\d/);
     expect(markup).toContain("Shares Part 2 only");
-    expect(markup).not.toContain("Class mocks"); // step 7
     expectMockLinksOnly(markup);
     await expect(ClassPage(props(T, { classId: "someone-else" }))).rejects.toThrow();
   });

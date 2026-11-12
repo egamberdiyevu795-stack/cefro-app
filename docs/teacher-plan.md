@@ -168,3 +168,58 @@ account, with the table-by-table test extended.
 before `shared_at`, consent withdrawn, audio deleted, old wording and its upgrade), `teacher-v1.test.ts` (API cross-user for every new route),
 `teacher-pages.test.ts`, `mock-view.test.ts`, `your-teacher.test.ts`, migration 0009 tests, `owner-delete-script.test.ts`, and
 `e2e/teacher-v1.spec.ts` at 390 px.
+
+## 11. What changed for Version 1, step 7: exam laptop mode (docs/v1-plan.md section 6; branch `claude/exam-laptop`, migration 0010)
+
+Still **mock mode only** (`TEACHER_LIVE` is false; the full mock's real routes also wait for all four `PART_LIVE` switches). Everything below works in `?mock=1`
+and in the tests; the real server side is covered by route tests and by a browser test on a test-only server (two laptops, a real database).
+
+| Was | Now |
+| --- | --- |
+| T3's black button: Copy join code | **Start exam laptop** (black). Copy join code and Copy join link are grey. A new **Class mocks** card lists each class mock ("Mock 3 · 10.11.26 · 8 of 9 finished", "Closed") and opens T8. |
+| Share (S2): name, will see / won't see | + **Class PIN**: 4 digits, a hidden field, "Your teacher can't see it". Stored only as a salted scrypt hash on `class_members.pin_hash`. |
+| Account > Your classes: Leave | + **Class PIN: set / not set yet** with a small **Set PIN / Change PIN** (`PUT /api/classes/[memberId]/pin`). The only way to reset a PIN: the student, signed in, on their own device. A new PIN also clears a lock. The teacher cannot read, set or reset it. |
+| (none) | **Start exam laptop** page (`/teacher/classes/[classId]/exam`): "Same paper for everyone" (the app suggests one task per part that **nobody in the class has done**; the screen sends the paper it showed) or "A different paper for each student" (each gets tasks they haven't done recently), a name for this laptop ("Room 1"), one black button. If another laptop already opened the class's mock, this page says **Join Mock 3** and joins it (same `class_mocks` row), with its own room label ("Room 2"). |
+| (none) | **T7 Exam laptop** (`.../exam/[classMockId]/laptop?room=Room+2`): **not in the app frame**: no navigation, no link out (the wordmark is not a link). Class name, **Tap your name**, a list in three groups: **Not started**, **In progress (Room 2)**, **Done**. Only a student who can start is a button; a student in progress on the other laptop, done, or without a PIN is plain text ("No PIN yet. Set one on your phone.", "Locked. Ask your teacher."). The list refreshes every 4 s, so the other laptop's state shows. Tap a name → **PIN pad** → **"Hi Aziza, this mock is saved to your account"** (the mock's own "Before you start" card with the microphone check and the black Start mock) → the normal full mock → **"Done. Your results will be on your phone."** (black "Back to the list"; also back by itself after 20 s). No band, level or result is ever on this screen. |
+| (none) | **T8 Class mock: results** (`.../exam/[classMockId]`): one row per student (level, the four part bands, a quiet **Listen** to T6), sorted by level (a grey control flips highest/lowest first; no level goes last), **Most common problems** for this mock only, and the black **Open first unrated** (the first row, in the order shown, with a scored part and no rating: no whole-mock level and not every scored part rated). |
+| Mocks all look the same | **In class** (taken on the exam laptop) or **At home**: on T6's header, on T4's mock rows, on the student's mock result and on History's mock rows. |
+
+**The pass (docs/v1-plan.md section 6).** The laptop stays signed in as the **teacher**. A correct PIN makes an `exam_passes` row: one laptop (a random id the laptop made
+for itself and keeps in its browser), one student, one class mock, `expires_at` 30 minutes later. The browser then sends the pass id and its laptop id (`x-exam-pass`,
+`x-exam-laptop`) with the mock's requests. **Only three routes read those headers** (`server/exam-laptop/acting-user.ts`): `POST /api/mock-exams` (Start mock), `POST
+/api/speaking/attempts` (the recording) and `POST /api/mock-exams/[mockId]/finish`. Everywhere else a pass is ignored, so it cannot open a result, a recording, an attempt,
+the student's account page, a password or anything else of the student. On those three routes the request acts as the **student**: the mock and every attempt belong to
+`student_user_id`, the student's own consent check runs (`assertCanRecord`), and the teacher's account is never the owner. A pass is refused (403, `exam_pass_*`) when:
+the caller is not the teacher who owns the class mock; the laptop id differs (other laptop); it is expired; it is used up; the student is locked on that laptop (a pass made
+before the lock stops at once); the student left, was removed or the class closed; the student's teacher-sharing consent is gone; or the request names any mock but the one the
+pass started (another student's, the teacher's own, none) or is a retry. The pass is **used up** at the end screen (finish), when the same student enters their PIN again on that laptop
+(a reload replaces it), by End exam laptop on that laptop, and by Leave / Remove / Close.
+
+**PIN lock.** Wrong PINs are counted per student **per laptop** (`class_members.pin_failures`, JSON `{"<laptop id>": n}`, saved with compare-and-set so parallel guesses can't all
+count as the first). The 5th wrong PIN on a laptop locks the student **there**; 10 across all laptops lock them everywhere. A correct PIN clears that laptop's count. **Unlocking
+needs the teacher's password** (Teacher options), as does End exam laptop: both go through the auth library's `verifyPassword` and count wrong passwords like failed sign-ins
+(429 after too many). A student can't be picked when done, in progress on the other laptop, without a PIN, or when the class mock is closed.
+
+**Ending.** **Teacher options** (a quiet text action under the list) opens a card with a password field and: **Unlock {name}** for each locked student, **End exam laptop**
+(this laptop's passes end; goes to the class page) and **End and close the class mock** (also sets `class_mocks.closed_at`: no new PIN or mock on any laptop, a student already under
+way finishes; goes to T8). Closing the class closes its class mocks too.
+
+**Data (migration 0010, additive).** New `class_mocks` (class, teacher, title "Mock N", the four task ids or all null = a different paper per student, `opened_at`, `closed_at`) and
+`exam_passes` (class mock, student, `device_label`, `laptop_id`, `session_id`, `created_at`, `expires_at`, `used_up_at`); new nullable `class_members.pin_hash` and `pin_failures`;
+new nullable `practice_sessions.class_mock_id` (set = "In class"; a plain text id with no foreign key, so the label survives the teacher's account). A mock started on the laptop is
+never offered as "Continue your mock" at home (`findInProgressMock` skips it). **Leave / Remove / Close** (`endMembership`) clear the PIN and its failures and end the student's
+passes in the same transaction; Close also closes the class's class mocks. **Delete my account** (`delete-account.ts` and `scripts/delete-account.mjs`) deletes the account's passes
+as a student, the passes made in its classes and the class mocks of its classes; the PIN goes with the membership row; both are compared table by table by
+`owner-delete-script.test.ts`.
+
+**What no response holds.** No route returns a PIN, a hash or a failure count; the student's class list says only `hasPin`; the roster says only name, state, room, `hasPin`, `lockedHere`,
+`locked`, `pickable`. A test reads every response of a whole session and fails on `scrypt`, `pin_hash`, `pinFailures` or either PIN.
+
+**Not done / to decide** (see the branch report): a browser cannot be locked into a page, so a student can still type another address on the laptop (the teacher's session is then
+open to them); kiosk or guided-access mode on the laptop closes that. The pass and the lock live in the database, so they survive a reload and a restart.
+
+**Tests:** `domain/teacher/exam-laptop.test.ts` (pass: wrong student, expired, used up, other laptop, locked; PIN lock; list states; paper suggestion), `app/api/teacher/exam-laptop.test.ts`
+(API cross-user: every route × caller, a pass can't write to another student, a teacher can't record into their own account through it, no PIN or hash in any response, End needs the
+password, Leave / Remove / Close), `server/db/migrations.test.ts` (0010), `owner-delete-script.test.ts`, `account-routes.test.ts`, `teacher-pages.test.ts`,
+`e2e/exam-laptop.spec.ts` (mock mode at 1280 and 390 px: two students in a row on one laptop), `e2e/exam-laptop-real.spec.ts` (two laptops, a real database, on
+`playwright.exam-laptop.config.ts`: `npm run test:e2e:exam-laptop`).

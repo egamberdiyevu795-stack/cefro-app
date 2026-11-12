@@ -1,3 +1,4 @@
+import { placeOfMock } from "@/domain/teacher/exam-laptop";
 import "server-only";
 import { desc, inArray } from "drizzle-orm";
 import { getSpeakingTask } from "@/content/speaking";
@@ -83,5 +84,5 @@ export async function getMockResult(userId: string, mockId: string, now = Date.n
     });
   });
 
-  return { id: mock.id, status: mock.status, createdAt: mock.createdAt, finishedAt: mock.finishedAt, parts, teacherLevel: await teacherLevelOfOwnMock(mock.id) };
+  return { id: mock.id, status: mock.status, createdAt: mock.createdAt, finishedAt: mock.finishedAt, parts, teacherLevel: await teacherLevelOfOwnMock(mock.id), place: placeOfMock(mock.classMockId) };
 }

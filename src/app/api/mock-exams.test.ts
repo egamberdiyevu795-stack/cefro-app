@@ -82,7 +82,7 @@ const drain = async () => {
 };
 const req = (init?: RequestInit) => new Request("http://localhost/x", init);
 
-const startMock = async () => json(await postMock());
+const startMock = async () => json(await postMock(req({ method: "POST" })));
 const readMock = async (id: string) => getMock(req(), ctx({ mockId: id }));
 const finish = async (id: string) => postFinish(req({ method: "POST" }), ctx({ mockId: id }));
 
@@ -127,7 +127,7 @@ afterEach(() => {
 describe("starting a mock", () => {
   it("creates one full_mock session, in progress, owned by the caller, with no part done", async () => {
     as(browsers.alice);
-    const response = await postMock();
+    const response = await postMock(req({ method: "POST" }));
     expect(response.status).toBe(201);
     const { mock, resumed } = await json(response);
     expect(resumed).toBe(false);
@@ -139,7 +139,7 @@ describe("starting a mock", () => {
   it("returns the mock already in progress instead of a second one (two tabs, a double tap)", async () => {
     as(browsers.alice);
     const first = await startMock();
-    const response = await postMock();
+    const response = await postMock(req({ method: "POST" }));
     expect(response.status).toBe(200);
     const second = await json(response);
     expect(second.resumed).toBe(true);
@@ -152,7 +152,7 @@ describe("starting a mock", () => {
   it("is a 404 until all four parts are live: nothing is created", async () => {
     live.mock = false;
     as(browsers.alice);
-    expect((await postMock()).status).toBe(404);
+    expect((await postMock(req({ method: "POST" }))).status).toBe(404);
     expect(await db.select().from(practiceSessions).all()).toHaveLength(0);
   });
 
@@ -322,13 +322,13 @@ describe("pilot consent: the lock is exactly the recording lock (CONSENT_REQUIRE
     setConsentRequiredForTesting(true);
     for (const [who, browser] of [["a guest", browsers.anonymous], ["an account without consent", browsers.alice]] as const) {
       as(browser);
-      const response = await postMock();
+      const response = await postMock(req({ method: "POST" }));
       expect(response.status, who).toBe(403);
       expect((await json(response)).error.code).toBe("consent_required");
     }
     await setConsent("bob@example.com", "withdrawn");
     as(browsers.bob);
-    expect((await postMock()).status).toBe(403);
+    expect((await postMock(req({ method: "POST" }))).status).toBe(403);
     expect(await db.select().from(practiceSessions).where(eq(practiceSessions.kind, "full_mock")).all()).toHaveLength(0);
   });
 

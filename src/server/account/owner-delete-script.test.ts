@@ -12,8 +12,11 @@ import {
   authSessions,
   authVerifications,
   classMembers,
+  classMocks,
+  examPasses,
   classes,
   evaluations,
+  practiceSessions,
   ratingPairs,
   recordingBlobs,
   recordings,
@@ -75,9 +78,20 @@ async function seed(db: Db, audioDir: string) {
   await db.insert(analyticsEvents).values({ id: "ev-alice-only", name: "page", source: "client", occurredAt: NOW, userId: "alice" }).run();
   // Teacher view both ways: alice is in bob's class and rated by bob; bob is in alice's class and rated by alice.
   await db.insert(classMembers).values([
-    { id: "m-alice", classId: "class-bob", studentUserId: "alice", shownName: "Alice", sharedAt: NOW, shareTextVersion: "1" },
-    { id: "m-bob", classId: "class-alice", studentUserId: "bob", shownName: "Bob", sharedAt: NOW, shareTextVersion: "1" },
+    { id: "m-alice", classId: "class-bob", studentUserId: "alice", shownName: "Alice", sharedAt: NOW, shareTextVersion: "1", pinHash: "scrypt$aa$bb", pinFailures: '{"laptop-1":2}' },
+    { id: "m-bob", classId: "class-alice", studentUserId: "bob", shownName: "Bob", sharedAt: NOW, shareTextVersion: "1", pinHash: "scrypt$cc$dd" },
   ]).run();
+  // Exam laptop (migration 0010), both ways: each is the other's teacher; a pass for each student; each mock was taken in class.
+  await db.insert(classMocks).values([
+    { id: "cm-x1", classId: "class-alice", teacherUserId: "alice", title: "Mock 1", openedAt: NOW },
+    { id: "cm-x2", classId: "class-bob", teacherUserId: "bob", title: "Mock 1", openedAt: NOW },
+  ]).run();
+  await db.insert(examPasses).values([
+    { id: "p-alice", classMockId: "cm-x2", studentUserId: "alice", deviceLabel: "Room 1", laptopId: "laptop-aaaaaaaaaaaaaaaa", sessionId: "ps-alice", createdAt: NOW, expiresAt: NOW },
+    { id: "p-bob", classMockId: "cm-x1", studentUserId: "bob", deviceLabel: "Room 2", laptopId: "laptop-bbbbbbbbbbbbbbbb", sessionId: "ps-bob", createdAt: NOW, expiresAt: NOW },
+  ]).run();
+  await db.update(practiceSessions).set({ classMockId: "cm-x2" }).where(eq(practiceSessions.id, "ps-alice")).run();
+  await db.update(practiceSessions).set({ classMockId: "cm-x1" }).where(eq(practiceSessions.id, "ps-bob")).run();
   const rating = { agrees: true, appBand: 3, evaluatorVersion: "1", rubricVersion: "1", updatedAt: NOW };
   await db.insert(teacherRatings).values([
     { id: "tr-1", attemptId: attempts.a1, teacherUserId: "bob", classId: "class-bob", ...rating },
@@ -165,6 +179,12 @@ describe("scripts/delete-account.mjs (the owner's deletion)", () => {
     expect(left).not.toMatch(/alice|guest-a/);
     expect(expected.rating_pairs).toHaveLength(1);
     expect(expected.teacher_mock_ratings).toHaveLength(0); // both the one on her mock and the one she gave
+    // Exam laptop: her pass and the pass made in her class are gone, her class mock too, and so is the PIN on her membership;
+    // bob's class mock and his own mock stay (his pass was in alice's class, so it went with her class mock).
+    expect(expected.exam_passes).toHaveLength(0);
+    expect(expected.class_mocks).toHaveLength(1);
+    expect(JSON.stringify(expected.class_mocks)).toContain("cm-x2");
+    expect(JSON.stringify(expected)).not.toContain("scrypt$");
     after.$client.close();
   });
 

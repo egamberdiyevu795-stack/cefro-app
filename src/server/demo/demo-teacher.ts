@@ -174,16 +174,21 @@ const EXTRA_ATTEMPTS: Record<string, { memberId: string; part: ExamPartId; daysA
 };
 
 /** The demo mocks: who made them and how long ago (after they shared). */
-const MOCKS: Record<string, { memberId: string; daysAgo: number }> = {
-  "aziza-mock": { memberId: "s1", daysAgo: 5 },
-  "bekzod-mock": { memberId: "s2", daysAgo: 3 },
+const MOCKS: Record<string, { memberId: string; daysAgo: number; inClass: boolean }> = {
+  "aziza-mock": { memberId: "s1", daysAgo: 5, inClass: true },
+  // Bekzod did his at home: "At home" beside Aziza's and Jasur's "In class".
+  "bekzod-mock": { memberId: "s2", daysAgo: 3, inClass: false },
+  "jasur-mock": { memberId: "s4", daysAgo: 2, inClass: true },
 };
 
+/** The demo class's class mock (docs/v1-plan.md section 6): "Mock 3", every student their own paper. Made up. */
+export const DEMO_CLASS_MOCK = { id: "demo-class-mock", title: "Mock 3", daysAgo: 5 } as const;
+
 /** The demo class's mock ids with the student who made each, for the pages that open one. */
-export function demoMockOwner(mockId: string): { memberId: string; studentName: string; createdAt: string } | null {
+export function demoMockOwner(mockId: string): { memberId: string; studentName: string; createdAt: string; inClass: boolean } | null {
   const spec = MOCKS[mockId];
   const student = spec && STUDENTS.find((s) => s.memberId === spec.memberId);
-  return spec && student ? { memberId: student.memberId, studentName: student.shownName, createdAt: ago(new Date(), spec.daysAgo) } : null;
+  return spec && student ? { memberId: student.memberId, studentName: student.shownName, createdAt: ago(new Date(), spec.daysAgo), inClass: spec.inClass } : null;
 }
 
 /** The demo class's six students with their shared attempts, as the real server would give them to their teacher. */
@@ -195,7 +200,7 @@ export async function demoClassStudents(now: Date): Promise<SharedStudent[]> {
       for (const [id, spec] of Object.entries(MOCKS)) {
         if (spec.memberId !== s.memberId) continue;
         const createdAt = ago(now, spec.daysAgo);
-        mocks.push({ id, status: DEMO_CLASS_MOCKS[id as keyof typeof DEMO_CLASS_MOCKS].status, createdAt });
+        mocks.push({ id, status: DEMO_CLASS_MOCKS[id as keyof typeof DEMO_CLASS_MOCKS].status, createdAt, classMockId: spec.inClass ? DEMO_CLASS_MOCK.id : null });
         for (const part of DEMO_CLASS_MOCKS[id as keyof typeof DEMO_CLASS_MOCKS].parts) {
           const attempt = await demoPartAttempt(part, { id: `${id}-${part}`, createdAt, sessionId: id });
           if (attempt) attempts.push(attempt);
@@ -282,3 +287,29 @@ export async function demoTeacherAttempt(attemptId: string, now: Date): Promise<
 
 /** The demo student's suggested name on the Share screen (the demo account is "Student"). */
 export const DEMO_STUDENT_ACCOUNT_NAME = "Student";
+
+
+/**
+ * The demo exam laptop's list (T7, mock mode only): who is Not started, In progress (Room 2) or Done, who has no PIN yet.
+ * Every demo student's PIN is `DEMO_PIN` (the screen says so). Made up: nothing here is a real person or a real PIN.
+ */
+export const DEMO_PIN = "1234";
+export type DemoRosterState = "not_started" | "in_progress" | "done";
+export interface DemoRosterEntry {
+  memberId: string;
+  name: string;
+  state: DemoRosterState;
+  room: string | null;
+  hasPin: boolean;
+}
+export function demoExamRoster(): DemoRosterEntry[] {
+  // Done = a finished mock taken in class.
+  const done = new Set(Object.entries(MOCKS).filter(([id, m]) => m.inClass && DEMO_CLASS_MOCKS[id as keyof typeof DEMO_CLASS_MOCKS].status === "finished").map(([, m]) => m.memberId));
+  return STUDENTS.map((s) => ({
+    memberId: s.memberId,
+    name: s.shownName,
+    state: done.has(s.memberId) ? "done" : s.memberId === "s3" ? "in_progress" : "not_started",
+    room: s.memberId === "s3" ? "Room 2" : null,
+    hasPin: s.memberId !== "s6",
+  }));
+}

@@ -7,7 +7,8 @@ import { validateProviderConfig } from "@/server/config/provider-config";
 import { assertCanRecord } from "@/server/consent/consent";
 import { HttpError } from "@/server/errors";
 import { parseFormData, readBodyWithLimit, withErrorHandling } from "@/server/http";
-import { getOrCreateCurrentUserId } from "@/server/identity/anonymous-user";
+import { actingUser } from "@/server/exam-laptop/acting-user";
+import { assertPassSession } from "@/server/exam-laptop/exam-store";
 
 // Processing (transcription + evaluation) continues after the response via `after`.
 export const maxDuration = 300;
@@ -44,8 +45,9 @@ export const POST = withErrorHandling(async (request: Request) => {
       300,
     );
   }
-  const userId = await getOrCreateCurrentUserId();
-  // Pilot consent (CONSENT_REQUIRED): refused before the recording is read or stored.
+  // With an exam laptop's one-mock pass the owner is the STUDENT the pass is for, never the signed-in teacher.
+  const { userId, pass } = await actingUser(request);
+  // Pilot consent (CONSENT_REQUIRED): refused before the recording is read or stored. With a pass it is the student's.
   await assertCanRecord(userId);
 
   // The body is counted as it arrives: Content-Length is only a fast path and may be missing or wrong.
@@ -65,6 +67,11 @@ export const POST = withErrorHandling(async (request: Request) => {
     chosenPoints: form.get("chosenPoints") || undefined,
   });
   if (!fields.success) throw new HttpError(400, "invalid_fields", "The upload was missing information.");
+  // A pass records only into the mock it started, and never a retry of something else.
+  if (pass) {
+    assertPassSession(pass, fields.data.sessionId);
+    if (fields.data.previousAttemptId) throw new HttpError(403, "exam_pass_wrong_student", "This pass can only record the mock.");
+  }
 
   const attempt = await createAttempt({
     userId,

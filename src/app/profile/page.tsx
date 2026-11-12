@@ -71,7 +71,7 @@ export default async function AccountPage(props: PageProps<"/profile">) {
           role: "student",
           memberships:
             query.joined === DEMO_CLASS.joinCode
-              ? [{ id: "demo-member", className: DEMO_CLASS.name, teacherName: DEMO_TEACHER.name, shownName: "Student", sharedAt: now.toISOString(), ended: false, needsUpgrade: query.legacy === "1" }]
+              ? [{ id: "demo-member", className: DEMO_CLASS.name, teacherName: DEMO_TEACHER.name, shownName: "Student", sharedAt: now.toISOString(), ended: false, needsUpgrade: query.legacy === "1", hasPin: false }]
               : [],
         };
   } else {

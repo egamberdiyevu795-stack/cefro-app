@@ -3,7 +3,8 @@ import { Card, CardHeader, Icon, PillButton, StatRow, Thumb, cx, styles } from "
 import { NO_LONGER_IN_CLASS } from "@/domain/teacher/rules";
 import { AttemptRow } from "@/features/history/sections";
 import { formatDate } from "@/features/history/view-model";
-import { ConfirmAction, JoinCodeCard, ShareMoreCard } from "./actions";
+import { ClassPinControl, ConfirmAction, JoinCodeCard, ShareMoreCard } from "./actions";
+import { ClassMocksCard, type ClassMockSummary } from "@/features/exam-laptop/ClassMocksCard";
 import { countText, studentCountText, type ClassSummary, type CommonProblem, type StudentDetail, type StudentRow } from "./view-model";
 
 /*
@@ -54,6 +55,7 @@ export function ClassOverview({
   joinCode,
   problems,
   students,
+  classMocks,
   href,
   demo,
 }: {
@@ -62,17 +64,26 @@ export function ClassOverview({
   joinCode: string;
   problems: readonly CommonProblem[];
   students: readonly StudentRow[];
-  href: { student: (memberId: string) => string; lesson: (slug: string) => string; afterClose: string };
+  /** The class's class mocks (exam laptop), newest first. */
+  classMocks: readonly ClassMockSummary[];
+  href: { student: (memberId: string) => string; lesson: (slug: string) => string; afterClose: string; examStart: string; examResults: (classMockId: string) => string };
   demo: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start">
-      <h1 className="text-title font-medium tracking-[-0.01em] text-fg lg:col-span-2">{name}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2">
+        <h1 className="text-title font-medium tracking-[-0.01em] text-fg">{name}</h1>
+        {/* The page's one black button (docs/v1-plan.md section 5, T3): Copy join code is grey now. */}
+        <PillButton href={href.examStart} icon="mic" size="lg" className="w-full sm:w-auto">
+          Start exam laptop
+        </PillButton>
+      </div>
       <Card aria-label="Join code" className="lg:col-start-2 lg:row-start-2">
-        <JoinCodeCard code={joinCode} classId={classId} demo={demo} />
+        <JoinCodeCard code={joinCode} classId={classId} demo={demo} primary={false} />
       </Card>
       <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2 lg:row-span-2">
         <CommonProblemsCard problems={problems} lessonHref={href.lesson} />
+        <ClassMocksCard mocks={classMocks} resultsHref={href.examResults} />
         <StudentsCard students={students} studentHref={href.student} />
       </div>
       <div className="lg:col-start-2 lg:row-start-3">
@@ -97,7 +108,7 @@ export function ClassOverview({
   );
 }
 
-function CommonProblemsCard({ problems, lessonHref }: { problems: readonly CommonProblem[]; lessonHref: (slug: string) => string }) {
+export function CommonProblemsCard({ problems, lessonHref }: { problems: readonly CommonProblem[]; lessonHref: (slug: string) => string }) {
   return (
     <Card aria-labelledby="problems-title" data-testid="common-problems">
       <CardHeader id="problems-title" title="Most common problems" />
@@ -293,6 +304,8 @@ export interface MembershipView {
   ended: boolean;
   /** An old Share wording, not upgraded or declined: one "Share recordings too?" card. */
   needsUpgrade?: boolean;
+  /** The student has set a class PIN for the exam laptop. */
+  hasPin?: boolean;
 }
 
 /**
@@ -320,6 +333,7 @@ export function MyClassesCard({ memberships, joinHref, accountHref, demo }: { me
                   <p className="mt-0.5 text-label text-fg-muted">
                     Name shown: <span className="text-fg">{m.shownName}</span> · Sharing since {formatDate(m.sharedAt)}
                   </p>
+                  <ClassPinControl memberId={m.id} hasPin={Boolean(m.hasPin)} demo={demo} />
                   {m.needsUpgrade && <ShareMoreCard memberId={m.id} teacherName={m.teacherName} className="min-h-9" demo={demo} />}
                   <div className="mt-2">
                     <ConfirmAction

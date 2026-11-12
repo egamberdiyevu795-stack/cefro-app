@@ -99,8 +99,10 @@ describe("fresh database", () => {
       "auth_sessions",
       "auth_verifications",
       "class_members",
+      "class_mocks",
       "classes",
       "evaluations",
+      "exam_passes",
       "practice_sessions",
       "rating_pairs",
       "recording_blobs",
@@ -275,6 +277,41 @@ describe("teacher v1 migration (0009)", () => {
     await client.execute("INSERT INTO teacher_mock_ratings (id, session_id, teacher_user_id, class_id, agrees, teacher_level, updated_at) VALUES ('r', 'mock', 't', 'c', 0, 'B2', '2026-11-08T10:00:00.000Z')");
     await expect(client.execute("INSERT INTO teacher_mock_ratings (id, session_id, teacher_user_id, class_id, agrees, updated_at) VALUES ('r2', 'mock', 't', 'c', 1, 'x')")).rejects.toThrow(); // one per mock and teacher
     expect(await query(client, "SELECT teacher_level FROM teacher_mock_ratings")).toEqual([{ teacher_level: "B2" }]);
+    client.close();
+  });
+});
+
+describe("exam laptop migration (0010)", () => {
+  it("is additive: two new tables with their indexes and three nullable columns, nothing dropped, rewritten or made NOT NULL on an old table", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0010_exam_laptop.sql"), "utf8");
+    expect(sql).toContain("CREATE TABLE `class_mocks`");
+    expect(sql).toContain("CREATE TABLE `exam_passes`");
+    expect(sql).toContain("ALTER TABLE `class_members` ADD `pin_hash` text;");
+    expect(sql).toContain("ALTER TABLE `class_members` ADD `pin_failures` text;");
+    expect(sql).toContain("ALTER TABLE `practice_sessions` ADD `class_mock_id` text;");
+    expect(sql.replace(/^--.*$/gm, "")).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME/i);
+    // The only NOT NULL columns are the two new tables' own.
+    expect(sql.replace(/CREATE TABLE `class_mocks` \([\s\S]*?\n\);/, "").replace(/CREATE TABLE `exam_passes` \([\s\S]*?\n\);/, "")).not.toMatch(/NOT NULL/i);
+  });
+
+  it("upgrades a 0009 database: old memberships and mocks are untouched (no PIN, taken at home), and a class mock with a pass can be written", async () => {
+    const file = path.join(tempDir(), "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(10));
+    await old.client.executeMultiple(`
+      INSERT INTO users (id, kind, role) VALUES ('t', 'registered', 'teacher'), ('s', 'registered', 'student');
+      INSERT INTO classes (id, teacher_user_id, name, join_code) VALUES ('c', 't', 'Group B', 'ABC234');
+      INSERT INTO class_members (id, class_id, student_user_id, shown_name, shared_at, share_text_version) VALUES ('m', 'c', 's', 'Ali', '2026-11-07T10:00:00.000Z', 'v1-all-parts-audio');
+      INSERT INTO practice_sessions (id, user_id, kind, status) VALUES ('mock', 's', 'full_mock', 'finished');
+    `);
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT pin_hash, pin_failures FROM class_members")).toEqual([{ pin_hash: null, pin_failures: null }]);
+    expect(await query(client, "SELECT class_mock_id FROM practice_sessions")).toEqual([{ class_mock_id: null }]);
+    await client.execute("INSERT INTO class_mocks (id, class_id, teacher_user_id, title, opened_at) VALUES ('cm', 'c', 't', 'Mock 1', '2026-11-08T10:00:00.000Z')");
+    await client.execute("INSERT INTO exam_passes (id, class_mock_id, student_user_id, device_label, laptop_id, created_at, expires_at) VALUES ('p', 'cm', 's', 'Room 2', 'laptop-aaaaaaaaaaaaaaaa', 'x', 'y')");
+    await expect(client.execute("INSERT INTO exam_passes (id, class_mock_id, student_user_id, device_label, laptop_id, created_at, expires_at) VALUES ('p2', 'nope', 's', 'Room 2', 'l', 'x', 'y')")).rejects.toThrow(); // a pass needs its class mock
     client.close();
   });
 });

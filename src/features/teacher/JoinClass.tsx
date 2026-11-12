@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
+import { PIN_PROBLEM, isPin } from "@/domain/teacher/exam-laptop";
 import { JOIN_CODE_LENGTH, SHARE_TEXT, UNKNOWN_CODE_MESSAGE, normaliseJoinCode, shownNameProblem } from "@/domain/teacher/rules";
 
 type Invite = { className: string; teacherName: string };
@@ -59,6 +60,7 @@ export function JoinClass({
   const [code, setCode] = useState(initialCode);
   const [invite, setInvite] = useState<Invite | null>(initialInvite);
   const [name, setName] = useState(suggestedName);
+  const [pin, setPin] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
@@ -84,11 +86,13 @@ export function JoinClass({
     event.preventDefault();
     const problem = shownNameProblem(name);
     if (problem) return setMessage(problem);
+    // The class PIN for the exam laptop: 4 digits, kept hashed, never shown to the teacher.
+    if (!isPin(pin)) return setMessage(PIN_PROBLEM);
     setBusy(true);
     setMessage(null);
     if (demo) setShared(true);
     else {
-      const result = await post("/api/classes", { code: normaliseJoinCode(code), shownName: name });
+      const result = await post("/api/classes", { code: normaliseJoinCode(code), shownName: name, pin });
       if (result.ok) {
         router.push(accountHref);
         router.refresh();
@@ -179,6 +183,27 @@ export function JoinClass({
         />
         <p id="shown-name-note" className="mt-1 text-label text-fg-muted">
           For this class only.
+        </p>
+        <label htmlFor="class-pin" className="mt-4 block text-caption font-semibold text-fg">
+          Class PIN
+        </label>
+        <input
+          id="class-pin"
+          name="pin"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          className={cx(FIELD, "mt-1 w-32 tracking-[0.3em]")}
+          disabled={!ready}
+          aria-describedby="class-pin-note"
+          data-testid="class-pin"
+        />
+        <p id="class-pin-note" className="mt-1 text-label text-fg-muted">
+          4 digits. You type it on your teacher&rsquo;s laptop for a class mock, so nobody can record under your name. Your teacher can&rsquo;t see it. You can change it later: Account, Your classes.
         </p>
         <dl className="mt-5 flex flex-col gap-3 border-t border-line pt-4 text-body">
           <div>

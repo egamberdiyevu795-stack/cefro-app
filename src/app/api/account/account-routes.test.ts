@@ -32,6 +32,8 @@ import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import {
   classMembers,
+  classMocks,
+  examPasses,
   classes,
   ratingPairs,
   teacherRatings,
@@ -385,6 +387,14 @@ describe("Delete my account: the Teacher view's rows (class links and ratings), 
     };
     const alice = await shareAndPractise("alice");
     const carol = await shareAndPractise("carol");
+    // Exam laptop rows (migration 0010): a class mock of Bob's class, a pass for each student, a PIN on each membership.
+    const now = new Date().toISOString();
+    const bobId = await userIdOf("bob@example.com");
+    await db.insert(classMocks).values({ id: "cm-1", classId: cls.id, teacherUserId: bobId, title: "Mock 1", openedAt: now }).run();
+    for (const name of ["alice", "carol"]) {
+      await db.insert(examPasses).values({ id: `pass-${name}`, classMockId: "cm-1", studentUserId: await userIdOf(`${name}@example.com`), deviceLabel: "Room 1", laptopId: "laptop-aaaaaaaaaaaaaaaa", createdAt: now, expiresAt: now }).run();
+    }
+    await db.update(classMembers).set({ pinHash: "scrypt$aa$bb" }).run();
     jar.clear();
     for (const [k, v] of bob) jar.set(k, v);
     for (const { attempt } of [alice, carol]) {
@@ -406,6 +416,9 @@ describe("Delete my account: the Teacher view's rows (class links and ratings), 
     expect(await db.select().from(classes).where(eq(classes.id, classId)).all()).toHaveLength(1);
     expect(await db.select().from(classMembers).all()).toHaveLength(1); // Carol's
     expect(await db.select().from(teacherRatings).where(eq(teacherRatings.attemptId, carol.attempt)).all()).toHaveLength(1);
+    // Exam laptop: Alice's pass and her PIN are gone (the PIN is on her membership row); Carol's pass and the class mock stay.
+    expect((await db.select().from(examPasses).all()).map((p) => p.id)).toEqual(["pass-carol"]);
+    expect(await db.select().from(classMocks).all()).toHaveLength(1);
   });
 
   it("a teacher: their classes, the memberships in them and their ratings go; students' attempts and accounts stay; earlier pairs stay", async () => {
@@ -421,6 +434,9 @@ describe("Delete my account: the Teacher view's rows (class links and ratings), 
     expect(await db.select().from(classes).all()).toEqual([]);
     expect(await db.select().from(classMembers).all()).toEqual([]);
     expect(await db.select().from(teacherRatings).all()).toEqual([]);
+    // Exam laptop: the class mocks of the deleted teacher's class and every pass made in it go; the students stay.
+    expect(await db.select().from(classMocks).all()).toEqual([]);
+    expect(await db.select().from(examPasses).all()).toEqual([]);
     expect(await db.select().from(ratingPairs).all()).toHaveLength(1);
     expect(await db.select().from(speakingAttempts).where(inArray(speakingAttempts.id, [alice.attempt, carol.attempt])).all()).toHaveLength(2);
     expect(await db.select().from(users).where(inArray(users.email, ["alice@example.com", "carol@example.com"])).all()).toHaveLength(2);

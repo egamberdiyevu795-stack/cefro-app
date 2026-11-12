@@ -70,8 +70,14 @@ export function PillAction({
   disabled,
   autoFocus,
   className,
+  testId,
+  label,
   children,
 }: {
+  /** `data-testid`, for the browser tests. */
+  testId?: string;
+  /** Accessible name when the visible text alone is ambiguous. */
+  label?: string;
   onClick?: () => void;
   type?: "button" | "submit";
   variant?: Variant;
@@ -88,6 +94,8 @@ export function PillAction({
       onClick={onClick}
       disabled={disabled}
       autoFocus={autoFocus}
+      data-testid={testId}
+      aria-label={label}
       className={cx(
         "inline-flex items-center justify-center rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
         SIZES[size],

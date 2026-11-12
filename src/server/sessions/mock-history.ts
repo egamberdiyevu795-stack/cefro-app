@@ -24,5 +24,6 @@ export async function listMockHistory(userId: string, now = Date.now()): Promise
     id: row.id,
     createdAt: row.createdAt,
     status: effectiveMockStatus({ status: row.status ?? "in_progress", createdAt: row.createdAt }, now),
+    classMockId: row.classMockId,
   }));
 }

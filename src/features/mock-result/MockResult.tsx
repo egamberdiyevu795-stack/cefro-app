@@ -68,7 +68,15 @@ function LevelCard({ view }: { view: MockResultView }) {
   const { headline } = view;
   return (
     <Card aria-labelledby="mock-result-title" data-testid="mock-level">
-      <p className="text-label font-medium text-fg-muted">{view.title}</p>
+      <p className="text-label font-medium text-fg-muted">
+        {view.title}
+        {view.placeText && (
+          <span data-testid="mock-place">
+            {" · "}
+            {view.placeText}
+          </span>
+        )}
+      </p>
       <h1 id="mock-result-title" className="mt-1 text-title font-medium tracking-[-0.01em] text-fg">
         {headline.kind === "level" ? "Your estimated speaking level" : headline.title}
       </h1>

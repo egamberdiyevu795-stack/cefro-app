@@ -3,6 +3,7 @@
  * the part filter, the band-over-time chart and the "Show more" step. Pure and browser-safe; also feeds the
  * dashboard's Recent attempts, so both show the same rows.
  */
+import { placeLabel, placeOfMock } from "@/domain/teacher/exam-laptop";
 import { EXAM_PART_IDS, examPartLabel, isExamPartId, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { MockStatus } from "@/domain/speaking/full-mock";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
@@ -200,12 +201,14 @@ export function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): Hi
           : scoring
             ? "Scoring…"
             : "Estimate not ready yet";
-  const caption =
+  const base =
     mock.status === "finished"
       ? "Speaking only · 4 parts"
       : done.length > 0
         ? `Finished: ${done.map(examPartLabel).join(", ")}`
         : "No part finished";
+  // "In class" (taken on a teacher's exam laptop) or "At home". A mock whose source does not say (`classMockId` absent) says neither.
+  const caption = mock.classMockId === undefined ? base : `${base} · ${placeLabel(placeOfMock(mock.classMockId))}`;
   return {
     id: mock.id,
     href: `/practice/mock/${encodeURIComponent(mock.id)}`,

@@ -1,3 +1,4 @@
+import { placeOfMock } from "@/domain/teacher/exam-laptop";
 import "server-only";
 import { getAnySpeakingTask, getSpeakingTask } from "@/content/speaking";
 import { getArgumentTask } from "@/content/speaking/part3";
@@ -210,6 +211,7 @@ export async function teacherMock(teacherId: string, classId: string, mockId: st
     finishedAt: mock.finishedAt,
     parts,
     rating: rating ? (rating.agrees ? { agrees: true } : { agrees: false, level: rating.teacherLevel as "B1" }) : null,
+    place: placeOfMock(mock.classMockId),
   };
 }
 

@@ -31,6 +31,13 @@ export const teacherLinks = {
   attempt: (classId: string, attemptId: string) => `/teacher/classes/${encodeURIComponent(classId)}/attempts/${encodeURIComponent(attemptId)}`,
   /** T6: a student's full mock. */
   mock: (classId: string, mockId: string) => `/teacher/classes/${encodeURIComponent(classId)}/mocks/${encodeURIComponent(mockId)}`,
+  /** "Start exam laptop": choose the paper (or join the class mock that is already open). */
+  examStart: (classId: string) => `/teacher/classes/${encodeURIComponent(classId)}/exam`,
+  /** T7: the exam laptop's list. `room` names this laptop ("Room 2"). */
+  examLaptop: (classId: string, classMockId: string, room?: string) =>
+    `/teacher/classes/${encodeURIComponent(classId)}/exam/${encodeURIComponent(classMockId)}/laptop${room ? `?${new URLSearchParams({ room })}` : ""}`,
+  /** T8: one class mock's results. */
+  examResults: (classId: string, classMockId: string) => `/teacher/classes/${encodeURIComponent(classId)}/exam/${encodeURIComponent(classMockId)}`,
   /** The page a student opens from a Telegram link: the join code pre-filled. */
   join: (code: string) => `/join/${encodeURIComponent(code)}`,
   /** An approved lesson, read-only, opened from a class's common problems. */

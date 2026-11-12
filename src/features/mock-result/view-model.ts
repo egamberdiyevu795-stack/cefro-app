@@ -6,6 +6,7 @@
  * rule needs. Then one row per part, then the biggest fix across the mock. Never a 0–75 or 0–30 score, never Passed / Failed,
  * never "certificate level" (docs/official-scale.md, section 5).
  */
+import { placeLabel } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { MockStatus } from "@/domain/speaking/full-mock";
 import {
@@ -61,6 +62,8 @@ export interface MockResultView {
   date: string;
   /** "Not finished" for a mock closed after 24 hours; null otherwise. */
   notFinishedNote: string | null;
+  /** "In class" (on a teacher's exam laptop) or "At home"; null when the source does not say (the demo mock). */
+  placeText: string | null;
   headline: Headline;
   /** The CEFRO level, and the teacher's when there is one: side by side, never instead of each other. */
   levels: LevelTile[];
@@ -161,6 +164,7 @@ export function buildMockResultView(source: MockResultSource): MockResultView {
     status: source.status,
     title: `Mock exam · ${date}`,
     date,
+    placeText: source.place ? placeLabel(source.place) : null,
     notFinishedNote: source.status === "not_finished" ? "Not finished. This mock took longer than 24 hours, so it is closed. The parts you finished keep their results." : null,
     headline,
     levels: [

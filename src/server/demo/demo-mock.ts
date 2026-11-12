@@ -252,13 +252,14 @@ export const DEMO_RECORDING = { src: "/audio/demo-recording.wav", durationMs: 30
 export const DEMO_CLASS_MOCKS = {
   "aziza-mock": { parts: ["1.1", "1.2", "2", "3"] as const, status: "finished" as MockStatus },
   "bekzod-mock": { parts: ["1.1", "1.2"] as const, status: "not_finished" as MockStatus },
+  "jasur-mock": { parts: ["1.1", "1.2", "2", "3"] as const, status: "finished" as MockStatus },
 } as const;
 export type DemoClassMockId = keyof typeof DEMO_CLASS_MOCKS;
 
 /** A demo class mock as its teacher reads it (T6): every part through the real result code, with a short demo recording. */
 export async function demoTeacherMock(
   mockId: string,
-  who: { classId: string; memberId: string; studentName: string; createdAt: string },
+  who: { classId: string; memberId: string; studentName: string; createdAt: string; inClass?: boolean },
 ): Promise<TeacherMockView | null> {
   const spec = DEMO_CLASS_MOCKS[mockId as DemoClassMockId];
   if (!spec) return null;
@@ -305,7 +306,7 @@ export async function demoTeacherMock(
       rating: null,
     });
   }
-  return { id: mockId, classId: who.classId, memberId: who.memberId, studentName: who.studentName, status: spec.status, createdAt: who.createdAt, finishedAt: spec.status === "finished" ? who.createdAt : null, parts, rating: null };
+  return { id: mockId, classId: who.classId, memberId: who.memberId, studentName: who.studentName, status: spec.status, createdAt: who.createdAt, finishedAt: spec.status === "finished" ? who.createdAt : null, parts, rating: null, place: who.inClass ? "in_class" : "at_home" };
 }
 
 /** The demo AttemptView of one part (transcript and real stored result), or null. */

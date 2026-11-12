@@ -29,17 +29,31 @@ export function allFlags(on: boolean): FeatureFlags {
  * so `?flags=off` does not change them.
  */
 export const PART_LIVE: Record<ExamPartId, boolean> = {
-  "1.1": false,
-  "1.2": false,
-  "2": true,
-  "3": part3LiveForTests(),
+  "1.1": envSwitch(process.env.PART_1_1_LIVE, false),
+  "1.2": envSwitch(process.env.PART_1_2_LIVE, false),
+  "2": envSwitch(process.env.PART_2_LIVE, true),
+  "3": envSwitch(process.env.PART_3_LIVE, false) || part3LiveForTests(),
 };
 
 /**
- * Part 3 is NOT live: its value is `false` in the product, on Vercel and in production builds, whatever is set. Only a
- * test server (`next dev` on a developer machine or CI, started by playwright.part3.config.ts with
- * CEFRO_TEST_PART3_LIVE=1) can turn it on, so the real Part 3 pages can be driven in a browser. The unit tests mock
- * `PART_LIVE` instead. Turning Part 3 on for real is a decision for the owner, after the live anchor run
+ * Release switches the owner can flip in Vercel (Settings > Environment Variables) without a new commit: `PART_1_1_LIVE`,
+ * `PART_1_2_LIVE`, `PART_2_LIVE`, `PART_3_LIVE`, `FULL_MOCK_LIVE` and `TEACHER_LIVE`. Only the exact words `true` / `1`
+ * (on) and `false` / `0` (off), in any letter case, count; unset, empty or anything else (a typo, "yes") keeps the
+ * default, which is OFF for every switch except Part 2 (on, as before). A switch is read when the server starts, so a
+ * change needs a Redeploy in Vercel (no commit). They are server-only on purpose (no NEXT_PUBLIC_ prefix): no client
+ * component reads them. docs/pilot-runbook.md says when to turn each on.
+ */
+export function envSwitch(raw: string | undefined, fallback: boolean): boolean {
+  const value = raw?.trim().toLowerCase();
+  if (value === "true" || value === "1") return true;
+  if (value === "false" || value === "0") return false;
+  return fallback;
+}
+
+/**
+ * The test-only Part 3 switch: a test server (`next dev` on a developer machine or CI, started by playwright.part3.config.ts
+ * with CEFRO_TEST_PART3_LIVE=1) turns Part 3 on so the real Part 3 pages can be driven in a browser. Ignored in production
+ * builds and on Vercel. The owner's switch for the real thing is `PART_3_LIVE` (above), after the live anchor run
  * (docs/part3-plan.md).
  */
 function part3LiveForTests(): boolean {
@@ -48,31 +62,35 @@ function part3LiveForTests(): boolean {
 
 /**
  * The full mock exam (docs/v1-plan.md, section 3.2) plays Parts 1.1, 1.2, 2 and 3 back to back, so its real flow is open
- * only when ALL four parts are live (`PART_LIVE`), or on a test server that sets CEFRO_TEST_FULL_MOCK_LIVE=1 (like Part 3's
- * switch: `next dev` on a developer machine or CI only, ignored when `NODE_ENV=production` or `VERCEL` is set). Anything
+ * when ALL four parts are live (`PART_LIVE`), or when the owner sets `FULL_MOCK_LIVE=true` (the mock can then be open while the
+ * single parts stay "Coming soon", which is the pilot's setup), or on a test server that sets CEFRO_TEST_FULL_MOCK_LIVE=1
+ * (`next dev` on a developer machine or CI only, ignored when `NODE_ENV=production` or `VERCEL` is set). Anything
  * else: "Coming soon" on the task list, and the mock's routes answer 404. Mock mode (`?mock=1`) works either way.
- * Turning the real mock on is the owner's decision; it needs no switch of its own.
+ * `FULL_MOCK_LIVE=false` does not close a mock that all four live parts open: switch a part off for that.
  */
 export function fullMockLive(live: Readonly<Record<ExamPartId, boolean>> = PART_LIVE): boolean {
-  return Object.values(live).every(Boolean) || fullMockLiveForTests();
+  return Object.values(live).every(Boolean) || FULL_MOCK_SWITCH || fullMockLiveForTests();
 }
+
+const FULL_MOCK_SWITCH = envSwitch(process.env.FULL_MOCK_LIVE, false);
 
 function fullMockLiveForTests(): boolean {
   return process.env.CEFRO_TEST_FULL_MOCK_LIVE === "1" && process.env.NODE_ENV !== "production" && !process.env.VERCEL;
 }
 
 /**
- * Release switch for the Teacher view (docs/teacher-plan.md). Off until parent consent for under-18s exists (plan
- * section 7): every real teacher page and API, and the student's Join / Share / Leave, answer 404. Mock mode
- * (`?mock=1`, the demo teacher and class DEMO42) works either way. Not a preview flag: `?flags=off` leaves it alone.
+ * Release switch for the Teacher view (docs/teacher-plan.md). Off by default; the owner turns it on with `TEACHER_LIVE=true`
+ * in Vercel once parent consent for under-18s is recorded (plan section 7). Off: every real teacher page and API, and the
+ * student's Join / Share / Leave, answer 404. Mock mode (`?mock=1`, the demo teacher and class DEMO42) works either way.
+ * Not a preview flag: `?flags=off` leaves it alone.
  */
-export const TEACHER_LIVE = teacherLiveForTests();
+export const TEACHER_LIVE = envSwitch(process.env.TEACHER_LIVE, false) || teacherLiveForTests();
 
 /**
- * The Teacher view is NOT live: `TEACHER_LIVE` is `false` in the product, on Vercel and in production builds, whatever is set.
- * Only a test server (`next dev` on a developer machine or CI, started by playwright.exam-laptop.config.ts with
- * CEFRO_TEST_TEACHER_LIVE=1, like Part 3's and the full mock's switches) can turn it on, so the real exam-laptop screens can be
- * driven in a browser with a real database. The unit tests use `setTeacherLiveForTesting` instead.
+ * The test-only Teacher switch: a test server (`next dev` on a developer machine or CI, started by
+ * playwright.exam-laptop.config.ts with CEFRO_TEST_TEACHER_LIVE=1, like Part 3's and the full mock's switches) turns it on so the
+ * real exam-laptop screens can be driven in a browser with a real database. Ignored in production builds and on Vercel. The unit
+ * tests use `setTeacherLiveForTesting` instead.
  */
 function teacherLiveForTests(): boolean {
   return process.env.CEFRO_TEST_TEACHER_LIVE === "1" && process.env.NODE_ENV !== "production" && !process.env.VERCEL;

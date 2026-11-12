@@ -205,7 +205,7 @@ export const placeLabel = (place: MockPlace) => (place === "in_class" ? "In clas
 export const EXAM_MESSAGES = {
   locked: "Too many wrong PINs. Ask your teacher to unlock you.",
   wrongPin: "That PIN isn't right.",
-  noPin: "No PIN yet. Set one on your phone: Account, My classes.",
+  noPin: "No PIN yet. Set one on your phone: Account, Your classes.",
   inProgressElsewhere: "This student is taking the mock on another laptop.",
   alreadyDone: "This student has already done this mock.",
   closed: "This class mock is closed. No new mock can start.",
@@ -213,4 +213,6 @@ export const EXAM_MESSAGES = {
   wrongPassword: "That password isn't right.",
   needsCredentials: "Enter your email and password.",
   wrongCredentials: "That email and password don't match.",
+  /** Start exam laptop while the full mock is switched off (FULL_MOCK_LIVE): said to the teacher, never in front of the class. */
+  mockNotLive: "The full mock exam is not switched on yet, so an exam laptop can't start. Ask the owner to set FULL_MOCK_LIVE=true.",
 } as const;

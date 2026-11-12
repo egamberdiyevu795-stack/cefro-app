@@ -8,9 +8,10 @@ vi.hoisted(() => {
   process.env.EVALUATION_PROVIDER = "mock";
 });
 const afterTasks = vi.hoisted(() => [] as (() => unknown)[]);
+const mockSwitch = vi.hoisted(() => ({ on: true }));
 vi.mock("@/config/features", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/config/features")>();
-  return { ...original, PART_LIVE: { "1.1": false, "1.2": false, "2": true, "3": false }, fullMockLive: () => true };
+  return { ...original, PART_LIVE: { "1.1": false, "1.2": false, "2": true, "3": false }, fullMockLive: () => mockSwitch.on };
 });
 vi.mock("next/headers", async () => (await import("../../../../test/next-headers-mock")).nextHeadersMock);
 vi.mock("next/server", async (importOriginal) => ({
@@ -401,6 +402,26 @@ describe("every exam route × caller", () => {
 });
 
 describe("starting and joining a class mock", () => {
+  it("is refused with a clear message while the full mock is switched off (FULL_MOCK_LIVE), and works again when it is on", async () => {
+    const w = await world();
+    actAs(w.teacher);
+    mockSwitch.on = false;
+    try {
+      const refused = await postExam(req("/x", "POST", { mode: "different", laptopId: L1, room: "Room 1" }), ctx({ classId: w.classId }));
+      expect(refused.status).toBe(409);
+      const body = (await read(refused)) as { error: { code: string; message: string } };
+      expect(body.error.code).toBe("mock_not_live");
+      expect(body.error.message).toContain("FULL_MOCK_LIVE");
+      // No device cookie was handed out (the browser stays a teacher login).
+      expect(refused.headers.get("set-cookie")).toBeNull();
+      expect((await getExam(req("/x"), ctx({ classId: w.classId }))).status).toBe(200);
+    } finally {
+      mockSwitch.on = true;
+    }
+    // On again: it starts (or joins the class mock the test world already has open).
+    expect((await postExam(req("/x", "POST", { mode: "different", laptopId: L1, room: "Room 1" }), ctx({ classId: w.classId }))).status).toBeLessThan(300);
+  });
+
   it("'same paper' suggests four tasks nobody in the class has done; the second laptop joins the open class mock", async () => {
     const w = await world();
     actAs(await loginTeacher());

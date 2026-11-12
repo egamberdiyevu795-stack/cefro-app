@@ -1,4 +1,5 @@
-import { isLaptopId, normaliseRoomLabel } from "@/domain/teacher/exam-laptop";
+import { fullMockLive } from "@/config/features";
+import { EXAM_MESSAGES, isLaptopId, normaliseRoomLabel } from "@/domain/teacher/exam-laptop";
 import { deviceCookieLine, signDeviceSession } from "@/server/exam-laptop/device-session";
 import { toClassMockView, openClassMockOf, startClassMock, suggestPaper } from "@/server/exam-laptop/exam-store";
 import { signOutBrowser } from "@/server/exam-laptop/teacher-signin";
@@ -13,6 +14,9 @@ import { ownOpenClass } from "@/server/teacher/teacher-store";
  * the teacher's login session on THIS browser is signed out and replaced by an exam-laptop DEVICE session scoped to that one class
  * mock and this laptop (server/exam-laptop/device-session.ts): from then on this browser can only run the exam laptop. Its own
  * teacher only; the same 404 as a stranger's class for anyone else, a device session included.
+ *
+ * Refused (409 `mock_not_live`) while the full mock exam is switched off (`FULL_MOCK_LIVE`, or all four parts live): the laptop
+ * would start but every student's "Start mock" would be a 404 in front of the class. The teacher is told before that happens.
  */
 export const GET = teacherRoute("teacher", async (_request, ctx: RouteContext<"/api/teacher/classes/[classId]/exam">, userId) => {
   const { classId } = await ctx.params;
@@ -24,6 +28,7 @@ export const GET = teacherRoute("teacher", async (_request, ctx: RouteContext<"/
 export const POST = teacherRoute("teacher", async (request, ctx: RouteContext<"/api/teacher/classes/[classId]/exam">, userId) => {
   const { classId } = await ctx.params;
   const body = await readJson(request);
+  if (!fullMockLive()) throw new HttpError(409, "mock_not_live", EXAM_MESSAGES.mockNotLive);
   if (!isLaptopId(body.laptopId)) throw new HttpError(400, "invalid_laptop", "This laptop could not be identified.");
   const room = normaliseRoomLabel(body.room);
   if (!room) throw new HttpError(400, "invalid_room", "Give this laptop a name, like Room 2.");

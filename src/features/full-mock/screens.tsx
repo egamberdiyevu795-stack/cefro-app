@@ -206,7 +206,7 @@ export function MockExamCard({ state }: { state: MockCardState }) {
       </p>
       {state.kind === "soon" && (
         <p className="mt-2 text-label text-fg-muted" data-testid="mock-status">
-          <span className="font-medium text-fg">Coming soon.</span> The full mock opens when all four parts are open.
+          <span className="font-medium text-fg">Coming soon.</span> The full mock is not open yet.
         </p>
       )}
       {state.kind === "demo" && state.soon && (

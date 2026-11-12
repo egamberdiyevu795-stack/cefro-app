@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { DemoLabel } from "@/components/ds";
-import { FEATURE_FLAGS } from "@/config/features";
+import { FEATURE_FLAGS, fullMockLive } from "@/config/features";
+import { EXAM_MESSAGES } from "@/domain/teacher/exam-laptop";
+import { InlineNotice } from "@/features/speaking-practice/components/screens";
 import { MOCK_PARTS, pickTaskForPart } from "@/domain/speaking/full-mock";
 import { getAnySpeakingTask } from "@/content/speaking";
 import { StartExam } from "@/features/exam-laptop/StartExam";
@@ -46,14 +48,18 @@ export default async function StartExamPage(props: PageProps<"/teacher/classes/[
   return (
     <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/dashboard" demoTeacher={page.mock} back={{ href: page.href(teacherLinks.cls(classId)), label: className }}>
       {page.mock && <DemoLabel variant="class" className="mb-4 bg-card" />}
-      <StartExam
-        classId={classId}
-        className={className}
-        open={open}
-        suggestion={suggestion}
-        demo={page.mock}
-        demoClassMockId={DEMO_CLASS_MOCK.id}
-      />
+      {!page.mock && !fullMockLive() ? (
+        <InlineNotice title="The exam laptop isn't switched on yet.">{EXAM_MESSAGES.mockNotLive}</InlineNotice>
+      ) : (
+        <StartExam
+          classId={classId}
+          className={className}
+          open={open}
+          suggestion={suggestion}
+          demo={page.mock}
+          demoClassMockId={DEMO_CLASS_MOCK.id}
+        />
+      )}
     </AppShell>
   );
 }

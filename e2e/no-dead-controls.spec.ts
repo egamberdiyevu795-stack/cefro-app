@@ -172,13 +172,18 @@ test.describe("no control that does nothing", () => {
     });
   }
 
-  test("the dashboard: no Search, Mock exam, notifications, Last 30 days or attempt menu; Part tiles keep 'Coming soon'", async ({ page }) => {
+  test("the dashboard: no Search, notifications, Last 30 days or attempt menu, no Mock exam button; the Mock exam row is a real link; Part tiles keep 'Coming soon'", async ({ page }) => {
     await page.goto("/dashboard?mock=1");
     await expect(page.getByRole("heading", { name: "Exam parts" })).toBeVisible();
-    for (const gone of [/search/i, /mock exam/i, /notifications/i, /last 30 days/i, /^options for/i, /^delete$/i, /report a wrong score/i]) {
+    for (const gone of [/search/i, /notifications/i, /last 30 days/i, /^options for/i, /^delete$/i, /report a wrong score/i]) {
       await expect(page.getByRole("button", { name: gone })).toHaveCount(0);
       await expect(page.getByRole("link", { name: gone })).toHaveCount(0);
     }
+    // "Mock exam": never a button (a control that does nothing). The only thing allowed is the Recent attempts row of a
+    // finished mock, a real link that opens the mock result and keeps mock mode.
+    await expect(page.getByRole("button", { name: /mock exam/i })).toHaveCount(0);
+    const mockRows = page.getByRole("link", { name: /mock exam/i });
+    for (const row of await mockRows.all()) await expect(row).toHaveAttribute("href", /^\/practice\/mock\/[^?]+\?mock=1/);
     await expect(page.getByText(/Search tasks and lessons/)).toHaveCount(0);
     // The honest status of the parts that are not live yet stays.
     await expect(page.getByTestId("part-tile").filter({ hasText: "Coming soon" })).toHaveCount(3);

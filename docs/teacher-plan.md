@@ -1,9 +1,11 @@
 # Teacher view (v1): plan
 
-Status: **Final, approved by Asadbek 2026-11-07.** Built (mock mode only, release switch off) on
+Status: **Final, approved by Asadbek 2026-11-07; extended for Version 1 on 2026-11-12 (section 10: what changed).** Where
+sections 1 to 9 below say "Part 2 only", "never recordings", "No player" or "students never see ratings", section 10 and
+docs/v1-plan.md (Decisions log) win. Built (mock mode only, release switch off) on
 `claude/teacher-view-kd6wdk`; see docs/merge-order.md for what was not followed exactly. Built on `claude/profile-settings` (the Account page
 at `/profile`, Delete my account). All decisions are in this plan; section 9 lists them.
-**Not in v1:** audio playback, messages, editing scores, mocks or deadlines (v2), public teacher sign-up (teachers are
+**Not in v1:** ~~audio playback~~ (now in: section 10), messages, editing scores, deadlines (v2), public teacher sign-up (teachers are
 approved by the owner by hand). Teachers see the name the student chose for them, never emails.
 
 **Mock mode only until launch.** Real teacher pages and APIs stay off (a release switch, 404) until parent consent for
@@ -122,3 +124,47 @@ reset code, remove a student · under-18s only with parent consent, age limit 18
 until then · teacher level stored as band 0–5, shown with our labels · the student confirms "Name your teacher sees" ·
 students don't see ratings in v1 · several classes per student · teachers reach classes from "Your classes" at the top
 of Home and a link on the Account page, no sixth tab · Remove / Close: Account page notice only in v1, email later.
+
+## 10. What changed for Version 1 (docs/v1-plan.md, step 6; branch `claude/teacher-v1`, migration 0009)
+
+Still **mock mode only** (`TEACHER_LIVE` is false). Everything below works in `?mock=1` and in the tests.
+
+**Decided by Asadbek (2026-11-10, v1-plan Decisions log):** teachers can listen to recordings (Q4, no access log, no separate
+switch), the student sees "Your teacher: B2" beside CEFRO's level (Q6), the teacher sees every part and mock.
+
+| Was (sections 1 to 9) | Now |
+| --- | --- |
+| Share text version `2026-11-07`: Part 2 attempts only, "Won't see: recordings" | Version **`v1-all-parts-audio`**. "Will see": that name and your level · every part you practise from now on (1.1, 1.2, 2 and 3) · every mock you make from now on · transcripts and feedback · "Your recordings (deleted after 30 days)". "Won't see": earlier attempts, email, exam date. Nothing about leaving changed. |
+| Teacher sees Part 2 attempts | Parts 1.1, 1.2, 2, 3 and full mocks, all made after `shared_at` (`teacherCanSee`, the same check; Part 3 has its own read-only attempt page). |
+| No player; the recording route is owner only | `teacherCanHear(teacher, attempt)` = `teacherCanSee` **and** the student's account still has recorded teacher-sharing consent **and** the audio is not deleted. A teacher-only audio route (`GET /api/teacher/classes/[classId]/attempts/[attemptId]/audio`), never cached, inline, Range supported. The student's own route stays owner only. Player speed 1x / 1.25x / 1.5x, no download button, no access log. After 30 days: the note "Recording deleted on …", the transcript and feedback stay. |
+| T3: name, level, attempts, last practice, fix, retry goal | + **Last mock** (level, date; "Not finished · date"; "—"). **Copy join link** (grey; `/join/CODE` opens the normal Join screen with the code filled in, then Share; opening it shares nothing). Copy join code stays the black one. No "Class mocks" list yet (step 7). |
+| T4: shared attempts | **Mocks first** (one row each, opening T6), then single attempts (a mock's four parts are inside the mock). Black button: "Open latest mock" (else "Open latest attempt"). |
+| T5 (Part 2 attempt) | Any part. Recording player or the "deleted" note. Part 3: its own page (points, biggest fix, words from the list, skills, answer) with the same **Your view**. |
+| (none) | **T6 Student's mock** `/teacher/classes/[classId]/mocks/[mockId]`: estimated level, date, Finished / In progress / Not finished; four part cards, each with the player, the transcript (tap a sentence for You said / Better / Why), CEFRO's band, and grey **Agree / Choose level** for that part (the existing per-attempt rating); at the bottom the optional **Your level for this mock**. No black button. |
+| `teacher_ratings` (per attempt) | Unchanged: it already is "the rating per part", because every part of a mock is an attempt. **Added** `teacher_mock_ratings` (migration 0009): one row per mock and teacher, `agrees` or `teacher_level` (Below B1, B1, B2, C1) with the estimate shown at the time. `teacher_ratings` did not need `session_id` or `part`. |
+| Students never see ratings | The student's result pages (single attempts, Part 3, mock) show **"Your teacher: B2"** beside CEFRO's band or level, never instead of it, and nothing when not rated. The mock page prefers the teacher's level for the whole mock, else their part levels. |
+
+**Old memberships (made on `2026-11-07`).** They keep the wording they agreed to: **Part 2 attempts only, no mocks, no recordings**
+(`memberScope` = `part2_only`). Nothing changes for them until they tap. The Account page shows each of them **one** card,
+"Share recordings too?", with two grey buttons: **Share recordings too** (`POST /api/classes/[memberId]/upgrade`) and **Not now**
+(`.../decline-upgrade`). The tap sets `class_members.all_parts_from` to now: from then on every part, mock and recording of
+attempts made **after the tap** is shared (the old Part 2 attempts stay as they were, text only; nothing from before the tap opens
+up). `share_text_version` is not rewritten (it records what they first agreed to; `all_parts_from` records the second yes). "Not now"
+stores `upgrade_declined_at`, changes nothing and the card never returns (leaving and rejoining on the new wording is the other
+way). The teacher sees a quiet "Shares Part 2 only" on T3 and T4 for such a student. The upgrade needs the same teacher-sharing consent
+as Share.
+
+**Consent for audio is stricter than for text.** The text pages follow `CONSENT_REQUIRED` as before. Audio needs the student's recorded
+`consent_status = granted` and `consent_teacher_sharing = true` **whatever that switch says**, so a mistake in configuration
+cannot open recordings.
+
+**Leave, Remove, Close.** One transaction as before: the membership ends, the teacher loses pages and audio at once, every part rating
+becomes an id-free `rating_pair` (now for Parts 1.1, 1.2, 2 and 3), and the rating row goes. The whole-mock level is **deleted
+with no pair** (a level is not a band; the part pairs carry the learning). **Delete my account** (`delete-account.ts` and
+`scripts/delete-account.mjs`) also deletes every `teacher_mock_ratings` row by, in the classes of, or on the mocks of the
+account, with the table-by-table test extended.
+
+**Tests:** `teacher-access.test.ts` (pure rules and `teacherCanSee` / `teacherCanHear` / `teacherCanSeeMock`: other teacher, ended membership,
+before `shared_at`, consent withdrawn, audio deleted, old wording and its upgrade), `teacher-v1.test.ts` (API cross-user for every new route),
+`teacher-pages.test.ts`, `mock-view.test.ts`, `your-teacher.test.ts`, migration 0009 tests, `owner-delete-script.test.ts`, and
+`e2e/teacher-v1.spec.ts` at 390 px.

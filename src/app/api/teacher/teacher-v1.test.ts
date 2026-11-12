@@ -88,7 +88,7 @@ async function seedAttempt(userId: string, part: ExamPartId, sessionId: string |
   await repo.ensureTaskSnapshot(task);
   const attemptId = newId();
   const key = `audio/${attemptId}.webm`;
-  await new LocalAudioStorage(dir).save(key, BYTES, "audio/webm");
+  await new LocalAudioStorage(dir).save(key, BYTES);
   await repo.insertAttemptWithRecording({
     attemptId,
     userId,

@@ -793,3 +793,33 @@ until the parts are: it changes what a result shows, and results only exist in m
   and `sections.tsx`, `features/part3/view-model.ts` and `result-sections.tsx`.
 - **Tests:** `sentence-fixes.test.ts` (the code checks), `transcript-fixes.test.ts`, `sentence-fixes-evaluators.test.ts` (demo answers of all four parts through the real evaluators, old results, schemas,
   prompts), more in `quality-gate.test.ts`; fingerprint fixtures updated; `e2e/transcript-fixes.spec.ts` (390 px: tap to expand, underline contrast, one open at a time, Part 3, teacher page, scripts delayed).
+
+## After `claude/better-versions`: `claude/teacher-v1` (teacher sees all parts, mocks and recordings, **adds migration `0009`**)
+
+Cut from `claude/better-versions` (`3bc5512`), so it comes **after it** (and so after `claude/mock-result`, `claude/scale-check` and `claude/full-mock`), merge commit, no squash.
+Branch name: `claude/teacher-v1` (10 characters after `claude/`). Step 6 of docs/v1-plan.md. **No Gemini call, no environment variable.** Nothing is live: `TEACHER_LIVE`
+stays false, so the real pages and routes are a 404 and everything works only in `?mock=1` and in the tests.
+
+- **Migration 0009 (`0009_teacher_v1.sql`), additive:** new table `teacher_mock_ratings` (one row per mock and teacher: `agrees` or `teacher_level`, the estimate shown, with its own two
+  indexes; foreign keys to `practice_sessions`, `users`, `classes`) and two **nullable** `class_members` columns, `all_parts_from` and `upgrade_declined_at`. Nothing is dropped, rewritten or made
+  NOT NULL on an existing table. It carries a `cefro:reviewed:` line (the unique index is on a table the migration creates): **written by Claude, the owner's review is still pending**.
+  `teacher_ratings` is **unchanged** (it already is the per-part rating: every part of a mock is an attempt). Run `npm run db:migrate` (or let the deploy do it) before the code is live.
+- **Share text:** `SHARE_TEXT_VERSION` is now `"v1-all-parts-audio"`; `"2026-11-07"` is `LEGACY_SHARE_TEXT_VERSION`. Old memberships keep Part 2 only until their student taps
+  "Share recordings too?" (details in docs/teacher-plan.md, section 10).
+- **Access:** `teacherCanSee` (all parts; the old wording limits it to Part 2), new `teacherCanSeeMock`, new `teacherCanHear` (see + recorded teacher-sharing consent + audio not deleted), all in
+  `server/teacher/teacher-store.ts`; the pure rules in `domain/teacher/rules.ts` (`memberSeesAttempt`, `memberSeesMock`, `canHearRecording`, `memberScope`). `teacherSharingConsentRecorded` in
+  `server/consent/consent.ts` (audio ignores the `CONSENT_REQUIRED` switch on purpose).
+- **New routes:** `GET /api/teacher/classes/[classId]/attempts/[attemptId]/audio` (teacher's player, never cached, Range), `GET .../mocks/[mockId]`, `PUT .../mocks/[mockId]/rating`,
+  `POST /api/classes/[memberId]/upgrade`, `POST /api/classes/[memberId]/decline-upgrade`. Changed: the attempt route (any part, `listen`), the rating route (Part 3 too), the class and student
+  routes (last mock, mocks first, scope note), `GET /api/mock-exams/[mockId]/result` (`teacherLevel`).
+- **New pages:** `/teacher/classes/[classId]/mocks/[mockId]` (T6), `/join/[code]` (redirects to the normal Join screen with the code filled in; signed out: sign in first). Changed: T3, T4, T5
+  (Part 3), S2 Share, the Account page (the one-time card), the student's result pages (`/result/[attemptId]`: "Your teacher").
+- **Leave / Remove / Close / Delete:** part ratings still become id-free pairs (now Part 1.1, 1.2, 2, 3); a whole-mock level is deleted with no pair. `delete-account.ts` **and
+  `scripts/delete-account.mjs`** delete `teacher_mock_ratings`; the table-by-table test is extended and still passes.
+- **Demo data (mock mode only, real evaluator types):** Aziza has a finished mock and a Part 3 attempt, Bekzod a not-finished mock, Dilnoza a Part 1.2 attempt, Sardor is on the old wording;
+  `public/audio/demo-recording.wav` is a 3-second synthetic tone (no voice) that the demo player plays.
+- **Shared code touched (small):** `features/result/sections.tsx` and `features/part3/result-sections.tsx` (`teacher.listen`, `yourTeacher`, Part 3 `teacher` mode), `features/history/view-model.ts`
+  (exports `mockRow`, `mockBands`), `features/mock-result/*` (`teacherLevel`), `server/sessions/mock-result.ts` (`bandLabelsForTask` exported), `AttemptResult` / `Part3AttemptResult` (`yourTeacher`).
+- **Tests:** `server/teacher/teacher-access.test.ts`, `app/api/teacher/teacher-v1.test.ts`, `features/teacher/{teacher-pages,mock-view,view-model}.test.ts`,
+  `features/result/your-teacher.test.ts`, `features/mock-result/view-model.test.ts`, `server/db/migrations.test.ts` (0009), `server/account/owner-delete-script.test.ts`,
+  `app/api/teacher/teacher-routes.test.ts` (updated), `e2e/teacher-v1.spec.ts`, `e2e/teacher-view.spec.ts` (updated).

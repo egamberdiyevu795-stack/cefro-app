@@ -101,7 +101,8 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   await student.getByRole("button", { name: "Continue" }).click();
   await expect(student.getByRole("heading", { name: "Demo teacher · Demo class" })).toBeVisible();
   await expect(student.getByLabel("Name your teacher sees")).toHaveValue("Student");
-  await expect(student.getByText("Earlier attempts, email, recordings, exam date.")).toBeVisible();
+  await expect(student.getByText("Earlier attempts, email, exam date.")).toBeVisible();
+  await expect(student.getByText("Your recordings (deleted after 30 days)")).toBeVisible();
   await audit(student, 1);
   await student.getByLabel("Name your teacher sees").fill("Sam");
   await student.getByRole("button", { name: "Share with this teacher" }).click();
@@ -114,8 +115,8 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   await expect(page.getByTestId("join-code")).toHaveText("DEMO42");
   await expect(page.getByTestId("student-row")).toHaveCount(6);
   await audit(page, 1);
-  await page.getByTestId("student-row").filter({ hasText: "Aziza" }).click();
-  await expect(page.getByRole("heading", { name: "Aziza" })).toBeVisible();
+  await page.getByTestId("student-row").filter({ hasText: "Jasur" }).click();
+  await expect(page.getByRole("heading", { name: "Jasur" })).toBeVisible();
   await audit(page, 1);
   await page.getByRole("link", { name: "Open latest attempt" }).click();
   await expect(page.getByTestId("app-verdict")).toHaveText(/^CEFRO: Part 2 · Band \d · /);
@@ -128,7 +129,9 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   expect(Math.abs(a!.y - c!.y)).toBeLessThan(1); // side by side
   expect(await agree.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(await choose.evaluate((el) => getComputedStyle(el).backgroundColor));
   for (const absent of ["Retry with this goal", "Learn how"]) await expect(page.getByText(absent)).toHaveCount(0);
-  await expect(page.locator("audio")).toHaveCount(0);
+  // The teacher's own player is on the page (play only: no download); the student's player is not.
+  await expect(page.getByTestId("teacher-player")).toBeVisible();
+  await expect(page.locator("audio")).toHaveCount(1);
   await agree.click();
   await expect(page.getByTestId("your-rating")).toHaveText("You: Agree");
   await page.getByRole("button", { name: "Change" }).click();
@@ -150,11 +153,11 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
 });
 
 test("real teacher and join pages are a 404 while the Teacher view is off", async ({ page }) => {
-  for (const path of ["/teacher/classes/new", "/teacher/classes/demo-class", "/teacher/classes/demo-class/attempts/aziza-2", "/profile/classes/join"]) {
+  for (const path of ["/teacher/classes/new", "/teacher/classes/demo-class", "/teacher/classes/demo-class/attempts/aziza-2", "/teacher/classes/demo-class/mocks/aziza-mock", "/profile/classes/join", "/join/DEMO42"]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
   }
-  for (const path of ["/api/teacher/classes", "/api/classes"]) {
+  for (const path of ["/api/teacher/classes", "/api/classes", "/api/teacher/classes/x/mocks/y", "/api/teacher/classes/x/attempts/y/audio"]) {
     expect((await page.request.get(path)).status(), path).toBe(404);
   }
 });

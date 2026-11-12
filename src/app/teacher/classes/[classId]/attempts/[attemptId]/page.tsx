@@ -42,7 +42,9 @@ export default async function TeacherAttemptPage(props: PageProps<"/teacher/clas
   } else {
     attempt = await orNotFound(teacherAttempt(page.teacherId, classId, attemptId));
   }
-  const studentHref = page.href(teacherLinks.student(classId, attempt.memberId));
+  // A part of a mock goes back to its mock; anything else back to the student.
+  const studentHref = attempt.mockId ? page.href(teacherLinks.mock(classId, attempt.mockId)) : page.href(teacherLinks.student(classId, attempt.memberId));
+  const backLabel = attempt.mockId ? "Mock" : attempt.studentName;
   const status = attempt.isStalled ? "failed" : attempt.status;
   const ratingUrl = `/api/teacher/classes/${encodeURIComponent(classId)}/attempts/${encodeURIComponent(attemptId)}/rating`;
 
@@ -55,7 +57,7 @@ export default async function TeacherAttemptPage(props: PageProps<"/teacher/clas
     const previous = attempt.previousResult && isMultilevelQ8(attempt.previousResult) ? attempt.previousResult : null;
     const scored = status === "completed" && result ? buildPart3View(result, { task, transcript: attempt.transcript ?? "", durationMs: attempt.durationMs, bandLabels, previous, isDevelopmentProvider: attempt.isDevelopmentProvider }) : null;
     return (
-      <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/dashboard" demoTeacher={page.mock} back={{ href: studentHref, label: attempt.studentName }}>
+      <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/dashboard" demoTeacher={page.mock} back={{ href: studentHref, label: backLabel }}>
         {page.mock && <DemoLabel variant="class" className="mb-4 bg-card" />}
         {scored ? (
           <Part3ScoredResult view={scored} retryHref="" demo={false} teacher={{ studentName: attempt.studentName, listen: attempt.listen }}>
@@ -88,7 +90,7 @@ export default async function TeacherAttemptPage(props: PageProps<"/teacher/clas
   const state = resultPageState(source);
 
   return (
-    <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/dashboard" demoTeacher={page.mock} back={{ href: studentHref, label: attempt.studentName }}>
+    <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/dashboard" demoTeacher={page.mock} back={{ href: studentHref, label: backLabel }}>
       {page.mock && <DemoLabel variant="class" className="mb-4 bg-card" />}
       {state.kind === "scored" ? (
         <ScoredResult view={state.view} task={task} teacher={{ studentName: attempt.studentName, listen: attempt.listen }}>

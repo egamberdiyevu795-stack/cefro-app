@@ -838,6 +838,41 @@ Built from docs/teacher-plan.md. Real pages and APIs are a 404 while `TEACHER_LI
   `?mock=1` links, nothing read from the database, cookies or identity; real pages 404) and `e2e/teacher-view.spec.ts`
   (the whole loop at 390 px with a WCAG AA contrast check on every text).
 
+### Teacher v1 (`claude/teacher-v1`, step 6 of `docs/v1-plan.md`)
+
+What changed in the Teacher view (details in `docs/teacher-plan.md`, section 10). Still mock mode only; `TEACHER_LIVE` stays false.
+
+- **New mock addresses:** T6 `/teacher/classes/demo-class/mocks/aziza-mock?mock=1&as=teacher` (finished) and `.../mocks/bekzod-mock?...`
+  (not finished, Parts 1.1 and 1.2 only); Part 3 attempt `.../attempts/aziza-p3?...`; Part 1.2 attempt `.../attempts/dilnoza-p12?...`; deleted recording
+  `.../attempts/madina-1?...`; join link `/join/DEMO42?mock=1` (goes to the Share screen); the one-time card
+  `/profile?mock=1&joined=DEMO42&legacy=1`. Sardor (the newest demo student) is on the first Share wording: "Shares Part 2 only".
+- **Share screen (S2), wording `v1-all-parts-audio`:** "Will see" is a list: *That name and your level · Every part you practise from now on: 1.1, 1.2, 2 and 3 ·
+  Every mock you make from now on · Transcripts and feedback · Your recordings (deleted after 30 days)*. "Won't see": *Earlier attempts, email, exam date.*
+  "Won't see: recordings" is gone. Black button unchanged: "Share with this teacher".
+- **T6 Student's mock** (`features/teacher/MockView.tsx`, data `mock-view.ts`): header card (student's shown name, "Mock exam · 10.11.26", status
+  **Finished / In progress / Not finished**, estimated level at 36 px, the official-scale line); four part cards, each: title + CEFRO level and "Band 3 · Lower B2"
+  at the right, the player, the transcript with the sentence view (`TranscriptWithFixes`, one open at a time per card), then **Your view** (compact: caption
+  "Your view", CEFRO's verdict, **Agree** and **Choose level** grey, same size, side by side); last card **Your level for this mock** (optional; Agree / Choose level
+  with Below B1, B1, B2, C1). **No black button on the page** (checked: 0). A part not done: "This part was not done."; a part with no band: "There is no band to rate
+  for this part yet." and its reason. Phone: one column, 390 px with no horizontal scroll; laptop: a 42 rem column.
+- **The teacher's player** (`features/result/TeacherPlayer.tsx`): the native audio control with its download entry and its own speed menu switched off
+  (`controlsList="nodownload noplaybackrate"`, right-click blocked), under it three grey chips **1x / 1.25x / 1.5x** (36 px high, `aria-pressed`; the chosen one has a
+  2 px dark outline, never a black fill, so it is not a second black button) and "Length 1:23". No download link, not even when the browser cannot play it
+  (then only a sentence). Deleted audio: the line "Recording deleted on 08.12.26, 30 days after scoring. The transcript and feedback are kept." and no player.
+- **T3:** each student row gets "Last mock: B2 · 10.11.26" (or "Not finished · date", "—") and, for a membership on the first wording, a quiet "Shares Part 2 only".
+  The join card has the black **Copy join code** and a grey **Copy join link** (copies `https://…/join/CODE`; the status line says opening it only fills in the code).
+- **T4:** **Mocks** card first (one history-style row per mock, opening T6), then **Single attempts**. Black button **Open latest mock** (**Open latest attempt** when
+  there is no mock).
+- **T5:** any part; Part 3 is its own read-only page (`Part3ScoredResult` with `teacher`), "Your view" under the result card, no Retry. Recording: player or note.
+- **Student side (Q6):** "CEFRO: Higher B2 · Your teacher: **B2**" under the band heading on Parts 1.1, 1.2, 2 and 3 result pages
+  (`data-testid="your-teacher"`; the band heading never moves or changes); on the mock result the "Your teacher" tile (the level the teacher gave the whole mock, else the
+  rule on their part levels). Nothing when not rated.
+- **"Share recordings too?"** (`ShareMoreCard`, Account page, once, only for a membership on the first wording): a tinted card inside the class row, the title, one
+  paragraph ("Your teacher now sees Part 2 attempts only. You can also share Parts 1.1, 1.2 and 3, your mocks and your recordings (deleted after 30 days), from the moment
+  you tap. Nothing from before that is shared."), and two grey buttons **Share recordings too** / **Not now**. The Account page keeps its one black button.
+- **Checks:** `features/teacher/teacher-pages.test.ts` (every screen: black buttons, 11 px, mock links only, nothing read from the database), `e2e/teacher-v1.spec.ts` (390 px:
+  T6, player speed, deleted note, Part 3, T3, join link, the card; WCAG AA contrast on every text) and the updated `e2e/teacher-view.spec.ts`.
+
 ## Part 3 (mock mode, and the real flow behind `PART_LIVE["3"]`)
 
 Part 3 (official Question 8, balanced argument, target C1, band 0–6; docs/part3-plan.md) is built in mock mode and,

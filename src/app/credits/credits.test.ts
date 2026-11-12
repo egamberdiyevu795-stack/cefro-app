@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 let pathname = "/";
-vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+let query = "";
+vi.mock("next/navigation", () => ({ usePathname: () => pathname, useSearchParams: () => new URLSearchParams(query) }));
 
 import { SiteFooter } from "@/components/SiteFooter";
 import CreditsPage from "./page";
@@ -45,6 +46,14 @@ describe("the footer", () => {
     expect(html).toContain('href="/credits"');
     expect(html).toContain("Credits");
     expect(html).not.toContain("<button");
+  });
+
+  it("keeps ?mock=1 in mock mode, like every other link of the app, and not otherwise", () => {
+    pathname = "/dashboard";
+    query = "mock=1";
+    expect(renderToStaticMarkup(createElement(SiteFooter))).toContain('href="/credits?mock=1"');
+    query = "";
+    expect(renderToStaticMarkup(createElement(SiteFooter))).toContain('href="/credits"');
   });
 
   it("is left out of the exam laptop page only (no link out there), and shown on the pages around it", () => {

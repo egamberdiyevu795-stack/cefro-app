@@ -7,11 +7,11 @@ for (const path of ["/?mock=1", "/dashboard?mock=1", "/practice?mock=1", "/histo
     const link = page.getByRole("link", { name: "Credits" });
     await expect(link).toHaveCount(1);
     await link.click();
-    await expect(page).toHaveURL(/\/credits$/);
+    await expect(page).toHaveURL(/\/credits\?mock=1$/);
     await expect(page.getByRole("heading", { name: "Credits", level: 1 })).toBeVisible();
     await expect(page.getByText("LibriTTS corpus")).toBeVisible();
     await expect(page.getByRole("link", { name: "CC BY 4.0" })).toHaveAttribute("href", "https://creativecommons.org/licenses/by/4.0/");
-    await expect(page.getByRole("button")).toHaveCount(0);
+    await expect(page.locator("main").getByRole("button")).toHaveCount(0); // not the dev-tools badge outside <main>
   });
 }
 

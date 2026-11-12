@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { EXAM_DEVICE_COOKIE } from "@/server/identity/user-cookie";
 import { config, examDeviceAllows, proxy } from "./proxy";
 
 /*
@@ -108,7 +109,7 @@ describe("a browser with the exam laptop's device cookie", () => {
 
   it("is sent through the proxy for the refused APIs and not for the allowed ones (so uploads are not buffered)", () => {
     const entry = config.matcher[1] as { source: string; has: { type: string; key: string }[] };
-    expect(entry.has).toEqual([{ type: "cookie", key: "cefro_exam_device" }]);
+    expect(entry.has).toEqual([{ type: "cookie", key: EXAM_DEVICE_COOKIE }]);
     const matches = (path: string) => new RegExp(`^${entry.source}$`).test(path);
     for (const path of REFUSED_APIS) expect(matches(path), path).toBe(true);
     for (const path of ALLOWED.filter((p) => p.startsWith("/api/"))) expect(matches(path), path).toBe(false);

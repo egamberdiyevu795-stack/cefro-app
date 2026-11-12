@@ -70,7 +70,8 @@ export const config = {
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
     // The APIs a device session may NOT use (everything but the exam laptop's own routes, the mock's start and finish and the
     // recording upload), only for a browser that carries the device cookie. The excluded routes never pass through here, so
-    // audio uploads are not buffered.
-    { source: "/api/((?!exam-laptop/|mock-exams$|mock-exams/[^/]+/finish$|speaking/attempts$).*)", has: [{ type: "cookie", key: EXAM_DEVICE_COOKIE }] },
+    // audio uploads are not buffered. The cookie name is a literal on purpose: Next reads `config` statically
+    // (it is EXAM_DEVICE_COOKIE; proxy.test.ts checks they agree).
+    { source: "/api/((?!exam-laptop/|mock-exams$|mock-exams/[^/]+/finish$|speaking/attempts$).*)", has: [{ type: "cookie", key: "cefro_exam_device" }] },
   ],
 };

@@ -379,6 +379,14 @@ export const classMembers = sqliteTable(
     shareTextVersion: text("share_text_version").notNull(),
     endedAt: text("ended_at"),
     endedBy: text("ended_by", { enum: ["student", "teacher", "class_closed"] }),
+    /**
+     * Migration 0009. A membership made on the first Share wording ("2026-11-07": Part 2 attempts only, no recordings)
+     * keeps it. When its student taps "Share recordings too?" on the Account page, this is that moment: from then on
+     * every part, every mock and the recordings are shared. Null: never (and always null on the current wording).
+     */
+    allPartsFrom: text("all_parts_from"),
+    /** Migration 0009. When the student answered "Not now" to that one-time card; the card is not shown again. */
+    upgradeDeclinedAt: text("upgrade_declined_at"),
   },
   (table) => [
     uniqueIndex("class_members_open_uq").on(table.classId, table.studentUserId).where(sql`${table.endedAt} IS NULL`),
@@ -407,6 +415,29 @@ export const teacherRatings = sqliteTable(
     updatedAt: text("updated_at").notNull(),
   },
   (table) => [uniqueIndex("teacher_ratings_attempt_teacher_uq").on(table.attemptId, table.teacherUserId), index("teacher_ratings_class_idx").on(table.classId)],
+);
+
+/**
+ * A teacher's level for a whole mock (migration 0009): Agree with the estimate (`agrees`) or their own level. The
+ * per-part ratings are `teacher_ratings` (one per part attempt). Never read by the scorer, the dashboard or History. When
+ * the membership ends the row is deleted and no pair is kept (a level is not a band).
+ */
+export const teacherMockRatings = sqliteTable(
+  "teacher_mock_ratings",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull().references(() => practiceSessions.id),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    classId: text("class_id").notNull().references(() => classes.id),
+    agrees: integer("agrees", { mode: "boolean" }).notNull(),
+    /** "Below B1" | "B1" | "B2" | "C1"; null when the teacher agreed. */
+    teacherLevel: text("teacher_level"),
+    /** The estimate shown when they rated; null when it was not ready. */
+    appLevel: text("app_level"),
+    ...timestamps,
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("teacher_mock_ratings_session_teacher_uq").on(table.sessionId, table.teacherUserId), index("teacher_mock_ratings_class_idx").on(table.classId)],
 );
 
 /**

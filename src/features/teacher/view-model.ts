@@ -4,9 +4,11 @@
  * browser-safe; the same functions serve the demo teacher (mock mode) and real classes.
  */
 import { FEATURE_LABELS, LEVEL_LABELS, type FeatureLevel } from "@/domain/evaluation/multilevel/levels";
-import type { BandedResult, HistoryAttempt } from "@/domain/speaking/history";
+import type { BandedResult, HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { LEVEL_WINDOW, overallLevel, scoredAttempts, skillLevels, type ScoredAttempt, type SkillLevels } from "@/features/dashboard/progress";
-import { formatDate, toHistoryRows, type HistoryRow } from "@/features/history/view-model";
+import { formatDate, mockBands, mockRow, toHistoryRows, type HistoryRow } from "@/features/history/view-model";
+import { estimateSpeakingLevel } from "@/domain/speaking/mock-level";
+import { lastMockText } from "./mock-view";
 import { lessonForResult } from "@/features/lessons/choose";
 import { GOAL_LABEL, goalOutcomeOf, type BandLabel } from "@/features/result/view-model";
 
@@ -17,6 +19,10 @@ export interface SharedStudent {
   sharedAt: string;
   /** Shared attempts only (created after `sharedAt`), newest first. A retry of an earlier attempt has no previous. */
   attempts: HistoryAttempt[];
+  /** The full mocks the teacher may see (started after the student's full sharing began), newest first. Their parts are `attempts` with `sessionId`. */
+  mocks: HistoryMock[];
+  /** False for a membership on the first Share wording that was not upgraded: Part 2 attempts only, no mocks, no recordings. */
+  partsShared: boolean;
 }
 
 /* ---------------------------------------------------------------------------------------------- level and skills */
@@ -131,6 +137,21 @@ export interface StudentRow {
   biggestFix: string;
   /** The latest scored attempt is a retry of a shared attempt: whether it met its goal. Else "—". */
   retryGoal: "Goal met" | "Not yet" | "—";
+  /** The newest mock the teacher may see: "B2 · 10.11.26" (level, date), "Not finished · 10.11.26", or "—". */
+  lastMock: string;
+  /** A quiet note when only Part 2 is shared (a membership on the first Share wording, not upgraded); else null. */
+  scopeNote: string | null;
+}
+
+/** Shown on T3 and T4 for a membership that shares Part 2 attempts only. */
+export const PART2_ONLY_NOTE = "Shares Part 2 only";
+
+/** The newest shared mock as "B2 · 10.11.26" (level, date), read from its own shared attempts. */
+export function lastMockOf(student: Pick<SharedStudent, "mocks" | "attempts">): string {
+  const mock = student.mocks[0];
+  if (!mock) return "—";
+  const estimate = estimateSpeakingLevel(mockBands(student.attempts.filter((a) => a.sessionId === mock.id)));
+  return lastMockText({ status: mock.status, createdAt: mock.createdAt, level: estimate.kind === "ready" ? estimate.level : null });
 }
 
 export function retryGoalOf(attempts: readonly HistoryAttempt[]): StudentRow["retryGoal"] {
@@ -151,6 +172,8 @@ export function studentRow(student: SharedStudent): StudentRow {
     lastPractice: student.attempts[0] ? formatDate(student.attempts[0].createdAt) : "—",
     biggestFix: latest ? fixKeyOf(latest.result).label : "—",
     retryGoal: retryGoalOf(student.attempts),
+    lastMock: lastMockOf(student),
+    scopeNote: student.partsShared ? null : PART2_ONLY_NOTE,
   };
 }
 
@@ -179,20 +202,31 @@ export interface StudentDetail {
   name: string;
   level: string;
   skills: { name: string; level: string }[];
+  /** Full mocks first (one row each: "Mock exam · B2 · 10.11.26"), newest first; each opens T6. */
+  mockRows: HistoryRow[];
+  /** Single attempts (mock parts are inside their mock), newest first. */
   rows: HistoryRow[];
   latestId: string | null;
+  /** The newest mock; "Open latest mock" is T4's black button, else "Open latest attempt". */
+  latestMockId: string | null;
+  scopeNote: string | null;
 }
 
 export function studentDetail(student: SharedStudent): StudentDetail {
   const skills = studentSkills(student.attempts);
+  const mockIds = new Set(student.mocks.map((m) => m.id));
+  const loose = student.attempts.filter((a) => !(a.sessionId != null && mockIds.has(a.sessionId)));
   return {
     name: student.shownName,
     level: levelText(skills ? overallLevel(skills) : null),
     skills: skills
       ? (Object.keys(FEATURE_LABELS) as (keyof typeof FEATURE_LABELS)[]).map((f) => ({ name: FEATURE_LABELS[f], level: skills[f] ? LEVEL_LABELS[skills[f]!] : "Not assessed" }))
       : [],
-    rows: toHistoryRows(student.attempts),
-    latestId: student.attempts[0]?.id ?? null,
+    mockRows: student.mocks.map((m) => mockRow(m, student.attempts.filter((a) => a.sessionId === m.id))),
+    rows: toHistoryRows(loose, student.attempts),
+    latestId: loose[0]?.id ?? student.attempts[0]?.id ?? null,
+    latestMockId: student.mocks[0]?.id ?? null,
+    scopeNote: student.partsShared ? null : PART2_ONLY_NOTE,
   };
 }
 

@@ -52,7 +52,7 @@ function attempt(r: MultilevelResult | null, opts: Partial<HistoryAttempt> = {})
     ...opts,
   };
 }
-const student = (name: string, attempts: HistoryAttempt[]): SharedStudent => ({ memberId: name, shownName: name, sharedAt: "2026-11-01T00:00:00.000Z", attempts });
+const student = (name: string, attempts: HistoryAttempt[]): SharedStudent => ({ memberId: name, shownName: name, sharedAt: "2026-11-01T00:00:00.000Z", attempts, mocks: [], partsShared: true });
 
 const Q3 = { kind: "question_coverage", question_id: 3 } as const;
 const GRAMMAR = { kind: "feature", feature: "grammar" } as const;
@@ -131,7 +131,7 @@ describe("most common problems", () => {
 
 describe("student rows", () => {
   it("level, attempts, last practice, biggest fix, retry goal; — with nothing shared", () => {
-    expect(studentRow(student("F", []))).toEqual({ memberId: "F", name: "F", level: "No level yet", attempts: 0, lastPractice: "—", biggestFix: "—", retryGoal: "—" });
+    expect(studentRow(student("F", []))).toEqual({ memberId: "F", name: "F", level: "No level yet", attempts: 0, lastPractice: "—", biggestFix: "—", retryGoal: "—", lastMock: "—", scopeNote: null });
     const first = attempt(result(Q3, { q3: "missing" }), { createdAt: "2026-11-03T10:00:00.000Z" });
     const retry = attempt(result(GRAMMAR, { band: 3 }), { previousAttemptId: first.id, createdAt: "2026-11-04T10:00:00.000Z" });
     const row = studentRow(student("A", [retry, first]));

@@ -29,9 +29,18 @@ export const teacherLinks = {
   cls: (classId: string) => `/teacher/classes/${encodeURIComponent(classId)}`,
   student: (classId: string, memberId: string) => `/teacher/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(memberId)}`,
   attempt: (classId: string, attemptId: string) => `/teacher/classes/${encodeURIComponent(classId)}/attempts/${encodeURIComponent(attemptId)}`,
+  /** T6: a student's full mock. */
+  mock: (classId: string, mockId: string) => `/teacher/classes/${encodeURIComponent(classId)}/mocks/${encodeURIComponent(mockId)}`,
+  /** The page a student opens from a Telegram link: the join code pre-filled. */
+  join: (code: string) => `/join/${encodeURIComponent(code)}`,
   /** An approved lesson, read-only, opened from a class's common problems. */
   lesson: (classId: string, slug: string) => `/teacher/lessons/${encodeURIComponent(slug)}?${new URLSearchParams({ class: classId })}`,
 };
+
+/** The teacher's own audio route for one attempt (never the student's route). Plays only; no download. */
+export function teacherAudioHref(classId: string, attemptId: string): string {
+  return `/api/teacher/classes/${encodeURIComponent(classId)}/attempts/${encodeURIComponent(attemptId)}/audio`;
+}
 
 export const studentLinks = {
   account: "/profile",

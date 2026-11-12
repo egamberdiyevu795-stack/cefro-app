@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Card, CardHeader, DeltaLabel, DemoLabel, Icon, PillAction, PillButton, ScoringLabel, cx, styles, type IconName } from "@/components/ds";
 import { describeFailure } from "@/features/speaking-practice/lib/failure-messages";
+import { TeacherPlayer } from "./TeacherPlayer";
+import type { TeacherListen } from "@/features/teacher/mock-view";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
 import { audioRetentionNote } from "@/domain/audio-retention";
 import { mockLink } from "@/features/demo/demo-mode";
@@ -78,6 +80,7 @@ export function ScoredResult({
   lesson = null,
   demo = false,
   teacher = null,
+  yourTeacher = null,
   children,
 }: {
   view: ResultView;
@@ -85,7 +88,9 @@ export function ScoredResult({
    * A teacher's read-only view of a student's shared attempt (Teacher view T5): the student's name instead of "Your",
    * no player, no Retry, no Learn how, no comparison. `children` goes under the result card ("Your view").
    */
-  teacher?: { studentName: string } | null;
+  teacher?: { studentName: string; /** The recording the teacher may play, or the "deleted" note. */ listen?: TeacherListen | null } | null;
+  /** The student's own page: the level their teacher gave ("B2"), next to CEFRO's band, never instead of it. */
+  yourTeacher?: string | null;
   children?: React.ReactNode;
   task: Task;
   /** The approved lesson for the biggest fix ("Learn how"); null when no approved lesson matches (then no link). */
@@ -101,7 +106,7 @@ export function ScoredResult({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.62fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-        <ResultCard view={view} onCompare={teacher ? null : (onCompare ?? null)} demo={demo} teacher={teacher} className="order-1 lg:order-none" />
+        <ResultCard view={view} onCompare={teacher ? null : (onCompare ?? null)} demo={demo} teacher={teacher} yourTeacher={yourTeacher} className="order-1 lg:order-none" />
         {children && <div className="order-1 lg:order-none">{children}</div>}
         <BiggestFixCard view={view} retryHref={teacher ? null : (retryHref ?? practiceHref(task))} lesson={teacher ? null : lesson} className="order-3 lg:order-none" />
         {view.patterns.length > 0 && <PatternsCard patterns={view.patterns} className="order-4 lg:order-none" />}
@@ -111,6 +116,8 @@ export function ScoredResult({
           fixes={view.transcriptFixes}
           durationMs={view.durationMs}
           audio={teacher ? null : audio}
+          listen={teacher?.listen ?? null}
+          who={teacher?.studentName}
           className="order-6 lg:order-none"
         />
       </div>
@@ -135,12 +142,14 @@ function ResultCard({
   onCompare,
   demo,
   teacher = null,
+  yourTeacher = null,
   className,
 }: {
   view: ResultView;
   onCompare: ActionTarget | null;
   demo: boolean;
   teacher?: { studentName: string } | null;
+  yourTeacher?: string | null;
   className?: string;
 }) {
   const retry = view.retry;
@@ -172,6 +181,12 @@ function ResultCard({
         <span className="text-stat font-light tracking-[-0.03em] text-fg">Band {view.band}</span>
         <span className="text-lead font-medium text-fg">· {view.bandLabel}</span>
       </h1>
+      {yourTeacher && (
+        <p className="mt-1 text-body text-fg" data-testid="your-teacher">
+          <span className="text-fg-muted">CEFRO: {view.bandLabel} · </span>
+          Your teacher: <span className="font-semibold">{yourTeacher}</span>
+        </p>
+      )}
 
       <BandMeter band={view.band} bandMax={view.bandMax} target={view.target.band} className="mt-5" />
       {view.target.above ? (
@@ -390,10 +405,15 @@ function AnswerCard({
   durationMs,
   empty,
   audio,
+  listen,
+  who = "student",
   fixes,
   className,
 }: {
   title?: string;
+  /** A teacher's player (or the "deleted" note) for the student's recording. */
+  listen?: TeacherListen | null;
+  who?: string;
   transcript: string | null;
   durationMs: number;
   /** The transcript with the student's mistakes underlined and expandable; null/absent = the plain transcript. */
@@ -417,6 +437,7 @@ function AnswerCard({
           </span>
         }
       />
+      {listen && <TeacherPlayer listen={listen} who={who} className="mb-4" />}
       {audio ? (
         <div className="mb-4">
           {!audio.deletedAt && <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />}

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { DemoLabel } from "@/components/ds";
 import { FEATURE_FLAGS } from "@/config/features";
-import { suggestedShownName } from "@/domain/teacher/rules";
+import { normaliseJoinCode, suggestedShownName } from "@/domain/teacher/rules";
 import { isMockQuery, withMock } from "@/features/demo/demo-mode";
 import { JoinClass } from "@/features/teacher/JoinClass";
 import { studentLinks } from "@/features/teacher/links";
@@ -38,6 +38,8 @@ export default async function JoinClassPage(props: PageProps<"/profile/classes/j
   }
   const invite = { className: DEMO_CLASS.name, teacherName: DEMO_TEACHER.name };
   const preview = mock && isDemoCode(query.code);
+  // A link from a teacher (/join/CODE) opens here with the code filled in: the student still taps Continue and Share.
+  const typed = !mock && typeof query.code === "string" ? normaliseJoinCode(query.code) : "";
   const accountHref = mock ? withMock(studentLinks.account) : studentLinks.account;
 
   return (
@@ -51,7 +53,7 @@ export default async function JoinClassPage(props: PageProps<"/profile/classes/j
           demoInvite={mock ? { code: DEMO_CLASS.joinCode, invite } : null}
           demoJoinedHref={mock ? withMock(`${studentLinks.account}?joined=${DEMO_CLASS.joinCode}`) : undefined}
           initialInvite={preview ? invite : null}
-          initialCode={preview ? DEMO_CLASS.joinCode : ""}
+          initialCode={preview ? DEMO_CLASS.joinCode : typed}
         />
       </div>
     </AppShell>

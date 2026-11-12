@@ -5,6 +5,7 @@
  * Plain data (JSON-safe), so the server can send it to the browser; no database, no provider. Browser-safe.
  */
 import { isMultilevel, isMultilevelQ8 } from "@/domain/evaluation/stored";
+import type { EstimatedLevel } from "@/domain/speaking/mock-level";
 import type { AttemptView } from "@/domain/speaking/attempt";
 import type { ExamPartId } from "@/domain/speaking/exam-part";
 import type { MockStatus } from "@/domain/speaking/full-mock";
@@ -70,6 +71,8 @@ export interface MockResultSource {
   finishedAt: string | null;
   /** All four parts in exam order. */
   parts: MockPartSource[];
+  /** The level a teacher gave the whole mock (docs/v1-plan.md, step 6); absent or null: not rated. Shown beside CEFRO's, never instead. */
+  teacherLevel?: EstimatedLevel | null;
 }
 
 export const NOT_DONE_PART = (part: ExamPartId): MockPartSource => ({

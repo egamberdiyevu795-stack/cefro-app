@@ -12,6 +12,7 @@ import { getDb } from "@/server/db/client";
 import { teacherRatings } from "@/server/db/schema";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
+import { teacherLevelOfOwnMock } from "@/server/teacher/student-view";
 import { getMock } from "./mock-service";
 
 /*
@@ -39,6 +40,14 @@ async function teacherRatingsFor(attemptIds: readonly string[], bandsOf: (attemp
   return found;
 }
 
+/** A task's band labels from its rubric (Part 3 uses its own), `[]` for an unknown task. */
+export function bandLabelsForTask(taskId: string): { band: number; label: string }[] {
+  const argument = getArgumentTask(taskId);
+  if (argument) return getArgumentRubric(argument).config.bands.map(({ band, label }) => ({ band, label }));
+  const task = getSpeakingTask(taskId);
+  return task ? getSpeakingRubric(task).config.bands.map(({ band, label }) => ({ band, label })) : [];
+}
+
 /** The caller's own mock as the result page reads it. 404 (`mock_not_found`) for anyone else's. */
 export async function getMockResult(userId: string, mockId: string, now = Date.now()): Promise<MockResultSource> {
   const mock = await getMock(userId, mockId, now);
@@ -48,12 +57,7 @@ export async function getMockResult(userId: string, mockId: string, now = Date.n
     ),
   );
 
-  const bandLabelsOf = (taskId: string) => {
-    const argument = getArgumentTask(taskId);
-    if (argument) return getArgumentRubric(argument).config.bands.map(({ band, label }) => ({ band, label }));
-    const task = getSpeakingTask(taskId);
-    return task ? getSpeakingRubric(task).config.bands.map(({ band, label }) => ({ band, label })) : [];
-  };
+  const bandLabelsOf = bandLabelsForTask;
   const taskOf = new Map([...attempts.values()].map((a) => [a.id, a.taskId]));
   const ratings = await teacherRatingsFor([...taskOf.keys()], (attemptId) => bandLabelsOf(taskOf.get(attemptId) ?? ""));
 
@@ -79,5 +83,5 @@ export async function getMockResult(userId: string, mockId: string, now = Date.n
     });
   });
 
-  return { id: mock.id, status: mock.status, createdAt: mock.createdAt, finishedAt: mock.finishedAt, parts };
+  return { id: mock.id, status: mock.status, createdAt: mock.createdAt, finishedAt: mock.finishedAt, parts, teacherLevel: await teacherLevelOfOwnMock(mock.id) };
 }

@@ -104,7 +104,7 @@ export function JoinClass({
           You&rsquo;re sharing with {invite.teacherName}
         </h1>
         <p className="mt-2 text-body text-fg">
-          {invite.className} · {name.trim()}. Your Part 2 attempts from now on are shared. Demo mode: nothing was saved.
+          {invite.className} · {name.trim()}. Every part and mock you make from now on, and your recordings, are shared. Demo mode: nothing was saved.
         </p>
         <Link href={demoJoinedHref ?? accountHref} className={cx(styles.SMALL_ACTION, "mt-4 min-h-9")}>
           Back to your account
@@ -183,7 +183,13 @@ export function JoinClass({
         <dl className="mt-5 flex flex-col gap-3 border-t border-line pt-4 text-body">
           <div>
             <dt className="text-caption font-semibold text-fg">Will see</dt>
-            <dd className="mt-0.5 text-fg">{SHARE_TEXT.willSee}</dd>
+            <dd className="mt-0.5">
+              <ul className="list-disc pl-5 text-fg" data-testid="will-see">
+                {SHARE_TEXT.willSee.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </dd>
           </div>
           <div>
             <dt className="text-caption font-semibold text-fg">Won&rsquo;t see</dt>

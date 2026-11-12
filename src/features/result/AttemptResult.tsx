@@ -30,7 +30,10 @@ export function AttemptResult({
   previous,
   task,
   bandLabels,
+  yourTeacher = null,
 }: {
+  /** The level the student's teacher gave this answer ("B2"), shown beside CEFRO's band; null when not rated. */
+  yourTeacher?: string | null;
   initial: AttemptView;
   /** The attempt this one retries, when it is one (for "Band 2 → 3", the goal and the comparison). */
   previous: AttemptView | null;
@@ -159,6 +162,7 @@ export function AttemptResult({
         <ScoredResult
           view={view.view}
           task={task}
+          yourTeacher={yourTeacher}
           audio={audio}
           retryHref={retryWithGoal}
           lesson={lesson ? { href: lessonHref(lesson, { attempt: attempt.id }), title: lesson.title } : null}

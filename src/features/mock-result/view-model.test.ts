@@ -227,3 +227,23 @@ describe("the demo mock (mock mode) goes through the real evaluator types", () =
     expect(html).not.toMatch(/bg-primary text-on-primary[^>]*>Back to Practice/);
   });
 });
+
+describe("the level a teacher gave the whole mock (docs/v1-plan.md step 6)", () => {
+  const rated = (band: number) => ({ band, level: "B2" });
+  it("is shown as 'Your teacher' beside CEFRO's level, and wins over the rule applied to part ratings", () => {
+    const parts = four([3, 3, 3, 4]).map((p) => (p.part === "1.1" ? p : { ...p, teacher: rated(3) })); // part ratings would say B2
+    const view = buildMockResultView({ id: "m", status: "finished", createdAt: "2026-11-01T09:00:00.000Z", finishedAt: null, parts, teacherLevel: "C1" });
+    expect(view.levels.map((l) => [l.name, l.value])).toEqual([["CEFRO", "B2"], ["Your teacher", "C1"]]);
+  });
+
+  it("shows nothing when the teacher gave no level for the mock and rated no part", () => {
+    const view = buildMockResultView({ id: "m", status: "finished", createdAt: "2026-11-01T09:00:00.000Z", finishedAt: null, parts: four([3, 3, 3, 4]), teacherLevel: null });
+    expect(view.levels.map((l) => l.name)).toEqual(["CEFRO"]);
+  });
+
+  it("a whole-mock level is shown even when the AI estimate is not ready: the teacher's level carries it", () => {
+    const parts = four([3, 3, 3, 4]).map((p) => (p.part === "3" ? { ...p, state: "not_scored" as const, reason: "ai_pending" as const, band: null } : p));
+    const view = buildMockResultView({ id: "m", status: "finished", createdAt: "2026-11-01T09:00:00.000Z", finishedAt: null, parts, teacherLevel: "B2" });
+    expect(view.levels).toEqual([{ name: "CEFRO", value: null }, { name: "Your teacher", value: "B2" }]);
+  });
+});

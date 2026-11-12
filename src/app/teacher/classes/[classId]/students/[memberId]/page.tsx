@@ -14,8 +14,9 @@ import { studentInClass } from "@/server/teacher/teacher-service";
 export const metadata: Metadata = { title: "Student" };
 
 /**
- * T4 Student: the shown name, current level and skills (shared attempts only), shared attempts newest first, the
- * black "Open latest attempt", and a quiet Remove from class (confirm card). Its class's teacher only.
+ * T4 Student: the shown name, current level and skills (shared attempts only), mocks first, then single attempts, the
+ * black "Open latest mock" ("Open latest attempt" with no mock), and a quiet Remove from class (confirm card). Its
+ * class's teacher only.
  */
 export default async function StudentPage(props: PageProps<"/teacher/classes/[classId]/students/[memberId]">) {
   await connection();
@@ -40,8 +41,16 @@ export default async function StudentPage(props: PageProps<"/teacher/classes/[cl
         detail={detail}
         classId={classId}
         memberId={memberId}
-        latestHref={detail.latestId ? page.href(teacherLinks.attempt(classId, detail.latestId)) : null}
+        latestHref={
+          detail.latestMockId
+            ? page.href(teacherLinks.mock(classId, detail.latestMockId))
+            : detail.latestId
+              ? page.href(teacherLinks.attempt(classId, detail.latestId))
+              : null
+        }
+        latestLabel={detail.latestMockId ? "Open latest mock" : "Open latest attempt"}
         attemptHref={(id) => page.href(teacherLinks.attempt(classId, id))}
+        mockHref={(id) => page.href(teacherLinks.mock(classId, id))}
         afterRemove={classHref}
         demo={page.mock}
       />

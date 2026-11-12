@@ -37,6 +37,8 @@ import NewClassPage from "@/app/teacher/classes/new/page";
 import ClassPage from "@/app/teacher/classes/[classId]/page";
 import StudentPage from "@/app/teacher/classes/[classId]/students/[memberId]/page";
 import AttemptPage from "@/app/teacher/classes/[classId]/attempts/[attemptId]/page";
+import MockPage from "@/app/teacher/classes/[classId]/mocks/[mockId]/page";
+import JoinLinkPage from "@/app/join/[code]/page";
 import TeacherLessonPage from "@/app/teacher/lessons/[lessonId]/page";
 import { DEMO_MEMBER_IDS } from "@/server/demo/demo-teacher";
 
@@ -132,11 +134,28 @@ describe("the demo teacher", () => {
     expect(markup).toContain("Close class");
     expectScreen(markup, 1);
     expect(markup).toMatch(/<button[^>]*bg-primary text-on-primary[^>]*>.*Copy join code/);
+    // The join link is a second, grey button; each student shows their last mock (level, date), and Sardor's Part 2-only note.
+    expect(markup).toMatch(/<button[^>]*bg-well[^>]*>Copy join link/);
+    expect(markup.match(/data-testid="last-mock"/g)).toHaveLength(6);
+    expect(markup).toMatch(/Last mock: <\/span>(B1|B2|C1|Below B1|Not ready) · \d\d\.\d\d\.\d\d/);
+    expect(markup).toMatch(/Last mock: <\/span>Not finished · \d\d\.\d\d\.\d\d/);
+    expect(markup).toContain("Shares Part 2 only");
+    expect(markup).not.toContain("Class mocks"); // step 7
     expectMockLinksOnly(markup);
     await expect(ClassPage(props(T, { classId: "someone-else" }))).rejects.toThrow();
   });
 
-  it("Student (T4): every demo student, level, skills, shared attempts; Open latest attempt is the one black button", async () => {
+  it("Student (T4): mocks first, then single attempts; Open latest mock (or attempt) is the one black button; Part 2-only note", async () => {
+    const aziza = await html(StudentPage(props(T, { classId: "demo-class", memberId: "s1" })));
+    expect(aziza.indexOf('data-testid="student-mocks"')).toBeGreaterThan(0);
+    expect(aziza.indexOf('data-testid="student-mocks"')).toBeLessThan(aziza.indexOf('data-testid="student-attempts"'));
+    expect(aziza).toMatch(/<a[^>]*bg-primary text-on-primary[^>]*>.*Open latest mock/);
+    expect(aziza).toContain('href="/teacher/classes/demo-class/mocks/aziza-mock?mock=1&amp;as=teacher"');
+    expect(aziza).not.toContain("Shares Part 2 only");
+    const sardor = await html(StudentPage(props(T, { classId: "demo-class", memberId: "s6" })));
+    expect(sardor).toContain("Shares Part 2 only");
+    expect(sardor).toMatch(/<a[^>]*bg-primary text-on-primary[^>]*>.*Open latest attempt/);
+    expect(sardor).not.toContain('data-testid="student-mocks"');
     for (const memberId of DEMO_MEMBER_IDS) {
       const markup = await html(StudentPage(props(T, { classId: "demo-class", memberId })));
       expect(markup).toContain('data-testid="student-level"');
@@ -158,9 +177,76 @@ describe("the demo teacher", () => {
       expect(buttons.map((b) => b[2])).toEqual(["Agree", "Choose level"]);
       expect(buttons[0][1]).toBe(buttons[1][1]); // the same classes: same colour and size
       expect(buttons[0][1]).toContain("bg-well");
-      for (const absent of ["Retry with this goal", "Learn how", "Play recording", "<audio", "Your result"]) expect(markup).not.toContain(absent);
+      for (const absent of ["Retry with this goal", "Learn how", "Play recording", "Your result"]) expect(markup).not.toContain(absent);
+      expect(markup.replaceAll("nodownload", "")).not.toContain("download"); // no download button or link; the player switches the native one off
       expectMockLinksOnly(markup);
     }
+  });
+
+  it("Attempt (T5): the teacher's player (speed chips, no download) or the deleted note; the student's own player is never used", async () => {
+    const playable = await html(AttemptPage(props(T, { classId: "demo-class", attemptId: "aziza-2" })));
+    expect(playable).toContain('data-testid="teacher-player"');
+    expect(playable).toContain("/audio/demo-recording.wav");
+    expect(playable).toContain('controlsList="nodownload noplaybackrate"');
+    for (const speed of ["1x", "1.25x", "1.5x"]) expect(playable).toContain(`>${speed}<`);
+    expect(playable).not.toContain("Your recorded answer");
+    const gone = await html(AttemptPage(props(T, { classId: "demo-class", attemptId: "madina-1" })));
+    expect(gone).toContain('data-testid="teacher-audio-deleted"');
+    expect(gone).not.toContain("<audio");
+  });
+
+  it("Attempt (T5) for Part 3: its own read-only page with the same Your view, no black button, no Retry", async () => {
+    const markup = await html(AttemptPage(props(T, { classId: "demo-class", attemptId: "aziza-p3" })));
+    expect(markup.match(BLACK)).toBeNull();
+    expect(markup).not.toMatch(SMALL);
+    expect(markup).toContain("Part 3");
+    expect(markup).toMatch(/CEFRO: Part 3 · Band \d · /);
+    expect(markup).toContain('data-testid="points-card"');
+    expect(markup).toContain('data-testid="teacher-player"');
+    const buttons = [...(/data-testid="your-view-actions"[^>]*>(.*?)<\/div>/.exec(markup)![1]).matchAll(/<button[^>]*class="([^"]*)"[^>]*>([^<]*)</g)];
+    expect(buttons.map((b) => b[2])).toEqual(["Agree", "Choose level"]);
+    expect(buttons[0][1]).toBe(buttons[1][1]);
+    for (const absent of ["Retry with this goal", "Your result", "Your answer"]) expect(markup).not.toContain(absent);
+    expectMockLinksOnly(markup);
+    // Part 1.2 too.
+    const part12 = await html(AttemptPage(props(T, { classId: "demo-class", attemptId: "dilnoza-p12" })));
+    expect(part12.match(BLACK)).toBeNull();
+    expect(part12).toMatch(/CEFRO: Part 1\.2 · Band \d/);
+  });
+
+  it("Student's mock (T6): estimated level, date, status; four part cards with player, transcript, band and grey Agree / Choose level; NO black button", async () => {
+    const markup = await html(MockPage(props(T, { classId: "demo-class", mockId: "aziza-mock" })));
+    expect(markup.match(BLACK)).toBeNull();
+    expect(markup).not.toMatch(SMALL);
+    expect(markup).toMatch(/Mock exam · \d\d\.\d\d\.\d\d/);
+    expect(markup).toContain('data-testid="mock-status"');
+    expect(markup).toContain("Finished");
+    expect(markup).toMatch(/data-testid="mock-estimate"[^>]*>(B1|B2|C1|Below B1)</);
+    expect(markup.match(/data-testid="mock-part"/g)).toHaveLength(4);
+    expect(markup.match(/data-testid="teacher-player"/g)).toHaveLength(4);
+    expect(markup.match(/data-testid="transcript-fixes"/g)).toHaveLength(4);
+    expect(markup.match(/data-testid="your-view"/g)).toHaveLength(4);
+    for (const part of ["Part 1.1", "Part 1.2", "Part 2", "Part 3"]) expect(markup).toContain(part);
+    expect(markup).toContain('data-testid="mock-level-view"');
+    // Agree and Choose level are the same grey pill everywhere on the page (4 parts + the whole mock).
+    const pills = [...markup.matchAll(/<button[^>]*class="([^"]*)"[^>]*>(Agree|Choose level)</g)];
+    expect(pills).toHaveLength(10);
+    expect(new Set(pills.map((p) => p[1].replace(/disabled:\S+/g, ""))).size).toBe(1);
+    expect(pills[0][1]).toContain("bg-well");
+    expect(markup.replaceAll("nodownload", "")).not.toContain("download");
+    expectMockLinksOnly(markup);
+    // A mock that was not finished says so and keeps the parts it has.
+    const unfinished = await html(MockPage(props(T, { classId: "demo-class", mockId: "bekzod-mock" })));
+    expect(unfinished).toContain("Not finished");
+    expect(unfinished).toContain("This part was not done.");
+    expect(unfinished.match(BLACK)).toBeNull();
+    await expect(MockPage(props(T, { classId: "demo-class", mockId: "nobody" }))).rejects.toThrow();
+    await expect(MockPage(props(T, { classId: "someone-else", mockId: "aziza-mock" }))).rejects.toThrow();
+  });
+
+  it("the join link opens the normal Join + Share screens: /join/DEMO42 goes to Share, with nothing shared", async () => {
+    await expect(JoinLinkPage(props({ mock: "1" }, { code: "demo42" }))).rejects.toThrow(/NEXT_REDIRECT/);
+    await expect(JoinLinkPage(props({ mock: "1" }, { code: "demo42" }))).rejects.toMatchObject({ digest: expect.stringContaining("/profile/classes/join?code=DEMO42&mock=1") });
   });
 
   it("the attempt of a retry shows the comparison only for shared originals", async () => {
@@ -199,12 +285,38 @@ describe("the demo student: Join, Share, My classes", () => {
     const markup = await html(JoinPage(props({ mock: "1", code: "demo42" })));
     expect(markup).toContain("Demo teacher · Demo class");
     expect(markup).toMatch(/id="shown-name"[^>]*value="Student"/);
-    for (const text of ["Will see", "Won’t see", "Earlier attempts, email, recordings, exam date.", "Your teacher loses access to everything.", "anonymous number pair", "Not now"]) {
+    for (const text of [
+      "Will see",
+      "Won’t see",
+      "Earlier attempts, email, exam date.",
+      "Every part you practise from now on: 1.1, 1.2, 2 and 3",
+      "Every mock you make from now on",
+      "Transcripts and feedback",
+      "Your recordings (deleted after 30 days)",
+      "Your teacher loses access to everything.",
+      "anonymous number pair",
+      "Not now",
+    ]) {
       expect(markup).toContain(text);
     }
+    // "Won't see: recordings" is gone, and the screen no longer says Part 2 only.
+    expect(markup).not.toMatch(/Won’t see[^]*recordings[^]*Your teacher loses/);
+    expect(markup).not.toContain("Part 2 attempt");
     expectScreen(markup, 1);
     expect(markup).toMatch(/<button[^>]*bg-primary text-on-primary[^>]*>Share with this teacher/);
     expectMockLinksOnly(markup, false);
+  });
+
+  it("Account page: an old membership gets one 'Share recordings too?' card with two grey buttons; the Account page's one black button stays", async () => {
+    const markup = await html(ProfilePage(props({ mock: "1", joined: "DEMO42", legacy: "1" })));
+    expect(markup).toContain('data-testid="share-more"');
+    expect(markup).toContain("Share recordings too?");
+    expect(markup).toContain("Nothing from before that is shared.");
+    expect(markup).toMatch(/<button[^>]*bg-well[^>]*>Share recordings too</);
+    expect(markup).toMatch(/<button[^>]*bg-well[^>]*>Not now</);
+    expectScreen(markup, 1);
+    // Not for a membership on the current wording.
+    expect(await html(ProfilePage(props({ mock: "1", joined: "DEMO42" })))).not.toContain('data-testid="share-more"');
   });
 
   it("Account page: grey Join a class; after joining, the class with Sharing since and a quiet Leave class", async () => {
@@ -229,6 +341,8 @@ describe("real pages while the Teacher view is off (no parent consent yet): 404,
     ["Class", () => ClassPage(props({}, { classId: "x" }))],
     ["Student", () => StudentPage(props({}, { classId: "x", memberId: "y" }))],
     ["Attempt", () => AttemptPage(props({}, { classId: "x", attemptId: "y" }))],
+    ["Student's mock", () => MockPage(props({}, { classId: "x", mockId: "y" }))],
+    ["Join link", () => JoinLinkPage(props({}, { code: "ABC234" }))],
     ["Lesson", () => TeacherLessonPage(props({ class: "x" }, { lessonId: "l-t1" }))],
     ["Join", () => JoinPage(props({}))],
   ])("%s", async (_name, page) => {

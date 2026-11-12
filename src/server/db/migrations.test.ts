@@ -107,6 +107,7 @@ describe("fresh database", () => {
       "recordings",
       "speaking_attempts",
       "speaking_tasks",
+      "teacher_mock_ratings",
       "teacher_ratings",
       "transcripts",
       "users",
@@ -242,6 +243,38 @@ describe("full mock migration (0008)", () => {
     expect(await query(client, "SELECT id, kind, status, finished_at FROM practice_sessions")).toEqual([{ id: "s1", kind: "single_task", status: null, finished_at: null }]);
     await client.execute("INSERT INTO practice_sessions (id, user_id, kind, status) VALUES ('m1', 'u1', 'full_mock', 'in_progress')");
     expect(await query(client, "SELECT kind, status FROM practice_sessions WHERE id = 'm1'")).toEqual([{ kind: "full_mock", status: "in_progress" }]);
+    client.close();
+  });
+});
+
+describe("teacher v1 migration (0009)", () => {
+  it("is additive: one new table (with its two indexes) and two nullable class_members columns, nothing dropped or rewritten", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0009_teacher_v1.sql"), "utf8");
+    expect(sql).toContain("CREATE TABLE `teacher_mock_ratings`");
+    expect(sql).toContain("ALTER TABLE `class_members` ADD `all_parts_from` text;");
+    expect(sql).toContain("ALTER TABLE `class_members` ADD `upgrade_declined_at` text;");
+    expect(sql.replace(/^--.*$/gm, "")).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME/i);
+    // The only NOT NULL columns are the new table's own.
+    expect(sql.replace(/CREATE TABLE `teacher_mock_ratings` \([\s\S]*?\n\);/, "")).not.toMatch(/NOT NULL/i);
+  });
+
+  it("upgrades a 0008 database: old memberships keep their wording and are not upgraded, and a mock rating can be written", async () => {
+    const file = path.join(tempDir(), "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(9));
+    await old.client.executeMultiple(`
+      INSERT INTO users (id, kind, role) VALUES ('t', 'registered', 'teacher'), ('s', 'registered', 'student');
+      INSERT INTO classes (id, teacher_user_id, name, join_code) VALUES ('c', 't', 'Group B', 'ABC234');
+      INSERT INTO class_members (id, class_id, student_user_id, shown_name, shared_at, share_text_version) VALUES ('m', 'c', 's', 'Ali', '2026-11-07T10:00:00.000Z', '2026-11-07');
+      INSERT INTO practice_sessions (id, user_id, kind, status) VALUES ('mock', 's', 'full_mock', 'finished');
+    `);
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT share_text_version, all_parts_from, upgrade_declined_at FROM class_members")).toEqual([{ share_text_version: "2026-11-07", all_parts_from: null, upgrade_declined_at: null }]);
+    await client.execute("INSERT INTO teacher_mock_ratings (id, session_id, teacher_user_id, class_id, agrees, teacher_level, updated_at) VALUES ('r', 'mock', 't', 'c', 0, 'B2', '2026-11-08T10:00:00.000Z')");
+    await expect(client.execute("INSERT INTO teacher_mock_ratings (id, session_id, teacher_user_id, class_id, agrees, updated_at) VALUES ('r2', 'mock', 't', 'c', 1, 'x')")).rejects.toThrow(); // one per mock and teacher
+    expect(await query(client, "SELECT teacher_level FROM teacher_mock_ratings")).toEqual([{ teacher_level: "B2" }]);
     client.close();
   });
 });

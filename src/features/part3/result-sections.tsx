@@ -3,6 +3,8 @@ import { TranscriptWithFixes } from "@/features/result/TranscriptWithFixes";
 import { audioRetentionNote } from "@/domain/audio-retention";
 import { BandMeter, type AnswerAudio } from "@/features/result/sections";
 import { formatDuration } from "@/features/result/view-model";
+import { TeacherPlayer } from "@/features/result/TeacherPlayer";
+import type { TeacherListen } from "@/features/teacher/mock-view";
 import { RecordingPlayer } from "@/features/speaking-practice/components/RecordingPlayer";
 import { GOAL_TEXT, type Part3ResultView, type PointVerdict, type SideView } from "./view-model";
 
@@ -21,8 +23,17 @@ export function Part3ScoredResult({
   retryHref,
   demo,
   audio = null,
+  teacher = null,
+  yourTeacher = null,
+  children,
 }: {
   view: Part3ResultView;
+  /** A teacher's read-only view (T5 for Part 3): the student's name, their player or the "deleted" note, no Retry. */
+  teacher?: { studentName: string; listen?: TeacherListen | null } | null;
+  /** The student's own page: the level their teacher gave, next to CEFRO's band. */
+  yourTeacher?: string | null;
+  /** Under the result card ("Your view" on the teacher's page). */
+  children?: React.ReactNode;
   retryHref: string;
   demo: boolean;
   /** A real attempt's stored recording: a player, or the retention note once it is deleted. Mock results have none. */
@@ -31,9 +42,10 @@ export function Part3ScoredResult({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,0.7fr)] lg:items-start">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-        <ResultCard view={view} demo={demo} className="order-1 lg:order-none" />
-        <FixCard view={view} retryHref={retryHref} className="order-3 lg:order-none" />
-        <AnswerCard view={view} audio={audio} className="order-6 lg:order-none" />
+        <ResultCard view={view} demo={demo} teacher={teacher} yourTeacher={yourTeacher} className="order-1 lg:order-none" />
+        {children && <div className="order-1 lg:order-none">{children}</div>}
+        <FixCard view={view} retryHref={teacher ? null : retryHref} className="order-3 lg:order-none" />
+        <AnswerCard view={view} audio={teacher ? null : audio} listen={teacher?.listen ?? null} who={teacher?.studentName} title={teacher ? "Answer" : undefined} className="order-6 lg:order-none" />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <PointsCard view={view} className="order-2 lg:order-none" />
@@ -44,13 +56,13 @@ export function Part3ScoredResult({
   );
 }
 
-function ResultCard({ view, demo, className }: { view: Part3ResultView; demo: boolean; className?: string }) {
+function ResultCard({ view, demo, teacher = null, yourTeacher = null, className }: { view: Part3ResultView; demo: boolean; teacher?: { studentName: string } | null; yourTeacher?: string | null; className?: string }) {
   const retry = view.retry;
   const change = retry ? retry.band - retry.previousBand : 0;
   return (
     <Card aria-labelledby="result-title" className={className}>
       {demo && <DemoLabel className="mb-3" />}
-      <p className="text-caption text-fg-muted">Your result · {view.taskTitle}</p>
+      <p className="text-caption text-fg-muted">{teacher ? teacher.studentName : "Your result"} · {view.taskTitle}</p>
       {retry && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-label font-semibold text-fg">
@@ -72,6 +84,12 @@ function ResultCard({ view, demo, className }: { view: Part3ResultView; demo: bo
         <span className="text-stat font-light tracking-[-0.03em] text-fg">Band {view.band}</span>
         <span className="text-lead font-medium text-fg">· {view.bandLabel}</span>
       </h1>
+      {yourTeacher && (
+        <p className="mt-1 text-body text-fg" data-testid="your-teacher">
+          <span className="text-fg-muted">CEFRO: {view.bandLabel} · </span>
+          Your teacher: <span className="font-semibold">{yourTeacher}</span>
+        </p>
+      )}
       <p className="mt-1 text-label text-fg-muted">{view.statement}</p>
       <BandMeter band={view.band} bandMax={view.bandMax} target={view.targetBand} className="mt-5" />
       <p className="mt-3 text-body text-fg">{view.targetText}</p>
@@ -151,7 +169,7 @@ function SideList({ side }: { side: SideView }) {
   );
 }
 
-function FixCard({ view, retryHref, className }: { view: Part3ResultView; retryHref: string; className?: string }) {
+function FixCard({ view, retryHref, className }: { view: Part3ResultView; retryHref: string | null; className?: string }) {
   const { fix } = view;
   return (
     <Card aria-labelledby="fix-title" className={className}>
@@ -177,9 +195,11 @@ function FixCard({ view, retryHref, className }: { view: Part3ResultView; retryH
         </div>
       )}
       <div className="mt-5">
+        {retryHref && (
         <PillButton href={retryHref} icon="retry" className="w-full sm:w-auto">
           Retry with this goal
         </PillButton>
+        )}
       </div>
     </Card>
   );
@@ -250,14 +270,14 @@ function SkillsCard({ view, className }: { view: Part3ResultView; className?: st
   );
 }
 
-function AnswerCard({ view, audio, className }: { view: Part3ResultView; audio: AnswerAudio | null; className?: string }) {
+function AnswerCard({ view, audio, listen, who = "student", title = "Your answer", className }: { view: Part3ResultView; audio: AnswerAudio | null; listen?: TeacherListen | null; who?: string; title?: string; className?: string }) {
   const anyCopied = view.transcript.some((p) => p.copied);
   const retentionNote = audio ? audioRetentionNote({ deletedAt: audio.deletedAt ?? null, deletesAt: audio.deletesAt ?? null }) : null;
   return (
     <Card aria-labelledby="answer-title" className={className}>
       <CardHeader
         id="answer-title"
-        title="Your answer"
+        title={title}
         action={
           <span className="inline-flex items-center gap-1.5 text-label text-fg-muted">
             <Icon name="clock" size={14} className="text-fg-subtle" />
@@ -265,6 +285,7 @@ function AnswerCard({ view, audio, className }: { view: Part3ResultView; audio: 
           </span>
         }
       />
+      {listen && <TeacherPlayer listen={listen} who={who} className="mb-4" />}
       {audio && (
         <div className="mb-4">
           {!audio.deletedAt && <RecordingPlayer src={audio.src} durationMs={audio.durationMs} label="Your recorded answer" />}

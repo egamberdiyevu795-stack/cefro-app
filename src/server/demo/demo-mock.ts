@@ -29,6 +29,8 @@ import { lessonHref } from "@/features/lessons/choose";
 import { DEMO_MOCK_HREF, DEMO_MOCK_ID } from "@/features/mock-result/links";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
+import { buildTranscriptFixes } from "@/features/result/transcript-fixes";
+import type { TeacherMockPartView, TeacherMockView } from "@/features/teacher/mock-view";
 
 export { DEMO_MOCK_HREF, DEMO_MOCK_ID };
 
@@ -215,4 +217,92 @@ export async function demoMockHistory(now: Date): Promise<{ mocks: HistoryMock[]
     });
   }
   return { mocks: [{ id: DEMO_MOCK_ID, status: "finished", createdAt }], attempts };
+}
+
+/* ------------------------------------------------------------------------------------------------ demo class (teacher) */
+
+/** One demo part as a History attempt with the given id, time and session: how the demo class's students carry mock parts and single attempts of Parts 1.2 and 3. */
+export async function demoPartAttempt(part: ExamPartId, o: { id: string; createdAt: string; sessionId: string | null }): Promise<HistoryAttempt | null> {
+  const key = part === "3" ? DEMO_PART3_KEY : demoPracticeKey(DEMO_TASKS[part], null);
+  const taskId = part === "3" ? DEMO_PART3_TASK : DEMO_TASKS[part];
+  const task = part === "3" ? getArgumentTask(taskId) : getSpeakingTask(taskId);
+  const result = part === "3" ? (await part3DemoEvaluation(key))?.result : (await demoEvaluation(key))?.result;
+  if (!task || !result) return null;
+  return {
+    id: o.id,
+    taskId,
+    title: task.title,
+    part: part === "3" ? "3" : examPartOf(task as { part: number; level: string }),
+    createdAt: o.createdAt,
+    status: "completed",
+    isStalled: false,
+    failureCode: null,
+    recordingDurationMs: durationOf(part === "3" ? part3DemoTranscriptFor(part3DemoSpec(key)!) : demoTranscript(key)),
+    previousAttemptId: null,
+    sessionId: o.sessionId,
+    result,
+  };
+}
+
+/** The demo recording a demo class "plays": a short quiet tone (`public/audio/demo-recording.wav`, no real voice). */
+export const DEMO_RECORDING = { src: "/audio/demo-recording.wav", durationMs: 3000 } as const;
+
+/** The demo class's mocks (docs/v1-plan.md, T6): which parts each one has. */
+export const DEMO_CLASS_MOCKS = {
+  "aziza-mock": { parts: ["1.1", "1.2", "2", "3"] as const, status: "finished" as MockStatus },
+  "bekzod-mock": { parts: ["1.1", "1.2"] as const, status: "not_finished" as MockStatus },
+} as const;
+export type DemoClassMockId = keyof typeof DEMO_CLASS_MOCKS;
+
+/** A demo class mock as its teacher reads it (T6): every part through the real result code, with a short demo recording. */
+export async function demoTeacherMock(
+  mockId: string,
+  who: { classId: string; memberId: string; studentName: string; createdAt: string },
+): Promise<TeacherMockView | null> {
+  const spec = DEMO_CLASS_MOCKS[mockId as DemoClassMockId];
+  if (!spec) return null;
+  const views = await demoViews();
+  const parts: TeacherMockPartView[] = [];
+  for (const part of MOCK_PARTS) {
+    const entry = views[part];
+    const done = (spec.parts as readonly ExamPartId[]).includes(part);
+    const links: PartLinks = { detail: "", retry: "", lesson: () => "" };
+    if (!entry || !done) {
+      parts.push({ ...NOT_DONE_PART(part), bands: [], transcript: null, fixes: null, listen: null, rating: null } as TeacherMockPartView);
+      continue;
+    }
+    const view = entry.view;
+    const result = view.evaluation?.result ?? null;
+    let source: MockPartSource;
+    let bands: { band: number; label: string }[];
+    if (part === "3") {
+      const task = getArgumentTask(view.taskId)!;
+      bands = getArgumentRubric(task).config.bands.map(({ band, label }) => ({ band, label }));
+      source = part3Source(view, { task: toPublicArgumentTask(task), links, teacher: null });
+    } else {
+      const task = getSpeakingTask(view.taskId)!;
+      bands = getSpeakingRubric(task).config.bands.map(({ band, label }) => ({ band, label }));
+      source = speakingPartSource(part, view, { task: toPublicTask(task), bandLabels: bands, links, teacher: null });
+    }
+    const text = view.transcript?.text ?? null;
+    parts.push({
+      part,
+      attemptId: `${mockId}-${part}`,
+      taskTitle: source.taskTitle,
+      state: source.state,
+      reason: source.reason,
+      band: source.band,
+      bands,
+      transcript: text,
+      fixes: text && result && "assessment" in result ? buildTranscriptFixes(text, result.assessment.sentence_fixes) : null,
+      listen: { state: "playable", src: DEMO_RECORDING.src, durationMs: DEMO_RECORDING.durationMs },
+      rating: null,
+    });
+  }
+  return { id: mockId, classId: who.classId, memberId: who.memberId, studentName: who.studentName, status: spec.status, createdAt: who.createdAt, finishedAt: spec.status === "finished" ? who.createdAt : null, parts, rating: null };
+}
+
+/** The demo AttemptView of one part (transcript and real stored result), or null. */
+export async function demoPartView(part: ExamPartId): Promise<AttemptView | null> {
+  return (await demoViews())[part]?.view ?? null;
 }

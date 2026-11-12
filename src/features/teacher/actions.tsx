@@ -6,6 +6,8 @@ import { useState } from "react";
 import { PillAction, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import type { BandLabel } from "@/features/result/view-model";
+import { MOCK_LEVELS, UPGRADE_TEXT, joinLinkPath } from "@/domain/teacher/rules";
+import type { TeacherMockRating } from "./mock-view";
 import { teacherHref, teacherLinks } from "./links";
 import { bandOptionLabel, ratingText, type TeacherRating } from "./view-model";
 
@@ -60,6 +62,16 @@ export function JoinCodeCard({ code: initial, classId, demo, primary = true }: {
       setStatus("Copy it by hand: select the code above.");
     }
   };
+  /** /join/CODE opens the normal Join screen with the code filled in (nothing is shared by opening it). */
+  const copyLink = async () => {
+    const link = `${window.location.origin}${joinLinkPath(code)}${demo ? "?mock=1" : ""}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setStatus("Link copied. Opening it only fills in the code: students still choose to share.");
+    } catch {
+      setStatus(`Copy it by hand: ${link}`);
+    }
+  };
   const reset = async () => {
     setBusy(true);
     if (demo) {
@@ -81,10 +93,13 @@ export function JoinCodeCard({ code: initial, classId, demo, primary = true }: {
       <p className="mt-1 text-stat font-light tracking-[0.12em] text-fg" data-testid="join-code" aria-label={`Join code ${code.split("").join(" ")}`}>
         {code}
       </p>
-      <p className="mt-2 text-body text-fg-muted">Students enter this on their Account page.</p>
+      <p className="mt-2 text-body text-fg-muted">Students enter this on their Account page, or open the join link.</p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <PillAction onClick={() => void copy()} variant={primary ? "primary" : "quiet"} icon="layers" disabled={!ready}>
           Copy join code
+        </PillAction>
+        <PillAction onClick={() => void copyLink()} variant="quiet" disabled={!ready}>
+          Copy join link
         </PillAction>
         <button type="button" onClick={() => void reset()} disabled={!ready || busy} className={cx(styles.SMALL_ACTION, "min-h-9 px-2 disabled:opacity-60")}>
           Reset code
@@ -202,12 +217,17 @@ export function YourView({
   initial,
   url,
   demo,
+  compact = false,
+  idPrefix = "your-view",
 }: {
   verdict: string;
   bands: readonly BandLabel[];
   initial: TeacherRating | null;
   url: string;
   demo: boolean;
+  /** Inside another card (T6's part cards): no card of its own, a smaller title. */
+  compact?: boolean;
+  idPrefix?: string;
 }) {
   const ready = useHydrated();
   const [rating, setRating] = useState<TeacherRating | null>(initial);
@@ -232,10 +252,20 @@ export function YourView({
   };
 
   return (
-    <section aria-labelledby="your-view-title" className="rounded-card bg-card p-5 shadow-card sm:p-6" data-testid="your-view">
-      <h2 id="your-view-title" className="text-title font-medium tracking-[-0.01em] text-fg">
-        Your view
-      </h2>
+    <section
+      aria-labelledby={`${idPrefix}-title`}
+      className={compact ? "border-t border-line pt-4" : "rounded-card bg-card p-5 shadow-card sm:p-6"}
+      data-testid="your-view"
+    >
+      {compact ? (
+        <h3 id={`${idPrefix}-title`} className="text-caption font-semibold text-fg">
+          Your view
+        </h3>
+      ) : (
+        <h2 id={`${idPrefix}-title`} className="text-title font-medium tracking-[-0.01em] text-fg">
+          Your view
+        </h2>
+      )}
       <p className="mt-2 text-body text-fg" data-testid="app-verdict">
         {verdict}
       </p>
@@ -363,5 +393,150 @@ export function CreateClassForm({ demo }: { demo: boolean }) {
         Create class
       </button>
     </form>
+  );
+}
+
+
+/* -------------------------------------------------------------------------------- the whole mock's level (T6, optional) */
+
+/**
+ * "Your level for this mock" (optional): the app's estimate, then Agree and Choose level, grey, the same size, side by
+ * side (as on a part). Choose level lists Below B1, B1, B2, C1. Demo: the page only.
+ */
+export function MockLevelView({
+  estimate,
+  initial,
+  url,
+  demo,
+}: {
+  estimate: string | null;
+  initial: TeacherMockRating | null;
+  url: string;
+  demo: boolean;
+}) {
+  const ready = useHydrated();
+  const [rating, setRating] = useState<TeacherMockRating | null>(initial);
+  const [choosing, setChoosing] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const save = async (next: TeacherMockRating) => {
+    setBusy(true);
+    setMessage(null);
+    if (demo) {
+      setRating(next);
+      setChoosing(false);
+    } else {
+      const result = await send(url, "PUT", next);
+      if (result.ok) {
+        setRating((result.data as { rating: TeacherMockRating }).rating);
+        setChoosing(false);
+      } else setMessage(result.message);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section aria-labelledby="mock-level-title" className="rounded-card bg-card p-5 shadow-card sm:p-6" data-testid="mock-level-view">
+      <h2 id="mock-level-title" className="text-title font-medium tracking-[-0.01em] text-fg">
+        Your level for this mock
+      </h2>
+      <p className="mt-1 text-label text-fg-muted">Optional. Your level for each part is above.</p>
+      <p className="mt-2 text-body text-fg" data-testid="mock-app-estimate">
+        {estimate ? `CEFRO: ${estimate}` : "CEFRO: estimate not ready yet"}
+      </p>
+      {rating && !choosing ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <p className="text-body font-semibold text-fg" data-testid="your-mock-rating">
+            {rating.agrees ? "You: Agree" : `You: ${rating.level}`}
+          </p>
+          <button type="button" onClick={() => setChoosing(true)} disabled={!ready} className={cx(styles.SMALL_ACTION, "min-h-9 px-2 disabled:opacity-60")}>
+            Change
+          </button>
+        </div>
+      ) : choosing ? (
+        <fieldset className="mt-4">
+          <legend className="text-caption font-semibold text-fg">Choose level</legend>
+          <ul className="mt-2 grid grid-cols-2 gap-2">
+            {MOCK_LEVELS.map((level) => (
+              <li key={level}>
+                <PillAction onClick={() => void save({ agrees: false, level })} variant="quiet" disabled={!ready || busy} className="w-full">
+                  {level}
+                </PillAction>
+              </li>
+            ))}
+          </ul>
+          <button type="button" onClick={() => setChoosing(false)} disabled={!ready} className={cx(styles.SMALL_ACTION, "mt-2 min-h-9 px-2")}>
+            Cancel
+          </button>
+        </fieldset>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <PillAction onClick={() => void save({ agrees: true })} variant="quiet" disabled={!ready || busy || !estimate} className="w-full">
+            Agree
+          </PillAction>
+          <PillAction onClick={() => setChoosing(true)} variant="quiet" disabled={!ready || busy} className="w-full">
+            Choose level
+          </PillAction>
+        </div>
+      )}
+      {demo && rating && <p className="mt-2 text-label text-fg-muted">Demo mode. Nothing was saved.</p>}
+      <Problem text={message} />
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------------------- "Share recordings too?" (Account, once) */
+
+/**
+ * The one-time card for a membership made on the first Share wording (Part 2 attempts only, no recordings). Nothing
+ * changes until the student taps "Share recordings too"; "Not now" keeps things as they are and the card is not shown
+ * again. Both grey: the Account page keeps its own black button. Demo: the page only.
+ */
+export function ShareMoreCard({ memberId, teacherName, className, demo }: { memberId: string; teacherName: string; className: string; demo: boolean }) {
+  const ready = useHydrated();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [state, setState] = useState<"asking" | "shared" | "declined">("asking");
+  const [message, setMessage] = useState<string | null>(null);
+
+  const answer = async (accept: boolean) => {
+    setBusy(true);
+    setMessage(null);
+    if (demo) setState(accept ? "shared" : "declined");
+    else {
+      const result = await send(`/api/classes/${encodeURIComponent(memberId)}/${accept ? "upgrade" : "decline-upgrade"}`, "POST");
+      if (result.ok) {
+        setState(accept ? "shared" : "declined");
+        router.refresh();
+      } else setMessage(result.message);
+    }
+    setBusy(false);
+  };
+
+  if (state !== "asking") {
+    return (
+      <p role="status" className="mt-2 text-label text-fg" data-testid="share-more-done">
+        {state === "shared" ? `Done. ${teacherName} now also sees every part, your mocks and your recordings from now on.` : "OK. Nothing changed."}
+        {demo && " Demo mode: nothing was saved."}
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3 rounded-tile bg-well p-3" role="group" aria-labelledby={`share-more-${memberId}`} data-testid="share-more">
+      <p id={`share-more-${memberId}`} className="text-body font-semibold text-fg">
+        {UPGRADE_TEXT.title}
+      </p>
+      <p className="mt-1 text-body text-fg">{UPGRADE_TEXT.body}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <PillAction onClick={() => void answer(true)} variant="quiet" disabled={!ready || busy} className={className}>
+          {UPGRADE_TEXT.accept}
+        </PillAction>
+        <PillAction onClick={() => void answer(false)} variant="quiet" disabled={!ready || busy} className={className}>
+          {UPGRADE_TEXT.decline}
+        </PillAction>
+      </div>
+      <Problem text={message} />
+    </div>
   );
 }

@@ -84,15 +84,41 @@ export function suggestedShownName(accountName: string | null | undefined): stri
 /**
  * The wording of the Share screen the student agrees to, stored with each share (`share_text_version`). Change the
  * version whenever SHARE_TEXT changes.
+ *
+ * "v1-all-parts-audio" (docs/v1-plan.md, step 6): every part, every mock made after joining, and the recordings
+ * ("Will see" lists them; "Won't see: recordings" is gone).
+ * Older memberships keep the version they agreed to ("2026-11-07": Part 2 attempts only, no recordings); see
+ * `memberScope`.
  */
-export const SHARE_TEXT_VERSION = "2026-11-07";
+export const SHARE_TEXT_VERSION = "v1-all-parts-audio";
+
+/** The first wording (2026-11-07): Part 2 attempts only, "Won't see: recordings". Memberships made then keep it. */
+export const LEGACY_SHARE_TEXT_VERSION = "2026-11-07";
 
 export const SHARE_TEXT = {
-  willSee: "That name, your level, and every Part 2 attempt you make from now on, with transcript, quotes and feedback.",
-  wontSee: "Earlier attempts, email, recordings, exam date.",
+  /** "Will see": one line each. The last one is the recordings (there is no "Won't see: recordings" any more). */
+  willSee: [
+    "That name and your level",
+    "Every part you practise from now on: 1.1, 1.2, 2 and 3",
+    "Every mock you make from now on",
+    "Transcripts and feedback",
+    "Your recordings (deleted after 30 days)",
+  ],
+  wontSee: "Earlier attempts, email, exam date.",
   leaveAccess: "Your teacher loses access to everything.",
   leavePairs:
     "If you leave, we keep your teacher's level and ours as an anonymous number pair to improve scoring. It can't be linked to you.",
+} as const;
+
+/**
+ * What an old membership's owner is asked once (Account page), and what the tap does. Nothing changes until they tap:
+ * their teacher keeps seeing Part 2 attempts only, with no recordings.
+ */
+export const UPGRADE_TEXT = {
+  title: "Share recordings too?",
+  body: "Your teacher now sees Part 2 attempts only. You can also share Parts 1.1, 1.2 and 3, your mocks and your recordings (deleted after 30 days), from the moment you tap. Nothing from before that is shared.",
+  accept: "Share recordings too",
+  decline: "Not now",
 } as const;
 
 export type EndedBy = "student" | "teacher" | "class_closed";
@@ -126,3 +152,102 @@ export function ratingPair(rating: {
     month: monthOf(rating.createdAt),
   };
 }
+
+/* ------------------------------------------------------------------------------------------ who may see and hear what */
+
+/** The part of an attempt an access rule needs: its exam part id ("1.1", "1.2", "2", "3") or null, and when it was made. */
+export interface AccessAttempt {
+  part: string | null;
+  createdAt: string;
+}
+
+/** What a membership row says about its scope (all `class_members` columns the rules read). */
+export interface AccessMember {
+  sharedAt: string;
+  shareTextVersion: string;
+  /** Set when an old member tapped "Share recordings too": the moment the wider scope starts. */
+  allPartsFrom?: string | null;
+}
+
+/**
+ * The scope a membership agreed to.
+ *  - "all_parts_audio": the current wording (every part, every mock, recordings), from `shared_at`.
+ *  - "part2_only": an older wording that has not been upgraded: Part 2 attempts only, no recordings.
+ *    An old member who tapped "Share recordings too" is "all_parts_audio" from that moment (`allPartsFrom`) and
+ *    "part2_only" before it.
+ */
+export type MemberScope = "all_parts_audio" | "part2_only";
+
+/** The moment from which a membership shares everything (all parts, mocks, recordings); null: never. */
+export function fullScopeFrom(member: AccessMember): string | null {
+  if (member.shareTextVersion !== LEGACY_SHARE_TEXT_VERSION) return member.sharedAt;
+  return member.allPartsFrom ?? null;
+}
+
+export function memberScope(member: AccessMember): MemberScope {
+  return fullScopeFrom(member) !== null ? "all_parts_audio" : "part2_only";
+}
+
+/** Does this membership still wait for the "Share recordings too?" answer: an old wording, not upgraded, not declined. */
+export function needsUpgradeAnswer(member: AccessMember & { upgradeDeclinedAt?: string | null; endedAt?: string | null }): boolean {
+  return !member.endedAt && member.shareTextVersion === LEGACY_SHARE_TEXT_VERSION && !member.allPartsFrom && !member.upgradeDeclinedAt;
+}
+
+/**
+ * The pure core of `teacherCanSee` for attempts: made after the student tapped Share (ISO times compare as text), and,
+ * for a membership on the old wording, Part 2 only unless it was upgraded and the attempt was made after the upgrade.
+ */
+export function memberSeesAttempt(member: AccessMember, attempt: AccessAttempt): boolean {
+  if (!(attempt.createdAt > member.sharedAt)) return false;
+  const from = fullScopeFrom(member);
+  if (from !== null && attempt.createdAt > from) return true;
+  return member.shareTextVersion === LEGACY_SHARE_TEXT_VERSION && attempt.part === "2";
+}
+
+/**
+ * The pure core of `teacherCanSee` for a mock: started after the full scope began (so never for an old membership that
+ * was not upgraded, and never a mock started before the student joined or upgraded).
+ */
+export function memberSeesMock(member: AccessMember, mock: { createdAt: string }): boolean {
+  const from = fullScopeFrom(member);
+  return from !== null && mock.createdAt > from;
+}
+
+/**
+ * Recordings (docs/v1-plan.md section 4.4): `teacherCanHear` = `teacherCanSee` AND the account still has
+ * `consent_teacher_sharing` AND the audio is not deleted. The membership must also cover recordings: an old wording
+ * promised "Won't see: recordings", so an attempt made before the upgrade has none to hear.
+ */
+export function canHearRecording(input: {
+  sees: boolean;
+  /** `users.consent_teacher_sharing` of the student, with recording consent granted. */
+  consentTeacherSharing: boolean;
+  /** `recordings.audio_deleted_at`; null: the audio is stored. */
+  audioDeletedAt: string | null;
+  /** The attempt's recording row exists. */
+  hasRecording: boolean;
+  member: AccessMember;
+  attempt: AccessAttempt;
+}): boolean {
+  if (!input.sees || !input.consentTeacherSharing || input.audioDeletedAt || !input.hasRecording) return false;
+  const from = fullScopeFrom(input.member);
+  return from !== null && input.attempt.createdAt > from;
+}
+
+/** The levels a teacher can give to a whole mock (the same four the estimate uses). */
+export const MOCK_LEVELS = ["Below B1", "B1", "B2", "C1"] as const;
+export type MockLevel = (typeof MOCK_LEVELS)[number];
+
+export function isMockLevel(value: unknown): value is MockLevel {
+  return typeof value === "string" && (MOCK_LEVELS as readonly string[]).includes(value);
+}
+
+/** The address a student opens from a Telegram link: the join code pre-filled (nothing is shared by opening it). */
+export function joinLinkPath(code: string): string {
+  return `/join/${encodeURIComponent(code)}`;
+}
+
+/** "Speaking playback speeds" of the teacher's player. */
+export const PLAYBACK_SPEEDS = [1, 1.25, 1.5] as const;
+export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
+export const speedLabel = (speed: PlaybackSpeed) => `${speed}x`;

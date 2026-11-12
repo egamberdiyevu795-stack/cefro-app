@@ -28,7 +28,10 @@ export function Part3AttemptResult({
   previous,
   task,
   bandLabels,
+  yourTeacher = null,
 }: {
+  /** The level the student's teacher gave this answer ("C1"), shown beside CEFRO's band; null when not rated. */
+  yourTeacher?: string | null;
   initial: AttemptView;
   /** The attempt this one retries, when it is one (for "Band 4 → 5" and the goal). */
   previous: AttemptView | null;
@@ -134,7 +137,7 @@ export function Part3AttemptResult({
       previous: previousResult,
       isDevelopmentProvider: attempt.evaluation?.meta.isDevelopmentProvider ?? false,
     });
-    return <Part3ScoredResult view={view} retryHref={part3RealPracticeHref(task.id, { retry: attempt.id })} demo={false} audio={audio} />;
+    return <Part3ScoredResult view={view} retryHref={part3RealPracticeHref(task.id, { retry: attempt.id })} demo={false} audio={audio} yourTeacher={yourTeacher} />;
   }
 
   // Failed (or completed without a Part 3 result we can read): "AI score not ready yet" when the transcript was

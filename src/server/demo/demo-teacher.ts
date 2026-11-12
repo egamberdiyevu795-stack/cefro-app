@@ -15,6 +15,10 @@ import type { SharedStudent } from "@/features/teacher/view-model";
 import type { SpeakingEvaluation } from "@/server/evaluation/speaking-evaluator";
 import type { TeacherAttempt } from "@/server/teacher/teacher-service";
 import { durationOf, evaluateDemoAnswer } from "./demo-data";
+import { DEMO_CLASS_MOCKS, DEMO_RECORDING, demoPartAttempt, demoPartView } from "./demo-mock";
+import type { ExamPartId } from "@/domain/speaking/exam-part";
+import type { HistoryMock } from "@/domain/speaking/history";
+import type { TeacherListen } from "@/features/teacher/mock-view";
 
 export const DEMO_TEACHER = { name: "Demo teacher" } as const;
 export const DEMO_CLASS = { id: "demo-class", name: "Demo class", joinCode: "DEMO42" } as const;
@@ -163,20 +167,90 @@ async function historyAttempt(spec: DemoClassAttemptSpec, now: Date): Promise<Hi
   };
 }
 
+/** Single attempts of Parts 1.2 and 3 (the demo class shares every part), built from the demo mock's own results. */
+const EXTRA_ATTEMPTS: Record<string, { memberId: string; part: ExamPartId; daysAgo: number }> = {
+  "aziza-p3": { memberId: "s1", part: "3", daysAgo: 2 },
+  "dilnoza-p12": { memberId: "s3", part: "1.2", daysAgo: 2 },
+};
+
+/** The demo mocks: who made them and how long ago (after they shared). */
+const MOCKS: Record<string, { memberId: string; daysAgo: number }> = {
+  "aziza-mock": { memberId: "s1", daysAgo: 5 },
+  "bekzod-mock": { memberId: "s2", daysAgo: 3 },
+};
+
+/** The demo class's mock ids with the student who made each, for the pages that open one. */
+export function demoMockOwner(mockId: string): { memberId: string; studentName: string; createdAt: string } | null {
+  const spec = MOCKS[mockId];
+  const student = spec && STUDENTS.find((s) => s.memberId === spec.memberId);
+  return spec && student ? { memberId: student.memberId, studentName: student.shownName, createdAt: ago(new Date(), spec.daysAgo) } : null;
+}
+
 /** The demo class's six students with their shared attempts, as the real server would give them to their teacher. */
 export async function demoClassStudents(now: Date): Promise<SharedStudent[]> {
   return Promise.all(
-    STUDENTS.map(async (s) => ({
-      memberId: s.memberId,
-      shownName: s.shownName,
-      sharedAt: ago(now, s.sharedDaysAgo),
-      attempts: await Promise.all(s.attempts.map((a) => historyAttempt(a, now))),
-    })),
+    STUDENTS.map(async (s) => {
+      const attempts = await Promise.all(s.attempts.map((a) => historyAttempt(a, now)));
+      const mocks: HistoryMock[] = [];
+      for (const [id, spec] of Object.entries(MOCKS)) {
+        if (spec.memberId !== s.memberId) continue;
+        const createdAt = ago(now, spec.daysAgo);
+        mocks.push({ id, status: DEMO_CLASS_MOCKS[id as keyof typeof DEMO_CLASS_MOCKS].status, createdAt });
+        for (const part of DEMO_CLASS_MOCKS[id as keyof typeof DEMO_CLASS_MOCKS].parts) {
+          const attempt = await demoPartAttempt(part, { id: `${id}-${part}`, createdAt, sessionId: id });
+          if (attempt) attempts.push(attempt);
+        }
+      }
+      for (const [id, spec] of Object.entries(EXTRA_ATTEMPTS)) {
+        if (spec.memberId !== s.memberId) continue;
+        const attempt = await demoPartAttempt(spec.part, { id, createdAt: ago(now, spec.daysAgo), sessionId: null });
+        if (attempt) attempts.push(attempt);
+      }
+      attempts.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+      return {
+        memberId: s.memberId,
+        shownName: s.shownName,
+        sharedAt: ago(now, s.sharedDaysAgo),
+        attempts,
+        mocks: mocks.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+        // The newest member joined on the first Share wording and has not tapped "Share recordings too?": Part 2 only.
+        partsShared: s.memberId !== "s6",
+      };
+    }),
   );
 }
 
+const demoListen = (durationMs: number): TeacherListen => ({ state: "playable", src: DEMO_RECORDING.src, durationMs });
+
 /** One demo class attempt as a teacher reads it (T5), or null for an unknown id. */
 export async function demoTeacherAttempt(attemptId: string, now: Date): Promise<TeacherAttempt | null> {
+  const extra = EXTRA_ATTEMPTS[attemptId];
+  if (extra) {
+    const view = await demoPartView(extra.part);
+    const student = STUDENTS.find((s) => s.memberId === extra.memberId)!;
+    if (!view) return null;
+    return {
+      id: attemptId,
+      classId: DEMO_CLASS.id,
+      memberId: student.memberId,
+      studentName: student.shownName,
+      taskId: view.taskId,
+      part: extra.part,
+      status: "completed",
+      failure: null,
+      isStalled: false,
+      durationMs: view.recordingDurationMs,
+      transcript: view.transcript?.text ?? null,
+      result: view.evaluation?.result && "scoring" in view.evaluation.result ? view.evaluation.result : null,
+      previousResult: null,
+      methodology: view.evaluation ? { evaluatorVersion: view.evaluation.meta.evaluatorVersion, rubricVersion: view.evaluation.meta.rubricVersion } : null,
+      isDevelopmentProvider: false,
+      createdAt: ago(now, extra.daysAgo),
+      mockId: null,
+      listen: demoListen(DEMO_RECORDING.durationMs),
+      rating: null,
+    };
+  }
   const found = ATTEMPTS.get(attemptId);
   if (!found) return null;
   const { student, spec } = found;
@@ -187,6 +261,7 @@ export async function demoTeacherAttempt(attemptId: string, now: Date): Promise<
     memberId: student.memberId,
     studentName: student.shownName,
     taskId: spec.taskId,
+    part: "2",
     status: "completed",
     failure: null,
     isStalled: false,
@@ -198,6 +273,9 @@ export async function demoTeacherAttempt(attemptId: string, now: Date): Promise<
     // As on the demo student's results: demo data carries the demo label instead of the development note.
     isDevelopmentProvider: false,
     createdAt: ago(now, spec.daysAgo, spec.hoursAgo),
+    mockId: null,
+    // Madina's recording is already past its 30 days (shows the "deleted" note); the others play the demo tone.
+    listen: student.memberId === "s5" && spec.id === "madina-1" ? { state: "deleted", deletedAt: ago(now, 1), durationMs: durationOf(transcriptOf(spec)) } : demoListen(DEMO_RECORDING.durationMs),
     rating: null,
   };
 }

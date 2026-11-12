@@ -14,6 +14,7 @@ vi.mock("next/server", async (importOriginal) => ({
 vi.setConfig({ testTimeout: 60_000 });
 
 import { eq } from "drizzle-orm";
+import { SHARE_TEXT_VERSION } from "@/domain/teacher/rules";
 import { resetAuthLimitersForTesting } from "@/server/auth/auth-limits";
 import { listAttemptHistory, getAttemptViewForUser } from "@/server/attempts/attempt-service";
 import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
@@ -218,8 +219,10 @@ describe("access: every teacher endpoint × caller", () => {
       expect(text).not.toContain("Alice");
       expect(text).not.toContain("Example");
       expect(text).not.toContain(w.examDate);
-      // No recording address, storage key or recording field.
-      expect(text).not.toContain("/audio");
+      // No storage key, no student recording route; the only audio address is the teacher's own route (and only when
+      // the teacher may hear it: teacher-v1.test.ts).
+      expect(text.replace(/\/api\/teacher\/classes\/[^"]+\/audio/g, "")).not.toContain("/audio");
+      expect(text).not.toContain("/api/speaking/");
       expect(text.toLowerCase()).not.toContain("storage");
       expect(text).not.toMatch(/"recording/i);
     }
@@ -237,7 +240,7 @@ describe("access: every teacher endpoint × caller", () => {
     expect(await (await getMyClasses(req("/x"), ctx({}))).json()).toEqual({ classes: [] });
     actAs(w.alice);
     const mine = (await (await getMyClasses(req("/x"), ctx({}))).json()) as { classes: Record<string, unknown>[] };
-    expect(mine.classes).toEqual([{ id: w.memberId, className: "Group B", teacherName: "Ms Karimova", shownName: "Ali", sharedAt: expect.any(String), endedBy: null }]);
+    expect(mine.classes).toEqual([{ id: w.memberId, className: "Group B", teacherName: "Ms Karimova", shownName: "Ali", sharedAt: expect.any(String), endedBy: null, needsUpgrade: false }]);
     expect(JSON.stringify(mine)).not.toContain("@");
     // Anonymous: 401 on the student endpoints.
     jar.clear();
@@ -433,7 +436,8 @@ describe("joining", () => {
     // Twice: 409, nothing new.
     expect((await postShare(req("/x", "POST", { code: w.code, shownName: "Bobby" }), ctx({}))).status).toBe(409);
     const row = (await db.select().from(classMembers).all()).find((m) => m.shownName === "Bobby")!;
-    expect(row.shareTextVersion).toBe("2026-11-07");
+    expect(row.shareTextVersion).toBe(SHARE_TEXT_VERSION);
+    expect(SHARE_TEXT_VERSION).toBe("v1-all-parts-audio");
   });
 
   it("the shown name: required, no email, at most 30 characters", async () => {

@@ -3,7 +3,7 @@ import { Card, CardHeader, Icon, PillButton, StatRow, Thumb, cx, styles } from "
 import { NO_LONGER_IN_CLASS } from "@/domain/teacher/rules";
 import { AttemptRow } from "@/features/history/sections";
 import { formatDate } from "@/features/history/view-model";
-import { ConfirmAction, JoinCodeCard } from "./actions";
+import { ConfirmAction, JoinCodeCard, ShareMoreCard } from "./actions";
 import { countText, studentCountText, type ClassSummary, type CommonProblem, type StudentDetail, type StudentRow } from "./view-model";
 
 /*
@@ -150,6 +150,15 @@ function StudentsCard({ students, studentHref }: { students: readonly StudentRow
                   <span className="mt-0.5 block text-label text-fg-muted">
                     {s.attempts} {s.attempts === 1 ? "attempt" : "attempts"} · Last practice {s.lastPractice}
                   </span>
+                  <span className="mt-0.5 block text-label text-fg" data-testid="last-mock">
+                    <span className="text-fg-muted">Last mock: </span>
+                    {s.lastMock}
+                  </span>
+                  {s.scopeNote && (
+                    <span className="mt-0.5 block text-label text-fg-muted" data-testid="scope-note">
+                      {s.scopeNote}
+                    </span>
+                  )}
                   <span className="mt-0.5 block text-label text-fg">
                     <span className="text-fg-muted">Biggest fix: </span>
                     {s.biggestFix}
@@ -175,7 +184,9 @@ export function StudentView({
   classId,
   memberId,
   latestHref,
+  latestLabel,
   attemptHref,
+  mockHref,
   afterRemove,
   demo,
 }: {
@@ -183,7 +194,10 @@ export function StudentView({
   classId: string;
   memberId: string;
   latestHref: string | null;
+  /** "Open latest mock" when the student has a mock, else "Open latest attempt". */
+  latestLabel: string;
   attemptHref: Href;
+  mockHref: Href;
   afterRemove: string;
   demo: boolean;
 }) {
@@ -199,10 +213,15 @@ export function StudentView({
           {detail.level}
         </p>
         <p className="mt-1 text-caption text-fg-muted">From shared answers only</p>
+        {detail.scopeNote && (
+          <p className="mt-1 text-caption text-fg-muted" data-testid="scope-note">
+            {detail.scopeNote}
+          </p>
+        )}
         {latestHref && (
           <div className="mt-5">
             <PillButton href={latestHref} icon="play">
-              Open latest attempt
+              {latestLabel}
             </PillButton>
           </div>
         )}
@@ -219,8 +238,18 @@ export function StudentView({
           <p className="text-body text-fg-muted">Skills appear once a shared answer is scored.</p>
         )}
       </Card>
-      <Card aria-labelledby="attempts-title" className="lg:col-start-1 lg:row-start-2">
-        <CardHeader id="attempts-title" title="Shared attempts" action={<span className="text-label text-fg-muted">{detail.rows.length}</span>} />
+      {detail.mockRows.length > 0 && (
+        <Card aria-labelledby="mocks-title" className="lg:col-start-1 lg:row-start-2" data-testid="student-mocks">
+          <CardHeader id="mocks-title" title="Mocks" action={<span className="text-label text-fg-muted">{detail.mockRows.length}</span>} />
+          <ul className="-my-1">
+            {detail.mockRows.map((row, i) => (
+              <AttemptRow key={row.id} row={{ ...row, href: mockHref(row.id) }} tone={(((i % 4) + 1) as 1 | 2 | 3 | 4)} />
+            ))}
+          </ul>
+        </Card>
+      )}
+      <Card aria-labelledby="attempts-title" className={cx("lg:col-start-1", detail.mockRows.length > 0 ? "lg:row-start-3" : "lg:row-start-2")} data-testid="student-attempts">
+        <CardHeader id="attempts-title" title="Single attempts" action={<span className="text-label text-fg-muted">{detail.rows.length}</span>} />
         {detail.rows.length ? (
           <ul className="-my-1">
             {detail.rows.map((row, i) => (
@@ -228,7 +257,7 @@ export function StudentView({
             ))}
           </ul>
         ) : (
-          <p className="text-body text-fg-muted">No shared attempts yet. Only answers made after joining are shared.</p>
+          <p className="text-body text-fg-muted">No single attempts yet. Only answers made after joining are shared.</p>
         )}
       </Card>
       <div className="lg:col-start-1">
@@ -262,6 +291,8 @@ export interface MembershipView {
   shownName: string;
   sharedAt: string;
   ended: boolean;
+  /** An old Share wording, not upgraded or declined: one "Share recordings too?" card. */
+  needsUpgrade?: boolean;
 }
 
 /**
@@ -289,6 +320,7 @@ export function MyClassesCard({ memberships, joinHref, accountHref, demo }: { me
                   <p className="mt-0.5 text-label text-fg-muted">
                     Name shown: <span className="text-fg">{m.shownName}</span> · Sharing since {formatDate(m.sharedAt)}
                   </p>
+                  {m.needsUpgrade && <ShareMoreCard memberId={m.id} teacherName={m.teacherName} className="min-h-9" demo={demo} />}
                   <div className="mt-2">
                     <ConfirmAction
                       testId="leave-class"

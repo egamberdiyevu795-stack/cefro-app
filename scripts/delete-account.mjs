@@ -84,6 +84,10 @@ try {
   add(`DELETE FROM teacher_ratings WHERE teacher_user_id IN (${u})`, userIds);
   if (ownClassIds.length) add(`DELETE FROM teacher_ratings WHERE class_id IN (${marks(ownClassIds)})`, ownClassIds);
   if (attemptIds.length) add(`DELETE FROM teacher_ratings WHERE attempt_id IN (${marks(attemptIds)})`, attemptIds);
+  // Whole-mock levels (migration 0009), before the sessions and classes they point at.
+  add(`DELETE FROM teacher_mock_ratings WHERE teacher_user_id IN (${u})`, userIds);
+  if (ownClassIds.length) add(`DELETE FROM teacher_mock_ratings WHERE class_id IN (${marks(ownClassIds)})`, ownClassIds);
+  add(`DELETE FROM teacher_mock_ratings WHERE session_id IN (SELECT id FROM practice_sessions WHERE user_id IN (${u}))`, userIds);
   add(`DELETE FROM class_members WHERE student_user_id IN (${u})`, userIds);
   if (ownClassIds.length) add(`DELETE FROM class_members WHERE class_id IN (${marks(ownClassIds)})`, ownClassIds);
   if (ownClassIds.length) add(`DELETE FROM classes WHERE id IN (${marks(ownClassIds)})`, ownClassIds);

@@ -172,7 +172,7 @@ export function recentRows(attempts: readonly HistoryAttempt[], mocks: readonly 
 }
 
 /** The part bands of a mock, read from its own attempts (a part that is not scored has none: too short, failed, still scoring, not done). */
-function mockBands(parts: readonly HistoryAttempt[]): PartBands {
+export function mockBands(parts: readonly HistoryAttempt[]): PartBands {
   const bands: PartBands = {};
   for (const a of parts) {
     if (a.part && bands[a.part] == null) bands[a.part] = scoredBand(a)?.band ?? null;
@@ -185,7 +185,7 @@ function mockBands(parts: readonly HistoryAttempt[]): PartBands {
  * with a part still being scored says "Scoring…"; a mock whose estimate cannot be given says "Estimate not ready yet". Never a
  * score, never Passed / Failed.
  */
-function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): HistoryRow {
+export function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): HistoryRow {
   const date = formatDate(mock.createdAt);
   const estimate = estimateSpeakingLevel(mockBands(parts));
   const scoring = parts.some((a) => outcomeOf(a).kind === "scoring");

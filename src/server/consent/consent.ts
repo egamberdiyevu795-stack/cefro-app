@@ -54,6 +54,15 @@ export async function teacherSharingAllowed(studentUserId: string): Promise<bool
   return canShareWithTeacher(true, await loadSubject(studentUserId));
 }
 
+/**
+ * Recordings are stricter than text: a teacher hears a student's audio only while the account really has recorded
+ * teacher-sharing consent, whatever the CONSENT_REQUIRED switch says (docs/v1-plan.md section 4.4: `teacherCanHear`
+ * needs "the account still has consent_teacher_sharing"). Withdrawn or never given: false.
+ */
+export async function teacherSharingConsentRecorded(studentUserId: string): Promise<boolean> {
+  return canShareWithTeacher(true, await loadSubject(studentUserId));
+}
+
 export const TEACHER_SHARING_LOCKED_MESSAGE = "A parent or guardian needs to agree to sharing with a teacher first.";
 
 /**

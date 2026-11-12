@@ -130,10 +130,12 @@ export function weakestPart(parts: readonly MockPartSource[]): MockPartSource | 
 }
 
 /**
- * The teacher's level for the mock. Until a whole-mock rating exists (docs/v1-plan.md, step 6), it is the same rule applied to
- * the teacher's own part bands, and only when the teacher rated every part the rule needs; otherwise null (nothing shown).
+ * The teacher's level for the mock: the level they gave the whole mock when they did (docs/v1-plan.md, step 6), else the same
+ * rule applied to the teacher's own part bands, and only when the teacher rated every part the rule needs; otherwise null
+ * (nothing shown).
  */
-export function teacherEstimate(parts: readonly MockPartSource[]): EstimatedLevel | null {
+export function teacherEstimate(parts: readonly MockPartSource[], whole: EstimatedLevel | null = null): EstimatedLevel | null {
+  if (whole) return whole;
   const bands: PartBands = {};
   for (const p of parts) bands[p.part] = p.teacher ? p.teacher.band : null;
   const estimate = estimateSpeakingLevel(bands);
@@ -145,7 +147,7 @@ export function buildMockResultView(source: MockResultSource): MockResultView {
   const date = formatDate(source.createdAt);
   const estimate = estimateSpeakingLevel(bandsOf(parts));
   const scoring = parts.some((p) => p.state === "scoring");
-  const teacher = teacherEstimate(parts);
+  const teacher = teacherEstimate(parts, source.teacherLevel ?? null);
 
   const headline: Headline =
     estimate.kind === "ready"

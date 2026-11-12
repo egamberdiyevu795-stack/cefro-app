@@ -14,6 +14,7 @@ import {
   recordingBlobs,
   recordings,
   speakingAttempts,
+  teacherMockRatings,
   teacherRatings,
   transcripts,
   users,
@@ -102,6 +103,11 @@ export async function deleteAccount(userId: string): Promise<DeletionSummary> {
     let ratingCount = (await tx.delete(teacherRatings).where(inArray(teacherRatings.teacherUserId, userIds)).run()).rowsAffected;
     if (ownClassIds.length) ratingCount += (await tx.delete(teacherRatings).where(inArray(teacherRatings.classId, ownClassIds)).run()).rowsAffected;
     if (attemptIds.length) ratingCount += (await tx.delete(teacherRatings).where(inArray(teacherRatings.attemptId, attemptIds)).run()).rowsAffected;
+    // Whole-mock levels (migration 0009): by the teacher, in their classes, and on the student's own mocks.
+    const sessionIds = (await tx.select({ id: practiceSessions.id }).from(practiceSessions).where(inArray(practiceSessions.userId, userIds)).all()).map((row) => row.id);
+    ratingCount += (await tx.delete(teacherMockRatings).where(inArray(teacherMockRatings.teacherUserId, userIds)).run()).rowsAffected;
+    if (ownClassIds.length) ratingCount += (await tx.delete(teacherMockRatings).where(inArray(teacherMockRatings.classId, ownClassIds)).run()).rowsAffected;
+    if (sessionIds.length) ratingCount += (await tx.delete(teacherMockRatings).where(inArray(teacherMockRatings.sessionId, sessionIds)).run()).rowsAffected;
     let memberCount = (await tx.delete(classMembers).where(inArray(classMembers.studentUserId, userIds)).run()).rowsAffected;
     if (ownClassIds.length) memberCount += (await tx.delete(classMembers).where(inArray(classMembers.classId, ownClassIds)).run()).rowsAffected;
     const classCount = ownClassIds.length ? (await tx.delete(classes).where(inArray(classes.id, ownClassIds)).run()).rowsAffected : 0;

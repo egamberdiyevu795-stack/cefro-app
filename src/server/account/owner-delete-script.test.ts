@@ -17,6 +17,7 @@ import {
   ratingPairs,
   recordingBlobs,
   recordings,
+  teacherMockRatings,
   teacherRatings,
   transcripts,
   users,
@@ -81,6 +82,11 @@ async function seed(db: Db, audioDir: string) {
   await db.insert(teacherRatings).values([
     { id: "tr-1", attemptId: attempts.a1, teacherUserId: "bob", classId: "class-bob", ...rating },
     { id: "tr-2", attemptId: attempts.b1, teacherUserId: "alice", classId: "class-alice", ...rating },
+  ]).run();
+  // Whole-mock levels (migration 0009), both ways: bob rated alice's mock, alice rated bob's.
+  await db.insert(teacherMockRatings).values([
+    { id: "tmr-1", sessionId: "ps-alice", teacherUserId: "bob", classId: "class-bob", agrees: false, teacherLevel: "B2", updatedAt: NOW },
+    { id: "tmr-2", sessionId: "ps-bob", teacherUserId: "alice", classId: "class-alice", agrees: true, appLevel: "B1", updatedAt: NOW },
   ]).run();
   await db.insert(ratingPairs).values({ teacherBand: 3, appBand: 3, evaluatorVersion: "1", rubricVersion: "1", part: "2", month: "2026-10" }).run();
 }
@@ -158,6 +164,7 @@ describe("scripts/delete-account.mjs (the owner's deletion)", () => {
     expect(left).toContain("bob@example.com");
     expect(left).not.toMatch(/alice|guest-a/);
     expect(expected.rating_pairs).toHaveLength(1);
+    expect(expected.teacher_mock_ratings).toHaveLength(0); // both the one on her mock and the one she gave
     after.$client.close();
   });
 

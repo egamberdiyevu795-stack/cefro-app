@@ -16,6 +16,7 @@ import { HttpError } from "@/server/errors";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { getArgumentRubric } from "@/server/evaluation/rubrics/q8";
 import { findCurrentUserId } from "@/server/identity/current-user";
+import { teacherLevelOfOwnAttempt } from "@/server/teacher/student-view";
 
 export const metadata: Metadata = { title: "Your result" };
 
@@ -46,14 +47,18 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
 
   // Part 3 (balanced argument) has its own result page; the attempt, owner check and polling are the same.
   const argumentTask = getArgumentTask(attempt.taskId);
+  const bandLabelsOf = (bands: readonly { band: number; label: string }[]) => bands.map(({ band, label }) => ({ band, label }));
   if (argumentTask) {
+    const labels = bandLabelsOf(getArgumentRubric(argumentTask).config.bands);
+    const teacher = await teacherLevelOfOwnAttempt(attempt.id, labels);
     return (
       <AppShell flags={FEATURE_FLAGS} account="real">
         <Part3AttemptResult
           initial={attempt}
           previous={previous}
           task={toPublicArgumentTask(argumentTask)}
-          bandLabels={getArgumentRubric(argumentTask).config.bands.map(({ band, label }) => ({ band, label }))}
+          bandLabels={labels}
+          yourTeacher={teacher?.level ?? null}
         />
       </AppShell>
     );
@@ -61,6 +66,8 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
 
   const speakingTask = getSpeakingTask(attempt.taskId);
   if (!speakingTask) notFound();
+  const labels = bandLabelsOf(getSpeakingRubric(speakingTask).config.bands);
+  const teacher = await teacherLevelOfOwnAttempt(attempt.id, labels);
 
   return (
     <AppShell flags={FEATURE_FLAGS} account="real">
@@ -68,7 +75,8 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
         initial={attempt}
         previous={previous}
         task={toPublicTask(speakingTask)}
-        bandLabels={getSpeakingRubric(speakingTask).config.bands.map(({ band, label }) => ({ band, label }))}
+        bandLabels={labels}
+        yourTeacher={teacher?.level ?? null}
       />
     </AppShell>
   );

@@ -94,6 +94,19 @@ test("two laptops, one class: start and join, PINs, a student in progress on one
   await expect(pick(l1, "Bekzod")).toBeVisible();
   await audit(l1, 0);
   const classMockId = new URL(l1.url()).pathname.split("/")[5]!;
+
+  // Laptop 1 is now a DEVICE session, not the teacher's login: it can't reach a teacher page, a student page, the Account page, a
+  // recording or any other API (the same 404 as a stranger), while its own screen and routes work.
+  for (const path of [`/teacher/classes/${classId}`, `/teacher/classes/${classId}/exam`, `/teacher/classes/${classId}/exam/${classMockId}`, "/profile", "/dashboard", "/practice", "/history", "/teacher/classes/new"]) {
+    const response = await l1.goto(path);
+    expect(response!.status(), path).toBe(404);
+  }
+  for (const path of ["/api/teacher/classes", `/api/teacher/classes/${classId}`, `/api/teacher/classes/${classId}/exam`, `/api/teacher/classes/${classId}/exam/${classMockId}/results`, "/api/account/me", "/api/classes", "/api/speaking/attempts/x/audio", `/api/mock-exams/${classMockId}/result`]) {
+    const response = await l1.request.get(path);
+    expect(response.status(), path).toBe(404);
+  }
+  expect((await l1.goto(`/teacher/classes/${classId}/exam/${classMockId}/laptop?room=Room+1`))!.status()).toBe(200);
+  await expect(l1.getByRole("heading", { name: "Tap your name" })).toBeVisible();
   expect(await querySql("SELECT task_1_1, task_1_2, task_2, task_3 FROM class_mocks")).toHaveLength(1);
 
   // Laptop 2: Start exam laptop joins the SAME open class mock (no second row), as "Room 2".
@@ -144,15 +157,25 @@ test("two laptops, one class: start and join, PINs, a student in progress on one
   await l1.goto(`/teacher/classes/${classId}/exam/${classMockId}/laptop?room=Room+1`);
   await expect(pick(l1, "Bekzod")).toBeVisible();
 
-  // Unlock on Laptop 2 needs the teacher's password.
+  // Unlock on Laptop 2 needs the teacher's email and password, and hands the teacher's own session back (the device session ends).
   await l2.getByTestId("teacher-options-open").click();
+  await l2.getByTestId("teacher-email").fill(email("teacher"));
   await l2.getByTestId("teacher-password").fill("not my password");
   await l2.getByRole("button", { name: "Unlock Bekzod" }).click();
-  await expect(l2.getByTestId("teacher-options-message")).toContainText("That password isn't right.");
+  await expect(l2.getByTestId("teacher-options-message")).toContainText("That email and password don't match.");
   await expect(pick(l2, "Bekzod")).toHaveCount(0);
+  await l2.getByTestId("teacher-email").fill(email("aziza")); // another account's email is refused too
   await l2.getByTestId("teacher-password").fill(PASSWORD);
   await l2.getByRole("button", { name: "Unlock Bekzod" }).click();
-  await expect(l2.getByTestId("teacher-options-message")).toContainText("Done.");
+  await expect(l2.getByTestId("teacher-options-message")).toContainText("That email and password don't match.");
+  await l2.getByTestId("teacher-email").fill(email("teacher"));
+  await l2.getByTestId("teacher-password").fill(PASSWORD);
+  await l2.getByRole("button", { name: "Unlock Bekzod" }).click();
+  // Laptop 2 is the teacher's browser again, on the Start page, which joins the open class mock.
+  await expect(l2).toHaveURL(new RegExp(`/teacher/classes/${classId}/exam$`));
+  await expect(l2.getByRole("heading", { name: /^Join Mock 1$/ })).toBeVisible();
+  await l2.getByRole("button", { name: "Join and start exam laptop" }).click();
+  await expect(l2).toHaveURL(new RegExp(`/exam/${classMockId}/laptop\\?room=Room\\+2$`));
   await expect(pick(l2, "Bekzod")).toBeVisible({ timeout: 20_000 });
   await typePinAfterOpen(l2, "Bekzod", "7319");
   await expect(l2.getByRole("heading", { name: "Hi Bekzod, this mock is saved to your account" })).toBeVisible();
@@ -160,9 +183,10 @@ test("two laptops, one class: start and join, PINs, a student in progress on one
   // End exam laptop (Room 2) needs the password too; the other laptop's pass stays; then closing the class mock refuses new starts.
   await l2.goto(`/teacher/classes/${classId}/exam/${classMockId}/laptop?room=Room+2`);
   await l2.getByTestId("teacher-options-open").click();
+  await l2.getByTestId("teacher-email").fill(email("teacher"));
   await l2.getByTestId("teacher-password").fill("nope");
   await l2.getByTestId("end-laptop").click();
-  await expect(l2.getByTestId("teacher-options-message")).toContainText("That password isn't right.");
+  await expect(l2.getByTestId("teacher-options-message")).toContainText("That email and password don't match.");
   await expect(l2).toHaveURL(/\/laptop\?room=Room\+2$/);
   await l2.getByTestId("teacher-password").fill(PASSWORD);
   await l2.getByTestId("end-class-mock").click();
@@ -170,15 +194,15 @@ test("two laptops, one class: start and join, PINs, a student in progress on one
   await expect(l2.getByTestId("class-mock-results")).toBeVisible();
   expect(await querySql("SELECT closed_at FROM class_mocks")).toEqual([{ closed_at: expect.any(String) }]);
 
-  // The closed class mock: Laptop 1's list is gone (its page sends the teacher to the results), and a PIN is refused by the server.
-  await l1.goto(`/teacher/classes/${classId}/exam/${classMockId}/laptop?room=Room+1`);
-  await expect(l1).toHaveURL(new RegExp(`/exam/${classMockId}$`));
-  const refused = await l1.request.post(`/api/teacher/classes/${classId}/exam/${classMockId}/pin`, {
-    data: { memberId: (await querySql("SELECT id FROM class_members WHERE shown_name = 'Bekzod'"))[0]!.id, pin: "7319", laptopId: "laptop-one-aaaaaaaaaaaa", room: "Room 1" },
+  // The class mock closed, so Laptop 1's device session is over: its screen is the 404 page, a PIN is refused by the server, and the
+  // dead device cookie is removed (the browser is an ordinary one again).
+  expect((await l1.goto(`/teacher/classes/${classId}/exam/${classMockId}/laptop?room=Room+1`))!.status()).toBe(404);
+  const refused = await l1.request.post(`/api/exam-laptop/${classMockId}/pin`, {
+    data: { memberId: (await querySql("SELECT id FROM class_members WHERE shown_name = 'Bekzod'"))[0]!.id, pin: "7319" },
     headers: { origin: ORIGIN },
   });
-  expect(refused.status()).toBe(409);
-  expect(((await refused.json()) as { error: { code: string } }).error.code).toBe("class_mock_closed");
+  expect(refused.status()).toBe(404);
+  expect((await l1.context().cookies()).some((c) => c.name === "cefro_exam_device")).toBe(false);
 
   await room1.context.close();
   await room2.context.close();

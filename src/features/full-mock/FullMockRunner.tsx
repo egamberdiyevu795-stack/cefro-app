@@ -55,11 +55,11 @@ export function FullMockRunner({
   /** Mock mode, browser tests only: shortens preparation and speaking time (Parts 1 and 3). */
   timeScale?: number;
   /**
-   * Exam laptop (T7): the student sits the mock on the teacher's laptop. `passId` / `laptopId` are sent with every request
+   * Exam laptop (T7): the student sits the mock on the teacher's laptop. `passId` is sent with every request
    * (the server then acts as the student), `greeting` heads "Before you start", and at the end the runner calls `onDone`
    * instead of opening the result: nothing of the result is ever shown on the shared screen.
    */
-  laptop?: { passId: string; laptopId: string; greeting: string; onDone: () => void };
+  laptop?: { passId: string; greeting: string; onDone: () => void };
 }) {
   const router = useRouter();
   const ready = useHydrated();
@@ -85,7 +85,7 @@ export function FullMockRunner({
     setAudio(createUnlockedAudio());
     primeChime();
     dispatch({ type: "begin" });
-    setExamPass(!mock && laptop ? { passId: laptop.passId, laptopId: laptop.laptopId } : null);
+    setExamPass(!mock && laptop ? { passId: laptop.passId } : null);
     if (mock) {
       dispatch({ type: "started", finished: [] });
       return;

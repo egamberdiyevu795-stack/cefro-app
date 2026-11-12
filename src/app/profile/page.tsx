@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { DemoLabel } from "@/components/ds";
@@ -19,6 +20,8 @@ import { currentLevel } from "@/features/profile/view-model";
 import { AppShell } from "@/features/shell/AppShell";
 import { readAccount, type AccountInfo } from "@/server/account/account-store";
 import { listAttemptHistory } from "@/server/attempts/attempt-service";
+import { cookies } from "next/headers";
+import { EXAM_DEVICE_COOKIE } from "@/server/identity/user-cookie";
 import { assertServerConfigured } from "@/server/config/boot-check";
 import { demoAccount, demoAttempts, demoExamDate } from "@/server/demo/demo-data";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
@@ -75,6 +78,8 @@ export default async function AccountPage(props: PageProps<"/profile">) {
               : [],
         };
   } else {
+    // The exam laptop's device session never reaches an account page (the proxy answers first; this is the second lock).
+    if ((await cookies()).get(EXAM_DEVICE_COOKIE)) notFound();
     assertServerConfigured();
     const userId = await findCurrentUserId();
     account = await readAccount(userId);

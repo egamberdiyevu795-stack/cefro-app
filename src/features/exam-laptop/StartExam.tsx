@@ -8,7 +8,7 @@ import { useHydrated } from "@/components/ds/useHydrated";
 import { DEFAULT_ROOM_LABEL, ROOM_LABEL_MAX_LENGTH, normaliseRoomLabel, type PaperMode } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
 import { teacherHref, teacherLinks } from "@/features/teacher/links";
-import { rememberRoom } from "./laptop-id";
+import { laptopId as readLaptopId, rememberRoom } from "./laptop-id";
 
 export interface StartExamProps {
   classId: string;
@@ -58,7 +58,7 @@ export function StartExam({ classId, className, open, suggestion, demo, demoClas
     let classMockId: string | null = null;
     if (demo) classMockId = open?.id ?? demoClassMockId ?? "demo-class-mock";
     else {
-      const result = await post(`/api/teacher/classes/${encodeURIComponent(classId)}/exam`, { mode, tasks: !open && mode === "same" ? Object.fromEntries(suggestion.map((s) => [s.part, s.taskId])) : undefined });
+      const result = await post(`/api/teacher/classes/${encodeURIComponent(classId)}/exam`, { mode, tasks: !open && mode === "same" ? Object.fromEntries(suggestion.map((s) => [s.part, s.taskId])) : undefined, laptopId: readLaptopId(), room: label });
       if (result.ok) classMockId = (result.data as { classMock: { id: string } }).classMock.id;
       else setMessage(result.message);
     }
@@ -78,7 +78,7 @@ export function StartExam({ classId, className, open, suggestion, demo, demoClas
       <p className="mt-2 text-body text-fg">
         {open
           ? "Another laptop already started this class mock. This laptop joins it: students in progress on the other laptop can't be picked here."
-          : "One student at a time takes the full mock on this laptop. Each student taps their name and types their class PIN, so their mock is saved to their own account."}
+          : "One student at a time takes the full mock on this laptop. Each student taps their name and types their class PIN, so their mock is saved to their own account. This laptop is signed out of your account while it runs the exam: to end it you type your email and password."}
       </p>
       <form method="post" onSubmit={(e) => void start(e)} noValidate className="mt-5">
         {!open && (

@@ -181,17 +181,19 @@ test.describe("laptop width (1280 px)", () => {
     await expect(page.getByTestId("roster-name").filter({ hasText: "Bekzod" })).toHaveCount(0);
     await audit(page, 0);
 
-    // Teacher options: a password is needed for every action.
+    // Teacher options: the teacher's email and password are needed for every action.
     await page.getByTestId("teacher-options-open").click();
     await expect(page.getByRole("button", { name: "Unlock Bekzod" })).toBeVisible();
     await page.getByRole("button", { name: "Unlock Bekzod" }).click();
-    await expect(page.getByTestId("teacher-options-message")).toHaveText("Enter your password.");
+    await expect(page.getByTestId("teacher-options-message")).toHaveText("Enter your email and password.");
+    await page.getByTestId("teacher-email").fill("teacher@example.com");
     await page.getByTestId("teacher-password").fill("my password");
     await audit(page, 0);
     await page.getByRole("button", { name: "Unlock Bekzod" }).click();
     await expect(page.getByTestId("teacher-options-message")).toContainText("Bekzod is unlocked.");
     await expect(page.getByTestId("roster-name").filter({ hasText: "Bekzod" })).toBeVisible();
 
+    await page.getByTestId("teacher-email").fill("teacher@example.com");
     await page.getByTestId("teacher-password").fill("my password");
     await page.getByTestId("end-laptop").click();
     await expect(page).toHaveURL(/\/teacher\/classes\/demo-class\?mock=1&as=teacher$/);
@@ -201,6 +203,7 @@ test.describe("laptop width (1280 px)", () => {
   test("End and close the class mock opens its results (T8)", async ({ page }) => {
     await page.goto(LAPTOP);
     await page.getByTestId("teacher-options-open").click();
+    await page.getByTestId("teacher-email").fill("teacher@example.com");
     await page.getByTestId("teacher-password").fill("my password");
     await page.getByTestId("end-class-mock").click();
     await expect(page).toHaveURL(/\/exam\/demo-class-mock\?mock=1&as=teacher$/);

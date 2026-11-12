@@ -65,11 +65,11 @@ export function isRetryable(error: unknown): boolean {
 
 /**
  * Exam laptop (docs/v1-plan.md section 6): while a student takes their mock on the teacher's laptop, every request carries the
- * one-mock pass and the laptop's id. The server accepts them only on the mock's start and finish and the recording upload, and
+ * one-mock pass (the laptop itself is named by its device session cookie). The server accepts them only on the mock's start and finish and the recording upload, and
  * then acts as the student. Set when the laptop's mock starts, cleared when it ends; never set at home.
  */
-let examPass: { passId: string; laptopId: string } | null = null;
-export function setExamPass(pass: { passId: string; laptopId: string } | null): void {
+let examPass: { passId: string } | null = null;
+export function setExamPass(pass: { passId: string } | null): void {
   examPass = pass;
 }
 
@@ -79,7 +79,6 @@ async function requestOnce<T>(input: string, init?: RequestOptions): Promise<T> 
     const headers = new Headers(init?.headers);
     if (examPass) {
       headers.set("x-exam-pass", examPass.passId);
-      headers.set("x-exam-laptop", examPass.laptopId);
     }
     response = await fetch(input, {
       ...init,

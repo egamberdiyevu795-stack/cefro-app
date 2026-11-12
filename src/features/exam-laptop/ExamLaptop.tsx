@@ -1,18 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, DemoLabel, PillAction, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import type { ExamPartId } from "@/domain/speaking/exam-part";
 import { MAX_PIN_FAILURES, isPin, rosterStateLabel, type RosterState } from "@/domain/teacher/exam-laptop";
 import { FullMockRunner } from "@/features/full-mock/FullMockRunner";
 import type { MockPartPlan } from "@/features/full-mock/plan";
-import { laptopId as readLaptopId } from "./laptop-id";
 import { PinPad } from "./PinPad";
 
 /*
- * T7 Exam laptop (docs/v1-plan.md sections 5 and 6): the teacher's laptop, signed in as the teacher, shows ONE thing to the
+ * T7 Exam laptop (docs/v1-plan.md sections 5 and 6): the teacher's laptop, running on its own DEVICE SESSION (the teacher's login was
+ * signed out of this browser when the exam started), shows ONE thing to the
  * students: the class name, "Tap your name", and who is Not started / In progress (Room 2) / Done. A name opens the PIN pad,
  * a correct PIN gives this laptop a pass for that student only, and the full mock runs exactly as at home. At the end:
  * "Done. Your results will be on your phone." and back to the list. No result, level or band is ever shown here, and the
@@ -46,6 +46,8 @@ export interface ExamLaptopProps {
   /** Where "End exam laptop" goes (the class page), and where closing the class mock goes (T8). */
   endHref: string;
   resultsHref: string;
+  /** "Start exam laptop" again (the page unlocking leads to: unlocking hands the teacher's own session back). */
+  startHref: string;
   /** Mock mode: the list and the plans come from here, nothing is sent, the PIN is `demoPin`. */
   demo?: { roster: RosterEntryView[]; plans: MockPartPlan[]; pin: string } | null;
   /** Mock mode, browser tests only: shorter preparation and speaking time. */
@@ -78,33 +80,32 @@ const SECTIONS: { state: RosterState; title: string }[] = [
   { state: "done", title: "Done" },
 ];
 
-export function ExamLaptop({ classId, classMockId, className, title, room, endHref, resultsHref, demo = null, timeScale = 1 }: ExamLaptopProps) {
+export function ExamLaptop({ classId, classMockId, className, title, room, endHref, resultsHref, startHref, demo = null, timeScale = 1 }: ExamLaptopProps) {
   const ready = useHydrated();
   const [view, setView] = useState<View>({ kind: "list" });
   const [entries, setEntries] = useState<RosterEntryView[]>(demo?.roster ?? []);
   const [loaded, setLoaded] = useState(Boolean(demo));
   const [problem, setProblem] = useState<string | null>(null);
-  // This laptop's own id lives in the browser: null while the page is rendered on the server.
-  const laptop = useSyncExternalStore(
-    () => () => {},
-    () => readLaptopId(),
-    () => null,
-  );
   // Demo only: wrong PINs per student, on this page.
   const [demoFailures, setDemoFailures] = useState<Record<string, number>>({});
 
-  const base = `/api/teacher/classes/${encodeURIComponent(classId)}/exam/${encodeURIComponent(classMockId)}`;
+  // This laptop's own API: it accepts only the exam laptop's device session (the laptop and its room come from that session).
+  const base = `/api/exam-laptop/${encodeURIComponent(classMockId)}`;
 
   const reload = useCallback(async () => {
-    if (demo || !laptop) return;
-    const result = await call<{ students: RosterEntryView[] }>(`${base}/roster?${new URLSearchParams({ laptop })}`, "GET");
+    if (demo) return;
+    const result = await call<{ students: RosterEntryView[] }>(`${base}/roster`, "GET");
     if (result.ok) {
       setEntries(result.data.students);
       setProblem(null);
       setLoaded(true);
     } else if (result.code === "network") setProblem(result.message);
-    else setProblem("This list could not be loaded. Ask your teacher.");
-  }, [base, demo, laptop]);
+    else if (result.code === "not_found") {
+      setEntries([]);
+      setLoaded(true);
+      setProblem("This laptop is no longer in exam mode (the class mock was closed or ended). Ask your teacher.");
+    } else setProblem("This list could not be loaded. Ask your teacher.");
+  }, [base, demo]);
 
   // The list follows the other laptop: a student in progress there can't be picked here.
   const watching = view.kind === "list" || view.kind === "done";
@@ -140,8 +141,7 @@ export function ExamLaptop({ classId, classMockId, className, title, room, endHr
       setView({ kind: "run", entry, passId: "demo-pass", plans: demo.plans, finished: [] });
       return null;
     }
-    if (!laptop) return "This laptop could not be identified. Reload the page.";
-    const result = await call<{ passId: string; name: string; plans: MockPartPlan[]; finished: ExamPartId[] }>(`${base}/pin`, "POST", { memberId: entry.memberId, pin, laptopId: laptop, room });
+    const result = await call<{ passId: string; name: string; plans: MockPartPlan[]; finished: ExamPartId[] }>(`${base}/pin`, "POST", { memberId: entry.memberId, pin });
     if (result.ok) {
       setView({ kind: "run", entry: { ...entry, name: result.data.name }, passId: result.data.passId, plans: result.data.plans, finished: result.data.finished });
       return null;
@@ -173,10 +173,10 @@ export function ExamLaptop({ classId, classMockId, className, title, room, endHr
 
   const runLaptop = useMemo(
     () =>
-      view.kind === "run" && (demo || laptop)
-        ? { passId: view.passId, laptopId: laptop ?? "demo-laptop-000000", greeting: `Hi ${view.entry.name}, this mock is saved to your account`, onDone: () => finished(view.entry.name, view.entry.memberId) }
+      view.kind === "run"
+        ? { passId: view.passId, greeting: `Hi ${view.entry.name}, this mock is saved to your account`, onDone: () => finished(view.entry.name, view.entry.memberId) }
         : null,
-    [view, laptop, demo, finished],
+    [view, finished],
   );
 
   return (
@@ -248,7 +248,7 @@ export function ExamLaptop({ classId, classMockId, className, title, room, endHr
             )}
             {loaded && shown.length === 0 && <p className="mt-5 text-body text-fg-muted">No students share with this class yet.</p>}
           </Card>
-          <TeacherOptions classId={classId} classMockId={classMockId} laptop={laptop} demo={Boolean(demo)} entries={shown} endHref={endHref} resultsHref={resultsHref} onChanged={() => void reload()} onUnlockedDemo={(id) => setDemoFailures((f) => ({ ...f, [id]: 0 }))} />
+          <TeacherOptions classId={classId} classMockId={classMockId} demo={Boolean(demo)} entries={shown} endHref={endHref} resultsHref={resultsHref} startHref={startHref} onUnlockedDemo={(id) => setDemoFailures((f) => ({ ...f, [id]: 0 }))} />
         </>
       )}
 
@@ -282,52 +282,49 @@ function fixedCaption(e: RosterEntryView): string {
 }
 
 /**
- * "Teacher options": unlock a locked student, End exam laptop, and closing the class mock. Every one asks for the teacher's
- * PASSWORD (the laptop is a shared screen, and unlocking is more PIN tries). Quiet and small: the students' screen has one
- * thing to do, tap a name.
+ * "Teacher options": unlock a locked student, End exam laptop, and closing the class mock. Every one asks for the teacher's EMAIL and
+ * PASSWORD, and every one hands the browser a normal teacher session back (the device session ends): End goes to the class page,
+ * End and close to the results, Unlock to "Start exam laptop" (which joins the open class mock again). Quiet and small: the
+ * students' screen has one thing to do, tap a name.
  */
 function TeacherOptions({
   classId,
   classMockId,
-  laptop,
   demo,
   entries,
   endHref,
   resultsHref,
-  onChanged,
+  startHref,
   onUnlockedDemo,
 }: {
   classId: string;
   classMockId: string;
-  laptop: string | null;
   demo: boolean;
   entries: RosterEntryView[];
   endHref: string;
   resultsHref: string;
-  onChanged: () => void;
+  startHref: string;
   onUnlockedDemo: (memberId: string) => void;
 }) {
   const ready = useHydrated();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const base = `/api/teacher/classes/${encodeURIComponent(classId)}/exam/${encodeURIComponent(classMockId)}`;
+  const base = `/api/exam-laptop/${encodeURIComponent(classMockId)}`;
   const locked = entries.filter((e) => e.locked || e.lockedHere);
+  void classId;
 
-  const run = async (action: () => Promise<ApiResult<unknown>>, then?: () => void) => {
-    if (!password) return setMessage("Enter your password.");
+  const run = async (action: () => Promise<ApiResult<unknown>>, then: () => void) => {
+    if (!email.trim() || !password) return setMessage("Enter your email and password.");
     setBusy(true);
     setMessage(null);
     const result = demo ? ({ ok: true, data: null } as const) : await action();
     if (result.ok) {
       setPassword("");
-      if (then) then();
-      else {
-        setMessage("Done.");
-        onChanged();
-      }
+      then();
     } else setMessage(result.message);
     setBusy(false);
   };
@@ -341,24 +338,21 @@ function TeacherOptions({
       </div>
     );
   }
+  const FIELD = cx("mt-1 h-11 w-full max-w-sm rounded-tile border border-fg-subtle bg-card px-3 text-body text-fg", styles.FOCUS_RING);
   return (
     <Card aria-labelledby="teacher-options-title" data-testid="teacher-options">
       <h2 id="teacher-options-title" className="text-title font-medium tracking-[-0.01em] text-fg">
         Teacher options
       </h2>
-      <p className="mt-1 text-body text-fg-muted">Enter your password to unlock a student or end the exam laptop.</p>
-      <label htmlFor="teacher-password" className="mt-4 block text-caption font-semibold text-fg">
+      <p className="mt-1 text-body text-fg-muted">This laptop is signed out of your account while it runs the exam. Enter your email and password to unlock a student or end the exam laptop: you are signed back in.</p>
+      <label htmlFor="teacher-email" className="mt-4 block text-caption font-semibold text-fg">
+        Your email
+      </label>
+      <input id="teacher-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className={FIELD} data-testid="teacher-email" />
+      <label htmlFor="teacher-password" className="mt-3 block text-caption font-semibold text-fg">
         Your password
       </label>
-      <input
-        id="teacher-password"
-        type="password"
-        autoComplete="current-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className={cx("mt-1 h-11 w-full max-w-sm rounded-tile border border-fg-subtle bg-card px-3 text-body text-fg", styles.FOCUS_RING)}
-        data-testid="teacher-password"
-      />
+      <input id="teacher-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={FIELD} data-testid="teacher-password" />
       {locked.length > 0 && (
         <ul className="mt-4 flex flex-col gap-2" aria-label="Locked students">
           {locked.map((e) => (
@@ -370,8 +364,8 @@ function TeacherOptions({
                 disabled={!ready || busy}
                 onClick={() =>
                   void run(
-                    () => call(`${base}/unlock`, "POST", { memberId: e.memberId, password }),
-                    demo ? () => { onUnlockedDemo(e.memberId); setMessage(`${e.name} is unlocked.`); } : undefined,
+                    () => call(`${base}/unlock`, "POST", { memberId: e.memberId, email, password }),
+                    demo ? () => { onUnlockedDemo(e.memberId); setMessage(`${e.name} is unlocked.`); } : () => router.push(startHref),
                   )
                 }
               >
@@ -382,17 +376,17 @@ function TeacherOptions({
         </ul>
       )}
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
-        <PillAction variant="quiet" disabled={!ready || busy} onClick={() => void run(() => call(`${base}/end`, "POST", { password, laptopId: laptop, close: false }), () => router.push(endHref))} testId="end-laptop">
+        <PillAction variant="quiet" disabled={!ready || busy} onClick={() => void run(() => call(`${base}/end`, "POST", { email, password, close: false }), () => router.push(endHref))} testId="end-laptop">
           End exam laptop
         </PillAction>
-        <PillAction variant="quiet" disabled={!ready || busy} onClick={() => void run(() => call(`${base}/end`, "POST", { password, laptopId: laptop, close: true }), () => router.push(resultsHref))} testId="end-class-mock">
+        <PillAction variant="quiet" disabled={!ready || busy} onClick={() => void run(() => call(`${base}/end`, "POST", { email, password, close: true }), () => router.push(resultsHref))} testId="end-class-mock">
           End and close the class mock
         </PillAction>
         <button type="button" onClick={() => { setOpen(false); setPassword(""); setMessage(null); }} className={cx(styles.SMALL_ACTION, "min-h-9 px-2")}>
           Cancel
         </button>
       </div>
-      <p className="mt-2 text-label text-fg-muted">&ldquo;End and close&rdquo; also stops the other laptop from starting new mocks. A student already under way finishes.{demo && " Demo mode: nothing is sent."}</p>
+      <p className="mt-2 text-label text-fg-muted">&ldquo;End and close&rdquo; also stops the other laptop from starting new mocks.{demo && " Demo mode: nothing is sent."}</p>
       {message && (
         <p role="alert" className="mt-2 text-label text-fg" data-testid="teacher-options-message">
           {message}

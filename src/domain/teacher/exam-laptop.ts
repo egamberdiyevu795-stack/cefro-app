@@ -211,4 +211,6 @@ export const EXAM_MESSAGES = {
   closed: "This class mock is closed. No new mock can start.",
   needsPassword: "Enter your password to end the exam laptop.",
   wrongPassword: "That password isn't right.",
+  needsCredentials: "Enter your email and password.",
+  wrongCredentials: "That email and password don't match.",
 } as const;

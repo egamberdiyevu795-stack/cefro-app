@@ -184,9 +184,10 @@ and in the tests; the real server side is covered by route tests and by a browse
 | (none) | **T8 Class mock: results** (`.../exam/[classMockId]`): one row per student (level, the four part bands, a quiet **Listen** to T6), sorted by level (a grey control flips highest/lowest first; no level goes last), **Most common problems** for this mock only, and the black **Open first unrated** (the first row, in the order shown, with a scored part and no rating: no whole-mock level and not every scored part rated). |
 | Mocks all look the same | **In class** (taken on the exam laptop) or **At home**: on T6's header, on T4's mock rows, on the student's mock result and on History's mock rows. |
 
-**The pass (docs/v1-plan.md section 6).** The laptop stays signed in as the **teacher**. A correct PIN makes an `exam_passes` row: one laptop (a random id the laptop made
-for itself and keeps in its browser), one student, one class mock, `expires_at` 30 minutes later. The browser then sends the pass id and its laptop id (`x-exam-pass`,
-`x-exam-laptop`) with the mock's requests. **Only three routes read those headers** (`server/exam-laptop/acting-user.ts`): `POST /api/mock-exams` (Start mock), `POST
+**The device session (follow-up on `claude/exam-laptop`).** A shared laptop must not hold the teacher's login. When **Start exam laptop** (or joining as Room 2) succeeds, the server **signs the teacher out of that browser** (the login session row is deleted and its cookie removed: other devices of the teacher are untouched) and gives it an **exam-laptop device session** instead: a signed (HMAC) **session cookie** `cefro_exam_device`, scoped to **one class mock and one laptop** (room label), at most 12 hours, checked against the database on every request (the class mock must still be open, the teacher still a teacher). It can only: show T7 and its list (`GET /api/exam-laptop/[mockId]/roster`), take PINs (`.../pin`), make one-mock passes, and run the three mock routes a pass allows. **Everything else refuses it with the same 404 as a stranger**: `src/proxy.ts` answers the not-found page (or the JSON 404) for every address but T7, the public audio and pictures and those routes, so teacher pages, T3 to T8, the Start page, student pages, the Account page, recordings and results never open; the routes behind them also see nobody signed in. **End exam laptop** and **Unlock** ask for the teacher's **email and password** (the email must be that teacher's own; wrong ones count like failed sign-ins, 429 after too many), sign the browser in again as a normal teacher session and remove the device session; Unlock then leads to the Start page, which joins the open class mock again. The device session **ends when the class mock closes** (End and close, Close class): the list and PINs answer 404 and the dead cookie is removed; a student already under way on another laptop can still finish their mock (the three pass routes honour a closed class mock). Close the browser and the device session is gone; the browser then simply has no login.
+
+**The pass (docs/v1-plan.md section 6).** The laptop's device session is the teacher's authority; a correct PIN makes an `exam_passes` row: one laptop (a random id the laptop made
+for itself and keeps in its browser), one student, one class mock, `expires_at` 30 minutes later. The browser then sends the pass id (`x-exam-pass`) with the mock's requests; the laptop is the one named by its device session. **Only three routes read those headers** (`server/exam-laptop/acting-user.ts`): `POST /api/mock-exams` (Start mock), `POST
 /api/speaking/attempts` (the recording) and `POST /api/mock-exams/[mockId]/finish`. Everywhere else a pass is ignored, so it cannot open a result, a recording, an attempt,
 the student's account page, a password or anything else of the student. On those three routes the request acts as the **student**: the mock and every attempt belong to
 `student_user_id`, the student's own consent check runs (`assertCanRecord`), and the teacher's account is never the owner. A pass is refused (403, `exam_pass_*`) when:
@@ -197,10 +198,9 @@ pass started (another student's, the teacher's own, none) or is a retry. The pas
 
 **PIN lock.** Wrong PINs are counted per student **per laptop** (`class_members.pin_failures`, JSON `{"<laptop id>": n}`, saved with compare-and-set so parallel guesses can't all
 count as the first). The 5th wrong PIN on a laptop locks the student **there**; 10 across all laptops lock them everywhere. A correct PIN clears that laptop's count. **Unlocking
-needs the teacher's password** (Teacher options), as does End exam laptop: both go through the auth library's `verifyPassword` and count wrong passwords like failed sign-ins
-(429 after too many). A student can't be picked when done, in progress on the other laptop, without a PIN, or when the class mock is closed.
+needs the teacher's email and password** (Teacher options), as does End exam laptop: both sign the teacher in through the app's own sign-in endpoint, so its limits apply (429 after too many). A student can't be picked when done, in progress on the other laptop, without a PIN, or when the class mock is closed.
 
-**Ending.** **Teacher options** (a quiet text action under the list) opens a card with a password field and: **Unlock {name}** for each locked student, **End exam laptop**
+**Ending.** **Teacher options** (a quiet text action under the list) opens a card with email and password fields and: **Unlock {name}** for each locked student, **End exam laptop**
 (this laptop's passes end; goes to the class page) and **End and close the class mock** (also sets `class_mocks.closed_at`: no new PIN or mock on any laptop, a student already under
 way finishes; goes to T8). Closing the class closes its class mocks too.
 
@@ -215,11 +215,10 @@ as a student, the passes made in its classes and the class mocks of its classes;
 **What no response holds.** No route returns a PIN, a hash or a failure count; the student's class list says only `hasPin`; the roster says only name, state, room, `hasPin`, `lockedHere`,
 `locked`, `pickable`. A test reads every response of a whole session and fails on `scrypt`, `pin_hash`, `pinFailures` or either PIN.
 
-**Not done / to decide** (see the branch report): a browser cannot be locked into a page, so a student can still type another address on the laptop (the teacher's session is then
-open to them); kiosk or guided-access mode on the laptop closes that. The pass and the lock live in the database, so they survive a reload and a restart.
+**Kiosk mode.** A browser can't be locked into a page, but a student who types another address now reaches nothing (the device session is not the teacher's login). Run the laptop in full-screen or kiosk mode as extra safety (`docs/launch-checklist.md`, section 11). The pass and the lock live in the database, so they survive a reload and a restart.
 
 **Tests:** `domain/teacher/exam-laptop.test.ts` (pass: wrong student, expired, used up, other laptop, locked; PIN lock; list states; paper suggestion), `app/api/teacher/exam-laptop.test.ts`
 (API cross-user: every route × caller, a pass can't write to another student, a teacher can't record into their own account through it, no PIN or hash in any response, End needs the
 password, Leave / Remove / Close), `server/db/migrations.test.ts` (0010), `owner-delete-script.test.ts`, `account-routes.test.ts`, `teacher-pages.test.ts`,
 `e2e/exam-laptop.spec.ts` (mock mode at 1280 and 390 px: two students in a row on one laptop), `e2e/exam-laptop-real.spec.ts` (two laptops, a real database, on
-`playwright.exam-laptop.config.ts`: `npm run test:e2e:exam-laptop`).
+`playwright.exam-laptop.config.ts`: `npm run test:e2e:exam-laptop`), `src/proxy.test.ts` (a device cookie reaches only the allowed addresses: every other page and API, T5 / T6 / T8, recordings and the Account page answer 404).

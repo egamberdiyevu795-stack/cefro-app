@@ -888,7 +888,7 @@ Details and rules in `docs/teacher-plan.md`, section 11. Still mock mode only; `
   A name that can't be tapped is a bordered `div` (not a disabled button): text only, never colour alone ("In progress (Room 2)", "Done", "No PIN yet. Set one on your phone.", "Locked. Ask your teacher.").
 - **PIN pad (`features/exam-laptop/PinPad.tsx`):** the student's name as the heading, four dots, a password field (so the keyboard works; digits never shown), a 3 x 4 pad of 56 px `bg-well` keys with
   17 px digits ("Clear", "Delete" in 13 px), the black **Continue**, and a small "Back to the list". A wrong PIN: "That PIN isn't right. 4 tries left." (`role="alert"`).
-- **Teacher options** (quiet small text action, bottom right of T7): a card with a password field, "Unlock {name}" per locked student, and the two grey end buttons; every message is `role="alert"`.
+- **Teacher options** (quiet small text action, bottom right of T7): a card with **email and password** fields (the laptop runs on a device session, not the teacher's login: the card says so and that they are signed back in), "Unlock {name}" per locked student, and the two grey end buttons; every message is `role="alert"`.
 - **Class mocks card** (T3, `ClassMocksCard`): `Card` with rows like the students list (title semibold, "10.11.26 · 8 of 9 finished · Closed" `text-label` muted, chevron). **T8** (`ResultsView`): header with the
   class, "Mock 3 · 10.11.26" and "2 of 6 finished"; a **Students** card (name and level at the left, the four bands as a muted `text-label` list, a grey small **Listen**); on laptop the common
   problems card sits at the right (the T3 card, reused).

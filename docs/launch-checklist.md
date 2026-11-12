@@ -253,3 +253,7 @@ Before inviting any pilot tester (`docs/consent-design.md`, section 2b):
    copy we control; the provider's own abuse-monitoring copy (55 days) we can't delete.
 6. **Before sending the parent message:** native check of the Uzbek and Russian, the lawyer's answer on data location
    (lawyer question 1, still open), and steps 1 to 3 done.
+7. **Exam laptop (`claude/exam-laptop`, `docs/teacher-plan.md` section 11):** run the exam laptop in the browser's full-screen or kiosk mode as extra safety.
+   The laptop already runs on its own device session (the teacher's login is signed out of that browser while the exam runs, and every other page and
+   API answers 404), so a student who types another address reaches nothing; full-screen or kiosk mode keeps the address bar out of sight as well.
+8. **Migration `0010_exam_laptop`** (additive: two tables, three nullable columns). Same steps as section 5; the counts become 11 migrations.

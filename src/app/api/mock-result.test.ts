@@ -319,6 +319,6 @@ describe("History for mocks", () => {
     expect(expired).toMatchObject([{ id: alice.id, status: "not_finished" }]);
     const row = buildHistoryView(attempts, { filter: "all", show: 20 }, expired).rows[0];
     expect(row.title).toMatch(/^Mock exam · Not finished · /);
-    expect(row.mock?.caption).toBe("Finished: Part 1.1, Part 1.2, Part 2, Part 3");
+    expect(row.mock?.caption).toBe("Finished: Part 1.1, Part 1.2, Part 2, Part 3 · At home");
   });
 });

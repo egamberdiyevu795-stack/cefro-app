@@ -240,7 +240,7 @@ describe("access: every teacher endpoint × caller", () => {
     expect(await (await getMyClasses(req("/x"), ctx({}))).json()).toEqual({ classes: [] });
     actAs(w.alice);
     const mine = (await (await getMyClasses(req("/x"), ctx({}))).json()) as { classes: Record<string, unknown>[] };
-    expect(mine.classes).toEqual([{ id: w.memberId, className: "Group B", teacherName: "Ms Karimova", shownName: "Ali", sharedAt: expect.any(String), endedBy: null, needsUpgrade: false }]);
+    expect(mine.classes).toEqual([{ id: w.memberId, className: "Group B", teacherName: "Ms Karimova", shownName: "Ali", sharedAt: expect.any(String), endedBy: null, needsUpgrade: false, hasPin: false }]);
     expect(JSON.stringify(mine)).not.toContain("@");
     // Anonymous: 401 on the student endpoints.
     jar.clear();

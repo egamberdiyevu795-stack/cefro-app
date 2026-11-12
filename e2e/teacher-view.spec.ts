@@ -105,6 +105,7 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   await expect(student.getByText("Your recordings (deleted after 30 days)")).toBeVisible();
   await audit(student, 1);
   await student.getByLabel("Name your teacher sees").fill("Sam");
+  await student.getByTestId("class-pin").fill("4321"); // the class PIN is asked for on the Share screen (step 7)
   await student.getByRole("button", { name: "Share with this teacher" }).click();
   await expect(student.getByTestId("shared")).toContainText("Demo class · Sam");
   await student.getByRole("link", { name: "Back to your account" }).click();

@@ -156,7 +156,7 @@ test("a Part 3 attempt has its own teacher page: points, fix, player, grey Agree
   await mockLinksOnly(page);
 });
 
-test("T3: each student's last mock (level, date); the join link is a second, grey button; Copy join code stays the black one", async ({ page, context }) => {
+test("T3: each student's last mock (level, date); the join link and Copy join code are grey; Start exam laptop is the black one", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const calls = watchApi(page);
   await page.goto("/teacher/classes/demo-class?mock=1&as=teacher");
@@ -165,12 +165,13 @@ test("T3: each student's last mock (level, date); the join link is a second, gre
   await expect(page.getByTestId("student-row").filter({ hasText: "Bekzod" }).getByTestId("last-mock")).toHaveText(/Not finished · \d\d\.\d\d\.\d\d/);
   await expect(page.getByTestId("student-row").filter({ hasText: "Dilnoza" }).getByTestId("last-mock")).toHaveText("Last mock: —");
   await expect(page.getByTestId("student-row").filter({ hasText: "Sardor" }).getByTestId("scope-note")).toHaveText("Shares Part 2 only");
-  await expect(page.getByText("Class mocks")).toHaveCount(0);
+  await expect(page.getByTestId("class-mocks")).toBeVisible(); // step 7
   await audit(page, 1);
   await page.getByRole("button", { name: "Copy join link" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Link copied" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/join\/DEMO42\?mock=1$/);
-  expect(await page.getByRole("button", { name: "Copy join link" }).evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(await page.getByRole("button", { name: "Copy join code" }).evaluate((el) => getComputedStyle(el).backgroundColor));
+  await expect(page.getByRole("button", { name: "Copy join code" })).not.toHaveClass(/bg-primary/);
+  await expect(page.getByRole("link", { name: "Start exam laptop" })).toHaveClass(/bg-primary/);
   expect(calls).toEqual([]);
 });
 

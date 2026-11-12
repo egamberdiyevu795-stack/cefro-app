@@ -1,7 +1,7 @@
 import "server-only";
 import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
-import { q8ModelOutputSchema } from "@/domain/evaluation/q8/model-output";
+import { q8ProviderOutputSchema } from "@/domain/evaluation/q8/model-output";
 import { ProviderError } from "@/server/errors";
 import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
@@ -64,7 +64,7 @@ export class GeminiEvaluationModel implements EvaluationModel, ArgumentEvaluatio
     let schema = this.schemas.get(key);
     if (!schema) {
       // Part 3 (official Question 8) has its own output shape; every other rubric is Part 2's shape on its own ladder.
-      schema = toGeminiJsonSchema(key === "multilevel-q8" ? q8ModelOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config));
+      schema = toGeminiJsonSchema(key === "multilevel-q8" ? q8ProviderOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config));
       this.schemas.set(key, schema);
     }
     return schema;

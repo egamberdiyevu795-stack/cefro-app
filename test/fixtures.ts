@@ -77,6 +77,7 @@ export function makeModelOutput(overrides: Partial<MultilevelModelOutput> = {}):
     },
     memorized_or_irrelevant: false,
     errors: [{ quote: "I have went to Samarkand", correction: "I went to Samarkand", type: "grammar", pattern: "Present perfect with a finished time" }],
+    sentence_fixes: [{ you_said: "I have went to Samarkand", better: "I went to Samarkand", why: "A finished time takes the simple past." }],
     error_patterns: [
       {
         name: "Present perfect with a finished time",

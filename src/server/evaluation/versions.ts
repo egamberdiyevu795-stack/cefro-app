@@ -79,8 +79,15 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   multilevel-q1-3/1.0.0 and multilevel-q4-6/1.0.0, and a Part 1 prompt of its own. Part 2's prompt, provider schema,
  *   scoring and gate results are byte-for-byte unchanged (tested: same prompt hash, same JSON schema), so stored Part 2
  *   attempts keep their methodology; Part 1 results are told apart by their rubric version.
+ * - speaking-evaluator/3.6.0 — Transcript with mistakes and better versions (docs/v1-plan.md §3.3, step 5), Parts 1.1, 1.2 and 2.
+ *   The model also returns "sentence_fixes": up to 8 of the student's own sentences with one mistake each (you_said /
+ *   better / why). Prompt rules added to the Part 1 and Part 2 prompts (NOT live-tested); the quality gate drops any item
+ *   that is not word for word in the transcript, that adds an idea or is more than a few words longer, that has more than
+ *   one mistake, or that is about pauses or pronunciation (domain/evaluation/sentence-fixes.ts). Scoring, rubrics and the
+ *   stored schema version are unchanged: the list is optional in stored results, so results from 3.5.0 and earlier have
+ *   none and render as before. New prompt hash and provider schema (test fixtures updated).
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.5.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.6.0";
 
 /**
  * Version of the Part 3 evaluation (prompt, gate and post-processing; argument-evaluator.ts). Stored with every
@@ -91,7 +98,10 @@ export const EVALUATOR_VERSION = "speaking-evaluator/3.5.0";
  *   with one regeneration, prompt overlap + dependence decision, deterministic 0–6 band, retry goals. The prompt is
  *   written but NOT live-tested: no model has been called with it. The real attempt flow stores results with this
  *   version; the live anchor run (plan section 8) must happen before `PART_LIVE["3"]` is switched on.
+ * - argument-evaluator/0.2.0 — Sentences with mistakes and better versions (docs/v1-plan.md §3.3, step 5): the model also
+ *   returns "sentence_fixes" (you_said / better / why, up to 8), with the same rules and code checks as Part 2's. Still NOT
+ *   live-tested. The stored Part 3 schema version is unchanged (the list is optional, older results have none).
  */
-export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.1.0";
+export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.2.0";
 
 export { EVALUATION_SCHEMA_VERSION };

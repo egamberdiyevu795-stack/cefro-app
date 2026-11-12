@@ -766,3 +766,30 @@ No migration, no environment variable, no Gemini call. New: `domain/speaking/moc
 `server/sessions/mock-result.ts`, `mock-history.ts`, `server/demo/demo-mock.ts`, `GET /api/mock-exams/[mockId]/result`. Changed: the `/practice/mock/[id]`
 page (was "Mock finished"; `MockFinishedCard` removed), the runner's mock-mode end, History (view model, rows, `?part=mock`), `HistoryAttempt.sessionId`
 (optional). Reads `teacher_ratings`, never writes. Shared code touched: `history/view-model.ts`, `history/sections.tsx`, `api-client.ts`, `attempt-views.ts`.
+
+## After `claude/mock-result`: `claude/better-versions` (transcript with mistakes and better versions, no migration)
+
+Cut from `claude/mock-result` (`0d56c45`), so it comes **after it** (and so after `claude/scale-check` and `claude/full-mock`), merge commit, no squash. Branch name: `claude/better-versions`
+(15 characters after `claude/`). Step 5 of docs/v1-plan.md (section 3.3). **No migration, no environment variable, no Gemini call.** Nothing here is live
+until the parts are: it changes what a result shows, and results only exist in mock mode or behind the `PART_LIVE` switches.
+
+- **Evaluator output:** a new list `sentence_fixes` (up to 8 items of `you_said` / `better` / `why`, most important first) in the output of all four parts.
+  `EVALUATOR_VERSION` `3.5.0` → `3.6.0` (Parts 1.1, 1.2, 2) and `ARGUMENT_EVALUATOR_VERSION` `0.1.0` → `0.2.0` (Part 3). The evaluation schema versions are **not**
+  bumped (3 and 4): the list is optional in stored results, so every result stored before this has none and renders as before. Required of the model in the provider schema.
+- **Code checks, not the AI:** `domain/evaluation/sentence-fixes.ts` (pure), run inside both quality gates (`quality-gate.ts`, `q8-quality-gate.ts`): an item is dropped (never repaired)
+  if `you_said` is not word for word in the transcript, if `better` adds an idea or is more than a few words longer, if it holds more than one mistake, if it is about
+  pauses or pronunciation, or if `why` is not one short line. A drop is a warning in the quality report (`sentence_fix_dropped`) and never rejects a draft.
+- **Prompts changed, not live-tested:** one shared text (`prompts/sentence-fixes.ts`) in the Part 1, Part 2 and Part 3 prompts. **Part 2's prompt hash and provider schema changed on purpose**
+  (`part1-prompt.test.ts` pinned hash, `test/fixtures/q7-model-output-schema.json`); so did Part 3's (`q8-fingerprint.test.ts`, `test/fixtures/q8-model-output-schema.json`).
+  Results saved by 3.5.0 keep their old hash. See `docs/feedback-review.md`, "Sentences to improve", for what to check live.
+- **Mock evaluators** fill the list from the demo answers (`server/evaluation/mock-sentence-fixes.ts`, a dozen rules for mistakes that are wrong in any context). **The demo answers now contain a few
+  such mistakes on purpose** (`features/demo/demo-answers.ts`, `part3-demo-answers.ts`, `server/demo/demo-teacher.ts`), otherwise the list would be empty. Only the words changed, not the length, so the
+  mock bands, goals and question statuses are the same as before.
+- **Result page:** "Your answer" card: amber underline under each mistake, tap a sentence to open You said / Better / Why under it, the count "6 sentences to improve" at the top. New
+  `features/result/TranscriptWithFixes.tsx` (a client component) and `transcript-fixes.ts` (pure); the same card on Part 3's page and on the teacher's read-only attempt page (Parts 1.1, 1.2, 2).
+  **New colour token `--color-mark` (amber `#b45309`)**: the only addition to the palette, used only as a line (see design-system.md).
+- **Shared code touched (small):** `domain/evaluation/evidence.ts` (`evidenceTokenSpans`, `locateQuote`), `multilevel/model-output.ts` and `q8/model-output.ts` (optional list, `q8ProviderOutputSchema`),
+  `quality-gate.ts`, `q8-quality-gate.ts`, the Gemini and Anthropic models and `q8-fingerprint.ts` (Part 3 now asks for `q8ProviderOutputSchema`), the Part 1 / 2 / 3 prompts, `features/result/view-model.ts`
+  and `sections.tsx`, `features/part3/view-model.ts` and `result-sections.tsx`.
+- **Tests:** `sentence-fixes.test.ts` (the code checks), `transcript-fixes.test.ts`, `sentence-fixes-evaluators.test.ts` (demo answers of all four parts through the real evaluators, old results, schemas,
+  prompts), more in `quality-gate.test.ts`; fingerprint fixtures updated; `e2e/transcript-fixes.spec.ts` (390 px: tap to expand, underline contrast, one open at a time, Part 3, teacher page, scripts delayed).

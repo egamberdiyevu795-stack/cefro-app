@@ -5,6 +5,8 @@ import { RecordingPlayer } from "@/features/speaking-practice/components/Recordi
 import { audioRetentionNote } from "@/domain/audio-retention";
 import { mockLink } from "@/features/demo/demo-mode";
 import { practiceHref as practiceLink } from "@/features/speaking-practice/lib/practice-flow";
+import { TranscriptWithFixes } from "./TranscriptWithFixes";
+import type { TranscriptFixesView } from "./transcript-fixes";
 import { GOAL_LABEL, GOAL_NOTE, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
 
 /*
@@ -106,6 +108,7 @@ export function ScoredResult({
         <AnswerCard
           title={teacher ? "Answer" : undefined}
           transcript={view.transcript}
+          fixes={view.transcriptFixes}
           durationMs={view.durationMs}
           audio={teacher ? null : audio}
           className="order-6 lg:order-none"
@@ -387,11 +390,14 @@ function AnswerCard({
   durationMs,
   empty,
   audio,
+  fixes,
   className,
 }: {
   title?: string;
   transcript: string | null;
   durationMs: number;
+  /** The transcript with the student's mistakes underlined and expandable; null/absent = the plain transcript. */
+  fixes?: TranscriptFixesView | null;
   /** Shown instead of the transcript when there is none. */
   empty?: string;
   /** The stored recording: a real player. Without it, no player (never a control that does nothing). */
@@ -421,8 +427,14 @@ function AnswerCard({
           )}
         </div>
       ) : null}
-      <p className="text-caption text-fg-muted">Transcript</p>
-      {transcript ? <p className="mt-1 text-body text-fg">{transcript}</p> : <p className="mt-1 text-body text-fg-muted">{empty}</p>}
+      {transcript && fixes ? (
+        <TranscriptWithFixes view={fixes} />
+      ) : (
+        <>
+          <p className="text-caption text-fg-muted">Transcript</p>
+          {transcript ? <p className="mt-1 text-body text-fg">{transcript}</p> : <p className="mt-1 text-body text-fg-muted">{empty}</p>}
+        </>
+      )}
     </Card>
   );
 }

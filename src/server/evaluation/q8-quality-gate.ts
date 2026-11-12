@@ -2,6 +2,7 @@ import "server-only";
 import { isQuoteInTranscript } from "@/domain/evaluation/evidence";
 import { POINT_IDS } from "@/domain/speaking/argument-task";
 import { q8LevelValue, type Q8Level } from "@/domain/evaluation/q8/levels";
+import { checkSentenceFixes } from "@/domain/evaluation/sentence-fixes";
 import type { Q8ModelOutput } from "@/domain/evaluation/q8/model-output";
 
 /**
@@ -23,7 +24,8 @@ export type Q8QualityCode =
   | "incoherent_but_own_development"
   | "missing_fix"
   | "pronunciation_from_transcript"
-  | "strength_below_c1";
+  | "strength_below_c1"
+  | "sentence_fix_dropped";
 
 export interface Q8QualityViolation {
   code: Q8QualityCode;
@@ -113,6 +115,12 @@ export function applyQ8QualityGate(output: Q8ModelOutput, context: Q8QualityCont
     add("quote_not_found", "warn", `errors[${i}].quote`, "error quote not in the transcript (removed)");
     return false;
   });
+
+  // Sentences to improve: the model proposes, code decides (domain/evaluation/sentence-fixes.ts). Part 3 has no audio
+  // step yet, and the model only reads the transcript: nothing about pauses or pronunciation.
+  const checkedFixes = checkSentenceFixes(result.sentence_fixes ?? [], { transcript: context.transcript, transcriptOnly: true });
+  for (const drop of checkedFixes.dropped) add("sentence_fix_dropped", "warn", `sentence_fixes[${drop.index}]`, `dropped a sentence fix: ${drop.reason}`);
+  result.sentence_fixes = checkedFixes.kept;
 
   return { result, report: { passed: !violations.some((v) => v.severity === "reject"), violations } };
 }

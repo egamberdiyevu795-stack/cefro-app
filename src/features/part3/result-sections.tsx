@@ -1,4 +1,5 @@
 import { Card, CardHeader, DeltaLabel, DemoLabel, Icon, Notice, PillButton, cx, styles, type IconName } from "@/components/ds";
+import { TranscriptWithFixes } from "@/features/result/TranscriptWithFixes";
 import { audioRetentionNote } from "@/domain/audio-retention";
 import { BandMeter, type AnswerAudio } from "@/features/result/sections";
 import { formatDuration } from "@/features/result/view-model";
@@ -274,19 +275,25 @@ function AnswerCard({ view, audio, className }: { view: Part3ResultView; audio: 
           )}
         </div>
       )}
-      <p className="text-caption text-fg-muted">Transcript</p>
-      <p className="mt-1 text-body text-fg" data-testid="transcript">
-        {view.transcript.map((piece, i) =>
-          piece.copied ? (
-            <mark key={i} className="rounded-sm bg-well px-0.5 text-fg underline decoration-dotted underline-offset-4">
-              <span className="sr-only">(from the list) </span>
-              {piece.text}
-            </mark>
-          ) : (
-            <span key={i}>{piece.text}</span>
-          ),
-        )}
-      </p>
+      {view.transcriptFixes ? (
+        <TranscriptWithFixes view={view.transcriptFixes} />
+      ) : (
+        <>
+          <p className="text-caption text-fg-muted">Transcript</p>
+          <p className="mt-1 text-body text-fg" data-testid="transcript">
+            {view.transcript.map((piece, i) =>
+              piece.copied ? (
+                <mark key={i} className="rounded-sm bg-well px-0.5 text-fg underline decoration-dotted underline-offset-4">
+                  <span className="sr-only">(from the list) </span>
+                  {piece.text}
+                </mark>
+              ) : (
+                <span key={i}>{piece.text}</span>
+              ),
+            )}
+          </p>
+        </>
+      )}
       {anyCopied && <p className="mt-2 text-label text-fg-muted">Dotted underline: words read from the lists.</p>}
     </Card>
   );

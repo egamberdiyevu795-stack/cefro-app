@@ -529,6 +529,37 @@
      "type": "null"
     }
    ]
+  },
+  "sentence_fixes": {
+   "maxItems": 8,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "you_said": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The student's own words, copied exactly from the transcript with the mistake in them: one clause or sentence, at most 25 words."
+     },
+     "better": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The same words with ONLY that one mistake fixed. Keep the student's words, order and idea. Never add an idea, a reason or an example; at most 3 words longer. Never a rewritten answer."
+     },
+     "why": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One short line (at most 20 words) naming the rule, in plain words. About grammar or word choice only."
+     }
+    },
+    "required": [
+     "you_said",
+     "better",
+     "why"
+    ],
+    "additionalProperties": false
+   },
+   "description": "Up to 8 sentences or phrases of the student's own words with one mistake each, most important first (a mistake that hides the meaning, or one that repeats, before a small slip). Empty list if there is no clear mistake. Without audio, never about pauses, fillers, speed or pronunciation."
   }
  },
  "required": [
@@ -542,7 +573,8 @@
   "errors",
   "error_patterns",
   "strengths",
-  "retry_review"
+  "retry_review",
+  "sentence_fixes"
  ],
  "additionalProperties": false
 }

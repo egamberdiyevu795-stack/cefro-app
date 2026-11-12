@@ -1,7 +1,10 @@
 # Feedback review: evaluator issues for the next live run
 
-**Status of every item below: to test live before changing the prompt.** Nothing here has been changed in the code
+**Status of issues 1–5 below: to test live before changing the prompt.** Nothing there has been changed in the code
 or the prompt yet. No model was called to write this review.
+
+**One prompt change is already in, not live-tested:** the "Sentences to improve" list ([below](#sentences-to-improve-prompt-changed-not-live-tested)),
+evaluator `speaking-evaluator/3.6.0` and `argument-evaluator/0.2.0` (v1-plan step 5).
 
 - **Source:** the saved outputs in `test/fixtures/live-3.6-flash/` (evaluator 3.5.0, commit `4edee53`, 2026-11-06).
 - **Model caveat:** those runs used `gemini-3.6-flash`, **not** the production model (`gemini-3.8-flash`), and were
@@ -18,6 +21,53 @@ or the prompt yet. No model was called to write this review.
 2. Count each issue below in those outputs, using the "How to check" line of each issue.
 3. Change the prompt only for issues that still show up on `gemini-3.8-flash`. One rule per change, bump the evaluator
    version, rerun the anchor set and compare bands. A rule must not move any anchor off its expected band.
+
+---
+
+## Sentences to improve (prompt changed, not live-tested)
+
+**Status: the prompt of all four parts (1.1, 1.2, 2, 3) was changed on `claude/better-versions` and has never been sent to a model.**
+No Gemini call was made: the mock evaluators fill the list from the demo answers, and the tests run the real quality gate on it.
+This was built for `docs/v1-plan.md` section 3.3 (step 5): the result page's "Your answer" card underlines the student's mistakes
+and opens You said / Better / Why under a tapped sentence.
+
+**What the model is now asked** (one shared text, `src/server/evaluation/prompts/sentence-fixes.ts`, used by the Part 1, Part 2 and
+Part 3 prompts): up to 8 items, most important first, each with
+`you_said` (the student's exact words, one clause or sentence, at most 25 words), `better` (the same words with only that one
+mistake fixed; no new idea, no reason, no example, not more advanced, at most 3 words longer; never a rewritten or model answer) and
+`why` (one short line, at most 20 words, about grammar or word choice). One mistake per item (this is issue 1's rule, applied to each
+item); items must not overlap; no clear mistake means an empty list; never about pauses, fillers, speed or pronunciation (issue 2's
+rule: the model only has the transcript).
+
+**What code checks, not the AI** (`src/domain/evaluation/sentence-fixes.ts`, run inside both quality gates; an item that fails is
+dropped whole, never repaired; a drop is a `warn` in the quality report, `sentence_fix_dropped`, and never rejects the draft):
+
+| Check | Drops an item when |
+| --- | --- |
+| Word for word | `you_said` is not one contiguous run of the transcript's words (case, punctuation and "um/uh" ignored), has an ellipsis, is one word, or is over 25 words |
+| Pauses, pronunciation | its `why` says pause, hesitation, filler, silence, speed, pace, slow, fast, fluency, smooth, accent, stress, pronunciation, sound, vowel... (transcript-only; see "Decision" below) |
+| No new idea | `better` is more than 3 words longer or shorter, keeps less than half of the student's words, or adds more than 2 new content words (a form of a student's word, like gave for give, is not new) |
+| Something was fixed | `better` has the same words as `you_said` (this also drops "remove the um") |
+| One mistake | the word-level difference is more than one change (neighbouring changed words count as one; a word moved to another place counts as one) |
+| One short line | `why` is more than 20 words, or two sentences, or contains `;` |
+| No internal words | `better` or `why` contains an internal field name (Parts 1 and 2) |
+| Not twice | its words overlap an item already kept; more than 8 kept |
+
+**Decision for the owner (one):** the spec says to drop pause and pronunciation items "from a transcript-only run". The sentence list
+is always produced by the transcript evaluator, which never hears the recording (the audio step runs separately and writes only
+pronunciation and fluency levels), so the code applies this check on every run, also when the audio step ran. If you want items about
+pauses allowed when audio was assessed, the audio step would first have to feed the list; that is a separate change.
+
+**To check on the next live run** (needs credit; `gemini-3.8-flash`; use the Part 2 anchors, 3 runs each, plus one Part 1.1, one
+Part 1.2 and one Part 3 anchor):
+
+1. In the saved quality report count `sentence_fix_dropped` warnings per run and group them by reason. A model that is following the
+   prompt should lose few items; many `changes_too_much` or `adds_idea` means the "better" rule needs a stronger sentence.
+2. Read every kept `better`. Does it keep the student's idea? Does it fix a different mistake from the one in `why`? Does it ever
+   read like a model answer? Any of these means the rule is not holding even with the code checks.
+3. Does an anchor with no clear mistake (A5, written text) get an empty list, or invented mistakes?
+4. Do the items agree with `errors` (issue 1 again)? The same mistake is allowed in both lists; they must say the same thing.
+5. Does the list change a band? It must not: scoring does not read it.
 
 ---
 

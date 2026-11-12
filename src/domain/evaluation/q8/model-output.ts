@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { errorPatternSchema, languageErrorSchema, retryReviewSchema } from "@/domain/evaluation/multilevel/model-output";
+import { sentenceFixesProviderSchema, sentenceFixesStoredSchema } from "@/domain/evaluation/sentence-fixes";
 import { PROMPT_DEPENDENCE_LEVELS } from "@/domain/evaluation/multilevel/prompt-overlap";
 import { POINT_IDS } from "@/domain/speaking/argument-task";
 import { Q8_LEVELS, Q8_PRONUNCIATION_LEVELS } from "./levels";
@@ -84,7 +85,12 @@ export const q8ModelOutputSchema = z.object({
   error_patterns: z.array(errorPatternSchema).max(4),
   strengths: z.array(q8StrengthSchema).max(2).describe("0-2 strengths, only for features judged C1 or above_C1."),
   retry_review: retryReviewSchema.nullable(),
+  /** argument-evaluator 0.2.0: sentences with one mistake each and a better version. Optional here so older stored results parse. */
+  sentence_fixes: sentenceFixesStoredSchema.optional(),
 });
+
+/** The schema the providers are asked for: the same, with the sentence list required (at most 8). */
+export const q8ProviderOutputSchema = q8ModelOutputSchema.extend({ sentence_fixes: sentenceFixesProviderSchema });
 
 export type Q8ModelOutput = z.infer<typeof q8ModelOutputSchema>;
 export type PointAssessment = z.infer<typeof pointAssessmentSchema>;

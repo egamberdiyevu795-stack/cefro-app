@@ -23,11 +23,11 @@ export type DemoAnswerVariant = "first" | "full" | "picture" | "bare";
 export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   "b2-part2-advice-from-someone": {
     story: [
-      "The best advice I got came from my grandfather. I was in a difficult situation, because I had failed my maths exam and I wanted to give up school.",
-      "His advice was simple: study a little every day and ask the teacher when I don't understand. I decided to do exactly that, and after three months my marks went up.",
+      "The best advice I got came from my grandfather. I was in a difficult situation, because I had failed my maths exam and I wanted give up school.",
+      "His advice was simple: study a little every day and ask the teacher when I don't understand. I decided do exactly that, and after three months my marks went up.",
     ],
     opinion:
-      "However, I don't think young people should always follow advice from older people. Older people have experience, but the world changes fast, so young people should listen and then decide for themselves.",
+      "However, I don't think young people should always follow advice from older people. Older people have experience, but young people is living in a faster world, so they should listen and then decide for themselves.",
     picture:
       "In the picture I can see an old man and a teenage girl. In the picture they are sitting on a bench in a park. I can see that the man is giving advice to the girl, and she is listening to him. In the picture the trees are green, so I think it is summer.",
     bareOpinion: "Older people are not always right.",
@@ -35,14 +35,14 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   "b2-part2-important-decision": {
     story: [
       "The most important decision I made was to move to Tashkent for university. I made the decision two years ago, when I finished school in Samarkand.",
-      "I decided to go because the courses were much stronger there. It completely changed my life: I live on my own now, I cook for myself and I have friends from every region.",
+      "I decided go because the courses were much stronger there. It completely changed my life: I live on my own now, I cook for myself and I have friends from every region.",
     ],
     opinion:
-      "In my view it is better to ask others for help with big decisions. Although you decide alone in the end, other people see problems that you can't see yourself.",
+      "In my view it is more better to ask others for help with big decisions. Although you decide alone in the end, other people see problems that you can't see yourself.",
   },
   "b2-part2-goal-you-set": {
     story: [
-      "Last year I set a goal to run five kilometres without stopping. I chose it because I felt tired all the time and I wanted to be healthier.",
+      "Last year I set a goal to run five kilometres without stopping. I chose it because I felt tired all the time and I wanted be healthier.",
       "To reach it I ran three times a week and added a little more distance every week. After four months I did succeed, and I was really proud of myself.",
     ],
     opinion:
@@ -50,16 +50,16 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
   },
   "b2-part2-working-in-a-team": {
     story: [
-      "At school our task was to make a short film about our city, and there were four of us in the team: two friends, my cousin and me.",
+      "At school our task was to make a short film about our city, and we was four in the team: two friends, my cousin and me.",
       "My role was to write the script and organise the filming days. The team did well in the end, and our film won second prize in the school competition.",
     ],
     opinion:
-      "I believe people achieve more working in a team than working alone. However, a team only works when everyone knows their role, otherwise people argue and nothing gets done.",
+      "I believe people achieve more working in a team than working alone. However, a team only works when everyone knows their role, otherwise people is arguing and nothing gets done.",
   },
   "b2-part2-trying-and-failing": {
     story: [
       "I was trying to get a place in the national chess tournament, because chess has been my hobby since I was seven.",
-      "Everything went wrong in the last game: I was nervous, I made a silly mistake and I lost. I felt terrible for a week and I didn't want to play at all.",
+      "Everything went wrong in the last game: I was nervous, I made a silly mistake and I lost. I felt terrible for a week and I didn't wanted to play at all.",
     ],
     opinion:
       "Still, I think failure can be very useful for young people. As a result of failing, you learn what to change, whereas success teaches you much less.",
@@ -70,7 +70,7 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
       "My whole family takes part: we get together at my grandmother's house and cook sumalak all night. What I enjoy about it most is singing and talking until the morning.",
     ],
     opinion:
-      "I think young people should keep old traditions in the modern world. Although life is faster now, traditions keep families together and remind us of our roots.",
+      "I am agree that young people should keep old traditions in the modern world. Although life is faster now, traditions keep families together and remind us of our roots.",
   },
   "b2-part2-happy-day": {
     story: [
@@ -90,25 +90,25 @@ export const DEMO_ANSWERS: Record<string, DemoAnswer> = {
 export const PART1_DEMO_ANSWERS: Record<string, { first: [string, string, string]; full: [string, string, string] }> = {
   "a2-part1-1-daily-life": {
     first: [
-      "At the weekend I usually sleep late, and then I play football in the park with my friends.",
+      "At the weekend I usually sleep late, and then I want play football in the park with my friends.",
       "My favourite food is plov. I like it because it is very tasty, and we eat it every Friday.",
       "Um, I spend a lot of time at school. School is big and I have many classes there.",
     ],
     full: [
-      "At the weekend I usually sleep late, and then I play football in the park with my friends.",
+      "At the weekend I usually sleep late, and then I want play football in the park with my friends.",
       "My favourite food is plov. I like it because it is very tasty, and we eat it every Friday.",
-      "I spend the most time with my brother. We share a room, so we talk a lot and sometimes we watch films together.",
+      "I spend the most time with my brother. We share a room, so we talk a lot and sometimes we was watching films together.",
     ],
   },
   "b1-part1-2-shopping": {
     first: [
       "In the first picture there is a seller at a wooden stall outside. He sells fruit and vegetables, and a woman is buying tomatoes.",
-      "I think many people like markets because the food is fresh and cheaper, and you can talk to the seller.",
+      "I think many people like markets because the food is fresh and more cheaper, and you can talk to the seller.",
       "Um, I don't know. Sorry.",
     ],
     full: [
       "In the first picture there is a small market outside, with a seller at a stall of fruit. The second picture shows a big supermarket inside, with long shelves and a man with a trolley. The market looks busy and friendly, but the supermarket is quieter and bigger.",
-      "I think many people like markets because the food is fresh and cheaper, and you can talk to the seller.",
+      "I think many people like markets because the food is fresh and more cheaper, and you can talk to the seller.",
       "Some people prefer supermarkets because everything is in one place, the prices are fixed and there is parking for the car.",
     ],
   },

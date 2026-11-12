@@ -28,7 +28,7 @@ export function isDemoCode(value: unknown): boolean {
 const CLASS_ANSWERS: Record<string, string> = {
   // A short, simple answer: fewer words and few linkers.
   "madina.happy-day":
-    "My happy day was my birthday last year. My family was at home and my friends came too. We ate cake and we played games. I was very happy because everybody was there. I think money is good but family is more important for me.",
+    "My happy day was my birthday last year. My family was at home and my friends is coming too. We ate cake and we played games. I was very happy because everybody was there. I think money is good but family is more better for me.",
   "sardor.trying-and-failing":
     "Last spring I tried to win the city football cup with my school team. We trained every day after lessons, but in the final we lost two to one. I was very sad, however my coach said that we played well. As a result, now I train harder. I think failure is useful for young people, although it hurts, because you learn what to change.",
 };

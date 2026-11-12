@@ -5,6 +5,7 @@ import type { Q8ModelOutput } from "@/domain/evaluation/q8/model-output";
 import { goalPoint } from "@/domain/evaluation/q8/result";
 import { pointById, sideOf } from "@/domain/speaking/argument-task";
 import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
+import { mockSentenceFixes } from "./mock-sentence-fixes";
 import { MOCK_B2_LINKERS, MOCK_C1_MARKERS, mockCount, mockJudgePoints, mockSentences } from "./mock-argument-rules";
 import type { ModelEvaluationOutput } from "./types";
 
@@ -132,6 +133,7 @@ export function buildMockArgument(input: ArgumentEvaluationInput): Q8ModelOutput
     memorized_or_irrelevant: false,
     errors: [],
     error_patterns: [],
+    sentence_fixes: mockSentenceFixes(transcript),
     strengths: cohesion === "C1" && markerSentence ? [{ feature: "cohesion", quote: markerSentence, note: "You move between the two sides with a clear linker." }] : [],
     retry_review: previousAttempt
       ? {

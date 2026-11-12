@@ -27,10 +27,10 @@ export type Part3DemoVariant = "first" | "full";
 export const PART3_DEMO_ANSWERS: Record<string, Part3DemoAnswer> = {
   "c1-part3-cars-in-city-centres": {
     intro:
-      "Whether cities should ban private cars from their centres is a question that divides opinion, and I think both sides have a point.",
+      "Whether cities should ban private cars from their centres is a question that divides opinion, and I am agree that both sides have a point.",
     developed: {
       F1: "The most obvious benefit would be cleaner air, because exhaust fumes are one of the main causes of breathing problems in big cities. In Tashkent in winter you can actually see the smog hanging over the streets.",
-      F2: "Streets would also be safer for pedestrians and cyclists, since most accidents in the centre happen when drivers are in a hurry. My younger brother cycles to school, and twice last year he was nearly hit by a taxi.",
+      F2: "Streets would also be safer for pedestrians and cyclists, since most accidents in the centre happen when drivers is in a hurry. My younger brother cycles to school, and twice last year he was nearly hit by a taxi.",
       F3: "What's more, more people would use public transport if driving into the centre were no longer an option. When my uncle's office moved next to a metro station, he sold his car within a month.",
       A1: "For elderly and disabled people, a car is often a necessity rather than a luxury, because many of them cannot walk from a bus stop to a hospital. My grandmother, for instance, would simply stop visiting her doctor.",
       A2: "Shops in the centre could also lose customers, since people who drive would rather go to a shopping mall with free parking. Small family businesses depend on passing trade, and some of them might close.",
@@ -43,7 +43,7 @@ export const PART3_DEMO_ANSWERS: Record<string, Part3DemoAnswer> = {
     },
     turn: "That said, the arguments against a ban should not be dismissed.",
     conclusion:
-      "Having weighed up both sides, I'd say a complete ban would be too drastic for now. On balance, a gradual approach with clear exceptions seems the most sensible.",
+      "Having weighed up both sides, I'd say a complete ban would be too drastic for now. On balance, a gradual approach with clear exceptions seems more safer for everybody.",
   },
   "c1-part3-smartphones-under-14": {
     intro:

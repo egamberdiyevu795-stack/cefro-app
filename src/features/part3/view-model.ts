@@ -2,6 +2,7 @@
  * The Part 3 result page's view model: turns a stored Part 3 result (`Q8Result`) into what the page shows. Pure and
  * browser-safe. The page renders only this, so a real Part 3 attempt plugs in later with no UI change.
  */
+import { buildTranscriptFixes, type TranscriptFixesView } from "@/features/result/transcript-fixes";
 import { FEATURES, FEATURE_LABELS, type Feature } from "@/domain/evaluation/multilevel/levels";
 import { tokenize } from "@/domain/evaluation/multilevel/prompt-overlap";
 import { Q8_LEVEL_LABELS, type Q8Level } from "@/domain/evaluation/q8/levels";
@@ -72,6 +73,8 @@ export interface Part3ResultView {
   fix: FixView;
   skills: SkillView[];
   transcript: { text: string; copied: boolean }[];
+  /** The transcript with the student's mistakes marked (also marks the copied runs); null for a result scored before argument-evaluator 0.2.0. */
+  transcriptFixes: TranscriptFixesView | null;
   durationMs: number;
   retry: { previousBand: number; band: number; goal: GoalOutcome | null; goalText: string | null } | null;
   developmentEvaluator: boolean;
@@ -138,6 +141,17 @@ export function markCopied(transcript: string, spans: readonly string[]): { text
   }
   if (at < transcript.length) pieces.push({ text: transcript.slice(at), copied: false });
   return pieces.filter((p) => p.text.length > 0);
+}
+
+/** The character ranges of the copied pieces (the pieces tile the transcript, so a running sum gives each one's place). */
+function copiedRanges(pieces: readonly { text: string; copied: boolean }[]): { start: number; end: number }[] {
+  const ranges: { start: number; end: number }[] = [];
+  let at = 0;
+  for (const piece of pieces) {
+    if (piece.copied) ranges.push({ start: at, end: at + piece.text.length });
+    at += piece.text.length;
+  }
+  return ranges;
 }
 
 function goalOutcome(result: Q8Result): GoalOutcome | null {
@@ -230,6 +244,7 @@ export function buildPart3View(
     fix: fixView(result, task, copiedSentences),
     skills,
     transcript: pieces,
+    transcriptFixes: buildTranscriptFixes(context.transcript, a.sentence_fixes, copiedRanges(pieces)),
     durationMs: context.durationMs,
     retry: context.previous
       ? { previousBand: context.previous.scoring.band, band: s.band, goal: goalOutcome(result), goalText: context.previous.retry_focus[0]?.objective ?? null }

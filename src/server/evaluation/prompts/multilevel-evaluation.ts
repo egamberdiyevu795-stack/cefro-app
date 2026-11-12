@@ -3,6 +3,7 @@ import { FEATURE_LABELS } from "@/domain/evaluation/multilevel/levels";
 import type { QualityViolation } from "../quality-gate";
 import type { EvaluationInput, EvaluationPrompt } from "../types";
 import { buildPart1EvaluationPrompt } from "./multilevel-part1-evaluation";
+import { sentenceFixesRules } from "./sentence-fixes";
 
 /**
  * CEFRO Multilevel evaluation prompt (evaluator 3.x), for any part described by a Multilevel rubric config.
@@ -103,6 +104,7 @@ Set memorized_or_irrelevant to true ONLY when the whole answer is clearly a prep
 - "errors": up to 8 of the most important grammar and vocabulary errors, most serious first. "quote" is copied exactly from the transcript; "correction" is the same words corrected, keeping the student's meaning. Skip one-off slips that don't matter.
 - "error_patterns": up to 4 error TYPES the student repeats (e.g. "Missing -s after he/she/it", "-ing after don't / should / will"), most important first. Give each a short "name", a one-sentence "rule" with a short correct example, and "how_to_fix" (one habit for the next attempt). Set each error's "pattern" to the exact name of its pattern, or "" for a one-off error. Every pattern must be used by at least one error. Grouping helps the student fix a habit instead of single sentences.
 - "strengths": 0–2, only for a feature you judged B2 or above_B2, each with an exact quote showing it. If no feature reaches B2, give an empty list. Do not invent strengths.
+${sentenceFixesRules(task.level === "B2" ? "B1–B2" : task.level)}
 
 # 5. Evidence rules
 - Every quote (question evidence, feature evidence, errors, strengths) must be an exact substring of the transcript, including the student's mistakes. Never correct, paraphrase, shorten with "…" or invent a quote. Short quotes (3–12 words) are best.
@@ -119,7 +121,7 @@ Everything you write for the student to copy (model_answer, error corrections, e
 - below_B1 student → simple, correct B1 sentences.
 - B1 student → plain B2 sentences: one clear reason or example, everyday linkers such as "however" or "for example". No third conditionals, no inversion, no academic words (e.g. "detrimental impact", "foster", "counterproductive").
 - B2 or above_B2 student → natural, strong B2: still spoken and plain, never formal academic C1 style.
-Corrections fix the error and keep the student's words and level; do not rewrite the sentence into a more advanced one. Suggest one next step, not a jump to C1.
+Corrections (and "better" in sentence_fixes) fix the error and keep the student's words and level; do not rewrite the sentence into a more advanced one. Suggest one next step, not a jump to C1.
 
 # 8. Wording rules for the student
 - Never write the level codes "above_B2" or "below_B1" (or any field name) in student text: say "above B2" or "below B1".

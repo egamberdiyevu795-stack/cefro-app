@@ -134,8 +134,8 @@ function mockedGemini() {
 describe("Part 2 picture (evaluator 3.5.0)", () => {
   afterEach(() => setDbForTesting(undefined));
 
-  it("is evaluator 3.5.0", () => {
-    expect(EVALUATOR_VERSION).toBe("speaking-evaluator/3.5.0");
+  it("the picture rule shipped in 3.5.0; the current evaluator is 3.6.0 (sentence list added)", () => {
+    expect(EVALUATOR_VERSION).toBe("speaking-evaluator/3.6.0");
   });
 
   it("A0-picture-only on mocked Gemini: all three questions off topic → band 0", async () => {
@@ -147,7 +147,7 @@ describe("Part 2 picture (evaluator 3.5.0)", () => {
     expect(evaluation.result.assessment.questions.map((q) => q.status)).toEqual(["off_topic", "off_topic", "off_topic"]);
     expect(evaluation.result.scoring).toMatchObject({ band: anchor.expect.band, on_topic_count: 0, zero_reason: "no_question_on_topic" });
     expect(evaluation.result.scoring.band).toBe(0);
-    expect(evaluation.evaluatorVersion).toBe("speaking-evaluator/3.5.0");
+    expect(evaluation.evaluatorVersion).toBe("speaking-evaluator/3.6.0");
     // Tokens are passed through for the cost report: thinking counts as output.
     expect(evaluation).toMatchObject({ inputTokens: 9000, outputTokens: 6500 });
   });

@@ -3,6 +3,7 @@ import { FEATURE_LABELS, LEVEL_LABELS, type Feature, type QuestionStatus } from 
 import { questionNumber } from "@/domain/speaking/task";
 import type { EvaluationInput, EvaluationPrompt } from "../types";
 import { escapeUntrusted } from "./multilevel-evaluation";
+import { sentenceFixesRules } from "./sentence-fixes";
 
 /**
  * CEFRO Multilevel evaluation prompt for Part 1 (Part 1.1, Questions 1–3, and Part 1.2, Questions 4–6;
@@ -111,6 +112,7 @@ Set memorized_or_irrelevant to true ONLY when the whole recording is clearly a p
 - "errors": up to 8 of the most important grammar and vocabulary errors, most serious first, each quoted exactly with its "correction" (the same words corrected, keeping the student's meaning and level).
 - "error_patterns": up to 4 error types the student repeats, each with a "name", a one-sentence "rule" with a short correct example, and "how_to_fix". Set each error's "pattern" to its pattern's exact name, or "".
 - "strengths": 0–2, only for a feature you judged ${target} or ${top}, each with an exact quote. If there is none, give an empty list.
+${sentenceFixesRules(`${lower}–${target}`)}
 
 # 5. Evidence rules
 - Every quote must be an exact substring of the transcript, including the student's mistakes. Never correct, paraphrase, shorten with "…" or invent a quote.

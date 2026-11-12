@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { q8ModelOutputSchema } from "@/domain/evaluation/q8/model-output";
+import { q8ProviderOutputSchema } from "@/domain/evaluation/q8/model-output";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import type { BalancedArgumentTask } from "@/domain/speaking/argument-task";
 import { ARGUMENT_INSTRUCTIONS } from "@/domain/speaking/argument-task";
@@ -63,7 +63,7 @@ function sentinelInput(withPrevious: boolean, rubric: ArgumentEvaluationInput["r
 
 /** The JSON Schema the providers are asked for (also pinned byte-for-byte by test/fixtures/q8-model-output-schema.json). */
 export function q8ProviderSchemaJson(): string {
-  return JSON.stringify(z.toJSONSchema(q8ModelOutputSchema));
+  return JSON.stringify(z.toJSONSchema(q8ProviderOutputSchema));
 }
 
 /** Hash for the Part 3 prompt that is about to be sent for `input` (`prompt` = what `buildQ8EvaluationPrompt` returned). */

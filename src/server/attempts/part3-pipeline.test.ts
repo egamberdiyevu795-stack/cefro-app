@@ -93,7 +93,7 @@ describe("Part 3 attempts: create, upload, process, stored result", () => {
     // Normalised to list order, feedback only.
     expect(result.chosen_points).toEqual(["F1", "F2", "A1", "A2"]);
     expect(result.scoring.band_max).toBe(6);
-    expect(view.evaluation!.meta).toMatchObject({ schemaVersion: 4, evaluatorVersion: "argument-evaluator/0.1.0", isDevelopmentProvider: true });
+    expect(view.evaluation!.meta).toMatchObject({ schemaVersion: 4, evaluatorVersion: "argument-evaluator/0.2.0", isDevelopmentProvider: true });
 
     const stored = await rows(created.id);
     expect(stored.evaluation).toMatchObject({ schemaVersion: 4, promptHash: expect.stringMatching(/^h2:[a-f0-9]{64}$/), overallLevel: `band:${result.scoring.band}` });

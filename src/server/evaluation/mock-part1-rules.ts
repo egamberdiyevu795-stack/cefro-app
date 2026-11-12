@@ -3,6 +3,7 @@ import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
 import { questionNumber } from "@/domain/speaking/task";
+import { mockSentenceFixes } from "./mock-sentence-fixes";
 import type { EvaluationInput } from "./types";
 
 /**
@@ -156,6 +157,7 @@ export function mockPart1Output(input: EvaluationInput): MultilevelModelOutput {
     memorized_or_irrelevant: false,
     errors: [],
     error_patterns: [],
+    sentence_fixes: mockSentenceFixes(input.transcript),
     strengths: [],
     retry_review: previousAttempt
       ? {

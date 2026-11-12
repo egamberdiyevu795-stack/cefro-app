@@ -278,7 +278,7 @@ scored, not failed.
 
 ## Rules
 
-- No colours beyond the tokens below. No new hues; status is shown by word and glyph, never by colour.
+- No colours beyond the tokens below. No new hues (one exception, `mark`: the amber underline under a mistake); status is shown by word and glyph, never by colour.
 - No gradients, except the soft one inside the radar chart.
 - One shadow (`shadow-card`). Nothing heavier.
 - No emojis. Icons come from `components/ds/Icon.tsx`.
@@ -302,6 +302,7 @@ scored, not failed.
 | `--color-accent` | `#1f3be8` | `bg-accent`, `border-accent` | The only hue: radar outline and dots, progress-bar fill, quote rule, focus ring. |
 | `--color-radar-core` | `#2f7bff` | — | Radar fill gradient, centre. |
 | `--color-radar-edge` | `#d9ecff` | — | Radar fill gradient, edge. |
+| `--color-mark` | `#b45309` | `decoration-mark` | Amber underline under a mistake in the transcript. A line only: never a fill, never text, never red. The one colour added after the palette was closed (v1-plan 3.3 asks for "amber, not red"). |
 | `--color-lime` | `#c8f26c` | `bg-lime` | Positive-change label only ("+1 band"). |
 | `--color-on-lime` | `#263409` | `text-on-lime` | Text on the lime label. |
 | `--color-block-1…4` | `#737479` … `#424347` | `bg-block-1…4` | Neutral stand-ins for photos and avatars (list thumbs). |
@@ -317,6 +318,7 @@ Measured with the WCAG relative-luminance formula. Every pair used on the dashbo
 | `fg-muted` `#5e5f64` (text) | 5.26 | 5.80 | 6.21 | 5.40 | 4.5 | pass |
 | `fg-subtle` `#838489` (icons only) | 3.08 | 3.40 | 3.64 | 3.16 | 3.0 | pass (was `#a3a4a9`: 2.05–2.43, **failed**, darkened) |
 | `accent` `#1f3be8` (bars, quote rule, focus ring) | 6.08 | 6.71 | 7.18 | 6.25 | 3.0 | pass |
+| `mark` `#b45309` (the amber underline: a line, so 3:1 applies) | 4.14 | 4.57 | 4.89 | 4.26 | 3.0 | pass |
 
 | Pair | Ratio | Needs | Result |
 | --- | --- | --- | --- |
@@ -443,6 +445,27 @@ is the not-found screen, so no student ever sees the saved runs as if they were 
   audited in the browser: no horizontal scroll, smallest text 11 px, lowest text contrast 5.26:1.
 - Screenshots: `docs/design-system/result-{a2,a4,a0-below-b1,scoring,too-short,no-speech,retry}-{desktop,phone}.png`.
 
+
+## Transcript with mistakes and better versions ("Your answer" card)
+
+Step 5 of `docs/v1-plan.md` (section 3.3). Components: `features/result/TranscriptWithFixes.tsx` (client), `transcript-fixes.ts` (pure view model), the checks in
+`domain/evaluation/sentence-fixes.ts`. The same card on `/result`, `/result/[attemptId]`, Part 3's result page and the teacher's read-only attempt page.
+
+- **The card:** "Transcript" with the count on the right ("6 sentences to improve", "1 sentence to improve", "No sentences marked in this answer"), one line under it ("Tap an underlined sentence to
+  see a better version."), then the transcript. The count is the number of **sentences** that hold a mistake (a sentence with two mistakes counts once and opens both).
+- **The mark:** the words the student said wrong are underlined in amber (`mark`, 2 px, 4 px offset, ink-skipping off, solid). Never red, never a fill, so it also reads without colour (it is a line).
+  `mark` on card is 4.89:1, on the open sentence's `well` 4.26:1 (a line needs 3:1). The browser test measures the live colour at 390 px.
+- **Tap:** a sentence with a mistake is one real `<button>` (inline, text colour `fg`, a `well` fill while it is open or hovered, accent focus ring), `aria-expanded`, disabled until the page's scripts
+  run (`useHydrated`). It opens **under that sentence**: the paragraph splits there and a `well` panel shows, per mistake, **You said** (the student's words as the transcript has them), **Better**
+  (the same words with the changed words in bold) and **Why** (one line, muted). One sentence open at a time; tap again to close. Labels are 11 px (`text-caption`), the rest 13 px.
+- **No new black button, no new action.** The page's black button is still "Retry with this goal"; the teacher's page has none.
+- **Never a model answer:** there is no "Improved answer", no whole rewritten text. `Better` is the student's own sentence with at most a few words changed (the code checks this; the evaluator's
+  prompt asks for it). "What you did well" and Biggest fix are unchanged.
+- **Old results:** a result saved before evaluator 3.6.0 has no list (`transcriptFixes` is null): the plain "Transcript" paragraph, exactly as before, no count.
+- **Part 3:** the same card; words read from the two lists keep their dotted underline and the line "Dotted underline: words read from the lists." Both marks can sit in one sentence.
+- **Checks:** `features/result/transcript-fixes.test.ts`, `domain/evaluation/sentence-fixes.test.ts`, `e2e/transcript-fixes.spec.ts` (390 px: count, underline colour not red and at least 3:1, tap opens under the
+  sentence, one open at a time, keyboard, no model answer, plain transcript for an old result, Parts 1.1 / 1.2 / 3, teacher page, scripts delayed; every screen audited: one black button (none on the
+  teacher page), no text under 11 px, AA contrast, no horizontal scroll).
 
 ## Practice flow, Part 2 (`/practice/speaking/[taskId]`)
 

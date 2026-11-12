@@ -45,6 +45,9 @@
   --color-radar-core: #2f7bff; /* radar fill, centre */
   --color-radar-edge: #d9ecff; /* radar fill, edge */
 
+  /* Amber underline under a mistake in the transcript (never red). Only ever a line: 4.89:1 on card, 4.26:1 on well (3:1 needed). */
+  --color-mark: #b45309;
+
   /* Positive change label */
   --color-lime: #c8f26c;
   --color-on-lime: #263409;

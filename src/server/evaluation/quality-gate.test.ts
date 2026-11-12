@@ -19,6 +19,52 @@ describe("quality gate (Multilevel)", () => {
     expect(result).toEqual(makeModelOutput());
   });
 
+  describe("sentence fixes (the model proposes, code decides)", () => {
+    const good = { you_said: "I have went to Samarkand", better: "I went to Samarkand", why: "A finished time takes the simple past." };
+    const withFixes = (...sentence_fixes: NonNullable<MultilevelModelOutput["sentence_fixes"]>) => makeModelOutput({ sentence_fixes });
+
+    it("keeps a good item as it is, and never rejects the draft over a bad one", () => {
+      expect(gate(makeModelOutput()).result.sentence_fixes).toEqual([good]); // the fixture's own list
+      const { result, report } = gate(withFixes(good));
+      expect(result.sentence_fixes).toEqual([good]);
+      expect(report).toEqual({ passed: true, violations: [] });
+    });
+
+    it("drops an item whose words are not in the transcript, with a warning (the draft still passes)", () => {
+      const { result, report } = gate(withFixes({ ...good, you_said: "Last year I have gone to Samarkand" }, good));
+      expect(result.sentence_fixes).toEqual([good]);
+      expect(report.passed).toBe(true);
+      expect(report.violations.map((v) => `${v.severity}:${v.code}@${v.path}`)).toEqual(["warn:sentence_fix_dropped@sentence_fixes[0]"]);
+    });
+
+    it("drops an item that adds an idea, or is about pauses, or names an internal field", () => {
+      const output = withFixes(
+        { ...good, better: "I went to Samarkand with my friend to see the old city and the market" },
+        { ...good, why: "You paused before this sentence." },
+        { ...good, why: "See how_to_improve." },
+      );
+      const { result, report } = gate(output);
+      expect(result.sentence_fixes).toEqual([]);
+      expect(report.violations.filter((v) => v.code === "sentence_fix_dropped")).toHaveLength(3);
+    });
+
+    it("a draft with no list at all (an old-style or lazy answer) gets an empty list, not a failure", () => {
+      const output = makeModelOutput();
+      delete output.sentence_fixes;
+      const { result, report } = gate(output);
+      expect(result.sentence_fixes).toEqual([]);
+      expect(report.passed).toBe(true);
+    });
+
+    it("keeps the model's order and at most 8", () => {
+      const transcript = Array.from({ length: 10 }, (_, i) => `he don't like thing${"x".repeat(i)}.`).join(" ");
+      const fixes = Array.from({ length: 10 }, (_, i) => ({ you_said: `he don't like thing${"x".repeat(i)}`, better: `he doesn't like thing${"x".repeat(i)}`, why: "Use doesn't." }));
+      const { result } = applyQualityGate(withFixes(...fixes), { ...context, transcript });
+      expect(result.sentence_fixes).toHaveLength(8);
+      expect(result.sentence_fixes!.map((f) => f.you_said)).toEqual(fixes.slice(0, 8).map((f) => f.you_said));
+    });
+  });
+
   describe("question numbering is 1-based and complete", () => {
     it("rejects 0-based ids", () => {
       const output = makeModelOutput();

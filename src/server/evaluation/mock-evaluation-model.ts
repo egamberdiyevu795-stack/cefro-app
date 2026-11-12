@@ -2,6 +2,7 @@ import "server-only";
 import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { mockSentenceFixes } from "./mock-sentence-fixes";
 import { mockIsMinimal, mockIsPictureOnly } from "./mock-answer-rules";
 import { mockPart1Output } from "./mock-part1-rules";
 import { MOCK_QUESTION_KEYWORDS } from "./mock-question-keywords";
@@ -135,6 +136,7 @@ function buildHeuristicResult(input: EvaluationInput): MultilevelModelOutput {
     memorized_or_irrelevant: false,
     errors: [],
     error_patterns: [],
+    sentence_fixes: mockSentenceFixes(transcript),
     strengths: cohesion === "B2" && linkerSentence ? [{ feature: "cohesion", quote: linkerSentence, note: "You contrast ideas with a linking word." }] : [],
     retry_review: previousAttempt
       ? {

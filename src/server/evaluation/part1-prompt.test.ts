@@ -65,19 +65,21 @@ describe("Part 1 prompt: everything from the rubric (docs/part1-plan.md §3, Pro
     expect(p12).toContain("above_B1, B1, A2, below_A2");
   });
 
-  it("Part 2's prompt hash and provider schema are unchanged by Part 1 (same as before Part 1 was added)", () => {
+  it("Part 2's prompt hash is pinned (changed on purpose by evaluator 3.6.0: the sentence_fixes rules, docs/v1-plan.md step 5)", () => {
     const i = input(part2, "I think so.");
     const plain = { ...i, metrics: computeSpeechMetrics("I think so.", 60_000, 120) };
-    expect(computePromptHash(plain, buildMultilevelEvaluationPrompt(plain))).toBe("h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae");
+    expect(computePromptHash(plain, buildMultilevelEvaluationPrompt(plain))).toBe("h2:114e346517c0c0374717331ecd24b247143211c9b39a446fdab6807b94e27363");
     expect(computePromptHash(input(part11), buildMultilevelEvaluationPrompt(input(part11)))).not.toBe(
       computePromptHash(input(part12), buildMultilevelEvaluationPrompt(input(part12))),
     );
   });
 
-  it("the Part 2 provider schema is byte-for-byte the one from before Part 1", async () => {
+  it("the Part 2 provider schema is byte-for-byte the pinned fixture (with the required sentence_fixes list since 3.6.0)", async () => {
     const { z } = await import("zod");
     const { providerOutputSchema } = await import("@/domain/evaluation/multilevel/model-output");
     const before = fs.readFileSync(path.join(process.cwd(), "test", "fixtures", "q7-model-output-schema.json"), "utf8");
+    expect(JSON.parse(before).required).toContain("sentence_fixes");
+    expect(JSON.parse(before).properties.sentence_fixes.maxItems).toBe(8);
     expect(JSON.stringify(z.toJSONSchema(providerOutputSchema(getSpeakingRubric(part2).config)), null, 1)).toBe(before);
     expect(JSON.stringify(z.toJSONSchema(providerOutputSchema()), null, 1)).toBe(before);
   });

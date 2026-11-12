@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
-import { q8ModelOutputSchema } from "@/domain/evaluation/q8/model-output";
+import { q8ProviderOutputSchema } from "@/domain/evaluation/q8/model-output";
 import { ProviderError } from "@/server/errors";
 import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
@@ -58,7 +58,7 @@ export class AnthropicEvaluationModel implements EvaluationModel, ArgumentEvalua
   async evaluate(prompt: EvaluationPrompt, input: EvaluationInput | ArgumentEvaluationInput): Promise<ModelEvaluationOutput> {
     // Part 3 (official Question 8) has its own output shape; every other rubric is Part 2's shape on its own ladder.
     const schema =
-      input?.rubric?.id === "multilevel-q8" ? q8ModelOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config);
+      input?.rubric?.id === "multilevel-q8" ? q8ProviderOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config);
     let response;
     try {
       response = await this.client.beta.messages.parse({

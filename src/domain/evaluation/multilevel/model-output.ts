@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sentenceFixesProviderSchema, sentenceFixesStoredSchema } from "../sentence-fixes";
 import { ALL_FEATURE_LEVELS, FEATURE_LEVELS, FEATURES, NOT_ASSESSED, QUESTION_STATUSES, type Feature, type LevelLadder, type QuestionStatus } from "./levels";
 
 /**
@@ -138,6 +139,12 @@ export const multilevelModelOutputSchema = z.object({
     .max(2)
     .describe("0-2 strengths. Only for a feature you judged B2 or above_B2, each with an exact quote. Empty if there is none."),
   retry_review: retryReviewSchema.nullable().describe("Only for retries (see <previous_attempt>); otherwise null."),
+  /**
+   * Evaluator 3.6.0: the student's own sentences with one mistake each and a better version (domain/evaluation/
+   * sentence-fixes.ts). Optional so that results stored before 3.6.0 (no list) still parse and render; the quality gate
+   * always writes the checked list, so every new result has it (possibly empty).
+   */
+  sentence_fixes: sentenceFixesStoredSchema.optional(),
 });
 
 export type MultilevelModelOutput = z.infer<typeof multilevelModelOutputSchema>;
@@ -181,6 +188,8 @@ export function rubricModelOutputSchema(shape: RubricOutputShape) {
       .max(2)
       .describe(`0-2 strengths. Only for a feature you judged ${target} or ${top}, each with an exact quote. Empty if there is none.`),
     retry_review: multilevelModelOutputSchema.shape.retry_review,
+    // Required of the model (evaluator 3.6.0); stored results from before it have no list (optional in the stored schema).
+    sentence_fixes: sentenceFixesProviderSchema,
   });
 }
 export type QuestionAssessment = z.infer<typeof questionAssessmentSchema>;

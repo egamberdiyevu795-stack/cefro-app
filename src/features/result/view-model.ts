@@ -7,6 +7,7 @@
  *
  * The quality-gate report (`evaluation.quality`) is optional and never read: the page needs nothing from it.
  */
+import { buildTranscriptFixes, type TranscriptFixesView } from "./transcript-fixes";
 import { FEATURES, FEATURE_LABELS, LEVEL_LABELS, ladderOf, levelValue, type Feature, type FeatureLevel, type PronunciationLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import { featureLevels, type MultilevelResult, type MultilevelRetryFocus } from "@/domain/evaluation/multilevel/result";
 import { examPartLabel, examPartOfResult, firstQuestionNumberOfResult } from "@/domain/speaking/exam-part";
@@ -200,6 +201,8 @@ export interface ResultView {
   skills: SkillRow[];
   pronunciationNote: string | null;
   transcript: string;
+  /** The transcript with the student's mistakes marked; null for a result scored before evaluator 3.6.0 (no list). */
+  transcriptFixes: TranscriptFixesView | null;
   durationMs: number;
   retry: RetryComparison | null;
   /** Scored by the local development evaluator, not a real assessment. */
@@ -275,6 +278,7 @@ export function buildResultView(
     skills: FEATURES.filter((feature) => result.assessment.features[feature]).map((feature) => skillRow(result, feature, prev)),
     pronunciationNote: result.audio.status === "not_assessed" ? AUDIO_REASON[result.audio.reason ?? "disabled"] : null,
     transcript: ctx.transcript,
+    transcriptFixes: buildTranscriptFixes(ctx.transcript, result.assessment.sentence_fixes),
     durationMs: ctx.durationMs,
     retry: prev ? compareWithPrevious(prev, result) : null,
     developmentEvaluator: ctx.isDevelopmentProvider ?? false,

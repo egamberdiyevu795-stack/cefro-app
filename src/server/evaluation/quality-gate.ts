@@ -1,6 +1,7 @@
 import { isQuoteInTranscript } from "@/domain/evaluation/evidence";
 import { FEATURES, FEATURE_LEVELS, levelValue, NOT_ASSESSED, QUESTION_STATUSES, type Feature, type LevelLadder, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { checkSentenceFixes } from "@/domain/evaluation/sentence-fixes";
 
 /**
  * Quality gate for Multilevel evaluator output.
@@ -42,7 +43,8 @@ export type QualityCode =
   | "memorized_conflict"
   | "missing_retry_review"
   | "retry_review_contradicts_metrics"
-  | "unexpected_retry_review";
+  | "unexpected_retry_review"
+  | "sentence_fix_dropped";
 
 export interface QualityViolation {
   code: QualityCode;
@@ -211,6 +213,16 @@ export function applyQualityGate(
     }
     return true;
   });
+
+  // ── Sentences to improve: the model proposes, code decides (domain/evaluation/sentence-fixes.ts). The model never
+  // hears the audio, so these are always judged from the transcript alone: nothing about pauses or pronunciation. ──
+  const checkedFixes = checkSentenceFixes(result.sentence_fixes ?? [], {
+    transcript: context.transcript,
+    transcriptOnly: true,
+    forbidden: INTERNAL_FIELD_NAMES,
+  });
+  for (const drop of checkedFixes.dropped) add("warn", "sentence_fix_dropped", `sentence_fixes[${drop.index}]`, `Dropped a sentence fix: ${drop.reason}.`);
+  result.sentence_fixes = checkedFixes.kept;
 
   if (result.memorized_or_irrelevant && result.questions.filter((q) => q.status === "on_topic" && q.evidence).length >= 2) {
     add("warn", "memorized_conflict", "memorized_or_irrelevant", "Marked memorised although two or more questions are answered on topic with evidence.");

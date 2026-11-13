@@ -1,6 +1,6 @@
 # CEFRO Version 1: plan for students and teachers
 
-Status: **draft, 2026-11-10. Asadbek answered Q1–Q8 and Q10 the same day (Decisions log at the end); the plan below
+Status: **draft, 2026-11-10. Asadbek answered Q1–Q8 the same day (Decisions log at the end); the plan below
 follows those answers. Only Q9 (teacher comment) is still open. Nothing in this plan is built yet.** Planning only: no app code, no migration, no model call was made to write it.
 Cut from `claude/project-thread-e59hcb`.
 
@@ -70,7 +70,6 @@ recording yet (mock only).
 | **Teacher listens to recordings** | **Decided no** on 2026-11-07 (recordings are owner-only; Share screen says "Won't see: recordings"). | Owner decided yes (Q4). Needs: player on teacher pages, access rule, new Share text. See section 7. | Medium |
 | **Teacher mock view** | Nothing. | A mock page per student: each part's audio, transcript, app band, teacher's band. | Medium |
 | **Classroom mock** | Nothing. | Section 6. Exam laptop mode: one student at a time, PIN, saved to the student's account. | Medium |
-| **Consent for under-18s** | Pilot route built: owner script `set-consent.mjs` (has `--teacher-sharing`), recording locked until consent, audio deleted 30 days after scoring. Parent message written but **not sent**. | Parent message must name teacher listening; native Uzbek/Russian check; lawyer questions still open. | Small (text), but blocks the pilot |
 | **Scoring cost** | Gemini credit is near zero. Mock evaluators work for everything. | A full mock = about 4 scorings (1.1, 1.2, 2, 3) instead of 1. Measure the real cost before the pilot. | — |
 
 ---
@@ -298,13 +297,8 @@ recordings" switch.** What stays, because it is already built or costs nothing:
 4. **Leaving the class cuts access at once**, recordings included (built for everything else).
 5. **Recording stays locked until consent** (built, `CONSENT_REQUIRED`), and teacher pages need the account's
    teacher-sharing consent (built, `set-consent.mjs --teacher-sharing`).
-6. **First name only** for under-18s in "Name your teacher sees", and nobody under 14 until the lawyer answers
+6. **First name only** for under-18s in "Name your teacher sees", and nobody under 14
    (decided earlier).
-
-**Parent message (Q10, decided: no change).** `docs/pilot-parent-message.md` is not changed for teacher listening.
-
-The lawyer list (`docs/lawyer-questions.md`) should still get: "Can a teacher (not the parent) listen to a minor's
-recording with the parent's consent?" That is a question, not a build step.
 
 ## 8. Build order
 
@@ -353,8 +347,7 @@ the official UZBMB papers before we show anything. Recommended: show **an estima
 made-up total score, until the official conversion is checked.
 
 **Q4 (answered: yes, without the extras; section 7). Can teachers listen to recordings?** This changes the 2026-11-07 decision ("teachers never hear recordings").
-Recommended: **yes, with the rules in section 7** (consent names it, play only, access log, 30-day deletion). Also
-add the question to the lawyer list.
+Recommended: **yes, with the rules in section 7** (consent names it, play only, access log, 30-day deletion).
 
 **Q5 (settled by Q4: one tap). One Share tap for everything, or a separate "Share recordings" switch?** Recommended: **one tap** in V1. Simpler
 for students; the parent consent already decides it for under-18s.
@@ -365,16 +358,11 @@ cheap pilot (Q1) needs it. Recommended: **yes, labelled "Your teacher: B2"**, ne
 **Q7 (answered: one student at a time on one laptop, or two laptops in two rooms; section 6). Classroom setup:** is "each student on their own phone, with headphones" realistic in the classes you know?
 If not, we design the shared-laptop flow properly instead of just not breaking it.
 
-**Q8 (answered: Azamat, a teacher at our language centre). Who is the first pilot teacher**, and how many students (we planned about 10)? Are any under 14? (Not invited
-until the lawyer answers.)
+**Q8 (answered: Azamat, a teacher at our language centre). Who is the first pilot teacher**, and how many students (we planned about 10)? Are any under 14?
 
 **Q9. Teacher written comment?** Teachers grade by hand today and probably write notes. A one-line comment per mock is
 small to build but is a "message" (excluded from v1 in the teacher plan). Recommended: **not in V1**, ask the pilot
 teacher.
-
----
-
-**Q10 (answered: no). One sentence in the parent message about teachers listening?** (section 7)
 
 ## Decisions log
 
@@ -387,6 +375,5 @@ Asadbek, 2026-11-10:
 - **Q7:** in class, one student at a time on one laptop; two laptops in two separate rooms to go faster.
 - **Q6:** the student sees the teacher's level, next to the app's level.
 - **Q8:** first pilot teacher: Azamat, at our language centre.
-- **Q10:** no sentence about teacher listening in the parent message.
 - **Change to Q1:** build AI scoring now, alongside teacher marking, even though it can't run without credit yet. The
   pilot shows both; the AI side fills in when credit arrives.

@@ -442,16 +442,16 @@ describe("scripts/set-consent.mjs (the owner's script)", () => {
     ]).run();
     expect(await row(fileDb, "alice@example.com")).toEqual({ s: null, at: null, t: false, v: null });
 
-    expect(run("Alice@Example.com", "granted").out).toMatch(/consent granted \(pilot-parent-message-2026-11-12c\), recording unlocked; teacher sharing off/);
-    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: false, v: "pilot-parent-message-2026-11-12c" });
-    expect(run("alice@example.com", "granted", "--notice", "pilot-parent-message-2026-12-01").code).toBe(0);
-    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", v: "pilot-parent-message-2026-12-01" });
+    expect(run("Alice@Example.com", "granted").out).toMatch(/consent granted \(pilot-consent-v1\), recording unlocked; teacher sharing off/);
+    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: false, v: "pilot-consent-v1" });
+    expect(run("alice@example.com", "granted", "--notice", "pilot-consent-v2").code).toBe(0);
+    expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", v: "pilot-consent-v2" });
     expect(run("alice@example.com", "granted", "--teacher-sharing").out).toMatch(/teacher sharing on/);
     expect(await row(fileDb, "alice@example.com")).toMatchObject({ s: "granted", t: true });
     expect(run("alice@example.com", "withdrawn").out).toMatch(/node scripts\/delete-account\.mjs alice@example\.com/);
     const withdrawn = await row(fileDb, "alice@example.com");
     // Withdrawn keeps the version that was agreed (a record), and tells the owner how to delete the account.
-    expect(withdrawn).toMatchObject({ s: "withdrawn", t: false, v: "pilot-parent-message-2026-11-12c" });
+    expect(withdrawn).toMatchObject({ s: "withdrawn", t: false, v: "pilot-consent-v1" });
     expect(Date.parse(withdrawn.at!)).toBeGreaterThan(Date.now() - 60_000);
     // Bob untouched.
     expect(await row(fileDb, "bob@example.com")).toEqual({ s: null, at: null, t: false, v: null });

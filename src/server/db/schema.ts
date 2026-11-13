@@ -72,8 +72,8 @@ export const users = sqliteTable("users", {
   /** When the owner last set `consent_status` (ISO time). */
   consentAt: text("consent_at"),
   /**
-   * Which text the person agreed to when consent was granted (e.g. "pilot-parent-message-2026-11-12c", the version in
-   * docs/pilot-parent-message.md). Set by the owner's script with the consent; null while none was granted.
+   * Which text the person agreed to when consent was granted (e.g. "pilot-consent-v1"). Set by the owner's script with the
+   * consent; null while none was granted.
    */
   consentNoticeVersion: text("consent_notice_version"),
   /** Teacher sharing was agreed too (`--teacher-sharing`). Only counts while `consent_status` is "granted". */

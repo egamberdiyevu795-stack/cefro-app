@@ -76,7 +76,8 @@ Steps 12 and 13 may go any time before 14; 26 is docs only.
 1. **`src/config/features.ts`:** `PART_1_1_LIVE`, `PART_1_2_LIVE`, `PART_2_LIVE`, `PART_3_LIVE`, `FULL_MOCK_LIVE`, `TEACHER_LIVE` read from the environment (defaults unchanged). Tests in `src/config/features.test.ts`.
 2. **`26f0f16` from `claude/full-mock`, cherry-picked (`-x`):** up to 4 answers may be processing at once for a **full mock** upload (ordinary practice keeps 2). **It was missing from the chain**: `claude/scale-check` was cut from the commit before it, so a mock's four uploads could hit "your earlier answers are still being checked" (429). One doc conflict (the launch-checklist item numbers) was resolved by keeping both items. After step 33, `claude/full-mock` needs no merge of its own: the same patch is already in.
 3. **Start exam laptop is refused** (409 `mock_not_live`, and the page says why) while the full mock is off, so a class never reaches a "not found" at Start mock.
-4. Two wording fixes (`No PIN yet. Set one on your phone: Account, Your classes.`; the "Coming soon" line on the mock card), `.env.example`, `docs/pilot-runbook.md`, `docs/pilot-dry-run.md`, `docs/launch-checklist.md` sections 12 and 13, lawyer question 13.
+4. Two wording fixes (`No PIN yet. Set one on your phone: Account, Your classes.`; the "Coming soon" line on the mock card), `.env.example`, `docs/pilot-runbook.md`, `docs/pilot-dry-run.md`, `docs/launch-checklist.md` sections 12 and 13.
+5. **The Credits page** (`/credits`: Piper and the LibriTTS voice under CC BY 4.0) with a quiet footer link on every page (not on the exam laptop screen). The notice version `scripts/set-consent.mjs` stores is now the plain string `pilot-consent-v1`; no app behaviour changed.
 
 ### Not merged, on purpose (three branch tips)
 
@@ -714,10 +715,9 @@ and `…/profile?mock=1&consent=granted`.
   (the owner deletes an account on a parent's request; a test requires it to match "Delete my account" table by
   table); the Account page's read-only "Recording consent" section; the Part 1 brief lock; audio of attempts stuck
   before scoring is deleted after 30 days too; a test that no code stores audio at a provider; docs updated
-  (`consent-design.md` 2b, `pilot-parent-message.md` no "free", `lawyer-questions.md`, `privacy-todo.md`,
+  (`consent-design.md` 2b, `privacy-todo.md`,
   `launch-checklist.md` section 11).
-- **Still open:** the parent message is not sent (native check of Uzbek and Russian; lawyer question 1 on data
-  location). Part 3 has no real recording yet; when it goes live it needs the same lock.
+- **Still open:** Part 3 has no real recording yet; when it goes live it needs the same lock.
 
 ## Merged through `claude/project-thread-mz2ndw`: `claude/part3` (Part 3 in mock mode, no migration)
 
@@ -764,7 +764,7 @@ Cut from `claude/integration-chgcwb` (`ced5367`), so it comes **after it** (or, 
 merging), merge commit, no squash. Branch name: 19 characters after `claude/`. **Documents only**: no app code, no
 migration, no environment variable. Contains: `docs/consent-design.md` (under-18 consent design, decisions of
 2026-11-08, pilot route), `docs/privacy-notice-draft.md` and `docs/terms-draft.md` (drafts for a lawyer, `[CHECK]`
-marks), `docs/lawyer-questions.md`, `docs/pilot-parent-message.md`, a change to `docs/growth-plan.md` phase 2
+marks), a change to `docs/growth-plan.md` phase 2
 (guests don't record), and this entry.
 
 ## Duplicate: `claude/entry-pages-jgh558` (never merge)

@@ -5,7 +5,7 @@
 //   node scripts/set-consent.mjs <email> granted                    unlock recording
 //   node scripts/set-consent.mjs <email> granted --teacher-sharing  unlock recording and sharing with a teacher
 //   node scripts/set-consent.mjs <email> withdrawn                  lock recording (and teacher sharing) again
-//   ... granted --notice <version>   the text the person agreed to (default: the current pilot parent message)
+//   ... granted --notice <version>   the notice version the person agreed to (default: the current one)
 //
 // Each run sets the whole consent: `granted` without --teacher-sharing turns teacher sharing off. `withdrawn` keeps the
 // account and its data; to delete them too, the student uses "Delete my account" (or the owner deletes the account).
@@ -17,8 +17,8 @@
 // (npm run db:migrate).
 import { createClient } from "@libsql/client";
 
-/** The version of docs/pilot-parent-message.md. Change it (and the doc's header) whenever that text changes. */
-const CURRENT_NOTICE = "pilot-parent-message-2026-11-12c";
+/** The current notice version stored with each consent. A plain version string: change it whenever the notice the owner shows people changes. */
+const CURRENT_NOTICE = "pilot-consent-v1";
 
 const raw = process.argv.slice(2);
 let notice = CURRENT_NOTICE;
@@ -42,7 +42,7 @@ if (unknown) die(`unknown option ${unknown.slice(0, 40)}. ${usage}`);
 const teacherSharing = flags.includes("--teacher-sharing");
 if (teacherSharing && status !== "granted") die("--teacher-sharing goes with granted only.");
 if (noticeAt !== -1 && status !== "granted") die("--notice goes with granted only.");
-if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(notice)) die("--notice needs a version like pilot-parent-message-2026-11-12c.");
+if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(notice)) die("--notice needs a version like pilot-consent-v1.");
 
 const url = process.env.TURSO_DATABASE_URL;
 const client = url

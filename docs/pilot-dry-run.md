@@ -64,7 +64,7 @@ npm ci && npm run db:migrate -- --require-remote
    switch protection off for this one test.
 6. **Two laptops**, each with **Chrome** and a working microphone (a headset is better), in two rooms (or two far corners
    with headsets). One phone each for you and your friend, ideally one of them an **iPhone** (it is also the iOS test,
-   `docs/launch-checklist.md`, section 12, item 4).
+   `docs/launch-checklist.md`, section 12, item 3).
 
 ---
 

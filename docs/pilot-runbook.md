@@ -12,15 +12,14 @@ carries the pilot**. When credit arrives, the AI side fills in later (`docs/v1-p
 
 ---
 
-## 0. Before you start: five things that must be true
+## 0. Before you start: four things that must be true
 
 | # | What | Who | Where |
 | --- | --- | --- | --- |
 | 1 | The code is merged into `main` and deployed to Production. **You have not decided this yet.** The exact order is in `docs/merge-order.md`, section "Pilot-ready: the exact merge order". | You | `docs/merge-order.md` |
-| 2 | The open items are closed: the parent message checked by a native speaker (it no longer says who sees the recordings), the lawyer's answers, the iPhone test (the Piper credit is now on the Credits page). | You, with a native speaker and a lawyer | `docs/launch-checklist.md`, section 12 |
-| 3 | You hold a written "yes" from every parent (under 18) or from the student (18+). | You | `docs/pilot-parent-message.md` |
-| 4 | Nobody in the pilot is under 14. | You | `docs/consent-design.md`, section 0 |
-| 5 | You did the 30-minute dry run with a friend and it passed. | You and a friend | `docs/pilot-dry-run.md` |
+| 2 | The open items are closed: the iPhone test (the Piper credit is now on the Credits page). | You | `docs/launch-checklist.md`, section 12 |
+| 3 | Nobody in the pilot is under 14. | You | `docs/consent-design.md`, section 0 |
+| 4 | You did the 30-minute dry run with a friend and it passed. | You and a friend | `docs/pilot-dry-run.md` |
 
 **Words used here.** *Vercel* is where the app runs (vercel.com, your project). *Turso* is where the data is kept
 (turso.tech). *Terminal* is the text window on your own computer where you paste commands (on a Mac: the Terminal app).
@@ -177,7 +176,7 @@ node scripts/set-consent.mjs student@example.com granted --teacher-sharing
 
    `--teacher-sharing` is what lets Azamat see their results and listen to recordings. Leave it out and the student can
    practise but **cannot** join a class. Expected: a line saying consent was recorded. It stores the date and which text
-   they agreed to (`pilot-parent-message-2026-11-12c`).
+   they agreed to (`pilot-consent-v1`).
 4. The student's **Account** page now says "Consent recorded on …".
 
 To lock someone again at once (data is kept): 
@@ -195,12 +194,6 @@ node scripts/delete-account.mjs student@example.com
 ```bash
 node scripts/delete-account.mjs student@example.com --yes
 ```
-
-**Before you send the parent message:** on 2026-11-12 (owner decisions) the sentences "Teachers see nothing" and "Who sees it: only your
-child and me" were **deleted** from all three languages, not replaced (version `pilot-parent-message-2026-11-12c`). The message no longer
-says who sees or hears the recordings. Whether it must say that the teacher listens is lawyer question 13: settle it, and the native Uzbek
-and Russian check, before you record consent on this message or `--teacher-sharing` for anyone (`docs/launch-checklist.md`, section 12,
-item 1). Nobody who agreed to an older version has agreed to teacher listening.
 
 ---
 
@@ -324,4 +317,3 @@ feedback when ready, and **"Your teacher: B2"** next to the app's level, never i
 - Recordings delete themselves 30 days after scoring (needs `CRON_SECRET`; check the Cron Jobs page now and then).
 - When Gemini credit arrives: add `GEMINI_API_KEY`, then the live checks in `docs/launch-checklist.md`, section 6. Answers
   already recorded can be re-scored later (step 9 of `docs/v1-plan.md`, not built yet).
-- Keep the parents' written replies somewhere safe. How long and where is lawyer question 6.

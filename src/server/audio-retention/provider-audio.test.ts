@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * inline in the request (Gemini `inlineData`) or as the body of one transcription request (OpenAI
  * `/audio/transcriptions`), never through a provider's file store (Gemini Files API, OpenAI or Anthropic Files). This
  * does NOT mean the provider keeps nothing: providers may keep request data for a limited time under their own terms
- * (Gemini abuse monitoring: 55 days). We can't delete that copy; the parent message says so (lawyer question 12).
+ * (Gemini abuse monitoring: 55 days). We can't delete that copy.
  * If this test fails, a provider file upload was added: delete the file right after scoring, or keep audio inline.
  */
 

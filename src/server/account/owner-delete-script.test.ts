@@ -44,7 +44,7 @@ let dir: string;
 async function seed(db: Db, audioDir: string) {
   await seedUsers(db, "guest-a");
   await db.insert(users).values([
-    { id: "alice", kind: "registered", email: "alice@example.com", consentStatus: "granted", consentAt: NOW, consentNoticeVersion: "pilot-parent-message-2026-11-08" },
+    { id: "alice", kind: "registered", email: "alice@example.com", consentStatus: "granted", consentAt: NOW, consentNoticeVersion: "pilot-consent-v1" },
     { id: "bob", kind: "registered", email: "bob@example.com" },
   ]).run();
   await db.update(users).set({ kind: "anonymous", mergedIntoUserId: "alice" }).where(eq(users.id, "guest-a")).run();

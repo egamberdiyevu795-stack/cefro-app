@@ -93,6 +93,12 @@ navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `b
   AA contrast of every visible text, no horizontal scroll; "See a demo result" keeps `?mock=1`; the list follows
   `PART_LIVE`; no name at sign-up and the server's name rule; signed in → dashboard), `e2e/auth.spec.ts` (unchanged journeys; the sign-in pages have no Account menu now, so their
   state is read from `/api/account/me`).
+- **Laptop size and screenshots:** the 390 px audits of `e2e/entry-pages.spec.ts` also run at 1440 px (one black control,
+  no text under 11 px, AA contrast, no horizontal scroll, one centred column of at most 448 px, no menu or tabs; the
+  "Built by" line is last and 11 px or more at both sizes), and a test reads the three pages for any price, "free" or
+  cost wording. Screenshots of the real pages (mock providers, throwaway database):
+  `docs/design-system/entry-{home,sign-in,create-account}-{desktop,phone}.png`. Retake them with
+  `node scripts/screenshots/entry.mjs` (under a minute; `--out`, `--port`; same safeguards as the dashboard script).
 
 ## Task list (`/practice`)
 

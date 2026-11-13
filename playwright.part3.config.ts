@@ -34,10 +34,12 @@ export default defineConfig({
     permissions: ["microphone"],
   },
   webServer: {
-    command: `npx next dev -p ${PORT}`,
+    // scripts/ci/start-dev-server.mjs: waits for the port to be free, trims a runaway dev cache, then runs `next dev`.
+    command: `node scripts/ci/start-dev-server.mjs ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
-    timeout: 120_000,
+    // A cold start takes about 10 s; a slow disk was seen to take far longer, so allow five minutes.
+    timeout: 300_000,
     env: {
       CEFRO_TEST_PART3_LIVE: "1",
       TRANSCRIPTION_PROVIDER: "mock",

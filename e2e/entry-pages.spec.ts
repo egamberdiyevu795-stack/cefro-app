@@ -2,8 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { PART_LIVE } from "../src/config/features";
 
 /*
- * The signed-out pages (home, sign in, Create account) at 390 px: one black control, no text under 11 px, WCAG AA text
- * contrast, no horizontal scroll, no header menu and no navigation tabs. "See a demo result" opens a real demo result
+ * The signed-out pages (home, sign in, Create account) at 390 px (phone) and 1440 px (laptop): one black control, no text
+ * under 11 px, WCAG AA text contrast, no horizontal scroll, no header menu and no navigation tabs. "See a demo result" opens a real demo result
  * (?mock=1). The exam-parts list follows the release switches (PART_LIVE). A signed-in visitor on home goes to the
  * dashboard.
  *
@@ -79,9 +79,22 @@ async function blackControls(page: Page) {
   );
 }
 
-async function audit(page: Page, black: string) {
-  await page.setViewportSize({ width: 390, height: 844 });
+/** Phone first; the laptop checks the same rules on a wide screen, where the column must stay narrow and centred. */
+const SIZES = [
+  { name: "phone", width: 390, height: 844 },
+  { name: "laptop", width: 1440, height: 900 },
+] as const;
+
+async function audit(page: Page, black: string, size: (typeof SIZES)[number]) {
+  await page.setViewportSize({ width: size.width, height: size.height });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // One narrow column (max 448 px), centred, on every screen size: nothing stretches across a laptop screen.
+  const column = await page.locator("main").evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return { width: box.width, centre: box.left + box.width / 2, viewport: window.innerWidth };
+  });
+  expect(column.width).toBeLessThanOrEqual(448);
+  expect(Math.abs(column.centre - column.viewport / 2)).toBeLessThanOrEqual(1);
   expect(await blackControls(page)).toEqual([black]);
   const { smallest, failures } = await textAudit(page);
   expect(smallest).toBeGreaterThanOrEqual(11);
@@ -91,17 +104,19 @@ async function audit(page: Page, black: string) {
   await expect(page.getByRole("navigation", { name: "Main" })).toHaveCount(0);
 }
 
-for (const mock of [false, true]) {
-  for (const { url, heading, black } of PAGES) {
-    const address = mock ? `${url}?mock=1` : url;
-    test(`${address} at 390 px: one black control, no text under 11 px, AA contrast, no menu or tabs`, async ({ page }) => {
-      test.skip(PREVIEW && !mock, "on a Preview with no variables the real pages are refused");
-      await page.setViewportSize({ width: 390, height: 844 });
-      await page.goto(address);
-      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
-      if (url !== "/") await expect(page.getByRole("button", { name: black })).toBeEnabled(); // the page is ready
-      await audit(page, black);
-    });
+for (const size of SIZES) {
+  for (const mock of [false, true]) {
+    for (const { url, heading, black } of PAGES) {
+      const address = mock ? `${url}?mock=1` : url;
+      test(`${address} at ${size.width} px (${size.name}): one black control, no text under 11 px, AA contrast, one centred column, no menu or tabs`, async ({ page }) => {
+        test.skip(PREVIEW && !mock, "on a Preview with no variables the real pages are refused");
+        await page.setViewportSize({ width: size.width, height: size.height });
+        await page.goto(address);
+        await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+        if (url !== "/") await expect(page.getByRole("button", { name: black })).toBeEnabled(); // the page is ready
+        await audit(page, black, size);
+      });
+    }
   }
 }
 
@@ -129,26 +144,36 @@ test("home links: Start practising and Sign in (mock mode keeps ?mock=1)", async
   }
 });
 
-test("the home page ends with the small grey 'Built by' line, under the status list", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/?mock=1");
-  const line = page.getByTestId("built-by");
-  await expect(line).toHaveText("Built by a student in Tashkent for UZBMB candidates.");
-  const { size, below, last, color } = await line.evaluate((el) => {
-    const status = document.querySelector("[data-testid=exam-status]")!.getBoundingClientRect();
-    const main = document.querySelector("main")!;
-    const texts = [...main.querySelectorAll("*")].filter((n) => n.children.length === 0 && n.textContent?.trim());
-    return {
-      size: parseFloat(getComputedStyle(el).fontSize),
-      below: el.getBoundingClientRect().top >= status.bottom,
-      last: texts[texts.length - 1] === el,
-      color: getComputedStyle(el).color,
-    };
+for (const size of SIZES) {
+  test(`the home page ends with the small grey 'Built by' line, under the status list (${size.name})`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto("/?mock=1");
+    const line = page.getByTestId("built-by");
+    await expect(line).toHaveText("Built by a student in Tashkent for UZBMB candidates.");
+    const { fontSize, below, last, color } = await line.evaluate((el) => {
+      const status = document.querySelector("[data-testid=exam-status]")!.getBoundingClientRect();
+      const main = document.querySelector("main")!;
+      const texts = [...main.querySelectorAll("*")].filter((n) => n.children.length === 0 && n.textContent?.trim());
+      return {
+        fontSize: parseFloat(getComputedStyle(el).fontSize),
+        below: el.getBoundingClientRect().top >= status.bottom,
+        last: texts[texts.length - 1] === el,
+        color: getComputedStyle(el).color,
+      };
+    });
+    expect(fontSize).toBeGreaterThanOrEqual(11);
+    expect(below).toBe(true);
+    expect(last).toBe(true);
+    expect(color).toBe("rgb(94, 95, 100)"); // fg-muted: 5.26:1 on the page, AA (the audits above measure it too)
   });
-  expect(size).toBeGreaterThanOrEqual(11);
-  expect(below).toBe(true);
-  expect(last).toBe(true);
-  expect(color).toBe("rgb(94, 95, 100)"); // fg-muted: 5.26:1 on the page, AA (the 390 px audit measures it too)
+}
+
+test("no price, 'free' or cost claim on home, sign in or Create account", async ({ page }) => {
+  for (const url of ["/?mock=1", "/login?mock=1", "/register?mock=1"]) {
+    await page.goto(url);
+    const text = await page.locator("body").innerText();
+    expect(text, url).not.toMatch(/\bfree\b|\bprice|\bpricing|\bcost|\bpaid\b|\bpremium\b|\bso['’]?m\b|\buzs\b|[$€£]|\d\s?%/i);
+  }
 });
 
 test("the exam-parts list follows the release switches (PART_LIVE), and no page text says Part 2 elsewhere", async ({ page }) => {

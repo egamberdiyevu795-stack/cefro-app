@@ -4,7 +4,8 @@
  *
  * Top: the speaking-only estimate ("CEFRO: B2"), and "Your teacher: B2" beside it when a teacher has rated the parts the
  * rule needs. Then one row per part, then the biggest fix across the mock. Never a 0–75 or 0–30 score, never Passed / Failed,
- * never "certificate level" (docs/official-scale.md, section 5).
+ * never "certificate level" (docs/official-scale.md, section 5). A 0-75 speaking score appears only here, on the full mock, and
+ * only when all four parts have a mark (`estimateMockSpeaking`); it is always labelled an estimate by the line under it.
  */
 import { placeLabel } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
@@ -12,10 +13,10 @@ import type { MockStatus } from "@/domain/speaking/full-mock";
 import {
   ESTIMATE_NOT_READY,
   SPEAKING_ONLY_LINE,
-  estimateSpeakingLevel,
   type EstimatedLevel,
   type PartBands,
 } from "@/domain/speaking/mock-level";
+import { estimateMockSpeaking } from "@/domain/speaking/mock-score";
 import { PART_NAMES } from "@/features/dashboard/progress";
 import { formatDate, levelOfBand } from "@/features/history/view-model";
 import type { MockPartSource, MockResultSource, NotScoredReason, PartFix } from "./part-source";
@@ -25,6 +26,8 @@ export interface LevelTile {
   /** "CEFRO" or "Your teacher". */
   name: string;
   value: EstimatedLevel | null;
+  /** The official 0-75 speaking score for the tile ("Speaking: 58 / 75"); null when it cannot be computed (full mock only). */
+  score: number | null;
 }
 
 export type Headline =
@@ -137,18 +140,19 @@ export function weakestPart(parts: readonly MockPartSource[]): MockPartSource | 
  * rule applied to the teacher's own part bands, and only when the teacher rated every part the rule needs; otherwise null
  * (nothing shown).
  */
-export function teacherEstimate(parts: readonly MockPartSource[], whole: EstimatedLevel | null = null): EstimatedLevel | null {
-  if (whole) return whole;
+export function teacherEstimate(parts: readonly MockPartSource[], whole: EstimatedLevel | null = null): { level: EstimatedLevel; score: number | null } | null {
+  // A level the teacher gave the whole mock has no 0-75 score: it is their level, not a sum of marks.
+  if (whole) return { level: whole, score: null };
   const bands: PartBands = {};
   for (const p of parts) bands[p.part] = p.teacher ? p.teacher.band : null;
-  const estimate = estimateSpeakingLevel(bands);
-  return estimate.kind === "ready" ? estimate.level : null;
+  const estimate = estimateMockSpeaking(bands);
+  return estimate.kind === "ready" ? { level: estimate.level, score: estimate.score } : null;
 }
 
 export function buildMockResultView(source: MockResultSource): MockResultView {
   const { parts } = source;
   const date = formatDate(source.createdAt);
-  const estimate = estimateSpeakingLevel(bandsOf(parts));
+  const estimate = estimateMockSpeaking(bandsOf(parts));
   const scoring = parts.some((p) => p.state === "scoring");
   const teacher = teacherEstimate(parts, source.teacherLevel ?? null);
 
@@ -168,8 +172,8 @@ export function buildMockResultView(source: MockResultSource): MockResultView {
     notFinishedNote: source.status === "not_finished" ? "Not finished. This mock took longer than 24 hours, so it is closed. The parts you finished keep their results." : null,
     headline,
     levels: [
-      { name: "CEFRO", value: estimate.kind === "ready" ? estimate.level : null },
-      ...(teacher ? [{ name: "Your teacher", value: teacher }] : []),
+      { name: "CEFRO", value: estimate.kind === "ready" ? estimate.level : null, score: estimate.kind === "ready" ? estimate.score : null },
+      ...(teacher ? [{ name: "Your teacher", value: teacher.level, score: teacher.score }] : []),
     ],
     line: SPEAKING_ONLY_LINE,
     rows: parts.map((p) => ({

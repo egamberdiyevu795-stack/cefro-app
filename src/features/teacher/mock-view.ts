@@ -6,7 +6,8 @@ import { placeLabel } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
 import { isMockLevel, type MockLevel } from "@/domain/teacher/rules";
 import type { MockStatus } from "@/domain/speaking/full-mock";
-import { ESTIMATE_NOT_READY, SPEAKING_ONLY_LINE, estimateSpeakingLevel, type EstimatedLevel, type PartBands } from "@/domain/speaking/mock-level";
+import { ESTIMATE_NOT_READY, SPEAKING_ONLY_LINE, type EstimatedLevel, type PartBands } from "@/domain/speaking/mock-level";
+import { estimateMockSpeaking } from "@/domain/speaking/mock-score";
 import { formatDate } from "@/features/history/view-model";
 import type { MockPartBand, MockPartState, NotScoredReason } from "@/features/mock-result/part-source";
 import type { TranscriptFixesView } from "@/features/result/transcript-fixes";
@@ -78,10 +79,24 @@ export function partStatusText(part: Pick<TeacherMockPartView, "part" | "state" 
 
 /** The app's estimate for the mock, from its parts' bands (docs/official-scale.md rule); null while it can't be given. */
 export function appEstimate(parts: readonly Pick<TeacherMockPartView, "part" | "state" | "band">[]): EstimatedLevel | null {
+  return appScoredEstimate(parts)?.level ?? null;
+}
+
+/** The same estimate with its official 0-75 speaking score (null score: only the interim rule could give the level). */
+export function appScoredEstimate(parts: readonly Pick<TeacherMockPartView, "part" | "state" | "band">[]): { level: EstimatedLevel; score: number | null } | null {
   const bands: PartBands = {};
   for (const p of parts) bands[p.part] = p.state === "scored" && p.band ? p.band.band : null;
-  const estimate = estimateSpeakingLevel(bands);
-  return estimate.kind === "ready" ? estimate.level : null;
+  const estimate = estimateMockSpeaking(bands);
+  return estimate.kind === "ready" ? { level: estimate.level, score: estimate.score } : null;
+}
+
+/** The teacher's own marks for the mock: their level and score when they rated every part (same table), else null. */
+export function teacherScoredEstimate(parts: readonly Pick<TeacherMockPartView, "part" | "state" | "band" | "rating">[]): { level: EstimatedLevel; score: number | null } | null {
+  const bands: PartBands = {};
+  // "Agree" keeps the app's band for that part; otherwise the teacher's own band.
+  for (const p of parts) bands[p.part] = !p.rating ? null : p.rating.agrees ? (p.state === "scored" && p.band ? p.band.band : null) : p.rating.band;
+  const estimate = estimateMockSpeaking(bands);
+  return estimate.kind === "ready" ? { level: estimate.level, score: estimate.score } : null;
 }
 
 export interface TeacherMockHeader {
@@ -91,6 +106,10 @@ export interface TeacherMockHeader {
   /** "Not finished. This mock took longer than 24 hours…" for a closed mock. */
   note: string | null;
   estimate: EstimatedLevel | null;
+  /** "Speaking: 58 / 75" (official table); null when it cannot be computed. */
+  scoreText: string | null;
+  /** The teacher's own level from their part marks, "Your marks: B2 · Speaking: 58 / 75"; null until every part is rated. */
+  teacherText: string | null;
   estimateText: string;
   line: typeof SPEAKING_ONLY_LINE;
   /** "You: Agree" / "You: B2" for the whole mock, when rated. */
@@ -100,15 +119,18 @@ export interface TeacherMockHeader {
 }
 
 export function teacherMockHeader(mock: Pick<TeacherMockView, "createdAt" | "status" | "parts" | "rating" | "place">): TeacherMockHeader {
-  const estimate = appEstimate(mock.parts);
+  const estimate = appScoredEstimate(mock.parts);
+  const mine = teacherScoredEstimate(mock.parts);
   const date = formatDate(mock.createdAt);
   return {
     title: `Mock exam · ${date}`,
     date,
     statusText: MOCK_STATUS_TEXT[mock.status],
     note: mock.status === "not_finished" ? "This mock took longer than 24 hours, so it is closed. The parts that were finished keep their results." : null,
-    estimate,
-    estimateText: estimate ?? ESTIMATE_NOT_READY,
+    estimate: estimate?.level ?? null,
+    scoreText: estimate && estimate.score !== null ? `Speaking: ${estimate.score} / 75` : null,
+    teacherText: mine ? `Your marks: ${mine.level}${mine.score !== null ? ` · Speaking: ${mine.score} / 75` : ""}` : null,
+    estimateText: estimate?.level ?? ESTIMATE_NOT_READY,
     line: SPEAKING_ONLY_LINE,
     ratingText: mock.rating ? (mock.rating.agrees ? "You: Agree" : `You: ${mock.rating.level}`) : null,
     placeText: mock.place ? placeLabel(mock.place) : null,

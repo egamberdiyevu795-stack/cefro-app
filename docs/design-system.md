@@ -1026,11 +1026,15 @@ preparation and speaking times), played by the same components with an `embedded
 Step 4 of `docs/v1-plan.md`; replaces "Mock finished". Wording from `docs/official-scale.md` section 5. Components in `features/mock-result`.
 
 - **Top card:** "CEFRO: B2" (36 px level) and, **beside it** when a teacher rated, "Your teacher: B2" (never instead of it), then the exact line
-  "Speaking only. An estimate from this mock, not an official UZBMB score." Never a 0-75 / 0-30 score, Passed / Failed or "certificate level".
-- **The level rule is one pure function**, `estimateSpeakingLevel` in `domain/speaking/mock-level.ts` (own tests). C1: Part 3 band 5+ and Part 2 band 3+;
+  "Speaking only. An estimate from this mock, not an official UZBMB score." Under each level tile, when all four parts have a band: "Speaking: 49 / 75"
+  (14 px, `text-body`; official 0-75 score, `estimateMockSpeaking` in `domain/speaking/mock-score.ts`). The 0-75 score is on the full mock only (and the
+  teacher's mock view), never on a single part's result. Never a 0-30 score, Passed / Failed or "certificate level".
+- **Score and level (official):** raw = sum of the four part bands (0-21), `rawToSpeaking75` (`domain/speaking/speaking-score.ts`, table and source in
+  `speaking-score-table.ts`) gives 0-75, and UZBMB's bands (C1 65-75, B2 51-64, B1 38-50, below B1 0-37) give the level.
+- **The interim rule is a fallback only**, `estimateSpeakingLevel` in `domain/speaking/mock-level.ts` (own tests), used where no score can be computed (Part 1.1 has no band): level only, no /75. C1: Part 3 band 5+ and Part 2 band 3+;
   B2: Part 2 band 3+ or Part 3 band 3+; B1: Part 2 band 1+ or Part 1.2 band 3+; else Below B1. Parts 1.2, 2 and 3 must have a band, else
   "Estimate not ready yet" (with the reason: "Part 2 is still being scored", "Part 3 has no AI score yet", "Part 3 was not done"): never a guess.
-  Part 1.1 shows in its row but is not read. Swap this function when UZBMB's table is read; nothing else changes.
+  Part 1.1 shows in its row but is not read. (Replaced by the official table for complete mocks, 2026-11-13.)
 - **Teacher level:** read, never written, from `teacher_ratings` per attempt (own mock's attempts only). Each row shows "Your teacher: B2" when that
   part was rated; the top shows it only when the parts the rule needs are all rated (same rule on the teacher's bands, until step 6 stores a mock-level
   rating). Empty until the teacher screens write ratings.

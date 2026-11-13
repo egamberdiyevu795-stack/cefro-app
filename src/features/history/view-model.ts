@@ -7,7 +7,8 @@ import { placeLabel, placeOfMock } from "@/domain/teacher/exam-laptop";
 import { EXAM_PART_IDS, examPartLabel, isExamPartId, type ExamPartId } from "@/domain/speaking/exam-part";
 import type { MockStatus } from "@/domain/speaking/full-mock";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
-import { estimateSpeakingLevel, type PartBands } from "@/domain/speaking/mock-level";
+import type { PartBands } from "@/domain/speaking/mock-level";
+import { estimateMockSpeaking } from "@/domain/speaking/mock-score";
 import { GOAL_LABEL, goalOutcomeOf } from "@/features/result/view-model";
 
 /** Rows shown at first; each "Show more" adds this many. */
@@ -188,7 +189,7 @@ export function mockBands(parts: readonly HistoryAttempt[]): PartBands {
  */
 export function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): HistoryRow {
   const date = formatDate(mock.createdAt);
-  const estimate = estimateSpeakingLevel(mockBands(parts));
+  const estimate = estimateMockSpeaking(mockBands(parts));
   const scoring = parts.some((a) => outcomeOf(a).kind === "scoring");
   const done = EXAM_PART_IDS.filter((p) => parts.some((a) => a.part === p));
   const state =

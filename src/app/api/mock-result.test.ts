@@ -148,7 +148,7 @@ describe("the mock result route", () => {
     expect(result.parts.map((p) => p.state)).toEqual(["scored", "scored", "scoring", "scoring"]);
     const view = buildMockResultView(result);
     expect(view.headline).toMatchObject({ kind: "not_ready", title: "Estimate not ready yet" });
-    expect(view.levels).toEqual([{ name: "CEFRO", value: null }]);
+    expect(view.levels).toEqual([{ name: "CEFRO", value: null, score: null }]);
     expect(view.rows.map((r) => r.status)).toEqual([null, null, "Scoring Part 2…", "Scoring Part 3…"]);
     expect(view.fix).toBeNull();
     // The rows fill in when ready.

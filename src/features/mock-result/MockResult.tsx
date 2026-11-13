@@ -105,14 +105,21 @@ function LevelCard({ view }: { view: MockResultView }) {
 function Tile({ tile }: { tile: LevelTile }) {
   const testId = tile.name === "CEFRO" ? "level-cefro" : "level-teacher";
   return (
-    <p className="flex items-baseline gap-2" data-testid={testId}>
-      <span className="text-label font-medium text-fg-muted">{tile.name}:</span>{" "}
-      {tile.value ? (
-        <span className="text-stat font-light tracking-[-0.03em] text-fg">{tile.value}</span>
-      ) : (
-        <span className="text-lead font-medium text-fg">Estimate not ready yet</span>
+    <div className="flex flex-col gap-1">
+      <p className="flex items-baseline gap-2" data-testid={testId}>
+        <span className="text-label font-medium text-fg-muted">{tile.name}:</span>{" "}
+        {tile.value ? (
+          <span className="text-stat font-light tracking-[-0.03em] text-fg">{tile.value}</span>
+        ) : (
+          <span className="text-lead font-medium text-fg">Estimate not ready yet</span>
+        )}
+      </p>
+      {tile.value && tile.score !== null && (
+        <p className="text-body font-medium text-fg" data-testid={`${testId}-score`}>
+          Speaking: {tile.score} / 75
+        </p>
       )}
-    </p>
+    </div>
   );
 }
 

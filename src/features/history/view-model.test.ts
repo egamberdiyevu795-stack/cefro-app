@@ -250,7 +250,7 @@ describe("mock exams in History", () => {
   };
   const mock = (id: string, over: Partial<HistoryMock> = {}): HistoryMock => ({ id, status: "finished", createdAt: new Date(Date.UTC(2026, 10, 11, 9)).toISOString(), ...over });
   const withMocks = (list: HistoryAttempt[], mocks: HistoryMock[], query: Record<string, string> = {}) => buildHistoryView(newestFirst(list), parseHistoryQuery(query), mocks);
-  const finished = (id: string) => [part(id, "1.1", 3), part(id, "1.2", 3), part(id, "2", 3), part(id, "3", 4)];
+  const finished = (id: string) => [part(id, "1.1", 3), part(id, "1.2", 3), part(id, "2", 4), part(id, "3", 4)]; // raw 14 -> 51 / 75 -> B2
 
   it("is one row, 'Mock exam · B2 · 11.11.26', that opens the mock result; its parts are not listed again under All", () => {
     const loose = attempt({ day: 3 });
@@ -327,7 +327,7 @@ describe("the dashboard's recent rows with mocks", () => {
   it("shows a mock as one row, newest first among the loose attempts, and never its parts", () => {
     const older = attempt({ day: 3 });
     const newer = attempt({ day: 14 });
-    const parts = [partOf("1.1", 3), partOf("1.2", 3), partOf("2", 3), partOf("3", 4)];
+    const parts = [partOf("1.1", 3), partOf("1.2", 3), partOf("2", 4), partOf("3", 4)];
     const rows = recentRows(newestFirst([older, newer, ...parts]), [{ id: "m1", status: "finished", createdAt: at(12) }], 4);
     expect(rows.map((r) => r.title)).toEqual([newer.title, "Mock exam · B2 · 12.11.26", older.title]);
     expect(rows[1].href).toBe("/practice/mock/m1");

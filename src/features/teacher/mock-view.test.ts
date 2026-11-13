@@ -32,7 +32,10 @@ const four = (over: Partial<Record<TeacherMockPartView["part"], Partial<TeacherM
 describe("T6 header", () => {
   it("estimated level, date and Finished", () => {
     const header = teacherMockHeader(mock(four()));
-    expect(header).toMatchObject({ title: "Mock exam · 10.11.26", statusText: "Finished", estimate: "B2", estimateText: "B2", note: null, ratingText: null });
+    expect(header).toMatchObject({ title: "Mock exam · 10.11.26", statusText: "Finished", estimate: "B1", estimateText: "B1", note: null, ratingText: null });
+    // Four Band 3 marks: raw 12 -> 46 / 75 -> B1 (official table and bands).
+    expect(header.scoreText).toBe("Speaking: 46 / 75");
+    expect(header.teacherText).toBeNull();
     expect(header.line).toBe("Speaking only. An estimate from this mock, not an official UZBMB score.");
   });
 
@@ -44,6 +47,23 @@ describe("T6 header", () => {
     expect(header.estimate).toBeNull();
     expect(header.estimateText).toBe("Estimate not ready yet");
     expect(teacherMockHeader(mock(four(), { status: "in_progress" })).statusText).toBe("In progress");
+  });
+
+  it("shows the teacher's own score and level from their marks, only when every part is rated (Agree keeps the app's band)", () => {
+    const rated = (rating: TeacherMockPartView["rating"]) => ({ rating });
+    // Agree, Agree, Band 4, Band 4: 3 + 3 + 4 + 4 = raw 14 -> 51 / 75 -> B2.
+    const header = teacherMockHeader(mock(four({ "1.1": rated({ agrees: true }), "1.2": rated({ agrees: true }), "2": rated({ agrees: false, band: 4 }), "3": rated({ agrees: false, band: 4 }) })));
+    expect(header.teacherText).toBe("Your marks: B2 · Speaking: 51 / 75");
+    expect(header.scoreText).toBe("Speaking: 46 / 75");
+    // Part 1.1 not rated: no score from the teacher's marks, only the interim level.
+    expect(teacherMockHeader(mock(four({ "1.2": rated({ agrees: true }), "2": rated({ agrees: true }), "3": rated({ agrees: true }) }))).teacherText).toBe("Your marks: B2");
+    expect(teacherMockHeader(mock(four({ "2": rated({ agrees: true }) }))).teacherText).toBeNull();
+  });
+
+  it("falls back to the interim level with no score when Part 1.1 has no band", () => {
+    const header = teacherMockHeader(mock(four({ "1.1": { state: "not_done" as const, band: null, attemptId: null, taskTitle: null } })));
+    expect(header.estimate).toBe("B2");
+    expect(header.scoreText).toBeNull();
   });
 
   it("the teacher's own level for the mock", () => {

@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
 async function noForbiddenWords(page: import("@playwright/test").Page) {
   const text = (await page.locator("main").innerText()).replace(/\s+/g, " ");
   expect(text).not.toMatch(/\bpassed\b|\bfailed\b|certificate/i);
-  expect(text).not.toMatch(/\b\d{1,3}\s?\/\s?(30|75|120)\b/);
+  expect(text).not.toMatch(/\b\d{1,3}\s?\/\s?(30|120)\b/); // the official 0-75 score is allowed on the full mock only
   expect(text).not.toMatch(/\b\d{1,3}\s?points?\b/i);
 }
 
@@ -50,12 +50,14 @@ test("the mock result at 390 px: level, the exact line, a row per part, the bigg
   await expect(page.getByRole("heading", { name: /^Part 2 · / })).toBeVisible({ timeout: 20_000 });
 });
 
-test("two levels side by side: 'CEFRO: B2' and 'Your teacher: B2', next to each other", async ({ page }) => {
+test("two levels side by side: 'CEFRO: B1' and 'Your teacher: B2' with their /75 scores, next to each other", async ({ page }) => {
   await page.goto(`${RESULT}&teacher=1`);
   const ours = page.getByTestId("level-cefro");
   const theirs = page.getByTestId("level-teacher");
-  await expect(ours).toHaveText("CEFRO: B2");
+  await expect(ours).toHaveText("CEFRO: B1"); // demo bands 3+3+3+4 = raw 13 -> 49 / 75 (official table)
   await expect(theirs).toHaveText("Your teacher: B2");
+  await expect(page.getByTestId("level-cefro-score")).toHaveText("Speaking: 49 / 75");
+  await expect(page.getByTestId("level-teacher-score")).toHaveText("Speaking: 51 / 75"); // the demo teacher gives Part 2 one band more
   const [a, b] = [await ours.boundingBox(), await theirs.boundingBox()];
   expect(Math.abs(a!.y - b!.y)).toBeLessThan(8); // the same line
   expect(b!.x).toBeGreaterThan(a!.x + a!.width - 1); // beside, never on top

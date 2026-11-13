@@ -7,7 +7,7 @@ import { FEATURE_LABELS, LEVEL_LABELS, type FeatureLevel } from "@/domain/evalua
 import type { BandedResult, HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { LEVEL_WINDOW, overallLevel, scoredAttempts, skillLevels, type ScoredAttempt, type SkillLevels } from "@/features/dashboard/progress";
 import { formatDate, mockBands, mockRow, toHistoryRows, type HistoryRow } from "@/features/history/view-model";
-import { estimateSpeakingLevel } from "@/domain/speaking/mock-level";
+import { estimateMockSpeaking } from "@/domain/speaking/mock-score";
 import { lastMockText } from "./mock-view";
 import { lessonForResult } from "@/features/lessons/choose";
 import { GOAL_LABEL, goalOutcomeOf, type BandLabel } from "@/features/result/view-model";
@@ -150,7 +150,7 @@ export const PART2_ONLY_NOTE = "Shares Part 2 only";
 export function lastMockOf(student: Pick<SharedStudent, "mocks" | "attempts">): string {
   const mock = student.mocks[0];
   if (!mock) return "—";
-  const estimate = estimateSpeakingLevel(mockBands(student.attempts.filter((a) => a.sessionId === mock.id)));
+  const estimate = estimateMockSpeaking(mockBands(student.attempts.filter((a) => a.sessionId === mock.id)));
   return lastMockText({ status: mock.status, createdAt: mock.createdAt, level: estimate.kind === "ready" ? estimate.level : null });
 }
 

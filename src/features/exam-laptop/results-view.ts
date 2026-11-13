@@ -1,7 +1,8 @@
 import type { ExamPartId } from "@/domain/speaking/exam-part";
 import { EXAM_PART_IDS, examPartLabel } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
-import { estimateSpeakingLevel, type EstimatedLevel } from "@/domain/speaking/mock-level";
+import type { EstimatedLevel } from "@/domain/speaking/mock-level";
+import { estimateMockSpeaking } from "@/domain/speaking/mock-score";
 import { mockBands } from "@/features/history/view-model";
 import { commonProblems, type CommonProblem, type SharedStudent } from "@/features/teacher/view-model";
 
@@ -42,7 +43,7 @@ export function resultRow(student: SharedStudent, classMockId: string, rated: { 
   const parts = student.attempts.filter((a: HistoryAttempt) => a.sessionId === mock.id);
   const bands = mockBands(parts);
   const scored = EXAM_PART_IDS.filter((p) => bands[p] != null).length;
-  const estimate = estimateSpeakingLevel(bands);
+  const estimate = estimateMockSpeaking(bands);
   const level = mock.status === "finished" && estimate.kind === "ready" ? estimate.level : null;
   const levelText = mock.status === "in_progress" ? "In progress" : mock.status === "not_finished" ? "Not finished" : level ?? "Estimate not ready yet";
   return {

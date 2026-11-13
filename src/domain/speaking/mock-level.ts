@@ -1,15 +1,11 @@
 import type { ExamPartId } from "./exam-part";
 
 /*
- * The estimated speaking level of a full mock (docs/official-scale.md, section 5; docs/v1-plan.md, step 4).
+ * THE INTERIM LEVEL RULE, NOW A FALLBACK ONLY (docs/official-scale.md, section 5 and the 2026-11-13 update).
  *
- * THE ONE PLACE THE RULE LIVES. It is ours, not UZBMB's. What is official (docs/official-scale.md, section 1.4): every skill is
- * on a 0-75 scale; our four part bands ARE UZBMB's four speaking marks (Q1-3 0-5, Q4-6 0-5, Q7 0-5, Q8 0-6, raw maximum 21);
- * and the level comes from the 0-75 score (C1 65-75, B2 51-64, B1 38-50, below B1 0-37). The ONLY thing still missing is
- * UZBMB's conversion of the raw 0-21 speaking total to the 0-75 speaking score ("rating scale for multilevel speaking"), so we
- * cannot yet go sum -> score -> level, and we show no score. Until that conversion is read, this plain rule over the part bands
- * stands in. When it is read, replace `estimateSpeakingLevel` (and its test) and nothing else: the mock result page, History and
- * the API only call this function.
+ * A complete mock no longer uses this: `estimateMockSpeaking` (mock-score.ts) sums the four part bands, converts with UZBMB's
+ * official table (speaking-score-table.ts) and levels by UZBMB's bands on the 0-75 score. This rule stays only where no score can be
+ * computed (Part 1.1 has no band, or the sum is not a valid raw total): it gives a LEVEL, never a /75 number. It is ours, not UZBMB's.
  *
  * Pure: no database, no clock, no model. Browser-safe.
  */

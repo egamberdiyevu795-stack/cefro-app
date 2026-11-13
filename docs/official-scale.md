@@ -292,6 +292,46 @@ read.
 
 ---
 
+## Update 2026-11-13: the raw 0–21 → 0–75 speaking table is in, and the interim rule is replaced
+
+The conversion that was "still missing" (section 1.4, "Still missing"; section 5, step 2; section 6) is now known.
+
+- **Source:** UZBMB, "Ko‘p darajali format gapirish ko‘nikmasini baholash reyting shkalasi" (rating scale for multilevel speaking),
+  <https://uzbmb.uz/upload/file/pdf/phone/reyting_shkala.pdf>, listed on <https://gov.uz/oz/uzbmb/sections/view/49531>.
+  Supplied by the project owner as text and checked 2026-11-13. In code: `src/domain/speaking/speaking-score-table.ts` (the only place
+  the values live, with this source), `rawToSpeaking75` in `speaking-score.ts`.
+- **Raw = the sum of the four marks** (Q1–3 + Q4–6 + Q7 + Q8 = our Part 1.1 + 1.2 + 2 + 3 bands), maximum 21.
+- **Half-point steps.** Raw goes in 0.5 steps, so the table has **43 rows**, not 22. Our own sums are whole numbers (a band is an
+  integer); the half points stay because the official table has them. `rawToSpeaking75` accepts 0 to 21 in 0.5 steps and returns null
+  for anything else (it never rounds or interpolates).
+
+| raw | 0–75 | raw | 0–75 | raw | 0–75 | raw | 0–75 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | 0 | 5.5 | 27 | 11 | 43 | 16.5 | 59 |
+| 0.5 | 10 | 6 | 29 | 11.5 | 45 | 17 | 61 |
+| 1 | 11 | 6.5 | 30 | 12 | 46 | 17.5 | 63 |
+| 1.5 | 13 | 7 | 32 | 12.5 | 47 | 18 | 64 |
+| 2 | 15 | 7.5 | 33 | 13 | 49 | 18.5 | 65 |
+| 2.5 | 17 | 8 | 35 | 13.5 | 50 | 19 | 67 |
+| 3 | 19 | 8.5 | 37 | 14 | 51 | 19.5 | 69 |
+| 3.5 | 21 | 9 | 38 | 14.5 | 52 | 20 | 71 |
+| 4 | 23 | 9.5 | 39 | 15 | 54 | 20.5 | 73 |
+| 4.5 | 24 | 10 | 40 | 15.5 | 56 | 21 | 75 |
+| 5 | 26 | 10.5 | 42 | 16 | 57 | | |
+
+- **Level** comes from the 0–75 score by the official bands (C1 65–75, B2 51–64, B1 38–50, below B1 0–37).
+- **Where it shows:** the full mock result ("Speaking: 49 / 75" under the level, only when all four parts have a band) and the teacher's
+  mock view (the app's score, and "Your marks" from the teacher's own part marks when every part is rated). **Never** on a single part's
+  result, History or the dashboard (those show the level only). The line "Speaking only. An estimate from this mock, not an official
+  UZBMB score." stays: the marks are our AI's, not an examiner's.
+- **The interim rule (section 5) is replaced** for complete mocks (`estimateMockSpeaking` in `mock-score.ts`). `estimateSpeakingLevel`
+  stays only as a fallback where no score can be computed (Part 1.1 has no band): it gives a level, never a /75 number.
+- **Effect to know:** the official bands are stricter than the interim rule. Band 3 on Parts 1.1, 1.2 and 2 and band 4 on Part 3
+  (raw 13) is **49 / 75, B1** (the interim rule said B2). B2 starts at raw 14.
+- **Still not official:** the certificate level averages four skills; this is speaking only.
+
+---
+
 ## 6. Decision needed
 
 **Q (for Asadbek):** send the uzbmb.uz document "Ko‘p darajali format gapirish ko‘nikmasini baholash reyting

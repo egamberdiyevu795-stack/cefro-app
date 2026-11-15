@@ -9,8 +9,13 @@
 # `push` trigger, because deploy.yml runs this workflow for main.
 #
 # Actions-minutes budget: feature branches are validated by their pull_request run (a branch push without a PR runs
-# nothing; use "Run workflow" if needed), docs-only changes are skipped, and everything runs in ONE job so checkout +
-# npm ci happen once. A commit message containing [skip ci] skips the run (GitHub built-in).
+# nothing; use "Run workflow" if needed), docs-only changes are skipped. A commit message containing [skip ci] skips the
+# run (GitHub built-in).
+#
+# Four jobs in parallel (2026-11-15): the merged chain no longer fit in one job. A single job ran ~12 min of unit tests
+# and ~28 min of browser tests and its runner was shut down at ~40 min, twice (PR #9). Now: checks (lint, typecheck,
+# unit, build), the main browser tests in two shards, and the two extra browser suites. A caller that `needs` this
+# workflow waits for every job, so the pipeline still deploys only when all of them pass.
 name: CI
 
 on:
@@ -30,9 +35,9 @@ permissions:
 
 jobs:
   validate:
-    name: Lint, typecheck, test, build, browser tests
+    name: Lint, typecheck, unit tests, build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,23 +46,64 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # ffmpeg-static downloads its binary from GitHub releases during install, and those downloads sometimes fail
+      # with a 504 for a few minutes. Try again with a pause rather than failing the whole run on a download.
+      - name: npm ci (retried on a failed download)
+        run: |
+          for attempt in 1 2 3 4; do
+            npm ci && exit 0
+            echo "npm ci failed (attempt $attempt); retrying in $((attempt * 20)) s"
+            sleep $((attempt * 20))
+          done
+          exit 1
+      # The speech activity guard decodes audio with ffmpeg; its tests must run, not be skipped.
+      - name: Install ffmpeg (needed by the speech activity guard tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       # Migrations reach the production database before the new code is deployed, so they must be backward compatible
       # and applied migrations must never be edited. No database access, no secrets.
       - name: Migration safety (journal, immutability of applied migrations, backward compatibility)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node scripts/ci/check-migrations.mjs --base "$BASE_SHA"
-      # The speech activity guard decodes audio with ffmpeg; its tests must run, not be skipped.
-      - name: Install ffmpeg (needed by the speech activity guard tests)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: npm run lint
       - run: npm run typecheck
       - name: Unit and integration tests (includes the migration tests)
         run: npm test
         env:
           REQUIRE_FFMPEG: "1"
-      # Browser tests (mock providers) run against `next dev`, before the production build touches .next.
+      - name: Build
+        run: npm run build
+
+  browser:
+    name: Browser tests (shard ${{ matrix.shard }} of 2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the migration check compares with the commit before this change
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # ffmpeg-static downloads its binary from GitHub releases during install, and those downloads sometimes fail
+      # with a 504 for a few minutes. Try again with a pause rather than failing the whole run on a download.
+      - name: npm ci (retried on a failed download)
+        run: |
+          for attempt in 1 2 3 4; do
+            npm ci && exit 0
+            echo "npm ci failed (attempt $attempt); retrying in $((attempt * 20)) s"
+            sleep $((attempt * 20))
+          done
+          exit 1
+      # The speech activity guard decodes audio with ffmpeg; its tests must run, not be skipped.
+      - name: Install ffmpeg (needed by the speech activity guard tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      # Browser tests (mock providers) run against `next dev`.
       - name: Cache the Playwright browser
         id: pw-cache
         uses: actions/cache@v4
@@ -71,14 +117,67 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - name: Browser tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/2
       - name: Keep the Playwright traces of a failed run
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-traces
+          name: playwright-traces-${{ github.job }}-${{ strategy.job-index }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
-      - name: Build
-        run: npm run build
+
+  browser-extra:
+    name: Browser tests, real Part 3 flow and exam laptop
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the migration check compares with the commit before this change
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # ffmpeg-static downloads its binary from GitHub releases during install, and those downloads sometimes fail
+      # with a 504 for a few minutes. Try again with a pause rather than failing the whole run on a download.
+      - name: npm ci (retried on a failed download)
+        run: |
+          for attempt in 1 2 3 4; do
+            npm ci && exit 0
+            echo "npm ci failed (attempt $attempt); retrying in $((attempt * 20)) s"
+            sleep $((attempt * 20))
+          done
+          exit 1
+      # The speech activity guard decodes audio with ffmpeg; its tests must run, not be skipped.
+      - name: Install ffmpeg (needed by the speech activity guard tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      # Browser tests (mock providers) run against `next dev`.
+      - name: Cache the Playwright browser
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium system dependencies (browser restored from cache)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      # The real Part 3 flow needs PART_LIVE["3"] on, which only a test server can do (CEFRO_TEST_PART3_LIVE, ignored in
+      # production builds and on Vercel): two short runs on their own servers, mock providers only.
+      - name: Browser tests, real Part 3 flow
+        run: npm run test:e2e:part3
+      # Exam laptop mode with a real database and two browsers needs TEACHER_LIVE and the full mock on, which only a test server
+      # can do (CEFRO_TEST_TEACHER_LIVE / CEFRO_TEST_FULL_MOCK_LIVE, ignored in production builds and on Vercel).
+      - name: Browser tests, exam laptop (two laptops, real database)
+        run: npm run test:e2e:exam-laptop
+      - name: Keep the Playwright traces of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ github.job }}-${{ strategy.job-index }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

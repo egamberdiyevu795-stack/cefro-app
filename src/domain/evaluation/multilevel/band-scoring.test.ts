@@ -22,7 +22,7 @@ function input(
 
 describe("multilevel_q7.json", () => {
   it("is a valid rubric config with the official band labels", () => {
-    expect(config.version).toBe("multilevel-q7/2.0.0");
+    expect(config.version).toBe("multilevel-q7/2.1.0");
     expect(config.meets_target_band).toBe(3);
     expect(Object.fromEntries(config.bands.map((b) => [b.band, b.label]))).toEqual({
       5: "Above B2",
@@ -148,5 +148,62 @@ describe("biggest_fix", () => {
       config,
     );
     expect(score.biggest_fix).toEqual({ kind: "feature", feature: "grammar" });
+  });
+});
+
+describe("decision rules (band 5 gate, minimal, too short, fluency fix)", () => {
+  const features = (f: Partial<BandScoringInput["features"]>): BandScoringInput["features"] => ({
+    grammar: "above_B2",
+    vocabulary: "above_B2",
+    fluency: "above_B2",
+    cohesion: "above_B2",
+    pronunciation: "not_assessed",
+    ...f,
+  });
+  const allOnTopic = [1, 2, 3].map((id) => ({ id, status: "on_topic" as const }));
+
+  it("band 5 needs all three questions on topic AND grammar and vocabulary above B2", () => {
+    expect(scoreBand({ questions: allOnTopic, features: features({}), memorizedOrIrrelevant: false }, config).band).toBe(5);
+  });
+
+  it.each([
+    ["grammar only B2", { grammar: "B2" }],
+    ["vocabulary only B2", { vocabulary: "B2" }],
+  ] as const)("above-B2 language with %s is capped at 4", (_label, f) => {
+    // Mean of above_B2 ×3 + B2 still rounds to above_B2, so only the gate stops band 5.
+    const score = scoreBand({ questions: allOnTopic, features: features(f), memorizedOrIrrelevant: false }, config);
+    expect(score).toMatchObject({ language_level: "above_B2", topic_cap: 4, band: 4 });
+  });
+
+  it("'minimal' does not count as on topic (unlike 'partial')", () => {
+    const score = scoreBand(input("B2", 0, { statuses: ["on_topic", "minimal", "on_topic"] }), config);
+    expect(score).toMatchObject({ on_topic_count: 2, band: 3, biggest_fix: { kind: "question_coverage", question_id: 2 } });
+    expect(scoreBand(input("B2", 0, { statuses: ["minimal", "minimal", "minimal"] }), config)).toMatchObject({ band: 0, zero_reason: "no_question_on_topic" });
+  });
+
+  it("an answer under 30 words is not a ratable sample: band 0", () => {
+    const short = { ...input("B1", 3), wordCount: 29 };
+    expect(scoreBand(short, config)).toMatchObject({ band: 0, zero_reason: "too_short" });
+    expect(scoreBand({ ...input("B1", 3), wordCount: 30 }, config)).toMatchObject({ band: 2, zero_reason: null });
+    // Without a word count the check is skipped (stored results, unit callers).
+    expect(scoreBand(input("B1", 3), config).band).toBe(2);
+  });
+
+  it("when fluency is strictly the lowest feature it is the biggest fix, even when coverage also limits the band", () => {
+    const hesitant = {
+      questions: [
+        { id: 1, status: "on_topic" as const },
+        { id: 2, status: "partial" as const },
+        { id: 3, status: "on_topic" as const },
+      ],
+      features: features({ grammar: "B1", vocabulary: "B1", cohesion: "B1", fluency: "below_B1" }),
+      memorizedOrIrrelevant: false,
+    };
+    expect(scoreBand(hesitant, config)).toMatchObject({ band: 2, biggest_fix: { kind: "feature", feature: "fluency" } });
+    const coverageToo = { ...hesitant, questions: [...hesitant.questions.slice(0, 2), { id: 3, status: "missing" as const }] };
+    expect(scoreBand(coverageToo, config).biggest_fix).toEqual({ kind: "feature", feature: "fluency" });
+    // Tied lowest: the normal rules apply (fix priority puts grammar first).
+    const tied = { ...hesitant, features: features({ grammar: "B1", vocabulary: "B1", cohesion: "B1", fluency: "B1" }) };
+    expect(scoreBand(tied, config).biggest_fix).toEqual({ kind: "feature", feature: "grammar" });
   });
 });

@@ -1,8 +1,10 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { q8ProviderOutputSchema } from "@/domain/evaluation/q8/model-output";
 import { ProviderError } from "@/server/errors";
+import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
 
 export type AnthropicEffort = "low" | "medium" | "high" | "xhigh" | "max";
@@ -28,7 +30,7 @@ export interface AnthropicEvaluationOptions {
  * schema. Constraints such as enums and ranges are only hints to the API, so
  * the evaluation service re-validates everything before it is stored.
  */
-export class AnthropicEvaluationModel implements EvaluationModel {
+export class AnthropicEvaluationModel implements EvaluationModel, ArgumentEvaluationModel {
   readonly provider = "anthropic";
   readonly isDevelopmentProvider = false;
   readonly config: Record<string, string | number | boolean>;
@@ -53,8 +55,10 @@ export class AnthropicEvaluationModel implements EvaluationModel {
     return this.options.model;
   }
 
-  async evaluate(prompt: EvaluationPrompt, _input: EvaluationInput): Promise<ModelEvaluationOutput> {
-    void _input; // transcript-only: the prompt already contains everything needed (audio has its own step).
+  async evaluate(prompt: EvaluationPrompt, input: EvaluationInput | ArgumentEvaluationInput): Promise<ModelEvaluationOutput> {
+    // Part 3 (official Question 8) has its own output shape; every other rubric is Part 2's shape on its own ladder.
+    const schema =
+      input?.rubric?.id === "multilevel-q8" ? q8ProviderOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config);
     let response;
     try {
       response = await this.client.beta.messages.parse({
@@ -67,7 +71,7 @@ export class AnthropicEvaluationModel implements EvaluationModel {
         thinking: { type: "adaptive" },
         output_config: {
           effort: this.options.effort,
-          format: betaZodOutputFormat(multilevelModelOutputSchema),
+          format: betaZodOutputFormat(schema),
         },
         system: prompt.system,
         messages: [{ role: "user", content: prompt.user }],

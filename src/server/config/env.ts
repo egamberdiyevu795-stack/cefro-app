@@ -93,6 +93,12 @@ const envSchema = z.object({
    */
   GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).default("high"),
   /**
+   * Sampling temperature for the Gemini evaluator. 0 (the lowest the API accepts) by default, so the same transcript
+   * gives the same judgements as often as possible. Google suggests 1.0 for Gemini 3 thinking models (lower values can
+   * cause repetition); raise it if live runs show looping or truncated output.
+   */
+  GEMINI_TEMPERATURE: z.coerce.number().min(0).max(2).default(0),
+  /**
    * "schema": send the JSON schema to the API (constrained decoding) and in the prompt.
    * "json": only request JSON and describe the shape in the prompt. Escape hatch if the API
    * rejects the schema. Our own validation applies in both modes.
@@ -125,11 +131,52 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(32).optional(),
   /** Public origin of the app (e.g. https://app.example.com). Used for the auth origin check; inferred from the request when unset. */
   APP_URL: z.string().url().optional(),
-  /** Login/registration abuse limits (in-memory, per process; see docs/ARCHITECTURE_DECISIONS.md). */
-  LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN: z.coerce.number().int().positive().default(8),
-  LIMIT_LOGIN_FAILURES_PER_IP_15MIN: z.coerce.number().int().positive().default(30),
-  LIMIT_REGISTRATIONS_PER_IP_HOUR: z.coerce.number().int().positive().default(10),
-  LIMIT_REGISTRATIONS_GLOBAL_HOUR: z.coerce.number().int().positive().default(100),
+  /**
+   * Login/registration abuse limits (in-memory, per process; see docs/ARCHITECTURE_DECISIONS.md and
+   * server/auth/auth-limits.ts). A classroom shares one address (school Wi-Fi, a mobile network), so the per-IP limits
+   * let a whole class sign up and sign in together, while the per-account limit keeps guessing one person's password
+   * slow wherever the guesses come from without letting a classmate lock someone out everywhere.
+   */
+  /** Wrong passwords per account and client IP (sign-in, Change password, Delete my account share it). */
+  LIMIT_LOGIN_FAILURES_PER_EMAIL_IP_15MIN: z.coerce.number().int().positive().default(5),
+  /** Wrong passwords per account in total, from any IP. */
+  LIMIT_LOGIN_FAILURES_PER_EMAIL_15MIN: z.coerce.number().int().positive().default(20),
+  LIMIT_LOGIN_FAILURES_PER_IP_15MIN: z.coerce.number().int().positive().default(100),
+  LIMIT_REGISTRATIONS_PER_IP_HOUR: z.coerce.number().int().positive().default(30),
+  LIMIT_REGISTRATIONS_GLOBAL_HOUR: z.coerce.number().int().positive().default(300),
+
+  /**
+   * Pilot consent (docs/consent-design.md, "Pilot route"; docs/launch-checklist.md). "true": only accounts whose consent
+   * the owner recorded (scripts/set-consent.mjs) may record or be scored, and teacher sharing also needs the
+   * teacher-sharing flag; guests never record. "false" (the default, also in tests and always in mock mode): no lock.
+   * Set it to "true" in Vercel Production before inviting pilot testers.
+   */
+  CONSENT_REQUIRED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  /**
+   * Shared secret for the daily audio-retention job (GET /api/cron/audio-retention). Vercel Cron sends it as
+   * "Authorization: Bearer <CRON_SECRET>". Unset: the job refuses every call (also when it is shorter than 16 characters).
+   */
+  CRON_SECRET: z.string().optional(),
+
+  /**
+   * Email (only the "Forgot password" link today): server/email/email.ts and docs/password-reset.md. "auto" = SMTP
+   * when SMTP_HOST, SMTP_USER and SMTP_PASSWORD are set, otherwise the log in development and nothing in production
+   * (then "Forgot password?" is not shown).
+   */
+  EMAIL_PROVIDER: z.enum(["auto", "smtp", "log", "off"]).default("auto"),
+  SMTP_HOST: z.string().min(1).optional(),
+  /** 465 = TLS from the start (Gmail, Resend); 587 = STARTTLS. */
+  SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(465),
+  SMTP_USER: z.string().min(1).optional(),
+  /** Secret. For Gmail: an app password (Google account → Security → 2-Step Verification → App passwords). */
+  SMTP_PASSWORD: z.string().min(1).optional(),
+  /** Sender shown to students, e.g. `CEFRO <cefro.app@gmail.com>`. Default: `CEFRO <SMTP_USER>`. */
+  EMAIL_FROM: z.string().min(3).optional(),
+  /** Development and tests only: the "log" sender also appends each message to this file (one JSON line each). */
+  EMAIL_OUTBOX_FILE: z.string().min(1).optional(),
 
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),

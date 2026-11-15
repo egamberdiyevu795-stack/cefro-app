@@ -18,3 +18,10 @@ export const SESSION_COOKIE_NAMES = [`${AUTH_COOKIE_PREFIX}.session_token`, `__S
 export function hasSessionCookie(cookies: { get(name: string): unknown }): boolean {
   return SESSION_COOKIE_NAMES.some((name) => Boolean(cookies.get(name)));
 }
+
+/**
+ * Exam laptop device session (docs/v1-plan.md section 6, docs/teacher-plan.md section 11): the cookie that REPLACES the teacher's
+ * login session on a shared exam laptop. Shared with the proxy, which only needs to know whether it is PRESENT (a browser that
+ * carries it may reach nothing but the exam laptop's own screen and routes); the server verifies its signature and what it allows.
+ */
+export const EXAM_DEVICE_COOKIE = "cefro_exam_device";

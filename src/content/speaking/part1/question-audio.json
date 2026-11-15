@@ -1,0 +1,172 @@
+{
+  "voice": {
+    "engine": "Piper text-to-speech (https://github.com/rhasspy/piper, MIT licence)",
+    "model": "en-us-libritts-high (Piper voice release v0.0.2: voice-en-us-libritts-high.tar.gz)",
+    "modelLicence": "Trained on LibriTTS (Zen et al., 2019, http://www.openslr.org/60/), CC BY 4.0",
+    "speaker": "6426",
+    "speakerIndex": 80,
+    "lengthScale": 1,
+    "noiseScale": 0.667,
+    "noiseW": 0.8,
+    "sentenceSilence": 0.3,
+    "tempo": 1.0
+  },
+  "files": [
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/intro.wav",
+      "text": "Part 1.1. In this part, you will hear three short questions about yourself and your daily life. After each question, you have five seconds to get ready, and then thirty seconds to answer. Start speaking when you hear this sound."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/q1.wav",
+      "text": "What do you usually do at the weekend?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/q2.wav",
+      "text": "What is your favourite food? Why?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-daily-life/v1/q3.wav",
+      "text": "Who do you spend the most time with in your family?"
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v2/intro.wav",
+      "text": "Part 1.2. Now you will look at two pictures and answer three questions about them. Start speaking when you hear this sound."
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v2/q4.wav",
+      "text": "What can you see in these pictures?"
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v2/q5.wav",
+      "text": "Why do many people like shopping at local markets?"
+    },
+    {
+      "path": "/audio/speaking/part1/b1-part1-2-shopping/v2/q6.wav",
+      "text": "Why do some people prefer big supermarkets?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/intro.wav",
+      "text": "Part 1.1. In this part, you will hear three short questions about yourself and your daily life. After each question, you have five seconds to get ready, and then thirty seconds to answer. Start speaking when you hear this sound."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q01.wav",
+      "text": "Do you live in a house or a flat?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q02.wav",
+      "text": "Can you describe your house or your home?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q03.wav",
+      "text": "Can you describe your room?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q04.wav",
+      "text": "Tell me about your hometown."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q05.wav",
+      "text": "What do you do in your free time?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q06.wav",
+      "text": "What do you usually do at the weekends?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q07.wav",
+      "text": "What do you do in the evenings?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q08.wav",
+      "text": "Tell me about your first teacher."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q09.wav",
+      "text": "What is your favourite food or meal?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q10.wav",
+      "text": "What do you usually eat for breakfast?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q11.wav",
+      "text": "Do you have any pets?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q12.wav",
+      "text": "What do you do to stay healthy?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q13.wav",
+      "text": "Do you do any sports or exercise?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q14.wav",
+      "text": "Tell me about your close or best friend."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q15.wav",
+      "text": "Tell me about your school."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q16.wav",
+      "text": "What is your favourite room in your house?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q17.wav",
+      "text": "How often do you use the internet?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q18.wav",
+      "text": "Do you have a mobile phone?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q19.wav",
+      "text": "What is your favourite season?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q20.wav",
+      "text": "Tell me about your neighbourhood."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q21.wav",
+      "text": "What is your favourite singer or type of music?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q22.wav",
+      "text": "Who is your favourite sports person?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q23.wav",
+      "text": "How do you spend time with your family?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q24.wav",
+      "text": "What is your favourite drink?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q25.wav",
+      "text": "What do you like about your hometown?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q26.wav",
+      "text": "Do you like cooking?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q27.wav",
+      "text": "How often do you watch TV?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q28.wav",
+      "text": "What time do you usually get up or go to bed?"
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q29.wav",
+      "text": "Tell me about your typical weekday or typical day."
+    },
+    {
+      "path": "/audio/speaking/part1/a2-part1-1-bank/v1/q30.wav",
+      "text": "Do you like outdoor activities?"
+    }
+  ]
+}

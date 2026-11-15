@@ -22,6 +22,34 @@ export function evidenceTokens(text: string): string[] {
   ).filter((token) => !FILLERS.has(token));
 }
 
+/**
+ * The same tokens as `evidenceTokens`, with where each one starts and ends in `text` (character offsets), so a quote
+ * found by tokens can be marked in the original transcript. Only the case and apostrophe variants are folded, one
+ * character for one character, so the offsets stay valid.
+ */
+export function evidenceTokenSpans(text: string): { token: string; start: number; end: number }[] {
+  const folded = text.replace(/[‘’ʼ`]/g, "'").toLowerCase();
+  const spans: { token: string; start: number; end: number }[] = [];
+  for (const match of folded.matchAll(/[a-z0-9]+(?:'[a-z0-9]+)*/g)) {
+    if (!FILLERS.has(match[0])) spans.push({ token: match[0], start: match.index, end: match.index + match[0].length });
+  }
+  return spans;
+}
+
+/**
+ * Where the first word-for-word run of `quote` sits in `transcript` (character range, from its first word to its last,
+ * hesitation sounds inside included), or null when it is not there. Same strict matching as `isQuoteInTranscript`.
+ */
+export function locateQuote(quote: string, transcript: string): { start: number; end: number } | null {
+  const words = evidenceTokens(quote);
+  if (words.length === 0) return null;
+  const spans = evidenceTokenSpans(transcript);
+  for (let from = 0; from + words.length <= spans.length; from++) {
+    if (words.every((word, i) => spans[from + i].token === word)) return { start: spans[from].start, end: spans[from + words.length - 1].end };
+  }
+  return null;
+}
+
 /** Split a quote on ellipses into the parts that must each be found. */
 function quoteSegments(quote: string): string[][] {
   return quote

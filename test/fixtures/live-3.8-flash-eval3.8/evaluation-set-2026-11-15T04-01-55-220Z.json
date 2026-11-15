@@ -1,0 +1,4261 @@
+[
+  {
+    "id": "A0-below-b1",
+    "kind": "anchor",
+    "expected": "band 0 · language below_B1 · Q1=on_topic, Q2=on_topic, Q3=on_topic",
+    "bands": [
+      0,
+      0,
+      0
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You stated that your father gave you advice when you were sixteen and wanted to leave school.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him.",
+              "note": "You explained what your father told you and confirmed that you followed his advice.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion that young people should listen to older people, adding that older people are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I am 16 year",
+                "My father say no",
+                "old people is not right"
+              ],
+              "note": "You used present tense verbs throughout a past story and made basic agreement mistakes.",
+              "how_to_improve": "Use the past simple tense for completed actions when telling a story, for example: 'Last year I traveled to Samarkand by train.'",
+              "how_to_check": "Check that every verb describing an action in your past story is in the past simple form."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "16 year",
+                "work in market",
+                "I listen him",
+                "many thing"
+              ],
+              "note": "Your vocabulary is very basic, with noticeable mistakes in set phrases, prepositions, and noun endings.",
+              "how_to_improve": "Learn verbs together with their dependent prepositions, for example: 'I always listen to podcasts about science.'",
+              "how_to_check": "Check that verbs requiring a preposition, such as 'listen to', include that preposition before the object."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice...",
+                "He is angry little.",
+                "Is good.",
+                "That's all."
+              ],
+              "note": "You spoke for 60 of the 120 seconds in very short, isolated sentences and finished early.",
+              "how_to_improve": "Plan two full sentences for each question during your preparation time so you have more to say.",
+              "how_to_check": "Check that your timer shows you spoke for at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know",
+                "But sometimes old people",
+                "Now I am",
+                "That's all."
+              ],
+              "note": "You linked several ideas using simple connectors like 'because' and 'but'.",
+              "how_to_improve": "Use a contrasting linker to connect two different ideas, for example: 'I enjoy swimming; however, my brother prefers football.'",
+              "how_to_check": "Check that your response contains at least one contrasting word such as 'however' or 'although' connecting two ideas."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Past tense for past events"
+            },
+            {
+              "quote": "I am 16 year",
+              "correction": "I was 16 years old",
+              "type": "grammar",
+              "pattern": "Past tense for past events"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to stop school",
+              "type": "grammar",
+              "pattern": "Missing 'to' after verbs"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "My father say no",
+              "correction": "My father said no",
+              "type": "grammar",
+              "pattern": "Past tense for past events"
+            },
+            {
+              "quote": "Now I am study in university",
+              "correction": "Now I am studying at university",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "old people know many thing",
+              "correction": "older people know many things",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "old people is not right",
+              "correction": "older people are not right",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Past tense for past events",
+              "type": "grammar",
+              "rule": "Use past simple verbs when talking about finished events in the past, for example: 'Yesterday I played football with my friends.'",
+              "how_to_fix": "Before you begin your story, remind yourself to change every main verb into the past tense."
+            },
+            {
+              "name": "Missing 'to' after verbs",
+              "type": "grammar",
+              "rule": "Use 'to' before the next verb after 'want', for example: 'I want to learn English.'",
+              "how_to_fix": "Whenever you use the verb 'want' before an action, say 'to' immediately after it."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "my father give me advice.",
+              "better": "my father gave me advice.",
+              "why": "Use the past simple form 'gave' for an action that happened in the past."
+            },
+            {
+              "you_said": "I want stop school,",
+              "better": "I wanted to stop school,",
+              "why": "Put 'to' between the verb 'want' and the following verb."
+            },
+            {
+              "you_said": "My father say no,",
+              "better": "My father said no,",
+              "why": "Use the past simple form 'said' for words spoken in the past."
+            },
+            {
+              "you_said": "I listen him.",
+              "better": "I listened to him.",
+              "why": "Use the preposition 'to' after the verb 'listen'."
+            },
+            {
+              "you_said": "Now I am study in university.",
+              "better": "Now I am studying in university.",
+              "why": "Use the -ing form after 'am' for an ongoing activity."
+            },
+            {
+              "you_said": "old people know many thing.",
+              "better": "old people know many things.",
+              "why": "Use the plural noun 'things' after the word 'many'."
+            },
+            {
+              "you_said": "old people is not right also.",
+              "better": "old people are not right also.",
+              "why": "Use 'are' because 'people' is a plural noun."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use the past simple tense for completed actions when telling a story, for example: 'Last year I traveled to Samarkand by train.'",
+            "success_check": "Check that every verb describing an action in your past story is in the past simple form.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Learn verbs together with their dependent prepositions, for example: 'I always listen to podcasts about science.'",
+            "success_check": "Check that verbs requiring a preposition, such as 'listen to', include that preposition before the object.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You explained that your father gave you advice when you were 16 and wanted to leave school to work.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him. Now I am study in university.",
+              "note": "You explained that your father told you to study, and that you followed his advice and went to university.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion that young people should listen to older people, while noting that older people are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I want stop school",
+                "Now I am study in university",
+                "old people is not right"
+              ],
+              "note": "You made basic grammatical mistakes with past tense verbs and subject-verb agreement throughout your response.",
+              "how_to_improve": "Use past simple verb forms to describe events that finished in the past, for example saying 'Last weekend I visited my grandparents and we cooked dinner together'.",
+              "how_to_check": "Check that all verbs describing finished past actions have an -ed ending or use their irregular past form."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "16 year",
+                "work in market",
+                "angry little",
+                "old people"
+              ],
+              "note": "Your vocabulary was sufficient to communicate your ideas, but basic word choices and missing words were noticeable.",
+              "how_to_improve": "Use comparative adjectives rather than absolute adjectives when describing age groups, for example talking about 'younger students' or 'older drivers'.",
+              "how_to_check": "Check that you use comparative words like 'older' or 'younger' when referring to groups of people by age."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice...",
+                "That's all."
+              ],
+              "note": "You spoke for 60 of the 120 seconds in very short sentences and stopped halfway through the available time.",
+              "how_to_improve": "Plan one specific reason and one short example for each question during your preparation time.",
+              "how_to_check": "Check the timer to ensure you speak for at least 90 of the 120 seconds before finishing."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know",
+                "But sometimes old people",
+                "is not right also"
+              ],
+              "note": "You linked your sentences using simple connecting words such as 'because', 'But', and 'also'.",
+              "how_to_improve": "Use a transition word to show contrast between two full sentences, for example saying 'I enjoy swimming. However, the pool is closed on Sundays'.",
+              "how_to_check": "Check that your response contains at least one linking word like 'however' connecting two separate ideas."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to stop school",
+              "type": "grammar",
+              "pattern": "Verb pattern: want to + verb"
+            },
+            {
+              "quote": "I want work in market",
+              "correction": "I wanted to work in the market",
+              "type": "grammar",
+              "pattern": "Verb pattern: want to + verb"
+            },
+            {
+              "quote": "My father say no",
+              "correction": "My father said no",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "old people is not right",
+              "correction": "old people are not right",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with plural nouns"
+            },
+            {
+              "quote": "old people",
+              "correction": "older people",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "16 year",
+              "correction": "16 years old",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Past simple for past events",
+              "type": "grammar",
+              "rule": "Use past simple verb forms to describe completed actions in the past, for example 'I walked to school yesterday'.",
+              "how_to_fix": "Check every verb when telling a past story and change present forms into past forms."
+            },
+            {
+              "name": "Verb pattern: want to + verb",
+              "type": "grammar",
+              "rule": "Use 'to' before the infinitive verb after 'want', for example 'I want to play tennis'.",
+              "how_to_fix": "Always say 'to' immediately after the verb 'want' before mentioning the next action."
+            },
+            {
+              "name": "Subject-verb agreement with plural nouns",
+              "type": "grammar",
+              "rule": "Match plural nouns with plural verb forms, for example 'my friends are happy'.",
+              "how_to_fix": "Identify plural nouns like 'people' and use plural verbs such as 'are' or 'were'."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "my father give me advice",
+              "better": "my father gave me advice",
+              "why": "Use the past simple tense for completed past events."
+            },
+            {
+              "you_said": "I want stop school",
+              "better": "I want to stop school",
+              "why": "Use 'to' between 'want' and another verb."
+            },
+            {
+              "you_said": "My father say no",
+              "better": "My father said no",
+              "why": "Use the past simple tense for finished past actions."
+            },
+            {
+              "you_said": "Now I am study in university",
+              "better": "Now I am studying in university",
+              "why": "Use the -ing form of the verb after 'am' in present continuous."
+            },
+            {
+              "you_said": "Is good",
+              "better": "It is good",
+              "why": "Sentences in English require a subject pronoun like 'it'."
+            },
+            {
+              "you_said": "old people know many thing",
+              "better": "old people know many things",
+              "why": "Use the plural form of a countable noun after 'many'."
+            },
+            {
+              "you_said": "old people is not right also",
+              "better": "old people are not right also",
+              "why": "Use the plural verb 'are' with the plural noun 'people'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use past simple verb forms to describe events that finished in the past, for example saying 'Last weekend I visited my grandparents and we cooked dinner together'.",
+            "success_check": "Check that all verbs describing finished past actions have an -ed ending or use their irregular past form.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use comparative adjectives rather than absolute adjectives when describing age groups, for example talking about 'younger students' or 'older drivers'.",
+            "success_check": "Check that you use comparative words like 'older' or 'younger' when referring to groups of people by age.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You described who gave you the advice and what situation you were facing at the age of 16.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him. Now I am study in university.",
+              "note": "You stated the advice your father gave and explained that you followed it and now study at university.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion on why young people should listen to older people and added a contrasting point.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I want stop school",
+                "Now I am study in university",
+                "old people is not right"
+              ],
+              "note": "Basic grammatical mistakes occur systematically in past tense forms, infinitives, and subject-verb agreement.",
+              "how_to_improve": "Use the past simple tense for completed actions when you narrate a story about the past (for example, 'Last summer I travelled to Samarkand and played football').",
+              "how_to_check": "Underline every verb in your past story and confirm that it has an -ed ending or an irregular past form."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "stop school",
+                "work in market",
+                "He is angry little",
+                "know many thing"
+              ],
+              "note": "Your vocabulary relies on basic everyday words with noticeable errors in fixed expressions and word forms.",
+              "how_to_improve": "Learn natural verb and noun collocations for common activities instead of translating words directly (for example, 'leave school' or 'take up a hobby').",
+              "how_to_check": "Check your main verb-noun pairs in a learner dictionary to confirm that they are natural word combinations."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice... my father give me advice.",
+                "That's all."
+              ],
+              "note": "You spoke for 60 of the 120 seconds, using very short, isolated sentences and finishing well before the time ended.",
+              "how_to_improve": "During preparation time, write two short ideas for each question so that you have enough points to keep speaking.",
+              "how_to_check": "Look at the timer during practice to ensure you speak for at least 90 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know many thing",
+                "But sometimes old people is not right also"
+              ],
+              "note": "You used simple linking words like 'because' and 'but', though several sentences were unconnected and formed a list of points.",
+              "how_to_improve": "Use coordinating conjunctions to join pairs of short, related sentences into one sentence (for example, joining 'I woke up early' and 'I caught the train' with 'so').",
+              "how_to_check": "Count your sentences in your transcript and check that you have connected related thoughts instead of leaving short, separate clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Using present verbs instead of past simple"
+            },
+            {
+              "quote": "stop school",
+              "correction": "leave school",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "I want stop",
+              "correction": "I wanted to stop",
+              "type": "grammar",
+              "pattern": "Using present verbs instead of past simple"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Missing preposition 'to' after verbs"
+            },
+            {
+              "quote": "Now I am study in university",
+              "correction": "Now I am studying at university",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "Young people must listen old people",
+              "correction": "Young people must listen to older people",
+              "type": "grammar",
+              "pattern": "Missing preposition 'to' after verbs"
+            },
+            {
+              "quote": "old people know many thing",
+              "correction": "old people know many things",
+              "type": "grammar",
+              "pattern": "Missing plural -s on countable nouns"
+            },
+            {
+              "quote": "old people is not right",
+              "correction": "old people are not right",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Using present verbs instead of past simple",
+              "type": "grammar",
+              "rule": "Use past simple verb forms to describe finished events in the past, for example, 'Yesterday I visited my friend and watched a film.'",
+              "how_to_fix": "Before telling a story about the past, remind yourself that every action verb must be in the past simple form."
+            },
+            {
+              "name": "Missing preposition 'to' after verbs",
+              "type": "grammar",
+              "rule": "Use the preposition 'to' after verbs like 'listen' before an object, for example, 'In the evening I listen to the radio.'",
+              "how_to_fix": "Say 'listen to' together as one fixed phrase whenever you name a person or thing after it."
+            },
+            {
+              "name": "Missing plural -s on countable nouns",
+              "type": "grammar",
+              "rule": "Add -s or -es to countable nouns after words like 'many', for example, 'There are many cars on the street.'",
+              "how_to_fix": "Check the word right after 'many' or numbers greater than one to ensure the noun ends with -s."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "my father give me advice.",
+              "better": "my father gave me advice.",
+              "why": "Use the past simple tense for completed past events."
+            },
+            {
+              "you_said": "I want stop school,",
+              "better": "I wanted to stop school,",
+              "why": "Use 'wanted to' for a past wish before another verb."
+            },
+            {
+              "you_said": "I listen him.",
+              "better": "I listened to him.",
+              "why": "Use the past tense and add 'to' after 'listen'."
+            },
+            {
+              "you_said": "Now I am study in university.",
+              "better": "Now I am studying in university.",
+              "why": "Use the -ing verb form after 'am' in the present continuous."
+            },
+            {
+              "you_said": "Young people must listen old people",
+              "better": "Young people must listen to old people",
+              "why": "Use the preposition 'to' after the verb 'listen'."
+            },
+            {
+              "you_said": "because old people know many thing.",
+              "better": "because old people know many things.",
+              "why": "Add -s to make a countable noun plural after 'many'."
+            },
+            {
+              "you_said": "But sometimes old people is not right also.",
+              "better": "But sometimes old people are not right also.",
+              "why": "The noun 'people' is plural, so use the plural verb 'are'."
+            },
+            {
+              "you_said": "Is good.",
+              "better": "It is good.",
+              "why": "English sentences require a subject pronoun like 'it' before the verb."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use the past simple tense for completed actions when you narrate a story about the past (for example, 'Last summer I travelled to Samarkand and played football').",
+            "success_check": "Underline every verb in your past story and confirm that it has an -ed ending or an irregular past form.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Learn natural verb and noun collocations for common activities instead of translating words directly (for example, 'leave school' or 'take up a hobby').",
+            "success_check": "Check your main verb-noun pairs in a learner dictionary to confirm that they are natural word combinations.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      89585,
+      126876,
+      107507
+    ],
+    "tokens": [
+      {
+        "input": 7530,
+        "output": 12398,
+        "calls": 1
+      },
+      {
+        "input": 7530,
+        "output": 17596,
+        "calls": 1
+      },
+      {
+        "input": 7530,
+        "output": 14111,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.05214,
+      0.0716325,
+      0.05856375
+    ]
+  },
+  {
+    "id": "A1-b1-only-q3",
+    "kind": "anchor",
+    "expected": "band 1 · language B1 · Q1=missing, Q2=missing, Q3=on_topic",
+    "bands": [
+      1,
+      1,
+      1
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "missing",
+              "evidence": "",
+              "note": "You did not mention who gave you advice or what situation you were in.",
+              "model_answer": "A few years ago, my [teacher / parent] gave me useful advice when I was deciding [which university to choose / how to prepare for exams]."
+            },
+            {
+              "id": 2,
+              "status": "missing",
+              "evidence": "",
+              "note": "You did not state what the advice was or whether you followed it.",
+              "model_answer": "They told me to [study consistently / stay calm], and I decided to [follow / ignore] that suggestion."
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "In my opinion, young people should listen to older people, because older people have more experience. For example, our grandparents lived a long life and they saw many problems. But I also think young people should not follow all advice. Sometimes older people don't understand modern life, for example technology or new jobs. So young people must think and decide themselves.",
+              "note": "You explained both why young people should respect older people's experience and why they should make their own choices.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "we cannot know everything",
+                "our grandparents lived a long life and they saw many problems",
+                "children usually respect their parents' advice"
+              ],
+              "note": "You use simple grammatical structures accurately, but you do not attempt complex constructions such as conditionals or relative clauses.",
+              "how_to_improve": "Add the preposition 'for' before reflexive pronouns when expressing that someone does something independently (for example, 'Students should learn to cook for themselves').",
+              "how_to_check": "Check your sentences to ensure that reflexive pronouns like 'themselves' have 'for' before them when expressing independent action."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "advice is very important",
+                "more experience",
+                "modern life",
+                "good tradition"
+              ],
+              "note": "You rely on everyday words and repeat words like 'advice' and 'people' several times without using more specific vocabulary.",
+              "how_to_improve": "Use precise verbs such as 'face' instead of basic perception verbs like 'see' when describing difficulties (for example, 'Our team faced several difficult challenges during the project').",
+              "how_to_check": "Check that you used a specific collocation like 'faced problems' rather than 'saw problems'."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "Everybody needs advice sometimes, because we cannot know everything.",
+                "So young people must think and decide themselves.",
+                "In conclusion, advice is useful, but we should choose good advice."
+              ],
+              "note": "You spoke for 85 of the 120 seconds in complete, simple sentences, with no written fillers or restarted phrases.",
+              "how_to_improve": "Plan two supporting details for each question during your preparation time to speak for longer.",
+              "how_to_check": "You spoke for at least 105 of the 120 seconds on the timer."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because we cannot know everything",
+                "For example, our grandparents lived a long life",
+                "But I also think young people should not follow all advice.",
+                "So young people must think and decide themselves."
+              ],
+              "note": "You link your ideas mostly with simple devices such as 'because', 'But', and 'So'.",
+              "how_to_improve": "Use a contrast linking word like 'however' to connect contrasting sentences instead of starting sentences with 'But' (for example, 'The train was delayed; however, we arrived before the match began').",
+              "how_to_check": "Check that your transcript includes contrast linkers like 'however' instead of beginning sentences with 'But'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "decide themselves",
+              "correction": "decide for themselves",
+              "type": "grammar",
+              "pattern": "Missing preposition before reflexive pronoun"
+            },
+            {
+              "quote": "saw many problems",
+              "correction": "faced many problems",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "in our life",
+              "correction": "in our lives",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "choose good advice",
+              "correction": "choose which advice to follow",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Missing preposition before reflexive pronoun",
+              "type": "grammar",
+              "rule": "When a reflexive pronoun shows that someone acts independently, use the preposition 'for' before it (for example, 'She solved the puzzle for herself').",
+              "how_to_fix": "Check that reflexive pronouns like 'themselves' have 'for' before them when meaning independently."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "So young people must think and decide themselves.",
+              "better": "So young people must think and decide for themselves.",
+              "why": "Use the preposition 'for' before 'themselves' when expressing independent action."
+            },
+            {
+              "you_said": "our grandparents lived a long life and they saw many problems.",
+              "better": "our grandparents lived a long life and they faced many problems.",
+              "why": "Use 'faced' instead of 'saw' when talking about experiencing difficulties."
+            },
+            {
+              "you_said": "I think advice is very important in our life.",
+              "better": "I think advice is very important in our lives.",
+              "why": "Use the plural noun 'lives' after the plural possessive pronoun 'our'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 1,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 1,
+          "language_cap": 2,
+          "band": 1,
+          "label": "Lower B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 1
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+            "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 1
+            }
+          },
+          {
+            "objective": "Add the preposition 'for' before reflexive pronouns when expressing that someone does something independently (for example, 'Students should learn to cook for themselves').",
+            "success_check": "Check your sentences to ensure that reflexive pronouns like 'themselves' have 'for' before them when expressing independent action.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "missing",
+              "evidence": "",
+              "note": "You did not describe a specific time someone gave you advice or what situation you were in.",
+              "model_answer": "A few years ago, my teacher / father gave me advice when I had a problem at school / with my exams."
+            },
+            {
+              "id": 2,
+              "status": "missing",
+              "evidence": "",
+              "note": "You did not mention what specific advice was given to you or whether you followed it.",
+              "model_answer": "They advised me to focus on my studies / relax, and I followed / did not follow their advice because it seemed / didn't seem helpful."
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "In my opinion, young people should listen to older people, because older people have more experience. For example, our grandparents lived a long life and they saw many problems. But I also think young people should not follow all advice. Sometimes older people don't understand modern life, for example technology or new jobs. So young people must think and decide themselves.",
+              "note": "You clearly explained your opinion on whether young people should follow older people's advice and gave reasons.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "Everybody needs advice sometimes, because we cannot know everything.",
+                "our grandparents lived a long life and they saw many problems.",
+                "young people must think and decide themselves."
+              ],
+              "note": "You used simple grammatical structures correctly throughout your answer, but you did not use complex structures like relative clauses or conditionals.",
+              "how_to_improve": "Use the preposition 'for' before reflexive pronouns when expressing that someone does an action independently (for example, 'Students must prepare for themselves before the exam').",
+              "how_to_check": "Check your written transcript to confirm that reflexive pronouns like 'themselves' have the preposition 'for' when meaning independently."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "advice is very important in our life",
+                "older people have more experience",
+                "technology or new jobs",
+                "good tradition"
+              ],
+              "note": "Your vocabulary is sufficient for everyday discussion, but you relied on simple words and one unnatural verb collocation.",
+              "how_to_improve": "Use natural verb-noun collocations instead of general verbs (for example, say 'score a goal' or 'set a goal' rather than 'make a goal' in sports).",
+              "how_to_check": "Look up your verbs and nouns in a collocation dictionary to ensure they form a natural pair."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "Everybody needs advice sometimes, because we cannot know everything.",
+                "young people must think and decide themselves."
+              ],
+              "note": "You spoke for 85 of the 120 seconds using short, complete sentences without restarting or abandoning phrases.",
+              "how_to_improve": "Use your preparation time to note down brief details for a personal story so you can address all parts of the task.",
+              "how_to_check": "Check the timer after recording to confirm that you spoke for at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because we cannot know everything.",
+                "In my opinion, young people should listen",
+                "For example, our grandparents lived",
+                "In conclusion, advice is useful, but"
+              ],
+              "note": "You connected your ideas clearly using simple cohesive devices like 'because', 'so', and 'for example'.",
+              "how_to_improve": "Use contrast linkers such as 'however' to connect opposing ideas instead of starting sentences with 'but' (for example, 'The train was late. However, we arrived in time for the match').",
+              "how_to_check": "Check your transcript to see that you connected two contrasting sentences with 'however' instead of 'but'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "decide themselves",
+              "correction": "decide for themselves",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "choose good advice",
+              "correction": "follow good advice",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "in our life",
+              "correction": "in our lives",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "So young people must think and decide themselves.",
+              "better": "So young people must think and decide for themselves.",
+              "why": "Use the preposition 'for' before the reflexive pronoun 'themselves' when meaning independently."
+            },
+            {
+              "you_said": "In conclusion, advice is useful, but we should choose good advice.",
+              "better": "In conclusion, advice is useful, but we should follow good advice.",
+              "why": "In English, we say 'follow advice' or 'take advice' rather than 'choose advice'."
+            },
+            {
+              "you_said": "I think advice is very important in our life.",
+              "better": "I think advice is very important in our lives.",
+              "why": "Use the plural noun 'lives' when referring to multiple people."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 1,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 1,
+          "language_cap": 2,
+          "band": 1,
+          "label": "Lower B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 1
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+            "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 1
+            }
+          },
+          {
+            "objective": "Use the preposition 'for' before reflexive pronouns when expressing that someone does an action independently (for example, 'Students must prepare for themselves before the exam').",
+            "success_check": "Check your written transcript to confirm that reflexive pronouns like 'themselves' have the preposition 'for' when meaning independently.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "missing",
+              "evidence": "",
+              "note": "You discussed advice in general terms and did not describe a specific person or situation.",
+              "model_answer": "A few years ago, my [teacher / parent] gave me advice when I had to choose between [studying history / studying science]."
+            },
+            {
+              "id": 2,
+              "status": "missing",
+              "evidence": "",
+              "note": "You did not state what specific advice you received or whether you decided to follow it.",
+              "model_answer": "They advised me to [follow my passion / focus on practical skills], and I decided to [follow / ignore] that advice."
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "In my opinion, young people should listen to older people, because older people have more experience. For example, our grandparents lived a long life and they saw many problems. But I also think young people should not follow all advice. Sometimes older people don't understand modern life, for example technology or new jobs. So young people must think and decide themselves.",
+              "note": "You gave a clear opinion on whether young people should follow older people's advice, supported with reasons about experience and technology.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "Everybody needs advice sometimes, because we cannot know everything.",
+                "In my opinion, young people should listen to older people, because older people have more experience.",
+                "our grandparents lived a long life and they saw many problems."
+              ],
+              "note": "You used simple tenses and modal verbs accurately, but you did not include complex grammar structures.",
+              "how_to_improve": "Use the preposition 'for' before reflexive pronouns when you describe people making independent choices (for example, 'Students should choose their subjects for themselves').",
+              "how_to_check": "Check your transcript to ensure reflexive pronouns like 'themselves' have the preposition 'for' in front of them when expressing independence."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "advice is very important in our life",
+                "older people have more experience",
+                "our grandparents lived a long life",
+                "children usually respect their parents' advice"
+              ],
+              "note": "You used everyday vocabulary correctly to explain your thoughts, but you did not use topic-specific collocations.",
+              "how_to_improve": "Use precise verbs such as 'face' or 'encounter' instead of 'see' when describing difficulties (for example, 'Our basketball team faced many difficulties last year').",
+              "how_to_check": "Check your transcript to ensure you use verbs like 'face' or 'encounter' rather than 'see' when talking about problems."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "I think advice is very important in our life.",
+                "In my opinion, young people should listen to older people, because older people have more experience.",
+                "Sometimes older people don't understand modern life, for example technology or new jobs."
+              ],
+              "note": "You spoke for 85 of the 120 seconds in short, simple sentences without written fillers, though you repeated words like 'advice' and 'people'.",
+              "how_to_improve": "Use your preparation time to outline one point for each question so that you can speak for the full two minutes.",
+              "how_to_check": "Look at the timer after your response to ensure you spoke for at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because we cannot know everything",
+                "For example, our grandparents lived a long life",
+                "But I also think young people should not follow all advice.",
+                "In conclusion, advice is useful, but we should choose good advice."
+              ],
+              "note": "You connected your sentences using basic linkers like 'because', 'so', and 'but', without higher-level cohesive devices.",
+              "how_to_improve": "Use linking phrases such as 'however' or 'on the other hand' instead of starting sentences with 'but' (for example, 'I enjoy swimming; however, my brother prefers running').",
+              "how_to_check": "Check your transcript to see that you used 'however' or 'on the other hand' to contrast two different ideas."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "decide themselves",
+              "correction": "decide for themselves",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "saw many problems",
+              "correction": "faced many problems",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "So young people must think and decide themselves.",
+              "better": "So young people must think and decide for themselves.",
+              "why": "Use the preposition 'for' before reflexive pronouns when meaning independently."
+            },
+            {
+              "you_said": "our grandparents lived a long life and they saw many problems.",
+              "better": "our grandparents lived a long life and they faced many problems.",
+              "why": "Use 'faced' instead of 'saw' when talking about dealing with difficulties."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 1,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 1,
+          "language_cap": 2,
+          "band": 1,
+          "label": "Lower B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 1
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+            "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 1
+            }
+          },
+          {
+            "objective": "Use the preposition 'for' before reflexive pronouns when you describe people making independent choices (for example, 'Students should choose their subjects for themselves').",
+            "success_check": "Check your transcript to ensure reflexive pronouns like 'themselves' have the preposition 'for' in front of them when expressing independence.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      69892,
+      80430,
+      105467
+    ],
+    "tokens": [
+      {
+        "input": 7642,
+        "output": 9798,
+        "calls": 1
+      },
+      {
+        "input": 7642,
+        "output": 10944,
+        "calls": 1
+      },
+      {
+        "input": 7642,
+        "output": 13696,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.042474,
+      0.0467715,
+      0.0570915
+    ]
+  },
+  {
+    "id": "A2-b1-all-three",
+    "kind": "anchor",
+    "expected": "band 2 · language B1 · Q1=on_topic, Q2=on_topic, Q3=on_topic",
+    "bands": [
+      2,
+      2,
+      2
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+              "note": "You clearly stated who gave the advice and explained the stressful situation you were facing before your exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My teacher told me to speak English every day, even for ten minutes, and to record myself on my phone. At first I didn't like it, because I felt shy when I listened to my voice. But I followed her advice",
+              "note": "You explained the specific advice you received and described how you followed it despite feeling shy.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "About young people, I think they should listen to advice from older people, but not always. Older people have more experience, so their advice is often useful. But sometimes they don't understand new things",
+              "note": "You gave a balanced opinion about whether young people should follow older people's advice and gave two reasons.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "Last year I was preparing for my CEFR exam",
+                "my speaking was weak",
+                "My teacher told me to speak English every day",
+                "decide themselves"
+              ],
+              "note": "You used simple structures such as past continuous and basic reporting verbs accurately, but you did not use complex grammar forms.",
+              "how_to_improve": "Add the preposition 'for' before reflexive pronouns when you express making independent choices or acting alone (for example, 'The players chose the team captain for themselves').",
+              "how_to_check": "Look at every reflexive pronoun such as 'themselves' in your transcript and verify that it has 'for' before it when referring to an independent action."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "advice from my English teacher",
+                "record myself on my phone",
+                "became better",
+                "more experience"
+              ],
+              "note": "Your vocabulary was sufficient to describe the event, but you relied on simple, everyday expressions such as 'became better' and 'more experience'.",
+              "how_to_improve": "Use precise topic verbs rather than general expressions like 'became better' when describing a change (for example, 'my swimming technique improved rapidly').",
+              "how_to_check": "Check that your transcript uses a specific verb such as 'improved' instead of a basic phrase like 'became better'."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "I was very stressed because my speaking was weak.",
+                "because I felt shy when I listened to my voice",
+                "Older people have more experience, so their advice is often useful."
+              ],
+              "note": "You spoke for 95 of the 120 seconds using short, simple sentences with no written fillers.",
+              "how_to_improve": "Plan the first sentence of each answer during your preparation time so that you can produce longer sentences right away.",
+              "how_to_check": "Check that you spoke for at least 100 of the 120 seconds on the timer."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because my speaking was weak",
+                "But I followed her advice",
+                "so I was very happy",
+                "About young people, I think"
+              ],
+              "note": "You connected your ideas using only simple linkers like 'because', 'but', and 'so'.",
+              "how_to_improve": "Use a concessive clause to contrast two ideas in a single sentence (for example, 'Although the weather was cold, our class went hiking').",
+              "how_to_check": "Check that your response contains at least one sentence beginning with a concessive conjunction such as 'although' to contrast two points."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "decide themselves",
+              "correction": "decide for themselves",
+              "type": "grammar",
+              "pattern": "Missing preposition before reflexive pronoun"
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Missing preposition before reflexive pronoun",
+              "type": "grammar",
+              "rule": "Use 'for' before reflexive pronouns like 'themselves' when someone does something independently (for example, 'Students should prepare lunch for themselves').",
+              "how_to_fix": "Whenever you use 'themselves' after a verb like 'decide' or 'choose', add 'for' before it."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "So young people should listen, and then decide themselves.",
+              "better": "So young people should listen, and then decide for themselves.",
+              "why": "Use 'for' before 'themselves' when talking about making an independent decision."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 2,
+          "band": 2,
+          "label": "Higher B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Add the preposition 'for' before reflexive pronouns when you express making independent choices or acting alone (for example, 'The players chose the team captain for themselves').",
+            "success_check": "Look at every reflexive pronoun such as 'themselves' in your transcript and verify that it has 'for' before it when referring to an independent action.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use precise topic verbs rather than general expressions like 'became better' when describing a change (for example, 'my swimming technique improved rapidly').",
+            "success_check": "Check that your transcript uses a specific verb such as 'improved' instead of a basic phrase like 'became better'.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "I want to talk about advice from my English teacher. Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+              "note": "You clearly explained who gave you the advice and the situation you were facing before your exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My teacher told me to speak English every day, even for ten minutes, and to record myself on my phone. At first I didn't like it, because I felt shy when I listened to my voice. But I followed her advice, and after two months my speaking became better.",
+              "note": "You stated the exact advice and explained that you followed it with positive results.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "About young people, I think they should listen to advice from older people, but not always. Older people have more experience, so their advice is often useful. But sometimes they don't understand new things, like new jobs or the internet. So young people should listen, and then decide themselves.",
+              "note": "You shared a clear general opinion and gave balanced reasons about experience and modern changes.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "Last year I was preparing for my CEFR exam",
+                "My teacher told me to speak English every day",
+                "because I felt shy when I listened to my voice",
+                "Older people have more experience"
+              ],
+              "note": "You used simple structures such as past continuous and basic clauses correctly, but you did not use complex structures.",
+              "how_to_improve": "Use the preposition 'for' before reflexive pronouns when expressing that someone acts independently, for example: 'Athletes must choose a training plan for themselves.'",
+              "how_to_check": "Check that any reflexive pronoun such as 'themselves' has 'for' before it when following a verb like 'decide'."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "preparing for my CEFR exam",
+                "record myself on my phone",
+                "my speaking became better",
+                "have more experience"
+              ],
+              "note": "Your vocabulary was sufficient to answer all questions, but you relied on everyday expressions like 'became better'.",
+              "how_to_improve": "Use more precise verbs to describe progress instead of general phrases, for example saying 'improved' instead of 'became better'.",
+              "how_to_check": "Check your text to ensure you used single verbs like 'improved' instead of phrases like 'became better'."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "Last year I was preparing for my CEFR exam",
+                "At first I didn't like it, because I felt shy",
+                "About young people, I think they should listen"
+              ],
+              "note": "You spoke for 95 of the 120 seconds in short, complete sentences.",
+              "how_to_improve": "Plan two specific points for each question during your preparation time to speak for longer.",
+              "how_to_check": "Check that you used at least 105 of the 120 seconds on the timer."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because my speaking was weak",
+                "At first I didn't like it, because",
+                "About young people, I think",
+                "Older people have more experience, so"
+              ],
+              "note": "You connected your ideas clearly, but you only used simple linkers such as 'because', 'so', and 'but'.",
+              "how_to_improve": "Use transition words to link contrasting sentences instead of relying on 'but', for example: 'The weather was cold; however, the team finished the race.'",
+              "how_to_check": "Check that at least one contrasting sentence uses a transition word like 'however' instead of 'but'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "decide themselves",
+              "correction": "decide for themselves",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "So young people should listen, and then decide themselves.",
+              "better": "So young people should listen, and then decide for themselves.",
+              "why": "Use the preposition 'for' before reflexive pronouns when expressing independent actions."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 2,
+          "band": 2,
+          "label": "Higher B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use the preposition 'for' before reflexive pronouns when expressing that someone acts independently, for example: 'Athletes must choose a training plan for themselves.'",
+            "success_check": "Check that any reflexive pronoun such as 'themselves' has 'for' before it when following a verb like 'decide'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use more precise verbs to describe progress instead of general phrases, for example saying 'improved' instead of 'became better'.",
+            "success_check": "Check your text to ensure you used single verbs like 'improved' instead of phrases like 'became better'.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "I want to talk about advice from my English teacher. Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+              "note": "You clearly stated that your English teacher gave you advice when you were stressed about preparing for your exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My teacher told me to speak English every day, even for ten minutes, and to record myself on my phone. At first I didn't like it, because I felt shy when I listened to my voice. But I followed her advice, and after two months my speaking became better.",
+              "note": "You explained that the advice was to speak and record yourself daily, and you confirmed that you followed it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "About young people, I think they should listen to advice from older people, but not always. Older people have more experience, so their advice is often useful. But sometimes they don't understand new things, like new jobs or the internet. So young people should listen, and then decide themselves.",
+              "note": "You gave a clear opinion with reasons explaining why young people should listen to older people but make their own choices.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+                "My teacher told me to speak English every day, even for ten minutes",
+                "because I felt shy when I listened to my voice.",
+                "Older people have more experience, so their advice is often useful."
+              ],
+              "note": "You use simple past and present structures accurately, but you do not use complex grammar such as relative clauses or conditionals.",
+              "how_to_improve": "Use a second conditional to explain an imaginary situation (for example: 'If I had more free time, I would join a swimming club').",
+              "how_to_check": "Check that your answer has a sentence with an 'if' clause in the past tense and 'would' plus a base verb."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "my speaking became better.",
+                "so I was very happy.",
+                "Older people have more experience",
+                "they don't understand new things"
+              ],
+              "note": "Your words are clear and easy to understand, but you rely on everyday vocabulary rather than specific collocations.",
+              "how_to_improve": "Use precise verbs such as 'improved' instead of combining 'became' with an adjective (for example: 'my running time improved').",
+              "how_to_check": "Check that you used a specific action verb instead of the word 'became' followed by an adjective."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "Last year I was preparing for my CEFR exam, and I was very stressed",
+                "At first I didn't like it, because I felt shy when I listened to my voice.",
+                "I got B2 in the exam, so I was very happy."
+              ],
+              "note": "You spoke for 95 of the 120 seconds, using short to medium sentences throughout your response.",
+              "how_to_improve": "Plan the first sentence of each answer during preparation so you can connect your thoughts into longer sentences.",
+              "how_to_check": "Check that you spoke for at least 100 of the 120 seconds on the timer."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "and I was very stressed because my speaking was weak.",
+                "At first I didn't like it, because I felt shy",
+                "About young people, I think they should listen",
+                "So young people should listen, and then decide themselves."
+              ],
+              "note": "You link your sentences clearly, but you rely only on simple connecting words like 'because', 'but', and 'so'.",
+              "how_to_improve": "Use contrast linking words such as 'however' or 'although' instead of starting multiple sentences with 'but' (for example: 'I wanted to travel; however, the train was cancelled').",
+              "how_to_check": "Check your transcript to see that you used 'however' or 'although' to link two contrasting ideas."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my speaking became better",
+              "correction": "my speaking improved",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "About young people",
+              "correction": "As for young people",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "after two months my speaking became better.",
+              "better": "after two months my speaking improved.",
+              "why": "Use the verb 'improved' instead of 'became better'."
+            },
+            {
+              "you_said": "About young people, I think they should listen to advice",
+              "better": "As for young people, I think they should listen to advice",
+              "why": "Use 'As for' instead of 'About' to introduce a topic."
+            },
+            {
+              "you_said": "So young people should listen, and then decide themselves.",
+              "better": "So young people should listen, and then decide for themselves.",
+              "why": "Use the preposition 'for' in the phrase 'decide for themselves'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 2,
+          "band": 2,
+          "label": "Higher B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a second conditional to explain an imaginary situation (for example: 'If I had more free time, I would join a swimming club').",
+            "success_check": "Check that your answer has a sentence with an 'if' clause in the past tense and 'would' plus a base verb.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use precise verbs such as 'improved' instead of combining 'became' with an adjective (for example: 'my running time improved').",
+            "success_check": "Check that you used a specific action verb instead of the word 'became' followed by an adjective.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      100804,
+      75177,
+      123793
+    ],
+    "tokens": [
+      {
+        "input": 7632,
+        "output": 13738,
+        "calls": 1
+      },
+      {
+        "input": 7632,
+        "output": 10352,
+        "calls": 1
+      },
+      {
+        "input": 7632,
+        "output": 17326,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.0572415,
+      0.044544,
+      0.0706965
+    ]
+  },
+  {
+    "id": "A3-b2-q3-missing",
+    "kind": "anchor",
+    "expected": "band 3 · language B2 · Q1=on_topic, Q2=on_topic, Q3=missing",
+    "bands": [
+      3,
+      3
+    ],
+    "misses": [],
+    "errors": [
+      "ProviderError: Network or SDK error calling Gemini: terminated"
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "a piece of advice my older brother gave me in my final year of school. At that time I was trying to decide which university to apply to, and I was seriously considering medicine simply because my parents wanted me to, even though I wasn't really interested in it.",
+              "note": "You clearly explained that your older brother gave you advice when you were choosing a university subject.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "my brother told me that I should choose something I would actually enjoy doing every day, because otherwise I would be miserable for years. He also suggested that I talk to people who were already working in the fields I was considering. I took his advice and spoke to a doctor, a programmer and an engineer, and I realised I was far more interested in programming, so I applied for computer science instead.",
+              "note": "You detailed the specific advice you received and explained how you followed it by researching careers and choosing computer science.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "missing",
+              "evidence": "",
+              "note": "You reflected on your own situation rather than answering whether young people in general should always follow older people's advice.",
+              "model_answer": "As for older people's advice, I think young people should / shouldn't always follow it, because life experiences differ across generations."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "above_B2",
+              "evidence": [
+                "If I hadn't, I would probably be studying something I don't care about.",
+                "He also suggested that I talk to people who were already working in the fields I was considering.",
+                "decisions based on real information are much better than decisions based on other people's expectations.",
+                "my brother told me that I should choose something I would actually enjoy doing every day, because otherwise I would be miserable for years."
+              ],
+              "note": "You used a wide range of complex grammatical forms accurately, including a mixed conditional, a subjunctive structure, and reduced relative clauses.",
+              "how_to_improve": "Use negative adverbial inversion to add emphasis to key statements, for example: 'Seldom had I witnessed such dedication on a sports team.'",
+              "how_to_check": "Check that an inverted sentence places the auxiliary verb directly before the subject after a negative or restrictive adverbial."
+            },
+            "vocabulary": {
+              "level": "B2",
+              "evidence": [
+                "seriously considering medicine simply because my parents wanted me to",
+                "He also suggested that I talk to people who were already working in the fields",
+                "I took his advice and spoke to a doctor, a programmer and an engineer",
+                "decisions based on other people's expectations"
+              ],
+              "note": "You used natural collocations and topic-appropriate phrases to explain your dilemma and subsequent choice clearly.",
+              "how_to_improve": "Use compound adjectives to describe personal attributes or situations more concisely, for example describing a long mountain hike as 'physically draining'.",
+              "how_to_check": "Check that your recording contains at least one compound adjective modifying a noun."
+            },
+            "fluency": {
+              "level": "B2",
+              "evidence": [
+                "I'd like to talk about a piece of advice my older brother gave me in my final year of school.",
+                "Looking back, I'm really glad I listened to him. If I hadn't, I would probably be studying something I don't care about."
+              ],
+              "note": "You spoke for 105 of the 120 seconds in complete, extended sentences with zero fillers in the transcript.",
+              "how_to_improve": "Plan the opening sentence for each numbered prompt during preparation time to make sure you address all parts before the timer ends, for example deciding how to begin talking about a childhood hobby.",
+              "how_to_check": "Check your preparation notes to see that you wrote an opening sentence for each of the three prompt questions."
+            },
+            "cohesion": {
+              "level": "B2",
+              "evidence": [
+                "simply because my parents wanted me to, even though I wasn't really interested in it.",
+                "because otherwise I would be miserable for years.",
+                "so I applied for computer science instead.",
+                "Looking back, I'm really glad I listened to him."
+              ],
+              "note": "You linked clauses and shifted between past reflections and present conclusions using clear devices like 'even though', 'otherwise', and 'instead'.",
+              "how_to_improve": "Use formal concessive clauses to balance contrasting viewpoints, for example: 'Much as I enjoyed playing chess, I could not attend every weekend tournament.'",
+              "how_to_check": "Check that you formed a concessive clause introduced by a structure such as 'much as' or 'even if'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "If I hadn't, I would probably be studying something I don't care about.",
+              "note": "You constructed an accurate mixed conditional that connected a past condition to a present result."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "decisions based on other people's expectations",
+              "note": "You used natural collocations that expressed your final point clearly."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 2,
+          "language_level": "B2",
+          "language_mean": 2.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 3,
+          "language_cap": 4,
+          "band": 3,
+          "label": "Lower B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 3
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 3: \"Do you think young people should always follow advice from older people? Why or why not?\"",
+            "success_check": "You say at least two sentences that answer question 3, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 3
+            }
+          },
+          {
+            "objective": "Use compound adjectives to describe personal attributes or situations more concisely, for example describing a long mountain hike as 'physically draining'.",
+            "success_check": "Check that your recording contains at least one compound adjective modifying a noun.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my older brother gave me in my final year of school. At that time I was trying to decide which university to apply to",
+              "note": "You clearly explained who gave you the advice and described your situation when choosing a university.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "my brother told me that I should choose something I would actually enjoy doing every day, because otherwise I would be miserable for years.",
+              "note": "You detailed the specific advice your brother gave and explained how you followed it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "missing",
+              "evidence": "",
+              "note": "You shared what the experience taught you personally, but you did not address whether young people in general should always follow advice from older people.",
+              "model_answer": "As for older people's advice, I think young people should / shouldn't always follow it, because modern careers and technology change rapidly."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B2",
+              "evidence": [
+                "If I hadn't, I would probably be studying something I don't care about.",
+                "decisions based on real information are much better than decisions based on other people's expectations.",
+                "even though I wasn't really interested in it"
+              ],
+              "note": "You used complex grammar accurately, including a mixed conditional, a concession clause, and reduced relative clauses.",
+              "how_to_improve": "Use inversion after negative adverbials to add emphasis when making a key point (for example: \"Rarely did our school football team lose a home match\").",
+              "how_to_check": "Check your transcript for a sentence that starts with a negative word like \"rarely\" or \"never\" where an auxiliary verb comes before the subject."
+            },
+            "vocabulary": {
+              "level": "B2",
+              "evidence": [
+                "seriously considering medicine",
+                "fields I was considering",
+                "took his advice",
+                "other people's expectations"
+              ],
+              "note": "You used natural collocations and topic-specific vocabulary appropriate for discussing academic choices.",
+              "how_to_improve": "Use precise idiomatic collocations to describe difficult choices (for example, describing being torn between two options as \"being at a crossroads\").",
+              "how_to_check": "Check your transcript for an idiomatic phrase that expresses a dilemma or emotion rather than relying solely on everyday words."
+            },
+            "fluency": {
+              "level": "B2",
+              "evidence": [
+                "I'd like to talk about a piece of advice my older brother gave me in my final year of school.",
+                "Looking back, I'm really glad I listened to him. If I hadn't, I would probably be studying something I don't care about."
+              ],
+              "note": "You spoke for 105 of the 120 seconds in extended, complete sentences without false starts or unfinished thoughts.",
+              "how_to_improve": "Plan the first sentence for each of the three prompt questions during your preparation time.",
+              "how_to_check": "Check your preparation notes to ensure you wrote down three separate opening sentences before speaking."
+            },
+            "cohesion": {
+              "level": "B2",
+              "evidence": [
+                "simply because my parents wanted me to, even though I wasn't really interested in it.",
+                "because otherwise I would be miserable for years.",
+                "so I applied for computer science instead."
+              ],
+              "note": "You connected your ideas logically with cohesive devices such as \"even though\", \"otherwise\", and \"instead\".",
+              "how_to_improve": "Use complex concession clauses to balance two contrasting perspectives (for example: \"Whereas travelling by train is relaxing, driving is much more flexible\").",
+              "how_to_check": "Check your transcript for a linker like \"whereas\" or \"while\" connecting two contrasting clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "If I hadn't, I would probably be studying something I don't care about.",
+              "note": "You formed a mixed conditional accurately to reflect on how a past event affects your present situation."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "decisions based on real information are much better than decisions based on other people's expectations.",
+              "note": "You used effective, natural collocations to summarize your reflection clearly."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 2,
+          "language_level": "B2",
+          "language_mean": 2,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 3,
+          "language_cap": 4,
+          "band": 3,
+          "label": "Lower B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 3
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 3: \"Do you think young people should always follow advice from older people? Why or why not?\"",
+            "success_check": "You say at least two sentences that answer question 3, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 3
+            }
+          },
+          {
+            "objective": "Use inversion after negative adverbials to add emphasis when making a key point (for example: \"Rarely did our school football team lose a home match\").",
+            "success_check": "Check your transcript for a sentence that starts with a negative word like \"rarely\" or \"never\" where an auxiliary verb comes before the subject.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      85007,
+      81293
+    ],
+    "tokens": [
+      {
+        "input": 7643,
+        "output": 11918,
+        "calls": 1
+      },
+      {
+        "input": 7643,
+        "output": 11054,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.05042475,
+      0.04718475
+    ]
+  },
+  {
+    "id": "A4-b2-all-three",
+    "kind": "anchor",
+    "expected": "band 4 · language B2 · Q1=on_topic, Q2=on_topic, Q3=on_topic",
+    "bands": [
+      4,
+      4,
+      4
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "I'd like to talk about some advice I received from my grandfather a few years ago. I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+              "note": "You identified your grandfather as the person who gave advice and explained that you had failed an important exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "He advised me to go through every mistake and make a study plan based on them. I followed his advice, although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score.",
+              "note": "You described his advice to review mistakes and create a study plan, and confirmed that following it helped you pass.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "As for whether young people should always follow advice from older people, I don't think they should do it blindly. Older people usually have more life experience, so their advice is worth listening to. However, the world is changing quickly, and some advice about careers or technology may be out of date. In my view, young people should listen carefully, but make their own decisions in the end.",
+              "note": "You gave a balanced opinion explaining why older people have valuable experience but young people should still make their own choices.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B2",
+              "evidence": [
+                "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up",
+                "When he noticed how upset I was, he told me that failing once doesn't mean you aren't capable",
+                "He advised me to go through every mistake and make a study plan based on them.",
+                "although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score."
+              ],
+              "note": "You accurately used complex structures including the past perfect, reported speech, and adverbial clauses.",
+              "how_to_improve": "Use a cleft sentence to emphasise a significant reason or turning point (for example: 'What helped me improve was practising the guitar every evening').",
+              "how_to_check": "You can identify at least one sentence where a what-clause focuses attention on a key action."
+            },
+            "vocabulary": {
+              "level": "B2",
+              "evidence": [
+                "giving up on my plan to study engineering",
+                "make a study plan based on them",
+                "I don't think they should do it blindly",
+                "may be out of date"
+              ],
+              "note": "You used natural collocations and topic-related expressions like 'do it blindly' and 'out of date' appropriately.",
+              "how_to_improve": "Use precise adjective-noun collocations instead of general descriptions to convey specific qualities (for example: 'a rigorous training schedule' or 'a daunting challenge').",
+              "how_to_check": "You can find at least one collocation pairing a descriptive adjective with a noun to describe an event or feeling."
+            },
+            "fluency": {
+              "level": "B2",
+              "evidence": [
+                "I'd like to talk about some advice I received from my grandfather a few years ago.",
+                "When he noticed how upset I was, he told me that failing once doesn't mean you aren't capable",
+                "As for whether young people should always follow advice from older people, I don't think they should do it blindly."
+              ],
+              "note": "You spoke for 110 of the 120 seconds in complete, extended sentences with no fillers or false starts in your transcript.",
+              "how_to_improve": "Plan the opening sentence of each main point during preparation time so you can transition between ideas without repeating short clauses (for example, in a talk about travel: 'My first trip abroad taught me independence').",
+              "how_to_check": "You used at least 105 of the 120 seconds on the timer, and your transcript shows no repeated clauses at the start of sentences."
+            },
+            "cohesion": {
+              "level": "B2",
+              "evidence": [
+                "although it took a lot of effort",
+                "As for whether young people should always follow advice from older people",
+                "However, the world is changing quickly",
+                "In my view, young people should listen carefully, but make their own decisions in the end."
+              ],
+              "note": "You used a range of cohesive devices such as 'as for whether', 'although', and 'however' to organise your points clearly.",
+              "how_to_improve": "Use correlative conjunctions to link two related points within a single sentence (for example: 'Not only did our football team win the match, but they also set a new school record').",
+              "how_to_check": "Your transcript contains a sentence connecting two complementary clauses with a pair of correlative conjunctions."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up",
+              "note": "You used the past perfect and a result clause with 'so... that' accurately to set the scene."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "I don't think they should do it blindly.",
+              "note": "You used the collocation 'do it blindly' naturally to express a nuanced opinion."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B2",
+          "language_mean": 2,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 4,
+          "band": 4,
+          "label": "Higher B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a cleft sentence to emphasise a significant reason or turning point (for example: 'What helped me improve was practising the guitar every evening').",
+            "success_check": "You can identify at least one sentence where a what-clause focuses attention on a key action.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use precise adjective-noun collocations instead of general descriptions to convey specific qualities (for example: 'a rigorous training schedule' or 'a daunting challenge').",
+            "success_check": "You can find at least one collocation pairing a descriptive adjective with a noun to describe an event or feeling.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "I'd like to talk about some advice I received from my grandfather a few years ago. I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+              "note": "You clearly stated who advised you and described the situation that led up to it.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "He advised me to go through every mistake and make a study plan based on them. I followed his advice, although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score.",
+              "note": "You explained the exact advice you received and described the outcome of following it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "As for whether young people should always follow advice from older people, I don't think they should do it blindly. Older people usually have more life experience, so their advice is worth listening to. However, the world is changing quickly, and some advice about careers or technology may be out of date. In my view, young people should listen carefully, but make their own decisions in the end.",
+              "note": "You provided a clear, balanced general opinion supported by two distinct reasons.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B2",
+              "evidence": [
+                "I had just failed an important maths exam",
+                "so disappointed that I was thinking about giving up",
+                "advised me to go through every mistake",
+                "although it took a lot of effort"
+              ],
+              "note": "You used a good variety of complex structures accurately, including the past perfect, reported speech, and clauses of concession.",
+              "how_to_improve": "Use a third conditional structure to reflect on how a past event could have had a different outcome.",
+              "how_to_check": "Check that your response includes an 'if' clause with the past perfect and 'would have' with a past participle, such as in: 'If we had caught the earlier train, we would have arrived on time.'"
+            },
+            "vocabulary": {
+              "level": "B2",
+              "evidence": [
+                "giving up on my plan",
+                "do it blindly",
+                "worth listening to",
+                "out of date"
+              ],
+              "note": "Your vocabulary was varied and natural, featuring appropriate collocations and idiomatic phrases suited to the topic.",
+              "how_to_improve": "Incorporate compound adjectives to describe situations or objects with greater precision.",
+              "how_to_check": "Check that your answer includes at least one compound adjective, for example describing a long journey as 'time-consuming' or a race as 'nerve-racking'."
+            },
+            "fluency": {
+              "level": "B2",
+              "evidence": [
+                "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+                "As for whether young people should always follow advice from older people, I don't think they should do it blindly."
+              ],
+              "note": "You spoke for 110 of the 120 seconds, producing full, multi-clause sentences for all three questions.",
+              "how_to_improve": "Group your points into three distinct parts during the 60 seconds of preparation to structure your timing across the full two minutes.",
+              "how_to_check": "Look at your timer after recording to confirm that you used at least 110 seconds of speaking time across the questions."
+            },
+            "cohesion": {
+              "level": "B2",
+              "evidence": [
+                "although it took a lot of effort",
+                "As for whether young people should always follow advice",
+                "However, the world is changing quickly",
+                "In my view, young people should listen carefully"
+              ],
+              "note": "You used a range of clear cohesive devices such as 'although', 'as for', and 'however' to organise your thoughts logically.",
+              "how_to_improve": "Use 'even though' to introduce a concession clause that connects two contrasting facts.",
+              "how_to_check": "Check that you linked two clauses using this structure, for example: 'Even though the rain was heavy, the team continued their football practice.'"
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+              "note": "You combined the past perfect and a result clause accurately within a single extended sentence."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "I don't think they should do it blindly.",
+              "note": "You used the adverb 'blindly' naturally to convey a nuanced opinion."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B2",
+          "language_mean": 2,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 4,
+          "band": 4,
+          "label": "Higher B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a third conditional structure to reflect on how a past event could have had a different outcome.",
+            "success_check": "Check that your response includes an 'if' clause with the past perfect and 'would have' with a past participle, such as in: 'If we had caught the earlier train, we would have arrived on time.'",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Incorporate compound adjectives to describe situations or objects with greater precision.",
+            "success_check": "Check that your answer includes at least one compound adjective, for example describing a long journey as 'time-consuming' or a race as 'nerve-racking'.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "I'd like to talk about some advice I received from my grandfather a few years ago. I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up on my plan to study engineering.",
+              "note": "You clearly stated that your grandfather gave you advice after you failed a maths exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "He advised me to go through every mistake and make a study plan based on them. I followed his advice, although it took a lot of effort, and when I retook the exam a few months later, I passed with a much higher score.",
+              "note": "You explained the advice to analyse your mistakes and confirmed that you followed it successfully.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "As for whether young people should always follow advice from older people, I don't think they should do it blindly. Older people usually have more life experience, so their advice is worth listening to. However, the world is changing quickly, and some advice about careers or technology may be out of date. In my view, young people should listen carefully, but make their own decisions in the end.",
+              "note": "You presented a balanced opinion on whether young people should follow older people's advice.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B2",
+              "evidence": [
+                "I had just failed an important maths exam",
+                "he told me that failing once doesn't mean you aren't capable",
+                "He advised me to go through every mistake",
+                "although it took a lot of effort"
+              ],
+              "note": "You used complex structures such as the past perfect, reported speech, and concession clauses accurately.",
+              "how_to_improve": "Use a cleft sentence to emphasise a key turning point in a narrative, for example: 'What helped me progress was practising the guitar every evening.'",
+              "how_to_check": "Check that your answer includes at least one sentence beginning with 'What...' followed by a verb and 'was' or 'is'."
+            },
+            "vocabulary": {
+              "level": "B2",
+              "evidence": [
+                "giving up on my plan to study engineering",
+                "make a study plan based on them",
+                "I don't think they should do it blindly",
+                "some advice about careers or technology may be out of date"
+              ],
+              "note": "You used effective topic collocations such as 'life experience', 'do it blindly', and 'out of date'.",
+              "how_to_improve": "Use precise descriptive adjectives when describing an event, for example: 'Running that marathon was an exhausting challenge.'",
+              "how_to_check": "Check that your story includes at least one specific descriptive adjective qualifying a noun rather than a general word."
+            },
+            "fluency": {
+              "level": "B2",
+              "evidence": [
+                "I had just failed an important maths exam, and I was so disappointed",
+                "When he noticed how upset I was, he told me that failing once doesn't mean you aren't capable",
+                "As for whether young people should always follow advice from older people"
+              ],
+              "note": "You spoke for 110 of the 120 seconds, sustaining long and complete sentences.",
+              "how_to_improve": "Plan two supporting reasons during preparation to expand the final question, for example: 'Cycling to work saves money, and it also keeps you healthy.'",
+              "how_to_check": "Check that the timer shows you used at least 115 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B2",
+              "evidence": [
+                "although it took a lot of effort",
+                "As for whether young people",
+                "However, the world is changing quickly",
+                "In my view, young people should listen carefully"
+              ],
+              "note": "You connected your points clearly using devices such as 'although', 'as for', and 'however'.",
+              "how_to_improve": "Use a concession clause to balance contrasting perspectives, for example: 'While living in a large city is exciting, it can also be stressful.'",
+              "how_to_check": "Check that your answer contains a sentence beginning with 'While...' to set up a contrast between two clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "I had just failed an important maths exam, and I was so disappointed that I was thinking about giving up",
+              "note": "You combined past tenses and a result clause accurately."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "I don't think they should do it blindly",
+              "note": "You used an idiomatic collocation naturally."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B2",
+          "language_mean": 2,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 4,
+          "band": 4,
+          "label": "Higher B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a cleft sentence to emphasise a key turning point in a narrative, for example: 'What helped me progress was practising the guitar every evening.'",
+            "success_check": "Check that your answer includes at least one sentence beginning with 'What...' followed by a verb and 'was' or 'is'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use precise descriptive adjectives when describing an event, for example: 'Running that marathon was an exhausting challenge.'",
+            "success_check": "Check that your story includes at least one specific descriptive adjective qualifying a noun rather than a general word.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      87477,
+      57248,
+      66353
+    ],
+    "tokens": [
+      {
+        "input": 7683,
+        "output": 11410,
+        "calls": 1
+      },
+      {
+        "input": 7683,
+        "output": 7593,
+        "calls": 1
+      },
+      {
+        "input": 7683,
+        "output": 9223,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.04854975,
+      0.034236,
+      0.0403485
+    ]
+  },
+  {
+    "id": "A5-above-b2",
+    "kind": "anchor",
+    "expected": "band 5 · language above_B2 · Q1=on_topic, Q2=on_topic, Q3=on_topic",
+    "bands": [
+      5,
+      5,
+      5
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "The piece of advice that has stayed with me the most came from a former English teacher of mine, shortly before I sat my first major exam. I had been studying obsessively for weeks and was, frankly, close to burning out.",
+              "note": "You identified who gave the advice and clearly described your stressful situation before an exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks. It struck me as counterintuitive, and I was reluctant at first, but I eventually gave it a try.",
+              "note": "You explained the specific advice given and confirmed that you followed it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience. Older people undoubtedly have the benefit of experience, and dismissing their views outright would be arrogant. That said, circumstances have changed dramatically in recent decades, so some well-meant advice, particularly about careers, may no longer apply. Ideally, young people should weigh it up critically rather than accepting or rejecting it automatically.",
+              "note": "You gave a well-developed opinion with reasons on whether young people should follow older people's advice.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "above_B2",
+              "evidence": [
+                "I had been studying obsessively for weeks",
+                "which is what I'd expected",
+                "Not only did my results improve, but I also felt",
+                "dismissing their views outright would be arrogant"
+              ],
+              "note": "You used a wide range of complex structures accurately, including inversion, past perfect continuous, and gerund subjects.",
+              "how_to_improve": "Use a mixed conditional to explain how a past decision shapes a current situation, for example: 'If I had trained harder during the summer, I would be ready for the tournament now.'",
+              "how_to_check": "Check that your sentence uses 'had' with a past participle in the condition and 'would' with a base verb for the present outcome."
+            },
+            "vocabulary": {
+              "level": "above_B2",
+              "evidence": [
+                "close to burning out",
+                "struck me as counterintuitive",
+                "blind obedience",
+                "weigh it up critically"
+              ],
+              "note": "You used precise, natural collocations and nuanced expressions throughout your answer.",
+              "how_to_improve": "Use precise phrasal verbs to describe changes or progress, for example: 'Our football team managed to bounce back after losing the first round.'",
+              "how_to_check": "Check your response to ensure you used a phrasal verb correctly in place of a basic verb."
+            },
+            "fluency": {
+              "level": "above_B2",
+              "evidence": [
+                "I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                "That said, circumstances have changed dramatically in recent decades, so some well-meant advice, particularly about careers, may no longer apply."
+              ],
+              "note": "You spoke for 118 of the 120 seconds using extended, multi-clause sentences throughout.",
+              "how_to_improve": "Plan the opening sentence of each answer during preparation time so you can connect your thoughts into longer spoken points immediately.",
+              "how_to_check": "Check the timer after speaking to confirm you used at least 110 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "above_B2",
+              "evidence": [
+                "Rather than telling me to work harder",
+                "which in turn made my practice far more productive",
+                "As to whether young people should always follow",
+                "That said, circumstances have changed dramatically"
+              ],
+              "note": "You used a wide and varied range of cohesive devices to connect your arguments.",
+              "how_to_improve": "Use concessive clauses to balance two contrasting points within a single sentence, for example: 'Even though regular exercise is demanding, it boosts overall energy levels.'",
+              "how_to_check": "Check that your response includes a sentence showing contrast introduced by a concessive clause."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "Not only did my results improve, but I also felt considerably less anxious",
+              "note": "You used negative inversion accurately to emphasize the positive outcome."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "struck me as counterintuitive",
+              "note": "You used advanced, precise vocabulary to describe your reaction."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "above_B2",
+          "language_mean": 3,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 5,
+          "language_cap": 5,
+          "band": 5,
+          "label": "Above B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a mixed conditional to explain how a past decision shapes a current situation, for example: 'If I had trained harder during the summer, I would be ready for the tournament now.'",
+            "success_check": "Check that your sentence uses 'had' with a past participle in the condition and 'would' with a base verb for the present outcome.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use precise phrasal verbs to describe changes or progress, for example: 'Our football team managed to bounce back after losing the first round.'",
+            "success_check": "Check your response to ensure you used a phrasal verb correctly in place of a basic verb.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "The piece of advice that has stayed with me the most came from a former English teacher of mine, shortly before I sat my first major exam. I had been studying obsessively for weeks and was, frankly, close to burning out.",
+              "note": "You clearly stated who gave you the advice and described your stressful situation before an exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks. It struck me as counterintuitive, and I was reluctant at first, but I eventually gave it a try.",
+              "note": "You explained the exact advice you received and confirmed that you followed it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience. Older people undoubtedly have the benefit of experience, and dismissing their views outright would be arrogant. That said, circumstances have changed dramatically in recent decades, so some well-meant advice, particularly about careers, may no longer apply. Ideally, young people should weigh it up critically rather than accepting or rejecting it automatically.",
+              "note": "You provided a well-reasoned, balanced perspective on whether younger people should follow older people's advice.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "above_B2",
+              "evidence": [
+                "Not only did my results improve, but I also felt considerably less anxious",
+                "I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                "Rather than telling me to work harder, which is what I'd expected",
+                "dismissing their views outright would be arrogant."
+              ],
+              "note": "You used a wide range of complex structures accurately, including inversion and past perfect continuous, with no errors.",
+              "how_to_improve": "Use a cleft sentence to place strong emphasis on a key factor when explaining reasons. For example, in a talk about travel, you could say: \"What made the journey difficult was the sudden rain.\"",
+              "how_to_check": "Look over your response to verify that you included a clause beginning with \"what\" that highlights your main point."
+            },
+            "vocabulary": {
+              "level": "above_B2",
+              "evidence": [
+                "close to burning out",
+                "counterintuitive, and I was reluctant at first",
+                "a matter of blind obedience",
+                "weigh it up critically"
+              ],
+              "note": "Your choice of words is precise, natural, and idiomatic throughout the entire answer.",
+              "how_to_improve": "Continue expanding your range by using topic-specific idioms to evaluate situations. For example, when discussing sports, you might describe a successful player as having \"raised the bar\" for the rest of the team.",
+              "how_to_check": "Check your transcript to see whether you included a natural, topic-specific collocation or idiom to support your evaluation."
+            },
+            "fluency": {
+              "level": "above_B2",
+              "evidence": [
+                "I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                "she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks."
+              ],
+              "note": "You spoke for 118 of the 120 seconds, sustaining long, complex sentences with zero written fillers, repeated words, or false starts.",
+              "how_to_improve": "During preparation time, silently draft your opening sentence so you begin your response without any false starts. For example, when speaking about a hobby, plan the exact first sentence naming when you took it up.",
+              "how_to_check": "Check that the transcript of your next response starts immediately with a complete, unbroken sentence."
+            },
+            "cohesion": {
+              "level": "above_B2",
+              "evidence": [
+                "Rather than telling me to work harder",
+                "Not only did my results improve, but I also",
+                "which in turn made my practice far more productive",
+                "That said, circumstances have changed dramatically"
+              ],
+              "note": "You connected your ideas with a varied range of sophisticated linking devices that made the progression of points completely clear.",
+              "how_to_improve": "Use a concessive clause to qualify an opinion and balance two contrasting viewpoints. For example, when discussing athletics, you could say: \"Much as I enjoy running, training in the winter can be exhausting.\"",
+              "how_to_check": "Check that your answer contains a concessive clause linking two contrasting clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "Not only did my results improve, but I also felt considerably less anxious",
+              "note": "You used negative inversion accurately to emphasize the positive outcome of following the advice."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "I'd argue it shouldn't be a matter of blind obedience.",
+              "note": "You used natural, precise phrasing to express a nuanced opinion."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "above_B2",
+          "language_mean": 3,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 5,
+          "language_cap": 5,
+          "band": 5,
+          "label": "Above B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a cleft sentence to place strong emphasis on a key factor when explaining reasons. For example, in a talk about travel, you could say: \"What made the journey difficult was the sudden rain.\"",
+            "success_check": "Look over your response to verify that you included a clause beginning with \"what\" that highlights your main point.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Continue expanding your range by using topic-specific idioms to evaluate situations. For example, when discussing sports, you might describe a successful player as having \"raised the bar\" for the rest of the team.",
+            "success_check": "Check your transcript to see whether you included a natural, topic-specific collocation or idiom to support your evaluation.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "The piece of advice that has stayed with me the most came from a former English teacher of mine, shortly before I sat my first major exam. I had been studying obsessively for weeks and was, frankly, close to burning out.",
+              "note": "You clearly identified who gave you the advice and explained the stressful situation you were facing before your exam.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks. It struck me as counterintuitive, and I was reluctant at first, but I eventually gave it a try.",
+              "note": "You explained what the advice was and confirmed that you followed it after initial reluctance.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience. Older people undoubtedly have the benefit of experience, and dismissing their views outright would be arrogant. That said, circumstances have changed dramatically in recent decades, so some well-meant advice, particularly about careers, may no longer apply.",
+              "note": "You gave a thoughtful, balanced opinion on whether young people should always follow advice from older generations.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "above_B2",
+              "evidence": [
+                "I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive.",
+                "dismissing their views outright would be arrogant"
+              ],
+              "note": "You used a wide range of advanced grammatical structures accurately, including inversion, past perfect continuous, and gerund subjects.",
+              "how_to_improve": "Practise using mixed conditionals to connect an imagined past action with its present outcome on other topics (for example: 'If I had taken up swimming as a child, I would be much fitter today').",
+              "how_to_check": "Check that your conditional sentence pairs a past perfect clause with 'would' plus a base infinitive."
+            },
+            "vocabulary": {
+              "level": "above_B2",
+              "evidence": [
+                "It struck me as counterintuitive, and I was reluctant at first",
+                "blind obedience",
+                "dismissing their views outright would be arrogant",
+                "weigh it up critically"
+              ],
+              "note": "You sustained precise, nuanced vocabulary and natural collocations across your whole answer.",
+              "how_to_improve": "Practise building complex noun phrases for abstract concepts on topics such as transport or modern technology (for example: 'the rapid advent of electric vehicles').",
+              "how_to_check": "Check your practice transcript to ensure you replace general words like 'things' or 'stuff' with precise abstract nouns."
+            },
+            "fluency": {
+              "level": "above_B2",
+              "evidence": [
+                "Rather than telling me to work harder, which is what I'd expected, she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks.",
+                "That said, circumstances have changed dramatically in recent decades, so some well-meant advice, particularly about careers, may no longer apply."
+              ],
+              "note": "You spoke for 118 of the 120 seconds in complete, extended sentences with zero transcribed fillers or false starts.",
+              "how_to_improve": "Use your 60 seconds of preparation time to note down a two-point structure for each question before speaking.",
+              "how_to_check": "Check your preparation paper to verify that you wrote two brief bullet points for every question on the card."
+            },
+            "cohesion": {
+              "level": "above_B2",
+              "evidence": [
+                "Rather than telling me to work harder, which is what I'd expected",
+                "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive.",
+                "As to whether young people should always follow their elders' advice",
+                "That said, circumstances have changed dramatically in recent decades"
+              ],
+              "note": "You used sophisticated cohesive devices such as 'which in turn' and 'that said' to guide the listener through your ideas.",
+              "how_to_improve": "Use participle clauses to concede a point before introducing your main viewpoint (for example: 'Having acknowledged the benefits of team sports, individual training also builds self-discipline').",
+              "how_to_check": "Check your sentences to confirm that a participle clause starting with 'having' or '-ing' is followed by a complete independent clause."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive.",
+              "note": "You correctly formed a negative inversion structure combined with a relative clause showing consequence."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "It struck me as counterintuitive, and I was reluctant at first",
+              "note": "You used sophisticated, idiomatic wording that captured your personal reaction precisely."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "above_B2",
+          "language_mean": 3,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 5,
+          "language_cap": 5,
+          "band": 5,
+          "label": "Above B2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Practise using mixed conditionals to connect an imagined past action with its present outcome on other topics (for example: 'If I had taken up swimming as a child, I would be much fitter today').",
+            "success_check": "Check that your conditional sentence pairs a past perfect clause with 'would' plus a base infinitive.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Practise building complex noun phrases for abstract concepts on topics such as transport or modern technology (for example: 'the rapid advent of electric vehicles').",
+            "success_check": "Check your practice transcript to ensure you replace general words like 'things' or 'stuff' with precise abstract nouns.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      72151,
+      42186,
+      49184
+    ],
+    "tokens": [
+      {
+        "input": 7627,
+        "output": 9595,
+        "calls": 1
+      },
+      {
+        "input": 7627,
+        "output": 5373,
+        "calls": 1
+      },
+      {
+        "input": 7627,
+        "output": 7105,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.0417015,
+      0.025869,
+      0.032364
+    ]
+  },
+  {
+    "id": "A0-memorized-off-topic",
+    "kind": "anchor",
+    "expected": "band 0 · language B1 · Q1=off_topic, Q2=off_topic, Q3=off_topic · memorized",
+    "bands": [
+      0,
+      0,
+      0
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "off_topic",
+              "evidence": "I would like to talk about my favourite hobby, which is playing football.",
+              "note": "You spoke about your favourite hobby instead of describing a time someone gave you advice.",
+              "model_answer": "A few years ago, my teacher / parent gave me useful advice when I had to choose a university / prepare for an exam."
+            },
+            {
+              "id": 2,
+              "status": "missing",
+              "evidence": "",
+              "note": "You did not mention what advice was given or whether you followed it.",
+              "model_answer": "They told me to focus on my daily studies, and I decided to follow / ignore their advice because …"
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "I think every young person should have a hobby because it helps them relax after studying.",
+              "note": "You spoke about young people having hobbies instead of whether they should follow advice from older people.",
+              "model_answer": "I think young people should / shouldn't always follow advice from older people, because older people have more experience / modern times are very different."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "I started playing when I was seven years old",
+                "now I play three times a week with my friends",
+                "helps them relax after studying"
+              ],
+              "note": "You used simple grammatical structures accurately, but you did not produce complex grammar like conditionals or passive forms.",
+              "how_to_improve": "Use a second conditional sentence to describe an imaginary situation, using a past tense in the if-clause and 'would' with a base verb, for example: 'If I lived in a warmer climate, I would grow my own vegetables.'",
+              "how_to_check": "Your transcript contains an if-clause with a past verb and a main clause with 'would'."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "favourite hobby",
+                "stay healthy",
+                "teaches me teamwork",
+                "helps them relax"
+              ],
+              "note": "You used everyday vocabulary correctly, but you did not use vocabulary related to the topic of advice.",
+              "how_to_improve": "Use precise topic collocations to express specific actions instead of general verbs, for example: 'book accommodation' or 'board the train'.",
+              "how_to_check": "Your transcript contains at least two precise topic collocations instead of general verbs."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "I started playing when I was seven years old",
+                "Football helps me stay healthy and it also teaches me teamwork."
+              ],
+              "note": "You spoke for 45 of the 120 seconds, producing short, simple sentences without written fillers.",
+              "how_to_improve": "Plan two supporting details for each question during preparation time so you can speak longer.",
+              "how_to_check": "The timer shows that you spoke for at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "and now I play",
+                "and it also teaches",
+                "because it helps them"
+              ],
+              "note": "You connected your ideas using simple linkers such as 'and', 'also', and 'because'.",
+              "how_to_improve": "Connect two contrasting ideas within a single sentence using a concession clause, for example: 'Although the recipe was complicated, the dinner turned out delicious.'",
+              "how_to_check": "Your transcript contains a sentence that begins with a concession linker like 'although' linking two complete clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": true,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 0,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 0,
+          "language_cap": 2,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "memorized_or_irrelevant",
+          "biggest_fix": {
+            "kind": "own_words"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer the questions you are asked, in your own words. Do not use a prepared text.",
+            "success_check": "Each part of your answer starts by answering one of the questions directly.",
+            "target": {
+              "kind": "own_words"
+            }
+          },
+          {
+            "objective": "Use a second conditional sentence to describe an imaginary situation, using a past tense in the if-clause and 'would' with a base verb, for example: 'If I lived in a warmer climate, I would grow my own vegetables.'",
+            "success_check": "Your transcript contains an if-clause with a past verb and a main clause with 'would'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You spoke about your favourite hobby instead of describing who gave you advice and what situation you were in.",
+              "model_answer": "A few years ago, my teacher / father gave me useful advice when I was struggling with school / choosing a career."
+            },
+            {
+              "id": 2,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You did not mention what the advice was or whether you followed it.",
+              "model_answer": "They advised me to manage my time better / stay calm, and I decided to follow / ignore it because it sounded practical / difficult."
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You talked about hobbies rather than whether young people should follow older people's advice.",
+              "model_answer": "As for older people's advice, I think young people should / shouldn't always follow it, because older generations have more experience / the world has changed."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "I started playing when I was seven years old",
+                "Football helps me stay healthy",
+                "it helps them relax after studying"
+              ],
+              "note": "You use simple structures and verb patterns accurately, but you do not use a range of complex grammar.",
+              "how_to_improve": "Use a second conditional to describe an unreal or imagined situation, for example, 'If I had more free time, I would learn how to cook Italian food.'",
+              "how_to_check": "Check your answer to confirm you included a sentence with 'if', a past verb, and 'would'."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "favourite hobby",
+                "stay healthy",
+                "teaches me teamwork"
+              ],
+              "note": "You use everyday vocabulary correctly, but you do not use words related to the exam topic.",
+              "how_to_improve": "Expand your range by using precise topic collocations rather than general words, for example using 'reduce carbon emissions' or 'protect natural habitats' when discussing the environment.",
+              "how_to_check": "Check your transcript to ensure you used at least two precise topic-specific word pairings."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "I would like to talk about my favourite hobby",
+                "and my dream is to watch a match at their stadium one day"
+              ],
+              "note": "You spoke for 45 of the 120 seconds in short, simple sentences.",
+              "how_to_improve": "Plan two supporting points for each question during your preparation time to sustain a longer response.",
+              "how_to_check": "Check the timer after your response to ensure you spoke for at least 90 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "and now I play",
+                "and it also teaches me",
+                "because it helps them"
+              ],
+              "note": "You connect your clauses using basic linking words like 'and' and 'because'.",
+              "how_to_improve": "Use a subordinating conjunction to contrast two ideas in one sentence, for example, 'Although public transport is cheap, it can get crowded during rush hour.'",
+              "how_to_check": "Check your transcript to ensure you linked two contrasting ideas using a linker like 'although'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": true,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 0,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 0,
+          "language_cap": 2,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "memorized_or_irrelevant",
+          "biggest_fix": {
+            "kind": "own_words"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer the questions you are asked, in your own words. Do not use a prepared text.",
+            "success_check": "Each part of your answer starts by answering one of the questions directly.",
+            "target": {
+              "kind": "own_words"
+            }
+          },
+          {
+            "objective": "Use a second conditional to describe an unreal or imagined situation, for example, 'If I had more free time, I would learn how to cook Italian food.'",
+            "success_check": "Check your answer to confirm you included a sentence with 'if', a past verb, and 'would'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You spoke about your favourite hobby instead of answering who gave you advice and what situation you were in.",
+              "model_answer": "As for receiving advice, my teacher / father gave me advice when I had to choose a career / university, because I was confused."
+            },
+            {
+              "id": 2,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You did not mention what advice you were given or whether you followed it.",
+              "model_answer": "They told me to focus on my strengths / listen to my heart, and I decided to follow / ignore it because it seemed sensible."
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You did not give an opinion on whether young people should follow older people's advice.",
+              "model_answer": "In my opinion, young people should / shouldn't always follow older people's advice, because older generations have / lack experience with modern technology."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "I started playing when I was seven years old",
+                "now I play three times a week with my friends",
+                "Football helps me stay healthy and it also teaches me teamwork",
+                "I think every young person should have a hobby"
+              ],
+              "note": "You use simple grammatical structures accurately, but you do not use complex constructions.",
+              "how_to_improve": "Use a second conditional sentence to describe an imaginary situation, for example: 'If I lived near the sea, I would swim every morning.'",
+              "how_to_check": "Look at your transcript and check that you have an 'if' clause with a past tense verb followed by 'would' and a base verb."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "favourite hobby",
+                "stay healthy",
+                "teaches me teamwork",
+                "relax after studying"
+              ],
+              "note": "Your vocabulary consists of everyday expressions, but it does not address the required topic of advice.",
+              "how_to_improve": "Use topic-specific collocations suited to the prompt instead of general phrases, for example: 'board a train' or 'book accommodation' for a travel topic.",
+              "how_to_check": "Check that your transcript contains collocations that directly match the subject of the questions."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "I would like to talk about my favourite hobby",
+                "because it helps them relax after studying"
+              ],
+              "note": "You spoke for 45 of the 120 seconds, with no written fillers, in short sentences.",
+              "how_to_improve": "Plan two points for each question during your preparation time so that you can speak for the full duration.",
+              "how_to_check": "Check the timer after speaking to ensure you used at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "and now I play three times a week",
+                "and it also teaches me teamwork",
+                "because it helps them relax after studying"
+              ],
+              "note": "You link your points using simple cohesive devices like 'and', 'also', and 'because'.",
+              "how_to_improve": "Use a contrasting linker to show different points of view, for example: 'however' when comparing two options in a story about shopping.",
+              "how_to_check": "Check your transcript to see if you have linked contrasting clauses using a word other than 'but'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": true,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 0,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 0,
+          "language_cap": 2,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "memorized_or_irrelevant",
+          "biggest_fix": {
+            "kind": "own_words"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer the questions you are asked, in your own words. Do not use a prepared text.",
+            "success_check": "Each part of your answer starts by answering one of the questions directly.",
+            "target": {
+              "kind": "own_words"
+            }
+          },
+          {
+            "objective": "Use a second conditional sentence to describe an imaginary situation, for example: 'If I lived near the sea, I would swim every morning.'",
+            "success_check": "Look at your transcript and check that you have an 'if' clause with a past tense verb followed by 'would' and a base verb.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      72044,
+      56806,
+      65996
+    ],
+    "tokens": [
+      {
+        "input": 7484,
+        "output": 9059,
+        "calls": 1
+      },
+      {
+        "input": 7484,
+        "output": 7388,
+        "calls": 1
+      },
+      {
+        "input": 7484,
+        "output": 8908,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.03958425,
+      0.033318,
+      0.039018
+    ]
+  },
+  {
+    "id": "A0-picture-only",
+    "kind": "anchor",
+    "expected": "band 0 · language B1 · Q1=off_topic, Q2=off_topic, Q3=off_topic",
+    "bands": [
+      0,
+      0,
+      0
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "off_topic",
+              "evidence": "In this picture I can see an old man and a young girl.",
+              "note": "You described the people in the picture instead of talking about a time someone gave you advice.",
+              "model_answer": "A few years ago, my teacher / my parent gave me advice when I was preparing for an exam / choosing my future career."
+            },
+            {
+              "id": 2,
+              "status": "off_topic",
+              "evidence": "so I think the man is giving advice to the girl.",
+              "note": "You guessed what is happening in the picture instead of explaining the advice you received and whether you followed it.",
+              "model_answer": "They told me to work hard / take a break, and I followed / did not follow that advice because it was very helpful / too difficult."
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "Behind them there is a big green tree, and the sun is shining.",
+              "note": "You described the background of the image instead of giving your opinion about following older people's advice.",
+              "model_answer": "In my view, young people should / shouldn't always follow advice from older people, because times have changed / older people have valuable experience."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "They are sitting on a wooden bench in a park.",
+                "The man has grey hair and glasses, and he is wearing a blue jumper.",
+                "He is raising his hand, so I think the man is giving advice",
+                "Behind them there is a big green tree, and the sun is shining."
+              ],
+              "note": "You use simple present and continuous structures accurately, but you do not attempt complex grammar.",
+              "how_to_improve": "Use a relative clause with 'who' or 'which' to add extra information about a person or an object, for example: 'I spoke to my coach, who helped me win the match.'",
+              "how_to_check": "You can find at least one sentence where 'who' or 'which' connects two facts about a person or a thing."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "wooden bench in a park",
+                "blue jumper",
+                "holding a notebook",
+                "nice, calm day"
+              ],
+              "note": "You use everyday descriptive words accurately, but you do not use topic vocabulary for discussing guidance or decisions.",
+              "how_to_improve": "Use topic-specific verb-noun collocations to describe your actions in detail, for example: 'win a championship' or 'score a goal'.",
+              "how_to_check": "You can find at least two phrases where a specific verb and noun naturally go together."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "In this picture I can see an old man and a young girl.",
+                "They are sitting on a wooden bench in a park.",
+                "She is holding a notebook and she is listening to him carefully."
+              ],
+              "note": "You spoke for 70 of the 120 seconds, in short, simple sentences.",
+              "how_to_improve": "Plan one extra supporting point for each question during preparation, for example noting down a second reason during a talk about school trips.",
+              "how_to_check": "You spoke for at least 100 of the 120 seconds on the timer."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "and he is wearing a blue jumper.",
+                "so I think the man is giving advice",
+                "Behind them there is a big green tree, and the sun is shining."
+              ],
+              "note": "You link your ideas using only simple devices like 'and' and 'so'.",
+              "how_to_improve": "Use a contrast linker to connect two different ideas in a sentence, for example: 'I wanted to go cycling; however, it started raining.'",
+              "how_to_check": "You can find at least one sentence where a contrast word connects two opposite points."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 0,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 0,
+          "language_cap": 2,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "no_question_on_topic",
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 1
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+            "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 1
+            }
+          },
+          {
+            "objective": "Use a relative clause with 'who' or 'which' to add extra information about a person or an object, for example: 'I spoke to my coach, who helped me win the match.'",
+            "success_check": "You can find at least one sentence where 'who' or 'which' connects two facts about a person or a thing.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You described the people in the picture instead of saying who gave you advice and what situation you were in.",
+              "model_answer": "Once, my teacher / my friend gave me advice when I had to choose a university / prepare for an important exam."
+            },
+            {
+              "id": 2,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You described the girl listening instead of stating what the advice was and whether you followed it.",
+              "model_answer": "They advised me to practise every day, and I decided / chose not to follow that advice because I felt confident / unsure."
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You did not give an opinion on whether young people should always follow older people's advice.",
+              "model_answer": "As for older people's advice, I think young people should / shouldn't always follow it, because life has changed / older people have valuable experience."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "In this picture I can see an old man and a young girl.",
+                "They are sitting on a wooden bench in a park.",
+                "He is raising his hand, so I think the man is giving advice to the girl.",
+                "Behind them there is a big green tree, and the sun is shining."
+              ],
+              "note": "You use simple structures like the present continuous accurately, but you do not attempt any complex grammar.",
+              "how_to_improve": "Use relative clauses with 'who' or 'which' to add extra detail about people or objects, such as 'I met a coach who taught me how to play tennis'.",
+              "how_to_check": "Check your next attempt to see that you joined two clauses using 'who' or 'which'."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "wooden bench in a park",
+                "grey hair and glasses",
+                "holding a notebook",
+                "nice, calm day"
+              ],
+              "note": "Your vocabulary is sufficient for simple description, but it lacks topic-specific words and natural collocations.",
+              "how_to_improve": "Use natural verb-noun collocations to describe actions, such as 'set a goal' or 'take a break' when talking about your study routine.",
+              "how_to_check": "Check your transcript to see that you used at least one fixed verb-and-noun combination instead of simple single words."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "In this picture I can see an old man and a young girl.",
+                "The girl has long dark hair and an orange top.",
+                "It looks like a nice, calm day."
+              ],
+              "note": "You spoke for 70 of the 120 seconds in short, simple sentences.",
+              "how_to_improve": "Plan the first sentence of each answer during preparation so that you can expand each point, for example outlining your main idea about a school project before you begin.",
+              "how_to_check": "Check the timer after your next practice to ensure you speak for at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "and he is wearing a blue jumper",
+                "so I think the man is giving advice to the girl",
+                "and she is listening to him carefully",
+                "and the sun is shining"
+              ],
+              "note": "You connect ideas using only simple linkers like 'and' and 'so'.",
+              "how_to_improve": "Use a concession linker to contrast two ideas, such as 'Although it was raining, the team continued their football match'.",
+              "how_to_check": "Check your transcript to ensure you used a concession word like 'although' to link two contrasting clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 0,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 0,
+          "language_cap": 2,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "no_question_on_topic",
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 1
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+            "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 1
+            }
+          },
+          {
+            "objective": "Use relative clauses with 'who' or 'which' to add extra detail about people or objects, such as 'I met a coach who taught me how to play tennis'.",
+            "success_check": "Check your next attempt to see that you joined two clauses using 'who' or 'which'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You described the people in the picture instead of answering who gave you advice and what situation you were in.",
+              "model_answer": "A few years ago, my teacher / my father gave me useful advice when I had to choose a university / prepare for a difficult exam."
+            },
+            {
+              "id": 2,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You did not state what the advice was or whether you followed it.",
+              "model_answer": "They told me to focus on my main goals, and I decided to follow / ignore that suggestion because I wanted / didn't want to take risks."
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "",
+              "note": "You did not share an opinion about whether young people should always follow advice from older people.",
+              "model_answer": "In my view, young people should / shouldn't always follow older people's advice, because older generations have valuable experience / modern life has changed completely."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "B1",
+              "evidence": [
+                "They are sitting on a wooden bench in a park.",
+                "he is wearing a blue jumper",
+                "She is holding a notebook",
+                "It looks like a nice, calm day."
+              ],
+              "note": "You used simple tenses like the present continuous and present simple accurately, but you did not use any complex structures.",
+              "how_to_improve": "Use a relative clause with 'who' or 'which' to give additional information about a person or thing, for example 'My coach, who trained me every weekend, taught me how to swim'.",
+              "how_to_check": "Review your sentences to confirm that you included at least one clause starting with 'who' or 'which'."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "wooden bench in a park",
+                "grey hair and glasses",
+                "holding a notebook",
+                "nice, calm day"
+              ],
+              "note": "You used everyday descriptive vocabulary correctly, but you did not include topic-specific words or collocations.",
+              "how_to_improve": "Use verb-noun collocations to describe actions and experiences, for example 'make progress' or 'set a goal'.",
+              "how_to_check": "Find your main action verbs and check that they combine naturally with their nouns, such as 'scored a goal' instead of 'made a goal'."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "They are sitting on a wooden bench in a park.",
+                "Behind them there is a big green tree, and the sun is shining."
+              ],
+              "note": "You spoke for 70 of the 120 seconds in short, complete sentences.",
+              "how_to_improve": "Plan one main idea for each question during preparation so you have enough points to speak for the full time.",
+              "how_to_check": "Check the timer after speaking to see that you used at least 100 of the 120 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "so I think",
+                "Behind them there is",
+                "and she is listening"
+              ],
+              "note": "You connected your ideas using basic linking words like 'and' and 'so'.",
+              "how_to_improve": "Use a contrast linking word to link two contrasting thoughts, for example using 'although' in a sentence like 'Although the match was difficult, our team won'.",
+              "how_to_check": "Check that your answer includes at least one linking device showing contrast, such as 'although' or 'however'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 0,
+          "language_level": "B1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 0,
+          "language_cap": 2,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "no_question_on_topic",
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 1
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+            "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 1
+            }
+          },
+          {
+            "objective": "Use a relative clause with 'who' or 'which' to give additional information about a person or thing, for example 'My coach, who trained me every weekend, taught me how to swim'.",
+            "success_check": "Review your sentences to confirm that you included at least one clause starting with 'who' or 'which'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      93166,
+      76429,
+      84167
+    ],
+    "tokens": [
+      {
+        "input": 7503,
+        "output": 12611,
+        "calls": 1
+      },
+      {
+        "input": 7503,
+        "output": 10182,
+        "calls": 1
+      },
+      {
+        "input": 7503,
+        "output": 10832,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.0529185,
+      0.04380975,
+      0.04624725
+    ]
+  }
+]

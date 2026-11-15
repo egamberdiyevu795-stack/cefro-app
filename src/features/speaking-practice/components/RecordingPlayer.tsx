@@ -31,9 +31,9 @@ export function RecordingPlayer({ src, durationMs, label }: { src: string; durat
 
   if (failed) {
     return (
-      <p className="rounded-xl bg-warning-soft p-3 text-sm">
+      <p className="rounded-tile bg-well p-3 text-body text-fg">
         This browser can&apos;t play the recording here.{" "}
-        <a className="font-medium underline" href={src} download>
+        <a className="font-medium underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" href={src} download>
           Download it
         </a>{" "}
         to listen.
@@ -47,11 +47,11 @@ export function RecordingPlayer({ src, durationMs, label }: { src: string; durat
         preload="metadata"
         src={src}
         aria-label={label}
-        className="w-full"
+        className="h-10 w-full"
         onLoadedMetadata={onLoadedMetadata}
         onError={() => setFailed(true)}
       />
-      {durationMs !== null && durationMs > 0 && <p className="text-xs text-subtle">Length {lengthText(durationMs)}</p>}
+      {durationMs !== null && durationMs > 0 && <p className="text-caption text-fg-muted">Length {lengthText(durationMs)}</p>}
     </div>
   );
 }

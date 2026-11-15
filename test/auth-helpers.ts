@@ -17,8 +17,9 @@ export function authRequest(path: string, body: unknown, options: { ip?: string;
 
 export const PASSWORD = "correct horse battery staple";
 
-export async function signUp(email: string, password = PASSWORD, options: { ip?: string; cookie?: string } = {}) {
-  const response = await authRequest("/sign-up/email", { email, password, name: email.split("@")[0] }, options);
+/** Sign up as the form does. `name`: what was typed in Name (default: nothing, so the account has no name). */
+export async function signUp(email: string, password = PASSWORD, options: { ip?: string; cookie?: string; name?: string } = {}) {
+  const response = await authRequest("/sign-up/email", { email, password, name: options.name ?? "" }, options);
   applySetCookies(response);
   return response;
 }

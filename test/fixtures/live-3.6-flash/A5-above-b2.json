@@ -1,0 +1,582 @@
+{
+  "_fixture": {
+    "model": "gemini-3.6-flash",
+    "production": false,
+    "warning": "NOT the production model. Production evaluates with gemini-3.8-flash; this free-tier run used gemini-3.6-flash, so bands and judgements may differ from production.",
+    "anchor": "A5-above-b2",
+    "expectedBand": 5,
+    "bands": [
+      5,
+      5,
+      5
+    ],
+    "runAt": "2026-11-06",
+    "commit": "4edee53 (evaluator 3.5.0)",
+    "source": "eval-reports/evaluation-set-2026-11-06T09-59-29-104Z.json",
+    "settings": "EVAL_REPEAT=3, one at a time, 8 s pause, SDK retries off; transcript only (no audio)",
+    "savedFromRun": [
+      "result",
+      "latencyMs",
+      "modelCalls",
+      "inputTokens",
+      "outputTokens",
+      "model (answering model)",
+      "modelConfig (except audioAssessment)"
+    ],
+    "rebuiltFromCode": [
+      "evaluatorVersion",
+      "rubricVersion",
+      "schemaVersion",
+      "promptHash (deterministic)",
+      "modelConfig.audioAssessment",
+      "provider",
+      "isDevelopmentProvider"
+    ],
+    "notSaved": "quality (the quality-gate report) was not written to the report and is left out; qualityPassed is true where the live test asserted it, null where it did not reach that check."
+  },
+  "runs": [
+    {
+      "run": 1,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "The piece of advice that has stayed with me the most came from a former English teacher of mine, shortly before I sat my first major exam.",
+                "note": "You clearly explained who gave you advice and your situation at the time.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks.",
+                "note": "You described the specific advice given and confirmed that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience.",
+                "note": "You gave a well-reasoned opinion on whether young people should follow advice from older people.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "above_B2",
+                "evidence": [
+                  "I had been studying obsessively for weeks",
+                  "Rather than telling me to work harder, which is what I'd expected",
+                  "Not only did my results improve, but I also felt considerably less anxious",
+                  "dismissing their views outright would be arrogant"
+                ],
+                "note": "You demonstrated an excellent range of complex grammar structures accurately, including inversion and past tenses.",
+                "how_to_improve": "Keep practicing advanced structures such as inversions and participle clauses so they remain effortless in spontaneous speech.",
+                "how_to_check": "Re-record your speech and check that complex grammar structures sound natural and contain no errors."
+              },
+              "vocabulary": {
+                "level": "above_B2",
+                "evidence": [
+                  "close to burning out",
+                  "struck me as counterintuitive",
+                  "a matter of blind obedience",
+                  "weigh it up critically"
+                ],
+                "note": "You used precise, natural, and idiomatic vocabulary throughout your response.",
+                "how_to_improve": "Continue to expand your active vocabulary with precise idiomatic expressions suited to formal and semi-formal speaking topics.",
+                "how_to_check": "Review your recordings to ensure you choose specific, sophisticated words instead of repeating common terms."
+              },
+              "fluency": {
+                "level": "above_B2",
+                "evidence": [
+                  "The piece of advice that has stayed with me the most came from a former English teacher of mine",
+                  "Not only did my results improve, but I also felt considerably less anxious",
+                  "Older people undoubtedly have the benefit of experience"
+                ],
+                "note": "You spoke smoothly for 118 of the 120 seconds without any hesitations or filler words.",
+                "how_to_improve": "Maintain your steady pacing when responding to unexpected topics without preparation.",
+                "how_to_check": "Listen back to unscripted recordings to verify that your delivery stays uninterrupted."
+              },
+              "cohesion": {
+                "level": "above_B2",
+                "evidence": [
+                  "Rather than telling me to work harder",
+                  "which in turn made my practice far more productive",
+                  "As to whether young people should",
+                  "That said, circumstances have changed"
+                ],
+                "note": "You connected your thoughts smoothly using advanced linkers like 'As to whether' and 'That said'.",
+                "how_to_improve": "Vary your transition phrases across different parts of your response to maintain smooth discourse flow.",
+                "how_to_check": "Check that each idea flows logically into the next when reviewing your transcripts."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "Not only did my results improve, but I also felt considerably less anxious",
+                "note": "Excellent command of negative inversion for emphasis."
+              },
+              {
+                "feature": "vocabulary",
+                "quote": "it shouldn't be a matter of blind obedience",
+                "note": "Very natural use of advanced idiomatic phrasing."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "above_B2",
+            "language_mean": 3,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 5,
+            "language_cap": 5,
+            "band": 5,
+            "label": "Above B2",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": true,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Keep practicing advanced structures such as inversions and participle clauses so they remain effortless in spontaneous speech.",
+              "success_check": "Re-record your speech and check that complex grammar structures sound natural and contain no errors.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Continue to expand your active vocabulary with precise idiomatic expressions suited to formal and semi-formal speaking topics.",
+              "success_check": "Review your recordings to ensure you choose specific, sophisticated words instead of repeating common terms.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 24107,
+        "modelCalls": 1,
+        "inputTokens": 6250,
+        "outputTokens": 4765
+      }
+    },
+    {
+      "run": 2,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "The piece of advice that has stayed with me the most came from a former English teacher of mine, shortly before I sat my first major exam. I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                "note": "You clearly explained who gave you advice and described the situation before your exam.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "Rather than telling me to work harder, which is what I'd expected, she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks. It struck me as counterintuitive, and I was reluctant at first, but I eventually gave it a try.",
+                "note": "You detailed the specific advice and explained how you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience. Older people undoubtedly have the benefit of experience, and dismissing their views outright would be arrogant. That said, circumstances have changed dramatically in recent decades, so some well-meant advice, particularly about careers, may no longer apply. Ideally, young people should weigh it up critically rather than accepting or rejecting it automatically.",
+                "note": "You provided a balanced general view with solid reasons regarding advice from older people.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "above_B2",
+                "evidence": [
+                  "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive.",
+                  "Rather than telling me to work harder, which is what I'd expected, she advised me to do the opposite",
+                  "I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                  "dismissing their views outright would be arrogant."
+                ],
+                "note": "You used complex structures such as inversion, relative clauses, and past perfect continuous accurately.",
+                "how_to_improve": "Keep maintaining your high standard by experimenting with advanced participle phrases like 'Having considered all options, I decided to...'.",
+                "how_to_check": "Make sure your participle clauses have a clear subject and accurate tense control."
+              },
+              "vocabulary": {
+                "level": "above_B2",
+                "evidence": [
+                  "close to burning out",
+                  "counterintuitive, and I was reluctant at first",
+                  "blind obedience",
+                  "weigh it up critically rather than accepting or rejecting it automatically"
+                ],
+                "note": "Your vocabulary is precise, varied, and includes sophisticated collocations throughout.",
+                "how_to_improve": "Continue integrating nuanced idiomatic vocabulary naturally when expanding on abstract topics.",
+                "how_to_check": "Ensure idiomatic phrases sound natural and fit the context perfectly without feeling forced."
+              },
+              "fluency": {
+                "level": "above_B2",
+                "evidence": [
+                  "The piece of advice that has stayed with me the most came from a former English teacher of mine, shortly before I sat my first major exam.",
+                  "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive."
+                ],
+                "note": "You spoke smoothly for 118 seconds without visible hesitation or reformulations.",
+                "how_to_improve": "Sustain this continuous flow by practicing spontaneous responses without pre-planning exact phrases.",
+                "how_to_check": "Record your spontaneous speaking to confirm that pacing remains consistently smooth from start to finish."
+              },
+              "cohesion": {
+                "level": "above_B2",
+                "evidence": [
+                  "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive.",
+                  "That said, circumstances have changed dramatically in recent decades",
+                  "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience."
+                ],
+                "note": "You linked your points seamlessly using a wide range of advanced cohesive devices.",
+                "how_to_improve": "Vary your transition markers across different sections of your spoken response.",
+                "how_to_check": "Review your speech to verify that every connection between ideas flows naturally without repeating the same linkers."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "Not only did my results improve, but I also felt considerably less anxious, which in turn made my practice far more productive.",
+                "note": "You correctly used negative inversion alongside a non-defining relative clause."
+              },
+              {
+                "feature": "vocabulary",
+                "quote": "I'd argue it shouldn't be a matter of blind obedience.",
+                "note": "You expressed your point using strong, natural collocations."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "above_B2",
+            "language_mean": 3,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 5,
+            "language_cap": 5,
+            "band": 5,
+            "label": "Above B2",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": true,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Keep maintaining your high standard by experimenting with advanced participle phrases like 'Having considered all options, I decided to...'.",
+              "success_check": "Make sure your participle clauses have a clear subject and accurate tense control.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Continue integrating nuanced idiomatic vocabulary naturally when expanding on abstract topics.",
+              "success_check": "Ensure idiomatic phrases sound natural and fit the context perfectly without feeling forced.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 28528,
+        "modelCalls": 1,
+        "inputTokens": 6250,
+        "outputTokens": 5201
+      }
+    },
+    {
+      "run": 3,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "came from a former English teacher of mine, shortly before I sat my first major exam. I had been studying obsessively for weeks and was, frankly, close to burning out.",
+                "note": "You clearly explained who gave you advice and your situation before an exam.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "she advised me to do the opposite: cut my study hours, sleep properly and focus only on the areas where I was consistently losing marks. It struck me as counterintuitive, and I was reluctant at first, but I eventually gave it a try.",
+                "note": "You detailed the advice you received and confirmed that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "As to whether young people should always follow their elders' advice, I'd argue it shouldn't be a matter of blind obedience.",
+                "note": "You provided a well-reasoned opinion on whether young people should follow older people's advice.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "above_B2",
+                "evidence": [
+                  "I had been studying obsessively for weeks",
+                  "Not only did my results improve, but I also felt considerably less anxious",
+                  "which in turn made my practice far more productive",
+                  "rather than accepting or rejecting it automatically"
+                ],
+                "note": "You used a wide range of complex structures accurately and flexibly.",
+                "how_to_improve": "Keep using advanced structures such as inversion and complex relative clauses in natural spoken contexts.",
+                "how_to_check": "Check after speaking that your complex sentences remain accurate and easy to follow."
+              },
+              "vocabulary": {
+                "level": "above_B2",
+                "evidence": [
+                  "close to burning out",
+                  "counterintuitive",
+                  "blind obedience",
+                  "dismissing their views outright"
+                ],
+                "note": "You used precise, sophisticated vocabulary and natural collocations throughout your response.",
+                "how_to_improve": "Maintain this rich variety of precise topic vocabulary and natural collocations across all topics.",
+                "how_to_check": "Check that your word choices continue to convey subtle meanings accurately in spontaneous speech."
+              },
+              "fluency": {
+                "level": "above_B2",
+                "evidence": [
+                  "The piece of advice that has stayed with me the most came from a former English teacher of mine",
+                  "Rather than telling me to work harder, which is what I'd expected, she advised me to do the opposite"
+                ],
+                "note": "You spoke continuously and smoothly with no hesitation while expressing complex ideas.",
+                "how_to_improve": "Maintain this steady pace and smooth delivery when speaking on unfamiliar or spontaneous topics.",
+                "how_to_check": "Record yourself on new topics to ensure you speak continuously without introducing pauses or fillers."
+              },
+              "cohesion": {
+                "level": "above_B2",
+                "evidence": [
+                  "Not only did my results improve, but I also felt",
+                  "which in turn made my practice far more productive",
+                  "As to whether young people should always follow",
+                  "That said, circumstances have changed dramatically"
+                ],
+                "note": "You connected your ideas seamlessly using a wide variety of advanced linking words.",
+                "how_to_improve": "Continue using diverse discourse markers to transition smoothly between complex arguments.",
+                "how_to_check": "Listen to your answers to verify that your transitions between points feel natural and varied."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [],
+            "error_patterns": [],
+            "strengths": [
+              {
+                "feature": "grammar",
+                "quote": "Not only did my results improve, but I also felt considerably less anxious",
+                "note": "Excellent and natural use of negative inversion."
+              },
+              {
+                "feature": "vocabulary",
+                "quote": "I'd argue it shouldn't be a matter of blind obedience",
+                "note": "Precise and natural topic-specific phrase."
+              }
+            ],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "above_B2",
+            "language_mean": 3,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 5,
+            "language_cap": 5,
+            "band": 5,
+            "label": "Above B2",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": true,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Keep using advanced structures such as inversion and complex relative clauses in natural spoken contexts.",
+              "success_check": "Check after speaking that your complex sentences remain accurate and easy to follow.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Maintain this rich variety of precise topic vocabulary and natural collocations across all topics.",
+              "success_check": "Check that your word choices continue to convey subtle meanings accurately in spontaneous speech.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 25772,
+        "modelCalls": 1,
+        "inputTokens": 6250,
+        "outputTokens": 4896
+      }
+    }
+  ]
+}

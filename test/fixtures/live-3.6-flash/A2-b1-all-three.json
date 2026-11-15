@@ -1,0 +1,584 @@
+{
+  "_fixture": {
+    "model": "gemini-3.6-flash",
+    "production": false,
+    "warning": "NOT the production model. Production evaluates with gemini-3.8-flash; this free-tier run used gemini-3.6-flash, so bands and judgements may differ from production.",
+    "anchor": "A2-b1-all-three",
+    "expectedBand": 2,
+    "bands": [
+      2,
+      2,
+      2
+    ],
+    "runAt": "2026-11-06",
+    "commit": "4edee53 (evaluator 3.5.0)",
+    "source": "eval-reports/evaluation-set-2026-11-06T09-59-29-104Z.json",
+    "settings": "EVAL_REPEAT=3, one at a time, 8 s pause, SDK retries off; transcript only (no audio)",
+    "savedFromRun": [
+      "result",
+      "latencyMs",
+      "modelCalls",
+      "inputTokens",
+      "outputTokens",
+      "model (answering model)",
+      "modelConfig (except audioAssessment)"
+    ],
+    "rebuiltFromCode": [
+      "evaluatorVersion",
+      "rubricVersion",
+      "schemaVersion",
+      "promptHash (deterministic)",
+      "modelConfig.audioAssessment",
+      "provider",
+      "isDevelopmentProvider"
+    ],
+    "notSaved": "quality (the quality-gate report) was not written to the report and is left out; qualityPassed is true where the live test asserted it, null where it did not reach that check."
+  },
+  "runs": [
+    {
+      "run": 1,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "I want to talk about advice from my English teacher. Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+                "note": "You explained that your English teacher gave you advice when you were stressed about your exam.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "My teacher told me to speak English every day, even for ten minutes, and to record myself on my phone. At first I didn't like it, because I felt shy when I listened to my voice. But I followed her advice, and after two months my speaking became better.",
+                "note": "You explained the teacher's advice and confirmed that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "About young people, I think they should listen to advice from older people, but not always. Older people have more experience, so their advice is often useful. But sometimes they don't understand new things, like new jobs or the internet. So young people should listen, and then decide themselves.",
+                "note": "You gave a clear opinion on whether young people should follow advice from older people with reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B1",
+                "evidence": [
+                  "Last year I was preparing for my CEFR exam",
+                  "My teacher told me to speak English every day",
+                  "when I listened to my voice",
+                  "decide themselves"
+                ],
+                "note": "You used simple sentence structures correctly, but did not attempt complex structures like conditionals or relative clauses.",
+                "how_to_improve": "Try using a conditional sentence such as 'If I had not followed her advice, I would not have passed the exam'.",
+                "how_to_check": "Review your response and confirm it contains at least one sentence with 'if' or 'which'."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "my speaking became better",
+                  "I was very happy",
+                  "Older people have more experience",
+                  "decide themselves"
+                ],
+                "note": "Your vocabulary was clear and relevant, but relied mainly on simple, everyday words.",
+                "how_to_improve": "Replace simple phrases like 'became better' with topic-specific collocations like 'improved significantly'.",
+                "how_to_check": "Check your answer to ensure you used phrases with strong verbs and nouns instead of basic adjectives."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "At first I didn't like it, because I felt shy",
+                  "But I followed her advice, and after two months my speaking became better."
+                ],
+                "note": "You spoke smoothly without fillers, but your speech was built from short, simple sentences.",
+                "how_to_improve": "Group your main points into longer ideas during preparation so you can speak continuously.",
+                "how_to_check": "Count your sentence length to make sure you use extended clauses rather than short statements."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "because my speaking was weak",
+                  "At first I didn't like it",
+                  "so I was very happy",
+                  "About young people"
+                ],
+                "note": "You connected your ideas clearly using simple linkers like 'because', 'so', and 'but'.",
+                "how_to_improve": "Use higher-level connectors like 'however', 'as a result', or 'for instance' to link your thoughts.",
+                "how_to_check": "Check that your text contains transition words beyond basic conjunctions like 'and' or 'but'."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [
+              {
+                "quote": "my speaking became better",
+                "correction": "my speaking improved",
+                "type": "vocabulary",
+                "pattern": ""
+              },
+              {
+                "quote": "decide themselves",
+                "correction": "decide for themselves",
+                "type": "grammar",
+                "pattern": ""
+              }
+            ],
+            "error_patterns": [],
+            "strengths": [],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "B1",
+            "language_mean": 1,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 4,
+            "language_cap": 2,
+            "band": 2,
+            "label": "Higher B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Try using a conditional sentence such as 'If I had not followed her advice, I would not have passed the exam'.",
+              "success_check": "Review your response and confirm it contains at least one sentence with 'if' or 'which'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Replace simple phrases like 'became better' with topic-specific collocations like 'improved significantly'.",
+              "success_check": "Check your answer to ensure you used phrases with strong verbs and nouns instead of basic adjectives.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 33551,
+        "modelCalls": 1,
+        "inputTokens": 6255,
+        "outputTokens": 6913
+      }
+    },
+    {
+      "run": 2,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "I want to talk about advice from my English teacher. Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+                "note": "You explained who gave you advice and described the situation you were in.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "My teacher told me to speak English every day, even for ten minutes, and to record myself on my phone. At first I didn't like it, because I felt shy when I listened to my voice. But I followed her advice",
+                "note": "You clearly stated what advice you received and confirmed that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "About young people, I think they should listen to advice from older people, but not always. Older people have more experience, so their advice is often useful. But sometimes they don't understand new things, like new jobs or the internet. So young people should listen, and then decide themselves.",
+                "note": "You shared your opinion on whether young people should follow older people's advice and gave clear reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B1",
+                "evidence": [
+                  "Last year I was preparing for my CEFR exam",
+                  "My teacher told me to speak English every day",
+                  "I felt shy when I listened to my voice",
+                  "I got B2 in the exam, so I was very happy"
+                ],
+                "note": "Simple structures are used correctly, but complex structures like conditionals or relative clauses are missing.",
+                "how_to_improve": "Use complex structures such as conditionals with 'if' or relative clauses with 'who' or 'which'.",
+                "how_to_check": "Check your next response to ensure it contains at least one sentence using 'if' or 'which'."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "my speaking became better",
+                  "very happy",
+                  "more experience",
+                  "understand new things"
+                ],
+                "note": "Your vocabulary is clear and sufficient to answer, but it relies on simple everyday words.",
+                "how_to_improve": "Learn and use topic-specific collocations such as 'make their own decisions' or 'gain experience'.",
+                "how_to_check": "Review your text to see if you replaced basic words like 'became better' with phrases like 'improved significantly'."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "I was very stressed because my speaking was weak.",
+                  "At first I didn't like it, because I felt shy",
+                  "So young people should listen, and then decide themselves."
+                ],
+                "note": "You spoke continuously without visible fillers, but your sentences were mostly short and simple.",
+                "how_to_improve": "Plan your main points during preparation time so you can join ideas into longer sentences.",
+                "how_to_check": "Listen to your recording to verify that you speak for the full time with smooth transitions."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "because my speaking was weak",
+                  "At first I didn't like it",
+                  "so I was very happy",
+                  "About young people"
+                ],
+                "note": "You linked your sentences clearly, but you only used simple connectors like 'and', 'but', and 'so'.",
+                "how_to_improve": "Use formal linkers like 'however', 'for instance', or 'as a result' to connect your thoughts.",
+                "how_to_check": "Count your linking words and make sure you have used words like 'however' or 'for example'."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [
+              {
+                "quote": "decide themselves",
+                "correction": "decide for themselves",
+                "type": "grammar",
+                "pattern": ""
+              }
+            ],
+            "error_patterns": [],
+            "strengths": [],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "B1",
+            "language_mean": 1,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 4,
+            "language_cap": 2,
+            "band": 2,
+            "label": "Higher B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Use complex structures such as conditionals with 'if' or relative clauses with 'who' or 'which'.",
+              "success_check": "Check your next response to ensure it contains at least one sentence using 'if' or 'which'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Learn and use topic-specific collocations such as 'make their own decisions' or 'gain experience'.",
+              "success_check": "Review your text to see if you replaced basic words like 'became better' with phrases like 'improved significantly'.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 33410,
+        "modelCalls": 1,
+        "inputTokens": 6255,
+        "outputTokens": 6960
+      }
+    },
+    {
+      "run": 3,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "on_topic",
+                "evidence": "I want to talk about advice from my English teacher. Last year I was preparing for my CEFR exam, and I was very stressed because my speaking was weak.",
+                "note": "You clearly explained who gave you advice and what situation you were in.",
+                "model_answer": ""
+              },
+              {
+                "id": 2,
+                "status": "on_topic",
+                "evidence": "My teacher told me to speak English every day, even for ten minutes, and to record myself on my phone. At first I didn't like it, because I felt shy when I listened to my voice. But I followed her advice, and after two months my speaking became better.",
+                "note": "You stated the advice clearly and explained that you followed it.",
+                "model_answer": ""
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "About young people, I think they should listen to advice from older people, but not always. Older people have more experience, so their advice is often useful. But sometimes they don't understand new things, like new jobs or the internet. So young people should listen, and then decide themselves.",
+                "note": "You gave your opinion on whether young people should follow advice from older people and provided clear reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B1",
+                "evidence": [
+                  "I was preparing for my CEFR exam, and I was very stressed",
+                  "My teacher told me to speak English every day",
+                  "because I felt shy when I listened to my voice",
+                  "they should listen to advice from older people"
+                ],
+                "note": "You used simple structures accurately, but you did not include complex structures such as relative clauses or passives.",
+                "how_to_improve": "Add relative clauses with 'who' or 'which', for example: 'My English teacher, who had a lot of experience, gave me great advice.'",
+                "how_to_check": "Check your recorded speech to see if you used relative clauses with 'who' or 'which'."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "followed her advice",
+                  "my speaking became better",
+                  "very happy",
+                  "Older people have more experience"
+                ],
+                "note": "Your vocabulary was clear and relevant, but it relied mostly on everyday words like 'became better' and 'very happy'.",
+                "how_to_improve": "Use more natural verb-noun combinations, such as 'improved significantly' instead of 'became better', or 'gain experience' instead of 'have experience'.",
+                "how_to_check": "Look at your transcript and count how many specific verbs or collocations you used instead of basic words."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "I want to talk about advice from my English teacher.",
+                  "At first I didn't like it, because I felt shy when I listened to my voice.",
+                  "So young people should listen, and then decide themselves."
+                ],
+                "note": "You spoke continuously without visible fillers or hesitation, but your speech was made of simple sentences.",
+                "how_to_improve": "Plan the main points during your preparation time so you can connect short thoughts into longer, multi-clause sentences.",
+                "how_to_check": "Count the number of multi-clause sentences in your next recording."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "because my speaking was weak",
+                  "At first I didn't like it",
+                  "But I followed her advice",
+                  "so their advice is often useful"
+                ],
+                "note": "You connected your ideas clearly, but you relied only on simple linkers like 'because', 'but', and 'so'.",
+                "how_to_improve": "Use higher-level linking words such as 'however', 'as a result', or 'on the other hand' to show contrasts and consequences.",
+                "how_to_check": "Check your answer to confirm that you used at least one linking phrase like 'however' or 'as a result'."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [
+              {
+                "quote": "decide themselves",
+                "correction": "decide for themselves",
+                "type": "vocabulary",
+                "pattern": ""
+              },
+              {
+                "quote": "my speaking became better",
+                "correction": "my speaking improved",
+                "type": "vocabulary",
+                "pattern": ""
+              }
+            ],
+            "error_patterns": [],
+            "strengths": [],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 3,
+            "language_level": "B1",
+            "language_mean": 1,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 4,
+            "language_cap": 2,
+            "band": 2,
+            "label": "Higher B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Add relative clauses with 'who' or 'which', for example: 'My English teacher, who had a lot of experience, gave me great advice.'",
+              "success_check": "Check your recorded speech to see if you used relative clauses with 'who' or 'which'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            },
+            {
+              "objective": "Use more natural verb-noun combinations, such as 'improved significantly' instead of 'became better', or 'gain experience' instead of 'have experience'.",
+              "success_check": "Look at your transcript and count how many specific verbs or collocations you used instead of basic words.",
+              "target": {
+                "kind": "feature",
+                "feature": "vocabulary"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 35411,
+        "modelCalls": 1,
+        "inputTokens": 6255,
+        "outputTokens": 7573
+      }
+    }
+  ]
+}

@@ -168,6 +168,20 @@ jobs:
           cache: npm
       # Only what the migration needs: no dev tools, and no install scripts (ffmpeg-static would download a binary).
       - run: npm ci --omit=dev --ignore-scripts
+      # A full READ-ONLY backup of the production database, taken right before every migration and kept as a private
+      # workflow artifact for 30 days. If the backup fails, nothing is migrated. Restore: see scripts/ci/backup-database.mjs.
+      - name: Back up the production database (read-only)
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: node scripts/ci/backup-database.mjs "$RUNNER_TEMP/cefro-db-backup/cefro-production-backup.sql"
+      - name: Keep the backup (private artifact, 30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cefro-db-backup-${{ github.sha }}
+          path: ${{ runner.temp }}/cefro-db-backup/
+          retention-days: 30
+          if-no-files-found: error
       - name: npm run db:migrate
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}

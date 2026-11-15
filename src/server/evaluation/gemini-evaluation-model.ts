@@ -1,7 +1,9 @@
 import "server-only";
 import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel } from "@google/genai";
-import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { q8ProviderOutputSchema } from "@/domain/evaluation/q8/model-output";
 import { ProviderError } from "@/server/errors";
+import type { ArgumentEvaluationInput, ArgumentEvaluationModel } from "./argument-types";
 import { toGeminiJsonSchema } from "./gemini-json-schema";
 import type { EvaluationInput, EvaluationModel, EvaluationPrompt, ModelEvaluationOutput } from "./types";
 
@@ -14,6 +16,8 @@ export interface GeminiEvaluationOptions {
   maxTokens: number;
   /** Unset = the model's default. Only valid for models that support thinking levels. */
   thinkingLevel?: GeminiThinkingLevel;
+  /** Unset = the model's default. */
+  temperature?: number;
   structuredOutput: GeminiStructuredOutputMode;
   timeoutMs: number;
   /** Retries for 408/429/5xx (the SDK handles them). */
@@ -48,12 +52,23 @@ const REFUSAL_FINISH_REASONS = new Set<string>([
  * independent code in `speaking-evaluator.ts`. API-side schema enforcement is
  * a convenience and is never trusted.
  */
-export class GeminiEvaluationModel implements EvaluationModel {
+export class GeminiEvaluationModel implements EvaluationModel, ArgumentEvaluationModel {
   readonly provider = "gemini";
   readonly isDevelopmentProvider = false;
   readonly config: Record<string, string | number | boolean>;
   private readonly client: GoogleGenAI;
-  private readonly responseSchema = toGeminiJsonSchema(multilevelModelOutputSchema);
+  /** The response schema per rubric (its own levels, statuses and features; Part 3 its own shape), built once. */
+  private readonly schemas = new Map<string, ReturnType<typeof toGeminiJsonSchema>>();
+  private responseSchemaFor(input: EvaluationInput | ArgumentEvaluationInput) {
+    const key = input?.rubric?.id ?? "default";
+    let schema = this.schemas.get(key);
+    if (!schema) {
+      // Part 3 (official Question 8) has its own output shape; every other rubric is Part 2's shape on its own ladder.
+      schema = toGeminiJsonSchema(key === "multilevel-q8" ? q8ProviderOutputSchema : providerOutputSchema((input as EvaluationInput | undefined)?.rubric?.config));
+      this.schemas.set(key, schema);
+    }
+    return schema;
+  }
 
   constructor(private readonly options: GeminiEvaluationOptions) {
     this.client = new GoogleGenAI({
@@ -68,6 +83,7 @@ export class GeminiEvaluationModel implements EvaluationModel {
       maxTokens: options.maxTokens,
       structuredOutput: options.structuredOutput,
       ...(options.thinkingLevel ? { thinkingLevel: options.thinkingLevel } : {}),
+      ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
     };
   }
 
@@ -75,8 +91,9 @@ export class GeminiEvaluationModel implements EvaluationModel {
     return this.options.model;
   }
 
-  async evaluate(prompt: EvaluationPrompt, _input: EvaluationInput): Promise<ModelEvaluationOutput> {
-    void _input; // transcript-only evaluation: the prompt already contains everything needed.
+  async evaluate(prompt: EvaluationPrompt, input: EvaluationInput | ArgumentEvaluationInput): Promise<ModelEvaluationOutput> {
+    // Transcript-only evaluation: the prompt has everything; the input only picks the rubric's response schema.
+    const responseSchema = this.responseSchemaFor(input);
 
     let response;
     try {
@@ -84,10 +101,11 @@ export class GeminiEvaluationModel implements EvaluationModel {
         model: this.options.model,
         contents: prompt.user,
         config: {
-          systemInstruction: `${prompt.system}\n\n${this.outputFormatInstruction()}`,
+          systemInstruction: `${prompt.system}\n\n${outputFormatInstruction(responseSchema)}`,
           maxOutputTokens: this.options.maxTokens,
+          ...(this.options.temperature !== undefined ? { temperature: this.options.temperature } : {}),
           responseMimeType: "application/json",
-          ...(this.options.structuredOutput === "schema" ? { responseJsonSchema: this.responseSchema } : {}),
+          ...(this.options.structuredOutput === "schema" ? { responseJsonSchema: responseSchema } : {}),
           ...(this.options.thinkingLevel
             ? { thinkingConfig: { thinkingLevel: THINKING_LEVELS[this.options.thinkingLevel] } }
             : {}),
@@ -140,11 +158,12 @@ export class GeminiEvaluationModel implements EvaluationModel {
     };
   }
 
-  private outputFormatInstruction(): string {
-    return `# Output format
+}
+
+function outputFormatInstruction(responseSchema: unknown): string {
+  return `# Output format
 Respond with ONLY a JSON object (no markdown, no code fences, no text before or after) that matches this JSON Schema exactly. Include every property, and use null where the schema allows it and nothing applies.
-${JSON.stringify(this.responseSchema)}`;
-  }
+${JSON.stringify(responseSchema)}`;
 }
 
 /**

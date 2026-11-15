@@ -1,0 +1,1325 @@
+[
+  {
+    "id": "A0-below-b1",
+    "kind": "anchor",
+    "expected": "band 0 · language below_B1 · Q1=on_topic, Q2=on_topic, Q3=on_topic",
+    "bands": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "misses": [],
+    "errors": [],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You explained that your father gave you advice when you were 16 and wanted to leave school to work.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him.",
+              "note": "You shared that your father told you to keep studying and that you followed his advice.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion that young people should listen because older people know a lot, but noted that older people are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I am 16 year",
+                "Now I am study in university",
+                "old people is not right also"
+              ],
+              "note": "You regularly make basic mistakes with past tenses, subject-verb agreement, and verb forms like 'am study'.",
+              "how_to_improve": "Use past simple verbs (such as 'gave', 'wanted', and 'said') when telling a story about the past.",
+              "how_to_check": "Listen to your recording and verify that verbs describing past actions end in '-ed' or use irregular past forms like 'said'."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "work in market",
+                "angry little",
+                "Advice is good thing",
+                "know many thing"
+              ],
+              "note": "Your vocabulary relies on very basic words with noticeable errors like 'know many thing' and 'angry little'.",
+              "how_to_improve": "Practise common fixed expressions for this topic, such as 'take advice', 'leave school', and 'a little angry'.",
+              "how_to_check": "Check your transcript to ensure you use complete expressions like 'a little angry' instead of word-by-word translations."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice...",
+                "That's all."
+              ],
+              "note": "You spoke at a slow rate of 66 words per minute and finished speaking after only 60 seconds.",
+              "how_to_improve": "Use the preparation time to note down two details for each question so that you can continue speaking for the full two minutes.",
+              "how_to_check": "Look at the timer during your next practice to ensure you speak for at least 90 to 100 seconds before stopping."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know many thing",
+                "But sometimes old people is not right also",
+                "Now I am study in university"
+              ],
+              "note": "You used simple linking words like 'because' and 'But', but several sentences were presented as separate points without connectors.",
+              "how_to_improve": "Link your background sentences together using time linkers like 'when' and result linkers like 'so' (for example, 'When I was 16, I wanted to work, so my father advised me').",
+              "how_to_check": "Check that your sentences connect with words like 'when', 'so', or 'because' rather than standing alone as short clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Using present simple instead of past simple"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to stop school",
+              "type": "grammar",
+              "pattern": "Missing 'to' after want or listen"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Missing 'to' after want or listen"
+            },
+            {
+              "quote": "old people is not right also",
+              "correction": "old people are not right either",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with plural nouns"
+            },
+            {
+              "quote": "He is angry little",
+              "correction": "He was a little angry",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "Now I am study in university",
+              "correction": "Now I am studying at university",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "I am 16 year",
+              "correction": "I was 16 years old",
+              "type": "grammar",
+              "pattern": "Using present simple instead of past simple"
+            },
+            {
+              "quote": "old people know many thing",
+              "correction": "old people know many things",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Using present simple instead of past simple",
+              "type": "grammar",
+              "rule": "Use past simple verb forms like 'gave', 'wanted', and 'said' when talking about events in the past.",
+              "how_to_fix": "Before you start speaking about a past experience, remind yourself to put every action verb into the past tense."
+            },
+            {
+              "name": "Missing 'to' after want or listen",
+              "type": "grammar",
+              "rule": "Verbs like 'want' need 'to' before another verb (want to stop), and 'listen' needs 'to' before a person or object (listen to him).",
+              "how_to_fix": "Practise saying 'wanted to' and 'listened to' as fixed pairs so you do not omit the preposition 'to'."
+            },
+            {
+              "name": "Subject-verb agreement with plural nouns",
+              "type": "grammar",
+              "rule": "Plural nouns like 'people' take plural verbs such as 'are' or 'were' (e.g. 'older people are experienced').",
+              "how_to_fix": "Check whether your subject refers to a group and consciously match it with 'are' instead of 'is'."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "my father give me advice",
+              "better": "my father gave me advice",
+              "why": "Use the past simple tense for a finished past action."
+            },
+            {
+              "you_said": "I want stop school",
+              "better": "I want to stop school",
+              "why": "Use 'to' before a second verb after 'want'."
+            },
+            {
+              "you_said": "I listen him",
+              "better": "I listen to him",
+              "why": "Use the preposition 'to' after the verb 'listen'."
+            },
+            {
+              "you_said": "Now I am study in university",
+              "better": "Now I am studying in university",
+              "why": "Use the '-ing' form after 'am' in the continuous tense."
+            },
+            {
+              "you_said": "Advice is good thing",
+              "better": "Advice is a good thing",
+              "why": "Use the article 'a' before a singular countable noun phrase."
+            },
+            {
+              "you_said": "old people know many thing",
+              "better": "old people know many things",
+              "why": "Use the plural noun 'things' after 'many'."
+            },
+            {
+              "you_said": "old people is not right also",
+              "better": "old people are not right also",
+              "why": "Use 'are' because 'people' is a plural noun."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use past simple verbs (such as 'gave', 'wanted', and 'said') when telling a story about the past.",
+            "success_check": "Listen to your recording and verify that verbs describing past actions end in '-ed' or use irregular past forms like 'said'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Practise common fixed expressions for this topic, such as 'take advice', 'leave school', and 'a little angry'.",
+            "success_check": "Check your transcript to ensure you use complete expressions like 'a little angry' instead of word-by-word translations.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You explained that your father gave you advice when you were 16 and wanted to leave school to work.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him.",
+              "note": "You explained that your father told you to study and that you listened to his advice.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion that young people should listen because elders know a lot, but noted they are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I want stop school",
+                "I listen him",
+                "old people is not right"
+              ],
+              "note": "You make repeated basic errors with past tense verbs, missing 'to' in verb forms, and subject-verb agreement.",
+              "how_to_improve": "Practise changing verbs to the past tense like 'gave', 'wanted', and 'said' when you tell a story about the past.",
+              "how_to_check": "Read your sentences after speaking and check if every action in the past has a past-tense ending."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "work in market",
+                "He is angry little",
+                "listen him",
+                "know many thing"
+              ],
+              "note": "Your vocabulary covers the basic message, but unnatural phrasing and missing words are noticeable.",
+              "how_to_improve": "Learn common verb and preposition combinations like 'listen to' and 'work in a market'.",
+              "how_to_check": "Check whether you included the word 'to' after 'listen' and 'a' before singular countable nouns."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "Advice... my father give me advice.",
+                "That's all."
+              ],
+              "note": "You spoke without many false starts, but you spoke slowly and finished after only 60 seconds.",
+              "how_to_improve": "Add a second detail or an example to each answer so you continue speaking for at least 90 seconds.",
+              "how_to_check": "Look at the timer when you finish to see if you spoke past 90 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know many thing",
+                "But sometimes old people is not right also"
+              ],
+              "note": "You used simple linking words like 'because' and 'but', but several ideas were listed in separate short sentences.",
+              "how_to_improve": "Use phrases like 'For example' and 'In my opinion' to connect your ideas clearly.",
+              "how_to_check": "Look at your sentences to see if you used linking words other than 'and' or 'but'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Past tense when telling a story"
+            },
+            {
+              "quote": "My father say no",
+              "correction": "My father said no",
+              "type": "grammar",
+              "pattern": "Past tense when telling a story"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to stop school",
+              "type": "grammar",
+              "pattern": "Verb followed by 'to' + infinitive"
+            },
+            {
+              "quote": "I want work in market",
+              "correction": "I wanted to work in a market",
+              "type": "grammar",
+              "pattern": "Verb followed by 'to' + infinitive"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Missing preposition after 'listen'"
+            },
+            {
+              "quote": "listen old people",
+              "correction": "listen to older people",
+              "type": "grammar",
+              "pattern": "Missing preposition after 'listen'"
+            },
+            {
+              "quote": "old people is not right",
+              "correction": "older people are not right",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "He is angry little",
+              "correction": "He was a little angry",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Past tense when telling a story",
+              "type": "grammar",
+              "rule": "Use past tense forms when talking about events that happened in the past, for example 'my father gave me advice'.",
+              "how_to_fix": "Before you start your story, remind yourself to put every action verb into the past tense."
+            },
+            {
+              "name": "Verb followed by 'to' + infinitive",
+              "type": "grammar",
+              "rule": "When one verb follows 'want', use 'to' before the second verb, like 'I wanted to stop'.",
+              "how_to_fix": "Always pause and say 'to' after the verb 'want' before you name the action."
+            },
+            {
+              "name": "Missing preposition after 'listen'",
+              "type": "grammar",
+              "rule": "Always use the preposition 'to' after the verb 'listen', for example 'I listened to him'.",
+              "how_to_fix": "Whenever you say 'listen', immediately follow it with 'to'."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "my father give me advice.",
+              "better": "my father gave me advice.",
+              "why": "Use the past tense 'gave' because this happened in the past."
+            },
+            {
+              "you_said": "I want stop school,",
+              "better": "I wanted to stop school,",
+              "why": "Use 'to' between the verbs 'want' and 'stop'."
+            },
+            {
+              "you_said": "I want work in market.",
+              "better": "I wanted to work in market.",
+              "why": "Add 'to' after 'want' before the second verb."
+            },
+            {
+              "you_said": "My father say no, you must study.",
+              "better": "My father said no, you must study.",
+              "why": "Use the past form 'said' for past events."
+            },
+            {
+              "you_said": "I listen him.",
+              "better": "I listened to him.",
+              "why": "The verb 'listen' needs the preposition 'to' before the person."
+            },
+            {
+              "you_said": "Now I am study in university.",
+              "better": "Now I study in university.",
+              "why": "Use the simple present 'study' rather than 'am study'."
+            },
+            {
+              "you_said": "But sometimes old people is not right also.",
+              "better": "But sometimes old people are not right also.",
+              "why": "Use 'are' with the plural noun 'people'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.5,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Practise changing verbs to the past tense like 'gave', 'wanted', and 'said' when you tell a story about the past.",
+            "success_check": "Read your sentences after speaking and check if every action in the past has a past-tense ending.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Learn common verb and preposition combinations like 'listen to' and 'work in a market'.",
+            "success_check": "Check whether you included the word 'to' after 'listen' and 'a' before singular countable nouns.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You explained that your father gave you advice when you were 16 and wanted to leave school to work.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him. Now I am study in university.",
+              "note": "You shared that his advice was to study, and you followed it and are now at university.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion that young people should listen because older people know a lot, though they are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I want stop school",
+                "Now I am study in university",
+                "old people is not right"
+              ],
+              "note": "You often used present tense for past events and made basic errors in verb forms and agreement.",
+              "how_to_improve": "Practice using past simple verbs (such as 'gave', 'wanted', and 'said') when you talk about past experiences.",
+              "how_to_check": "Look at your verbs after speaking to make sure past actions end in -ed or use irregular past forms."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "work in market",
+                "angry little",
+                "Advice is good thing",
+                "old people know many thing"
+              ],
+              "note": "You relied on very basic words and made noticeable errors in word order and plural forms.",
+              "how_to_improve": "Learn common collocations for age and education, such as 'leave school' and 'older generation'.",
+              "how_to_check": "Check that adjectives come before nouns (for example, 'a little angry' instead of 'angry little')."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice... my father give me advice",
+                "He is angry little. I listen him",
+                "Is good. Advice is good thing",
+                "That's all."
+              ],
+              "note": "You spoke only 66 words and stopped after 60 seconds, using very short, broken sentences.",
+              "how_to_improve": "Plan two full sentences for each question during your preparation time so you can speak longer.",
+              "how_to_check": "Look at the timer to ensure you continue speaking for at least 90 to 100 seconds."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know many thing",
+                "But sometimes old people is not right also"
+              ],
+              "note": "You connected your ideas using simple linkers like 'because' and 'but'.",
+              "how_to_improve": "Try using slightly more varied connectors like 'however' or 'for example' instead of starting with 'But'.",
+              "how_to_check": "Check whether you used at least one linking phrase like 'for example' or 'on the other hand'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "old people is not right",
+              "correction": "older people are not right",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with 'people'"
+            },
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Using present tense for past events"
+            },
+            {
+              "quote": "My father say no",
+              "correction": "My father said no",
+              "type": "grammar",
+              "pattern": "Using present tense for past events"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to leave school",
+              "type": "grammar",
+              "pattern": "Missing 'to' after 'want'"
+            },
+            {
+              "quote": "I want work in market",
+              "correction": "I wanted to work in the market",
+              "type": "grammar",
+              "pattern": "Missing 'to' after 'want'"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Using present tense for past events"
+            },
+            {
+              "quote": "Now I am study in university",
+              "correction": "Now I am studying at university",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "He is angry little",
+              "correction": "He was a little angry",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Using present tense for past events",
+              "type": "grammar",
+              "rule": "When talking about an event that finished in the past, use past tense verbs (for example, 'my father gave' instead of 'my father give').",
+              "how_to_fix": "Before telling a personal story, remind yourself that every main action verb needs a past form."
+            },
+            {
+              "name": "Missing 'to' after 'want'",
+              "type": "grammar",
+              "rule": "When you put another verb after 'want', use 'to' plus the base verb (for example, 'I wanted to stop').",
+              "how_to_fix": "Practice saying 'want to' as a single unit before adding another action."
+            },
+            {
+              "name": "Subject-verb agreement with 'people'",
+              "type": "grammar",
+              "rule": "The noun 'people' is plural, so it requires a plural verb (for example, 'people are' instead of 'people is').",
+              "how_to_fix": "Always check that you use 'are' or 'were' whenever 'people' is the subject."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "But sometimes old people is not right also.",
+              "better": "But sometimes old people are not right also.",
+              "why": "The noun 'people' is plural, so it takes the plural verb 'are'."
+            },
+            {
+              "you_said": "my father give me advice.",
+              "better": "my father gave me advice.",
+              "why": "Use the past simple form 'gave' because this happened in the past."
+            },
+            {
+              "you_said": "My father say no, you must study.",
+              "better": "My father said no, you must study.",
+              "why": "Use the past simple verb 'said' when reporting past speech."
+            },
+            {
+              "you_said": "I want stop school,",
+              "better": "I want to stop school,",
+              "why": "Use 'to' before the second verb after 'want'."
+            },
+            {
+              "you_said": "I want work in market.",
+              "better": "I want to work in market.",
+              "why": "Add 'to' between 'want' and the next verb."
+            },
+            {
+              "you_said": "I listen him.",
+              "better": "I listen to him.",
+              "why": "The verb 'listen' needs the preposition 'to' before an object."
+            },
+            {
+              "you_said": "Now I am study in university.",
+              "better": "Now I am studying in university.",
+              "why": "Use the -ing form 'studying' after 'am' for present continuous."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Practice using past simple verbs (such as 'gave', 'wanted', and 'said') when you talk about past experiences.",
+            "success_check": "Look at your verbs after speaking to make sure past actions end in -ed or use irregular past forms.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Learn common collocations for age and education, such as 'leave school' and 'older generation'.",
+            "success_check": "Check that adjectives come before nouns (for example, 'a little angry' instead of 'angry little').",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You identified your father as the person who gave advice and explained your situation at age 16.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him. Now I am study in university.",
+              "note": "You stated that your father told you to study and confirmed that you followed his advice.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You gave your opinion with reasons explaining why young people should listen, but noted that older people are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I want stop school",
+                "Now I am study in university",
+                "old people is not right"
+              ],
+              "note": "You made basic mistakes with past tenses and verb forms in almost every sentence.",
+              "how_to_improve": "Practise past simple verbs such as 'gave', 'wanted', and 'said' when telling a story about the past.",
+              "how_to_check": "Check that every action in your past story ends in -ed or uses an irregular past form like 'gave' or 'told'."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "stop school",
+                "work in market",
+                "angry little",
+                "know many thing"
+              ],
+              "note": "Your vocabulary relies on very simple words with awkward combinations and missing word endings.",
+              "how_to_improve": "Learn common word combinations for education and work, such as 'leave school' and 'work at a market'.",
+              "how_to_check": "Look at your notes to see if you used fixed phrases like 'leave school' instead of translating word-for-word."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice...",
+                "I listen him. Now I am study in university.",
+                "That's all."
+              ],
+              "note": "You spoke for 60 of the 120 seconds at 66 words per minute and stopped early.",
+              "how_to_improve": "Plan two details or examples for each question during your preparation time so you can speak for the full two minutes.",
+              "how_to_check": "Time yourself with a timer to ensure you keep talking for at least 90 to 100 seconds without stopping early."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know many thing",
+                "But sometimes old people is not right also"
+              ],
+              "note": "You connected your ideas using simple linkers like 'because' and 'but', which meets the B1 standard.",
+              "how_to_improve": "Use linking words like 'however' or 'for example' to connect your sentences instead of starting with 'but'.",
+              "how_to_check": "Check that your sentences use words like 'however' or 'in addition' rather than only 'and' or 'but'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "I am 16 year",
+              "correction": "I was 16 years old",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to leave school",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Missing preposition after listen"
+            },
+            {
+              "quote": "listen old people",
+              "correction": "listen to older people",
+              "type": "grammar",
+              "pattern": "Missing preposition after listen"
+            },
+            {
+              "quote": "know many thing",
+              "correction": "know many things",
+              "type": "grammar",
+              "pattern": "Missing plural -s on count nouns"
+            },
+            {
+              "quote": "old people is not right",
+              "correction": "old people are not right",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with plural nouns"
+            },
+            {
+              "quote": "Now I am study in university",
+              "correction": "Now I am studying at university",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Past simple for past events",
+              "type": "grammar",
+              "rule": "Use past tense verbs when talking about a finished event in the past, for example, 'My father gave me advice'.",
+              "how_to_fix": "Before you tell a story, remind yourself to put every action verb into the past form."
+            },
+            {
+              "name": "Missing preposition after listen",
+              "type": "grammar",
+              "rule": "The verb 'listen' requires the preposition 'to' before an object, for example, 'I listened to him'.",
+              "how_to_fix": "Always say 'listen to' as a single unit whenever someone or something follows."
+            },
+            {
+              "name": "Missing plural -s on count nouns",
+              "type": "grammar",
+              "rule": "Use plural nouns after words like 'many', for example, 'many things'.",
+              "how_to_fix": "Whenever you use 'many' or a number higher than one, check that the noun ends with -s."
+            },
+            {
+              "name": "Subject-verb agreement with plural nouns",
+              "type": "grammar",
+              "rule": "Use plural verbs like 'are' with plural subjects like 'people', for example, 'people are right'.",
+              "how_to_fix": "Remember that 'people' is plural, so always pair it with 'are' or 'were'."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "my father give me advice.",
+              "better": "my father gave me advice.",
+              "why": "Use the past simple tense 'gave' because this happened in the past."
+            },
+            {
+              "you_said": "I want stop school,",
+              "better": "I wanted to stop school,",
+              "why": "Use 'wanted to' to talk about a past desire followed by another verb."
+            },
+            {
+              "you_said": "My father say no, you must study.",
+              "better": "My father said no, you must study.",
+              "why": "Use the past form 'said' for past speech."
+            },
+            {
+              "you_said": "I listen him.",
+              "better": "I listened to him.",
+              "why": "The verb 'listen' needs the preposition 'to' and the past ending '-ed'."
+            },
+            {
+              "you_said": "Now I am study in university.",
+              "better": "Now I am studying in university.",
+              "why": "Use the -ing form 'studying' after the helping verb 'am'."
+            },
+            {
+              "you_said": "because old people know many thing.",
+              "better": "because old people know many things.",
+              "why": "Use the plural noun 'things' after 'many'."
+            },
+            {
+              "you_said": "But sometimes old people is not right also.",
+              "better": "But sometimes old people are not right also.",
+              "why": "The word 'people' is plural, so it takes the plural verb 'are'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Practise past simple verbs such as 'gave', 'wanted', and 'said' when telling a story about the past.",
+            "success_check": "Check that every action in your past story ends in -ed or uses an irregular past form like 'gave' or 'told'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Learn common word combinations for education and work, such as 'leave school' and 'work at a market'.",
+            "success_check": "Look at your notes to see if you used fixed phrases like 'leave school' instead of translating word-for-word.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q7",
+        "part": 2,
+        "official_question": 7,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "my father give me advice. I am 16 year. I want stop school, I want work in market.",
+              "note": "You explained who gave you advice and described your situation at age 16.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My father say no, you must study. He is angry little. I listen him. Now I am study in university.",
+              "note": "You explained what your father told you and confirmed that you followed his advice.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Young people must listen old people because old people know many thing. But sometimes old people is not right also.",
+              "note": "You shared your opinion with reasons why young people should listen, while noting older people are not always right.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "below_B1",
+              "evidence": [
+                "my father give me advice",
+                "I want work in market",
+                "Now I am study in university",
+                "old people is not right"
+              ],
+              "note": "You made basic mistakes in most sentences, especially with past tense verbs and subject-verb agreement.",
+              "how_to_improve": "Practise using the past simple tense for past stories, saying 'my father gave', 'I wanted', and 'my father said'.",
+              "how_to_check": "Check your story to make sure every regular past verb ends in -ed and irregular verbs use their past form."
+            },
+            "vocabulary": {
+              "level": "below_B1",
+              "evidence": [
+                "I am 16 year",
+                "He is angry little",
+                "I listen him",
+                "know many thing"
+              ],
+              "note": "Your vocabulary was very basic and had noticeable word choice and phrase mistakes.",
+              "how_to_improve": "Learn fixed verb phrases with prepositions, such as 'listen to someone' and 'at the age of 16'.",
+              "how_to_check": "Check that you use 'to' after the verb 'listen' every time you speak."
+            },
+            "fluency": {
+              "level": "below_B1",
+              "evidence": [
+                "Advice... my father give me advice",
+                "That's all."
+              ],
+              "note": "You spoke at a slow pace of 66 words per minute and finished after 60 seconds, leaving half your time unused.",
+              "how_to_improve": "During preparation, plan two sentences for each question so that you keep speaking for more time.",
+              "how_to_check": "Look at your notes before speaking to confirm you have two points ready for each question."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "because old people know many thing",
+                "But sometimes old people is not right also"
+              ],
+              "note": "You used simple linking words like 'because' and 'but', though several sentences were short and disconnected.",
+              "how_to_improve": "Connect your past story using simple time linkers such as 'When I was 16' and 'After that'.",
+              "how_to_check": "Check that your sentences are joined with time words like 'when' instead of stopping after every fact."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "old people is not right",
+              "correction": "older people are not right",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with plural nouns"
+            },
+            {
+              "quote": "my father give me advice",
+              "correction": "my father gave me advice",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "I listen him",
+              "correction": "I listened to him",
+              "type": "grammar",
+              "pattern": "Preposition with 'listen'"
+            },
+            {
+              "quote": "Now I am study in university",
+              "correction": "Now I am studying at university",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "My father say no",
+              "correction": "My father said no",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "know many thing",
+              "correction": "know many things",
+              "type": "grammar",
+              "pattern": "Plural nouns after 'many' and numbers"
+            },
+            {
+              "quote": "I want stop school",
+              "correction": "I wanted to stop school",
+              "type": "grammar",
+              "pattern": "Past simple for past events"
+            },
+            {
+              "quote": "Young people must listen old people",
+              "correction": "Young people must listen to older people",
+              "type": "grammar",
+              "pattern": "Preposition with 'listen'"
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Past simple for past events",
+              "type": "grammar",
+              "rule": "Use past simple verbs when telling a story about the past, for example, 'my father gave' instead of 'my father give'.",
+              "how_to_fix": "Before you tell a story, remind yourself to put every action verb into the past tense."
+            },
+            {
+              "name": "Preposition with 'listen'",
+              "type": "grammar",
+              "rule": "Always use the preposition 'to' after the verb 'listen', for example, 'I listened to him'.",
+              "how_to_fix": "Whenever you use the verb 'listen', immediately follow it with 'to'."
+            },
+            {
+              "name": "Subject-verb agreement with plural nouns",
+              "type": "grammar",
+              "rule": "Use plural verbs with plural subjects like 'people', for example, 'people are' instead of 'people is'.",
+              "how_to_fix": "Remember that 'people' is plural, so always pair it with 'are' or 'were'."
+            },
+            {
+              "name": "Plural nouns after 'many' and numbers",
+              "type": "grammar",
+              "rule": "Use plural nouns after quantity words like 'many', for example, 'many things' instead of 'many thing'.",
+              "how_to_fix": "Check that countable nouns after 'many' have an -s ending."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "old people is not right also.",
+              "better": "old people are not right also.",
+              "why": "The noun 'people' is plural, so use 'are' instead of 'is'."
+            },
+            {
+              "you_said": "my father give me advice.",
+              "better": "my father gave me advice.",
+              "why": "Use the past simple form 'gave' when talking about a past event."
+            },
+            {
+              "you_said": "I listen him.",
+              "better": "I listened to him.",
+              "why": "The verb 'listen' needs the preposition 'to' before an object."
+            },
+            {
+              "you_said": "Now I am study in university.",
+              "better": "Now I am studying in university.",
+              "why": "Use the -ing form after 'am' in the present continuous tense."
+            },
+            {
+              "you_said": "My father say no, you must study.",
+              "better": "My father said no, you must study.",
+              "why": "Use the past simple form 'said' for a past event."
+            },
+            {
+              "you_said": "because old people know many thing.",
+              "better": "because old people know many things.",
+              "why": "Use the plural noun 'things' after the word 'many'."
+            },
+            {
+              "you_said": "I want stop school,",
+              "better": "I want to stop school,",
+              "why": "Use 'to' between the verbs 'want' and 'stop'."
+            },
+            {
+              "you_said": "Advice is good thing.",
+              "better": "Advice is a good thing.",
+              "why": "Use the article 'a' before the singular phrase 'good thing'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "below_B1",
+          "language_mean": 0.25,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 0,
+          "band": 0,
+          "label": "Below B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": "below_B1",
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Practise using the past simple tense for past stories, saying 'my father gave', 'I wanted', and 'my father said'.",
+            "success_check": "Check your story to make sure every regular past verb ends in -ed and irregular verbs use their past form.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Learn fixed verb phrases with prepositions, such as 'listen to someone' and 'at the age of 16'.",
+            "success_check": "Check that you use 'to' after the verb 'listen' every time you speak.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "latencyMs": [
+      77508,
+      58808,
+      59328,
+      76057,
+      87377
+    ],
+    "tokens": [
+      {
+        "input": 6813,
+        "output": 11313,
+        "calls": 1
+      },
+      {
+        "input": 6813,
+        "output": 8177,
+        "calls": 1
+      },
+      {
+        "input": 6813,
+        "output": 8169,
+        "calls": 1
+      },
+      {
+        "input": 6813,
+        "output": 10883,
+        "calls": 1
+      },
+      {
+        "input": 6813,
+        "output": 12474,
+        "calls": 1
+      }
+    ],
+    "costUsd": [
+      0.0475335,
+      0.0357735,
+      0.0357435,
+      0.045921,
+      0.05188725
+    ]
+  }
+]

@@ -251,11 +251,15 @@ that hits its budget) may still be billed (see section 7).
   a missing key for the selected real provider, or a mock provider in production.
 - `describeProviderMode(env)` distinguishes **`real`** (both providers real) from **`development_mock`** (any
   mock). Mock providers remain refused when `NODE_ENV=production`.
-- At server start (`src/instrumentation.ts` → `boot-check.ts`, skipped during `next build`): in production a
-  problem makes registration throw, so Next.js reports "Failed to prepare server" and every request returns
-  500 (verified with `next start`); health checks fail and a bad deploy is visible. The process itself stays up
-  because Next does not exit on an instrumentation error. In development and tests it only logs, so mock mode
-  and test overrides keep working.
+- At server start (`src/instrumentation.ts` → `boot-check.ts`, skipped during `next build`) every problem is
+  logged (variable names only). It does not throw: a throwing hook makes Next.js answer 500 on every route ("Failed
+  to prepare server"), which also took down the `/dashboard` design prototype, which needs no secret.
+- In production the check is enforced per request (`assertServerConfigured`): every API route through
+  `withErrorHandling` (503 `service_not_configured`), the app's pages through `src/app/(site)/layout.tsx` (500; the
+  layout calls `connection()` so the check runs per request, not once at build time), and `/api/health` (503), so
+  a bad deploy still fails its health check. Only `/dashboard` (mocked data, no database) is outside it. Verified
+  with `next start` and no environment variables. In development and tests nothing is refused, so mock mode and
+  test overrides keep working.
 - `POST /api/speaking/attempts` repeats the check and returns 503 `service_not_configured` before buffering or
   storing anything. The browser keeps the recording and the existing "try sending again" path works once the
   server is fixed. The response carries no variable names.
@@ -367,7 +371,7 @@ real-validated.
 ## 11. Identity and accounts (Stage 4)
 
 Stage 4 adds registration, sign-in and sign-out on top of the Stage 3 identity boundary. It adds identity
-infrastructure only: no profile, roles, billing, password reset, social login or account settings.
+infrastructure only: no profile, roles, billing, password reset, social login or account settings. (Password reset by email came later: `docs/password-reset.md`.)
 
 ### The model
 
@@ -492,9 +496,11 @@ migration batch rolls back completely).
 
 ### Known limitations (not production-scale)
 
-- **Email is not verified and there is no password reset** (nothing can send email). A forgotten password means a
-  lost account; an address can be registered by someone who does not own it (no takeover path, since there is no reset, but
-  squatting is possible). Registration reveals whether an email exists.
+- **Email is not verified.** An address can be registered by someone who does not own it (squatting). Password reset
+  by email exists since 2026-11-15 (`docs/password-reset.md`): the link goes only to the account's address, so a squatter
+  cannot take over the real owner's inbox, but the real owner of an address someone else registered can reset that
+  account's password and take it over (acceptable: it is their address). Registration reveals whether an email exists;
+  "Forgot password" does not.
 - Sign-in/registration limits are in-memory and per process; with several instances or a restart they are weaker.
 - The in-memory login limiters are per process (section 8); the session table itself is in the shared database (section 12).
 - A session slides for as long as it is used; there is no absolute maximum lifetime and no "sign out everywhere".

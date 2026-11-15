@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { multilevelModelOutputSchema } from "@/domain/evaluation/multilevel/model-output";
+import { providerOutputSchema } from "@/domain/evaluation/multilevel/model-output";
 import { computeSpeechMetrics } from "@/domain/speaking/metrics";
 import type { SpeakingTask } from "@/domain/speaking/task";
 import { buildAudioAssessmentPrompt } from "./prompts/multilevel-audio-assessment";
@@ -57,6 +57,8 @@ const SENTINEL_TASK: SpeakingTask = {
   topic: "Sentinel topic",
   question: "Sentinel question?",
   prompts: ["Sentinel question one", "Sentinel question two", "Sentinel question three"],
+  // A picture, so that the template covers the picture line of <task>.
+  picture: { src: "/sentinel.svg", alt: "Sentinel picture.", width: 1, height: 1, source: "Sentinel", licence: "© 2026 CEFRO. All rights reserved." },
   instructions: [],
   preparationSeconds: 60,
   speakingSeconds: 120,
@@ -100,6 +102,6 @@ export function currentPromptParts(input: EvaluationInput, prompt: EvaluationPro
     revisionTemplate: buildRevisionRequest([
       { code: "schema_invalid", severity: "reject", path: "sentinel.path", message: "Sentinel message." },
     ]),
-    resultSchema: JSON.stringify(z.toJSONSchema(multilevelModelOutputSchema)),
+    resultSchema: JSON.stringify(z.toJSONSchema(providerOutputSchema(input.rubric.config))),
   };
 }

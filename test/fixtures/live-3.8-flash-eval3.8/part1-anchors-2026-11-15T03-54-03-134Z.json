@@ -1,0 +1,561 @@
+[
+  {
+    "id": "1.2-middle",
+    "expected": 2,
+    "bands": [
+      2,
+      2
+    ],
+    "seconds": [
+      44.858,
+      77.67
+    ],
+    "errors": [
+      null,
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q4-6",
+        "part": 1,
+        "official_question": 4,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "In the first picture there is a small market where a man is selling fruit and vegetables outside. In the second picture a man is pushing a trolley in a big supermarket. The first one looks more friendly, but the second is bigger.",
+              "note": "You described both pictures and compared them clearly.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "People like market because the vegetables is more fresh and the price is cheaper. Also my mother know the seller and she talk with him.",
+              "note": "You gave reasons why people enjoy local markets, including fresh food and friendly sellers.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Supermarket is big and have everything in one place. People go there with car and buy many thing for all week.",
+              "note": "You explained why supermarkets are popular, mentioning variety and transport.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "A2",
+              "evidence": [
+                "my mother know",
+                "she talk",
+                "vegetables is",
+                "have everything"
+              ],
+              "note": "You produced simple sentences, but basic mistakes with verb endings and plural agreement occurred repeatedly.",
+              "how_to_improve": "Add -s or -es to present simple verbs when talking about one person or thing, such as saying your friend plays football after school.",
+              "how_to_check": "Every present simple action done by one person has an -s or -es ending in your transcript."
+            },
+            "vocabulary": {
+              "level": "A2",
+              "evidence": [
+                "the price is cheaper",
+                "with car",
+                "buy many thing"
+              ],
+              "note": "Your words were sufficient to answer the prompt, but noticeable inappropriate word choices occurred.",
+              "how_to_improve": "Use low or high instead of cheap or expensive when describing prices, such as saying concert tickets have low prices.",
+              "how_to_check": "Every time you use the word price, it is paired with high or low rather than cheap or expensive."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "In the first picture there is a small market where a man is selling fruit and vegetables outside.",
+                "In the second picture a man is pushing a trolley in a big supermarket."
+              ],
+              "note": "You spoke in full sentences without restarts or repeated words, but you used only 40 of the 105 seconds.",
+              "how_to_improve": "Add a second detail or an extra explanation to each answer to speak for more of the allocated time.",
+              "how_to_check": "You spoke for at least 70 of the 105 seconds across the three questions."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "where a man is selling",
+                "The first one looks more friendly, but the second is bigger",
+                "because the vegetables",
+                "Also my mother know"
+              ],
+              "note": "You connected your ideas appropriately using simple linkers like where, but, because, and also.",
+              "how_to_improve": "Use contrast linkers to connect contrasting clauses, for instance when contrasting morning study with evening practice.",
+              "how_to_check": "Your answer contains at least one contrast linker joining two complete clauses."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my mother know",
+              "correction": "my mother knows",
+              "type": "grammar",
+              "pattern": "Third-person singular -s"
+            },
+            {
+              "quote": "she talk",
+              "correction": "she talks",
+              "type": "grammar",
+              "pattern": "Third-person singular -s"
+            },
+            {
+              "quote": "have everything",
+              "correction": "has everything",
+              "type": "grammar",
+              "pattern": "Third-person singular -s"
+            },
+            {
+              "quote": "vegetables is",
+              "correction": "vegetables are",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with plural nouns"
+            },
+            {
+              "quote": "the price is cheaper",
+              "correction": "the prices are lower",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "with car",
+              "correction": "by car",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "buy many thing",
+              "correction": "buy many things",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "more fresh",
+              "correction": "fresher",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Third-person singular -s",
+              "type": "grammar",
+              "rule": "Add -s or -es to present simple verbs when the subject is he, she, or it, for example: My brother plays tennis every weekend.",
+              "how_to_fix": "Check that every present simple verb with he, she, or a singular noun ends with -s."
+            },
+            {
+              "name": "Subject-verb agreement with plural nouns",
+              "type": "grammar",
+              "rule": "Use are instead of is after plural nouns, for example: The books are on the table.",
+              "how_to_fix": "Look at the noun before is or are and use are whenever the noun is plural."
+            }
+          ],
+          "strengths": [
+            {
+              "feature": "cohesion",
+              "quote": "The first one looks more friendly, but the second is bigger.",
+              "note": "You used the linking word but effectively to compare the two pictures."
+            },
+            {
+              "feature": "fluency",
+              "quote": "In the first picture there is a small market where a man is selling fruit and vegetables outside.",
+              "note": "You produced a complete, extended sentence without false starts or reformulations."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "Also my mother know the seller",
+              "better": "Also my mother knows the seller",
+              "why": "Present simple verbs with singular subjects like mother require an -s ending."
+            },
+            {
+              "you_said": "and she talk with him.",
+              "better": "and she talks with him.",
+              "why": "Verbs following she take an -s ending in the present simple tense."
+            },
+            {
+              "you_said": "Supermarket is big and have everything in one place.",
+              "better": "Supermarket is big and has everything in one place.",
+              "why": "A singular subject takes has instead of have in the present tense."
+            },
+            {
+              "you_said": "because the vegetables is more fresh",
+              "better": "because the vegetables are more fresh",
+              "why": "Plural nouns take the plural verb are."
+            },
+            {
+              "you_said": "the price is cheaper.",
+              "better": "the price is lower.",
+              "why": "Prices are described as high or low, not cheap or expensive."
+            },
+            {
+              "you_said": "People go there with car",
+              "better": "People go there by car",
+              "why": "Use the preposition by before means of transport."
+            },
+            {
+              "you_said": "and buy many thing for all week.",
+              "better": "and buy many things for all week.",
+              "why": "Use a plural noun after the quantifier many."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "A2",
+          "language_mean": 1.5,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 2,
+          "band": 2,
+          "label": "Higher A2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Add -s or -es to present simple verbs when talking about one person or thing, such as saying your friend plays football after school.",
+            "success_check": "Every present simple action done by one person has an -s or -es ending in your transcript.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use low or high instead of cheap or expensive when describing prices, such as saying concert tickets have low prices.",
+            "success_check": "Every time you use the word price, it is paired with high or low rather than cheap or expensive.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q4-6",
+        "part": 1,
+        "official_question": 4,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "In the first picture there is a small market where a man is selling fruit and vegetables outside. In the second picture a man is pushing a trolley in a big supermarket. The first one looks more friendly, but the second is bigger.",
+              "note": "You described both pictures and compared them clearly.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "People like market because the vegetables is more fresh and the price is cheaper. Also my mother know the seller and she talk with him.",
+              "note": "You explained why people like local markets with reasons and a personal detail.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Supermarket is big and have everything in one place. People go there with car and buy many thing for all week.",
+              "note": "You gave clear reasons why people prefer shopping in big supermarkets.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "A2",
+              "evidence": [
+                "the vegetables is",
+                "my mother know the seller and she talk with him",
+                "have everything",
+                "buy many thing"
+              ],
+              "note": "You used simple structures, but basic mistakes with third-person singular endings and plurals occur systematically.",
+              "how_to_improve": "Add -s to present simple verbs when talking about a third-person singular subject, for example by saying that your brother walks to school.",
+              "how_to_check": "Every present simple verb following 'he', 'she', or a singular person ends with -s."
+            },
+            "vocabulary": {
+              "level": "A2",
+              "evidence": [
+                "with car",
+                "more fresh",
+                "for all week"
+              ],
+              "note": "Your vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable.",
+              "how_to_improve": "Use the preposition 'by' with forms of transport, for example by saying that you travel by train.",
+              "how_to_check": "Every mention of a vehicle or transport method uses 'by' before the noun."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "In the first picture there is a small market where a man is selling fruit and vegetables outside.",
+                "The first one looks more friendly, but the second is bigger.",
+                "Supermarket is big and have everything in one place."
+              ],
+              "note": "You spoke for 40 of the 105 seconds, using complete sentences with no repeated words or written fillers.",
+              "how_to_improve": "Add a second detail or an example to each answer, for example by describing your weekend routine after naming your hobby.",
+              "how_to_check": "The timer shows you spoke for at least 25 of the 30 seconds on Questions 5 and 6."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "where a man is selling fruit and vegetables outside",
+                "The first one looks more friendly, but the second is bigger.",
+                "People like market because the vegetables is more fresh",
+                "Also my mother know the seller"
+              ],
+              "note": "You connected your ideas using simple cohesive devices such as 'where', 'but', 'because', and 'also'.",
+              "how_to_improve": "Link contrasting ideas into one complex sentence using a concession clause, for example by explaining that although swimming is tiring, it builds strength.",
+              "how_to_check": "Your answer contains a sentence that connects two contrasting clauses together."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "my mother know",
+              "correction": "my mother knows",
+              "type": "grammar",
+              "pattern": "Missing -s on third-person singular present verbs"
+            },
+            {
+              "quote": "she talk",
+              "correction": "she talks",
+              "type": "grammar",
+              "pattern": "Missing -s on third-person singular present verbs"
+            },
+            {
+              "quote": "have everything",
+              "correction": "has everything",
+              "type": "grammar",
+              "pattern": "Missing -s on third-person singular present verbs"
+            },
+            {
+              "quote": "the vegetables is",
+              "correction": "the vegetables are",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement with plural nouns"
+            },
+            {
+              "quote": "many thing",
+              "correction": "many things",
+              "type": "grammar",
+              "pattern": "Plural noun after quantifiers"
+            },
+            {
+              "quote": "with car",
+              "correction": "by car",
+              "type": "vocabulary",
+              "pattern": ""
+            },
+            {
+              "quote": "like market",
+              "correction": "like markets",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "for all week",
+              "correction": "for the whole week",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Missing -s on third-person singular present verbs",
+              "type": "grammar",
+              "rule": "Add -s or -es to present simple verbs when the subject is he, she, or a singular noun, for example 'He plays tennis'.",
+              "how_to_fix": "Check every verb with a singular subject to ensure it ends with an -s."
+            },
+            {
+              "name": "Subject-verb agreement with plural nouns",
+              "type": "grammar",
+              "rule": "Use plural verb forms when the subject is a plural noun, for example 'The dogs are barking'.",
+              "how_to_fix": "Match plural nouns with 'are' instead of 'is'."
+            },
+            {
+              "name": "Plural noun after quantifiers",
+              "type": "grammar",
+              "rule": "Use a plural noun after quantifiers like 'many', for example 'She has many books'.",
+              "how_to_fix": "Add an -s to countable nouns that follow words like 'many'."
+            }
+          ],
+          "strengths": [
+            {
+              "feature": "fluency",
+              "quote": "In the first picture there is a small market where a man is selling fruit and vegetables outside.",
+              "note": "You produced a complete, continuous sentence with no false starts or restarts."
+            },
+            {
+              "feature": "cohesion",
+              "quote": "The first one looks more friendly, but the second is bigger.",
+              "note": "You used 'but' effectively to contrast the two pictures in one sentence."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "Also my mother know the seller",
+              "better": "Also my mother knows the seller",
+              "why": "Add -s to the verb in the present simple after 'my mother'."
+            },
+            {
+              "you_said": "and she talk with him.",
+              "better": "and she talks with him.",
+              "why": "Add -s to the verb in the present simple after 'she'."
+            },
+            {
+              "you_said": "the vegetables is more fresh",
+              "better": "the vegetables are more fresh",
+              "why": "Use 'are' with plural nouns like 'vegetables'."
+            },
+            {
+              "you_said": "and have everything in one place.",
+              "better": "and has everything in one place.",
+              "why": "Use 'has' instead of 'have' with a singular subject."
+            },
+            {
+              "you_said": "People go there with car",
+              "better": "People go there by car",
+              "why": "Use 'by' to talk about travel with transport words."
+            },
+            {
+              "you_said": "and buy many thing for all week.",
+              "better": "and buy many things for all week.",
+              "why": "Use a plural noun after 'many'."
+            },
+            {
+              "you_said": "People like market",
+              "better": "People like markets",
+              "why": "Use a plural noun when talking about things in general."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "A2",
+          "language_mean": 1.5,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 2,
+          "band": 2,
+          "label": "Higher A2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Add -s to present simple verbs when talking about a third-person singular subject, for example by saying that your brother walks to school.",
+            "success_check": "Every present simple verb following 'he', 'she', or a singular person ends with -s.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use the preposition 'by' with forms of transport, for example by saying that you travel by train.",
+            "success_check": "Every mention of a vehicle or transport method uses 'by' before the noun.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [],
+        "rejectedDrafts": []
+      },
+      {
+        "passed": true,
+        "violations": [],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 6219,
+        "output": 6207,
+        "calls": 1
+      },
+      {
+        "input": 6219,
+        "output": 11394,
+        "calls": 1
+      }
+    ]
+  }
+]

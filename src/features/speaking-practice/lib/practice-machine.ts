@@ -3,11 +3,14 @@ import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attemp
 /**
  * State machine for one practice session on a task.
  *
- *  brief ──▶ preparing ──▶ recording ──▶ review ──▶ uploading ──▶ processing ──▶ result
+ *  brief ──▶ intro ──▶ questions ──▶ preparing ──▶ recording ──▶ review ──▶ uploading ──▶ processing ──▶ result
  *    ▲                         ▲            │            │                          │
  *    │                         └─ re-record ┘     uploadFailed (recording kept)     │
  *    └──────────── retryBrief ◀───────────────────── "Retry this task" ◀────────────┤
  *                                                    comparison ◀── "Compare" ◀─────┘
+ *
+ * "intro" is the part's spoken introduction on its own screen (then the chime), as in the exam. "questions" is the
+ * examiner reading the task's questions aloud, with the task on screen; the minute of preparation starts only after it.
  *
  * Timers are stored as absolute deadlines (`endsAt`), so the displayed
  * countdown is always derived from this state, never kept separately.
@@ -15,6 +18,8 @@ import { IN_PROGRESS_STATUSES, type AttemptView } from "@/domain/speaking/attemp
 export type PracticePhase =
   | { kind: "brief" }
   | { kind: "retryBrief" }
+  | { kind: "intro" }
+  | { kind: "questions" }
   | { kind: "preparing"; endsAt: number }
   | { kind: "recording"; endsAt: number }
   | { kind: "review" }
@@ -33,6 +38,8 @@ export interface PracticeState {
 }
 
 export type PracticeAction =
+  | { type: "introStarted" }
+  | { type: "questionsStarted" }
   | { type: "preparationStarted"; now: number; preparationMs: number }
   | { type: "recordingStarted"; now: number; speakingMs: number }
   | { type: "recordingStopped" }
@@ -42,6 +49,8 @@ export type PracticeAction =
   | { type: "attemptUpdated"; attempt: AttemptView }
   | { type: "processingRestarted"; attempt: AttemptView }
   | { type: "showAttempt"; attempt: AttemptView }
+  /** Keep an attempt (e.g. the one a retry was compared with) without changing the screen. */
+  | { type: "attemptCached"; attempt: AttemptView }
   | { type: "retryRequested"; attempt: AttemptView }
   | { type: "comparisonRequested"; before: AttemptView; after: AttemptView }
   | { type: "backToResult"; attemptId: string }
@@ -51,6 +60,10 @@ export const initialPracticeState: PracticeState = { phase: { kind: "brief" }, r
 
 export function practiceReducer(state: PracticeState, action: PracticeAction): PracticeState {
   switch (action.type) {
+    case "introStarted":
+      return state.phase.kind === "brief" || state.phase.kind === "retryBrief" ? { ...state, phase: { kind: "intro" } } : state;
+    case "questionsStarted":
+      return state.phase.kind === "intro" ? { ...state, phase: { kind: "questions" } } : state;
     case "preparationStarted":
       return { ...state, phase: { kind: "preparing", endsAt: action.now + action.preparationMs } };
     case "recordingStarted":
@@ -91,7 +104,12 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
         phase: { kind: stillProcessing ? "processing" : "result", attemptId: action.attempt.id },
       };
     }
+    case "attemptCached":
+      return { ...state, attempts: { ...state.attempts, [action.attempt.id]: action.attempt } };
     case "retryRequested":
+      // Only from a brief: a retry that finishes loading late must never pull the student out of preparation,
+      // recording or a result.
+      if (state.phase.kind !== "brief" && state.phase.kind !== "retryBrief") return state;
       return { ...state, retryOf: action.attempt, phase: { kind: "retryBrief" } };
     case "comparisonRequested":
       return {

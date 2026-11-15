@@ -14,7 +14,7 @@ import { FIXTURE_TRANSCRIPT, fakeWebm, makeModelOutput } from "../../../test/fix
 import { claimAttempt, processAttempt, runClaimedAttempt } from "./attempt-processing";
 import { createAttempt, getAttemptViewForUser, listAttemptSummaries } from "./attempt-service";
 
-const TASK_ID = "b2-part2-technology-young-people";
+const TASK_ID = "b2-part2-advice-from-someone";
 const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER = "22222222-2222-4222-8222-222222222222";
 const TRANSCRIPT = FIXTURE_TRANSCRIPT;
@@ -86,14 +86,14 @@ describe("speaking attempt pipeline", () => {
 
     expect(view.status).toBe("completed");
     expect(view.transcript).toEqual({ text: TRANSCRIPT, provider: "fake-stt", model: "fake-stt-1" });
-    expect(view.metrics?.wordCount).toBe(29);
+    expect(view.metrics?.wordCount).toBe(39);
     const result = view.evaluation?.result;
     expect(result?.kind).toBe("multilevel");
     // FIXTURE output: B1 language (3 of 4 features B1, fluency B2 → mean 1.25 → B1), 2 questions on topic → band 2.
     expect(result?.kind === "multilevel" && result.scoring).toMatchObject({ band: 2, label: "Higher B1", meets_target: false, provisional: true });
     expect(view.evaluation?.meta).toMatchObject({
-      evaluatorVersion: "speaking-evaluator/3.0.0",
-      rubricVersion: "multilevel-q7/2.0.0",
+      evaluatorVersion: "speaking-evaluator/3.8.1",
+      rubricVersion: "multilevel-q7/2.1.0",
       schemaVersion: 3,
       provider: "fake-llm",
       model: "fake-llm-1",
@@ -133,7 +133,7 @@ describe("speaking attempt pipeline", () => {
     // (grammar), the second the unanswered question 3, numbered as the student sees it.
     expect(second.retryFocus?.map((f) => f.objective)).toEqual([
       makeModelOutput().features.grammar.how_to_improve,
-      'Answer question 3: "Should schools limit the use of smartphones? Why or why not?"',
+      'Answer question 3: "Do you think young people should always follow advice from older people? Why or why not?"',
     ]);
 
     await processAttempt(second.id);

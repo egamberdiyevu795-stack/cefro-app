@@ -25,8 +25,44 @@ export function describeProviderMode(env: ServerEnv): ProviderMode {
   return { transcription: env.TRANSCRIPTION_PROVIDER, evaluation: env.EVALUATION_PROVIDER, mode: mock ? "development_mock" : "real" };
 }
 
-export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
-  const problems: ConfigProblem[] = [];
+/**
+ * The provider choices that must be explicit on Vercel, with the values each accepts there (`mock` is refused in
+ * production, so it is not offered). Each variable names its own values: speech-to-text is OpenAI or Gemini, scoring
+ * is Gemini or Anthropic.
+ */
+export const EXPLICIT_ON_VERCEL = {
+  TRANSCRIPTION_PROVIDER: ["openai", "gemini"],
+  EVALUATION_PROVIDER: ["gemini", "anthropic"],
+} as const satisfies {
+  // Only values the parser accepts for that variable (checked by the compiler).
+  TRANSCRIPTION_PROVIDER: readonly ServerEnv["TRANSCRIPTION_PROVIDER"][];
+  EVALUATION_PROVIDER: readonly ServerEnv["EVALUATION_PROVIDER"][];
+};
+
+/**
+ * On Vercel (Production, Preview, Development) the speech-to-text and scoring providers must be chosen explicitly. The
+ * code's defaults (openai, anthropic) are for local development; on a hosted environment a variable that was not ticked
+ * for that environment would otherwise switch the provider silently. Reads the raw environment, because the parsed one
+ * already has the defaults filled in. An empty value counts as missing (as everywhere in getEnv). Locally (no VERCEL)
+ * nothing changes.
+ */
+export function validateExplicitProviders(raw: Record<string, string | undefined> = process.env): ConfigProblem[] {
+  if (!raw.VERCEL) return [];
+  return (Object.keys(EXPLICIT_ON_VERCEL) as Array<keyof typeof EXPLICIT_ON_VERCEL>)
+    .filter((variable) => !raw[variable])
+    .map((variable) => ({
+      variable,
+      message: `must be set explicitly on Vercel: ${EXPLICIT_ON_VERCEL[variable].map((value) => `${variable}=${value}`).join(" or ")}. The local default is not used there. Set it for this environment in the Vercel project settings.`,
+    }));
+}
+
+/**
+ * `scoring: false` leaves out the scoring provider (EVALUATION_PROVIDER and its key): the upload route uses it, because
+ * a recording must be kept and transcribed even when AI scoring can't run (no key, no credit); the result page then
+ * says "AI score not ready yet" and scoring runs later from the saved recording.
+ */
+export function validateProviderConfig(env: ServerEnv, options: { scoring?: boolean } = {}): ConfigProblem[] {
+  const problems: ConfigProblem[] = [...validateExplicitProviders()];
   const production = env.NODE_ENV === "production";
 
   switch (env.TRANSCRIPTION_PROVIDER) {
@@ -52,16 +88,18 @@ export function validateProviderConfig(env: ServerEnv): ConfigProblem[] {
     problems.push({ variable: "GEMINI_API_KEY", message: "required when AUDIO_ASSESSMENT=gemini" });
   }
 
-  switch (env.EVALUATION_PROVIDER) {
-    case "gemini":
-      if (!env.GEMINI_API_KEY) problems.push({ variable: "GEMINI_API_KEY", message: "required when EVALUATION_PROVIDER=gemini" });
-      break;
-    case "anthropic":
-      if (!env.ANTHROPIC_API_KEY) problems.push({ variable: "ANTHROPIC_API_KEY", message: "required when EVALUATION_PROVIDER=anthropic" });
-      break;
-    case "mock":
-      if (production) problems.push({ variable: "EVALUATION_PROVIDER", message: "the mock evaluator is development-only and is refused in production" });
-      break;
+  if (options.scoring !== false) {
+    switch (env.EVALUATION_PROVIDER) {
+      case "gemini":
+        if (!env.GEMINI_API_KEY) problems.push({ variable: "GEMINI_API_KEY", message: "required when EVALUATION_PROVIDER=gemini" });
+        break;
+      case "anthropic":
+        if (!env.ANTHROPIC_API_KEY) problems.push({ variable: "ANTHROPIC_API_KEY", message: "required when EVALUATION_PROVIDER=anthropic" });
+        break;
+      case "mock":
+        if (production) problems.push({ variable: "EVALUATION_PROVIDER", message: "the mock evaluator is development-only and is refused in production" });
+        break;
+    }
   }
 
   // The Speech Activity Guard decodes audio with ffmpeg. Running without it would let silent recordings reach the

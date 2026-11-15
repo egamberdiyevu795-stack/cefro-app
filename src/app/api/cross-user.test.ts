@@ -12,6 +12,7 @@ vi.mock("next/headers", async () => (await import("../../../test/next-headers-mo
 vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: (task: () => unknown) => void afterTasks.push(task),
+  connection: async () => undefined, // pages call it to opt out of prerendering; there is no request scope in tests
 }));
 
 import { eq } from "drizzle-orm";
@@ -32,6 +33,20 @@ import { POST as postAttempt } from "./speaking/attempts/route";
 import { GET as getTaskAttempts } from "./speaking/tasks/[taskId]/attempts/route";
 import { POST as postSession } from "./sessions/route";
 import { GET as getMe } from "./account/me/route";
+import HistoryPage from "../history/page";
+import { PUT as putExamDate } from "./account/exam-date/route";
+import { users } from "@/server/db/schema";
+import { todayIn, addDays, examDateState } from "@/domain/exam-date";
+import type { HistoryView } from "@/features/history/view-model";
+
+/** The History page as this actor's browser gets it: the view it renders (the shell around it is not needed). */
+async function historyFor(actor: Actor, query: Record<string, string> = {}): Promise<HistoryView> {
+  actAs(actor);
+  const page = (await HistoryPage({ params: Promise.resolve({}), searchParams: Promise.resolve(query) } as never)) as React.ReactElement<{
+    children: React.ReactElement<{ view: HistoryView }>;
+  }>;
+  return page.props.children.props.view;
+}
 
 /**
  * Cross-user access through the real route handlers. "Actors" are browsers: each has its own cookie jar, either a
@@ -107,6 +122,90 @@ describe("the owner", () => {
     expect((await audio.arrayBuffer()).byteLength).toBeGreaterThan(0);
     const list = await json(await getTaskAttempts(get("/x"), ctxFor({ taskId: TASK_ID })));
     expect(list.attempts.map((a: { id: string }) => a.id)).toEqual([attemptOfA]);
+  });
+});
+
+describe("History page: only the owner's attempts (same owner check as the result page)", () => {
+  it("lists alice's attempt for alice, and nothing of hers for bob or a new browser", async () => {
+    expect((await historyFor(actors.alice)).rows.map((r) => r.id)).toEqual([attemptOfA]);
+    for (const other of [actors.bob, actors.anonymous]) {
+      const view = await historyFor(other);
+      expect(view.total).toBe(0); // the empty state
+      expect(JSON.stringify(view)).not.toContain(attemptOfA);
+    }
+  });
+
+  it("each browser sees only its own attempts, signed in or anonymous", async () => {
+    actAs(actors.bob);
+    const { body: ofBob } = await upload();
+    // An anonymous browser gets its identity on its first API call, then records its own answer.
+    jar.clear();
+    const { body: ofAnon } = await upload();
+    const anonymous: Actor = new Map(jar);
+
+    expect((await historyFor(actors.alice)).rows.map((r) => r.id)).toEqual([attemptOfA]);
+    expect((await historyFor(actors.bob)).rows.map((r) => r.id)).toEqual([ofBob.attempt.id]);
+    expect((await historyFor(anonymous)).rows.map((r) => r.id)).toEqual([ofAnon.attempt.id]);
+  });
+
+  it("an attempt id that is not yours, put in the query, changes nothing", async () => {
+    const view = await historyFor(actors.bob, { part: attemptOfA, show: attemptOfA });
+    expect(view.total).toBe(0);
+  });
+});
+
+describe("exam date: saved per user, only ever the caller's own", () => {
+  const put = (body: unknown) => putExamDate(new Request("http://localhost/api/account/exam-date", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
+  const dateOf = async (email: string) =>
+    (await db.select({ examDate: users.examDate, skipped: users.examDateSkippedAt }).from(users).where(eq(users.email, email)).get())!;
+  const inDays = (n: number) => addDays(todayIn(new Date()), n);
+
+  it("saves alice's date on alice only; bob's stays empty", async () => {
+    actAs(actors.alice);
+    expect((await put({ date: inDays(20) })).status).toBe(204);
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(20), skipped: null });
+    expect(await dateOf("bob@example.com")).toEqual({ examDate: null, skipped: null });
+  });
+
+  it("refuses a past date, a malformed one and an empty body (400), changing nothing", async () => {
+    actAs(actors.alice);
+    for (const body of [{ date: inDays(-1) }, { date: "28.11.26" }, { date: "2026-02-30" }, {}, { userId: "x", date: 5 }]) {
+      const response = await put(body);
+      expect(response.status).toBe(400);
+      expect((await json(response)).error.code).toBe("invalid_exam_date");
+    }
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: null, skipped: null });
+  });
+
+  it("Skip is remembered, and saving a date later clears it", async () => {
+    actAs(actors.alice);
+    expect((await put({ skip: true })).status).toBe(204);
+    expect((await dateOf("alice@example.com")).skipped).not.toBeNull();
+    await put({ date: inDays(3) });
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(3), skipped: null });
+  });
+
+  it("Remove date clears alice's date and stops asking (the dashboard offers Add exam date); bob's is untouched", async () => {
+    actAs(actors.bob);
+    await put({ date: inDays(9) });
+    actAs(actors.alice);
+    await put({ date: inDays(5) });
+    expect((await put({ remove: true })).status).toBe(204);
+    const alice = await dateOf("alice@example.com");
+    expect(alice.examDate).toBeNull();
+    expect(alice.skipped).not.toBeNull();
+    expect(examDateState({ examDate: alice.examDate, examDateSkippedAt: alice.skipped }, new Date())).toEqual({ kind: "skipped" });
+    expect(await dateOf("bob@example.com")).toEqual({ examDate: inDays(9), skipped: null });
+    // Adding a date again from there works as before.
+    await put({ date: inDays(6) });
+    expect(await dateOf("alice@example.com")).toEqual({ examDate: inDays(6), skipped: null });
+  });
+
+  it("an anonymous visitor's date carries over when they create an account", async () => {
+    jar.clear();
+    expect((await put({ date: inDays(30) })).status).toBe(204); // gets an anonymous identity on the way
+    expect((await signUp("carol@example.com", PASSWORD, { ip: "10.4.9.9" })).status).toBe(200);
+    expect((await dateOf("carol@example.com")).examDate).toBe(inDays(30));
   });
 });
 
@@ -196,9 +295,9 @@ describe("signing out ends access", () => {
     expect((await getAttempt(get("/x"), ctxFor({ attemptId: attemptOfA }))).status).toBe(404);
   });
 
-  it("/api/account/me never returns ids", async () => {
+  it("/api/account/me never returns ids (only state, email and display name, for the Account menu)", async () => {
     actAs(actors.alice);
     const body = await json(await getMe());
-    expect(body).toEqual({ state: "authenticated", email: "alice@example.com" });
+    expect(body).toEqual({ state: "authenticated", email: "alice@example.com", name: null }); // no name typed: none
   });
 });

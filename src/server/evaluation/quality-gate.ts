@@ -1,6 +1,7 @@
 import { isQuoteInTranscript } from "@/domain/evaluation/evidence";
-import { levelValue, NOT_ASSESSED } from "@/domain/evaluation/multilevel/levels";
+import { FEATURES, FEATURE_LEVELS, levelValue, NOT_ASSESSED, QUESTION_STATUSES, type Feature, type LevelLadder, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
+import { checkSentenceFixes } from "@/domain/evaluation/sentence-fixes";
 
 /**
  * Quality gate for Multilevel evaluator output.
@@ -12,6 +13,8 @@ import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model
  *   internal field names, missing or generic advice) trigger one controlled regeneration, then a graceful failure;
  * - "warn" violations are repaired in place (an unverifiable quote is removed, a strength below B2 is dropped) and
  *   recorded in the stored quality report.
+ * - output outside the rubric's own shape (a level name not on its ladder, a question status it does not allow, a
+ *   feature it does not rate or a missing one) is rejected: e.g. "partial" or "minimal" in Part 1.1.
  *
  * Quotes are checked STRICTLY: word for word against the verbatim transcript (only case, punctuation and fillers are
  * ignored), so a "corrected" quote never passes as the student's words.
@@ -28,7 +31,11 @@ export type QualityCode =
   | "pronunciation_from_transcript"
   | "pronunciation_claim"
   | "internal_field_leak"
-  | "strength_below_b2"
+  | "strength_below_target"
+  | "status_not_allowed"
+  | "level_not_on_scale"
+  | "feature_not_rated"
+  | "feature_missing"
   | "model_answer_missing"
   | "model_answer_too_long"
   | "unknown_error_pattern"
@@ -36,7 +43,8 @@ export type QualityCode =
   | "memorized_conflict"
   | "missing_retry_review"
   | "retry_review_contradicts_metrics"
-  | "unexpected_retry_review";
+  | "unexpected_retry_review"
+  | "sentence_fix_dropped";
 
 export interface QualityViolation {
   code: QualityCode;
@@ -59,9 +67,12 @@ export interface QualityContext {
   /** Number of questions in the task (ids must be exactly 1..questionCount). */
   questionCount: number;
   hasPreviousAttempt: boolean;
+  /** The rubric's own shape. Defaults to Part 2's (all five features and statuses, below_B1 … above_B2). */
+  rubric?: { levels: LevelLadder; features: readonly Feature[]; question_statuses: readonly QuestionStatus[] };
 }
 
-const TEXT_FEATURES = ["grammar", "vocabulary", "fluency", "cohesion"] as const;
+type TextFeature = "grammar" | "vocabulary" | "fluency" | "cohesion";
+const TEXT_FEATURES: readonly TextFeature[] = ["grammar", "vocabulary", "fluency", "cohesion"];
 /** A model answer is a short example, not a showcase (the v2 runs showed long "better versions" turning showy). */
 const MAX_MODEL_ANSWER_WORDS = 40;
 /** Features whose level must be backed by quotes (fluency may rest on the speech metrics alone). */
@@ -78,6 +89,30 @@ export function applyQualityGate(
 
   // Work on a deep copy; repairs never mutate the model output object.
   const result: MultilevelModelOutput = structuredClone(input);
+  const rubric = context.rubric ?? { levels: FEATURE_LEVELS, features: FEATURES, question_statuses: QUESTION_STATUSES };
+  const ladder = rubric.levels;
+  const onLadder = (level: string) => (ladder as readonly string[]).includes(level);
+  const textFeatures = TEXT_FEATURES.filter((f) => rubric.features.includes(f));
+
+  // ── The rubric's own shape: its statuses, its levels, its features ──
+  result.questions.forEach((q, i) => {
+    if (!rubric.question_statuses.includes(q.status)) {
+      add("reject", "status_not_allowed", `questions[${i}].status`, `Status "${q.status}" is not allowed by this rubric (${rubric.question_statuses.join(", ")}).`);
+    }
+  });
+  for (const feature of TEXT_FEATURES) {
+    const f = result.features[feature];
+    if (!rubric.features.includes(feature)) {
+      if (f) add("reject", "feature_not_rated", `features.${feature}`, `This rubric does not rate ${feature}.`);
+      delete result.features[feature as "cohesion"];
+      continue;
+    }
+    if (!f) add("reject", "feature_missing", `features.${feature}`, `No judgement for ${feature}.`);
+    else if (!onLadder(f.level)) add("reject", "level_not_on_scale", `features.${feature}.level`, `Level "${f.level}" is not on this rubric's scale (${ladder.join(", ")}).`);
+  }
+  if (violations.some((v) => v.severity === "reject")) {
+    return { result, report: { passed: false, violations } };
+  }
 
   // ── Questions: exactly 1..n, each once (one 1-based numbering everywhere) ──
   const ids = result.questions.map((q) => q.id).sort((a, b) => a - b);
@@ -102,8 +137,8 @@ export function applyQualityGate(
   });
 
   // ── Feature evidence ────────────────────────────────────────────────
-  for (const feature of TEXT_FEATURES) {
-    const f = result.features[feature];
+  for (const feature of textFeatures) {
+    const f = result.features[feature]!;
     const given = f.evidence.length;
     f.evidence = f.evidence.filter((quote, i) => {
       const ok = found(quote);
@@ -128,7 +163,8 @@ export function applyQualityGate(
   }
   result.features.pronunciation = { level: NOT_ASSESSED, evidence: [], note: "", how_to_improve: "", how_to_check: "" };
   for (const [path, text] of studentTexts(result)) {
-    const claim = findPronunciationClaim(text);
+    // Practice tips are instructions, so they are allowed only where the student is told what to do next.
+    const claim = findPronunciationClaim(text, { allowPracticeTips: INSTRUCTION_PATH.test(path) });
     if (claim) add("reject", "pronunciation_claim", path, `Pronunciation claim: "${truncate(claim, 200)}"`);
     const leak = INTERNAL_FIELD_NAMES.exec(text);
     if (leak) add("reject", "internal_field_leak", path, `Internal field name "${leak[0]}" in student-facing text: "${truncate(text, 160)}"`);
@@ -170,12 +206,23 @@ export function applyQualityGate(
       add("warn", "quote_not_found", `strengths[${i}].quote`, `Removed strength with unverifiable quote: "${truncate(strength.quote)}"`);
       return false;
     }
-    if (levelValue(result.features[strength.feature].level) < levelValue("B2")) {
-      add("warn", "strength_below_b2", `strengths[${i}]`, `Removed: ${strength.feature} was judged ${result.features[strength.feature].level}.`);
+    const judged = result.features[strength.feature];
+    if (!judged || levelValue(judged.level, ladder) < 2) {
+      add("warn", "strength_below_target", `strengths[${i}]`, `Removed: ${strength.feature} was judged ${judged?.level ?? "not rated"}, below ${ladder[2]}.`);
       return false;
     }
     return true;
   });
+
+  // ── Sentences to improve: the model proposes, code decides (domain/evaluation/sentence-fixes.ts). The model never
+  // hears the audio, so these are always judged from the transcript alone: nothing about pauses or pronunciation. ──
+  const checkedFixes = checkSentenceFixes(result.sentence_fixes ?? [], {
+    transcript: context.transcript,
+    transcriptOnly: true,
+    forbidden: INTERNAL_FIELD_NAMES,
+  });
+  for (const drop of checkedFixes.dropped) add("warn", "sentence_fix_dropped", `sentence_fixes[${drop.index}]`, `Dropped a sentence fix: ${drop.reason}.`);
+  result.sentence_fixes = checkedFixes.kept;
 
   if (result.memorized_or_irrelevant && result.questions.filter((q) => q.status === "on_topic" && q.evidence).length >= 2) {
     add("warn", "memorized_conflict", "memorized_or_irrelevant", "Marked memorised although two or more questions are answered on topic with evidence.");
@@ -211,10 +258,13 @@ function studentTexts(result: MultilevelModelOutput): [string, string][] {
   result.questions.forEach((q, i) => out.push([`questions[${i}].note`, `${q.note} ${q.model_answer}`]));
   for (const feature of TEXT_FEATURES) {
     const f = result.features[feature];
-    out.push([`features.${feature}`, [f.note, f.how_to_improve, f.how_to_check].join(" ")]);
+    if (!f) continue;
+    out.push([`features.${feature}.note`, f.note], [`features.${feature}.how_to_improve`, f.how_to_improve], [`features.${feature}.how_to_check`, f.how_to_check]);
   }
   result.strengths.forEach((s, i) => out.push([`strengths[${i}].note`, s.note]));
-  result.error_patterns.forEach((p, i) => out.push([`error_patterns[${i}]`, `${p.name}. ${p.rule} ${p.how_to_fix}`]));
+  result.error_patterns.forEach((p, i) =>
+    out.push([`error_patterns[${i}].name`, p.name], [`error_patterns[${i}].rule`, p.rule], [`error_patterns[${i}].how_to_fix`, p.how_to_fix]),
+  );
   result.retry_review?.objectives.forEach((o, i) => out.push([`retry_review.objectives[${i}]`, `${o.objective}. ${o.evidence}`]));
   if (result.retry_review) out.push(["retry_review.summary", result.retry_review.summary]);
   return out;
@@ -244,11 +294,26 @@ export function findUnmetTarget(text: string, metrics: { speakingSeconds: number
 const PRONUNCIATION_PATTERN = /\b((?:mis)?pron(?:ou|u)nc\w*|accent\w*|intonation|vowels?|consonants?|phonem\w*|word stress)\b/i;
 const NEGATED_ASSESSMENT = /\b(not|cannot|can't|couldn't|unable to)\b[^.]*\b(assess\w*|judg\w*|evaluat\w*|hear\w*)\b/i;
 
-export function findPronunciationClaim(text: string): string | null {
+/**
+ * A practice instruction about sounds ("Pronounce the -s in 'helps' clearly", "Practise saying 'thirty' slowly") is
+ * allowed; a judgement of how the student sounded ("your pronunciation is clear", "you mispronounced 'th'") is not.
+ */
+const PRACTICE_TIP = /\b(?:pronounce|stress|practi[cs]e (?:saying|pronouncing)|say\b[^.]*\b(?:clearly|slowly|carefully|aloud|out loud))\b/i;
+const PRONUNCIATION_JUDGEMENT =
+  /\b(?:you|your)\b[^.]*\b(?:mispronounc\w*|accent\w*|pronunciation|intonation)\b|\b(?:mispronounc\w*|accent\w*|pronunciation|intonation)\b[^.]*\b(?:is|was|were|sounds?|sounded)\b/i;
+
+const INSTRUCTION_PATH = /\.(how_to_improve|how_to_check|how_to_fix|rule)$/;
+
+export function findPronunciationClaim(text: string, options: { allowPracticeTips?: boolean } = { allowPracticeTips: true }): string | null {
   return (
     text
       .split(/(?<=[.!?])\s+/)
-      .find((sentence) => PRONUNCIATION_PATTERN.test(sentence) && !NEGATED_ASSESSMENT.test(sentence)) ?? null
+      .find(
+        (sentence) =>
+          PRONUNCIATION_PATTERN.test(sentence) &&
+          !NEGATED_ASSESSMENT.test(sentence) &&
+          !(options.allowPracticeTips && PRACTICE_TIP.test(sentence) && !PRONUNCIATION_JUDGEMENT.test(sentence)),
+      ) ?? null
   );
 }
 
@@ -274,7 +339,7 @@ function hasSpecifics(text: string): boolean {
 
 /** Names of fields the evaluator is given as data (metrics, schema); they are not student vocabulary. */
 export const INTERNAL_FIELD_NAMES =
-  /\b(timeUsedRatio|wordsPerMinute|lexicalVariety|fillerCount|wordCount|speakingSeconds|repeatedPhrases|repeatedWords|speech_metrics?|memorized_or_irrelevant|how_to_improve|how_to_check|on_topic|off_topic|not_assessed|above_B2|below_B1)\b/;
+  /\b(timeUsedRatio|wordsPerMinute|lexicalVariety|fillerCount|wordCount|speakingSeconds|repeatedPhrases|repeatedWords|speech_metrics?|memorized_or_irrelevant|how_to_improve|how_to_check|on_topic|off_topic|not_assessed|above_B2|below_B1|above_B1|below_A2|above_A2|below_A1)\b/;
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;

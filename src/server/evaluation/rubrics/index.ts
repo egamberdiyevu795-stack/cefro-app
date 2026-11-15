@@ -2,6 +2,8 @@ import "server-only";
 import type { TargetLevel } from "@/domain/cefr";
 import { multilevelRubricConfigSchema, type MultilevelRubricConfig } from "@/domain/evaluation/multilevel/rubric-config";
 import type { RubricId, SpeakingTask } from "@/domain/speaking/task";
+import rawMultilevelQ1to3 from "./multilevel_q1_3.json";
+import rawMultilevelQ4to6 from "./multilevel_q4_6.json";
 import rawMultilevelQ7 from "./multilevel_q7.json";
 
 export interface Rubric {
@@ -26,7 +28,14 @@ function loadRubric(id: RubricId, raw: unknown): Rubric {
  */
 const RUBRICS: Record<RubricId, Rubric> = {
   "multilevel-q7": loadRubric("multilevel-q7", rawMultilevelQ7),
+  "multilevel-q1-3": loadRubric("multilevel-q1-3", rawMultilevelQ1to3),
+  "multilevel-q4-6": loadRubric("multilevel-q4-6", rawMultilevelQ4to6),
 };
+
+/** A rubric by id (e.g. to label a stored result by its `rubric_id`). */
+export function getRubricById(id: string): Rubric | undefined {
+  return (RUBRICS as Record<string, Rubric | undefined>)[id];
+}
 
 /** The rubric a task is scored against. The rubric's own version is stored with every evaluation. */
 export function getSpeakingRubric(task: Pick<SpeakingTask, "id" | "rubricId" | "level" | "part" | "prompts">): Rubric {

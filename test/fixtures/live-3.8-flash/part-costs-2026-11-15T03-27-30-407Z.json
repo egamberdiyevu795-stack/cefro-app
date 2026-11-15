@@ -1,0 +1,35 @@
+[
+  {
+    "part": "1.1",
+    "anchor": "1.1-middle",
+    "expected": 3,
+    "band": 3,
+    "input": 4676,
+    "output": 5047,
+    "calls": 1,
+    "cost": 0.02243325,
+    "seconds": 37.92
+  },
+  {
+    "part": "1.2",
+    "anchor": "1.2-middle",
+    "expected": 2,
+    "band": 0,
+    "input": 5404,
+    "output": 23668,
+    "calls": 1,
+    "cost": 0.092808,
+    "seconds": 161.576
+  },
+  {
+    "part": "3",
+    "anchor": "cars-A4",
+    "expected": 4,
+    "band": 4,
+    "input": 4665,
+    "output": 7603,
+    "calls": 1,
+    "cost": 0.03201,
+    "seconds": 53.805
+  }
+]

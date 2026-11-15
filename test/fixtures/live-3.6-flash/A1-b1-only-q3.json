@@ -1,0 +1,587 @@
+{
+  "_fixture": {
+    "model": "gemini-3.6-flash",
+    "production": false,
+    "warning": "NOT the production model. Production evaluates with gemini-3.8-flash; this free-tier run used gemini-3.6-flash, so bands and judgements may differ from production.",
+    "anchor": "A1-b1-only-q3",
+    "expectedBand": 1,
+    "bands": [
+      1,
+      1,
+      1
+    ],
+    "runAt": "2026-11-06",
+    "commit": "4edee53 (evaluator 3.5.0)",
+    "source": "eval-reports/evaluation-set-2026-11-06T09-59-29-104Z.json",
+    "settings": "EVAL_REPEAT=3, one at a time, 8 s pause, SDK retries off; transcript only (no audio)",
+    "savedFromRun": [
+      "result",
+      "latencyMs",
+      "modelCalls",
+      "inputTokens",
+      "outputTokens",
+      "model (answering model)",
+      "modelConfig (except audioAssessment)"
+    ],
+    "rebuiltFromCode": [
+      "evaluatorVersion",
+      "rubricVersion",
+      "schemaVersion",
+      "promptHash (deterministic)",
+      "modelConfig.audioAssessment",
+      "provider",
+      "isDevelopmentProvider"
+    ],
+    "notSaved": "quality (the quality-gate report) was not written to the report and is left out; qualityPassed is true where the live test asserted it, null where it did not reach that check."
+  },
+  "runs": [
+    {
+      "run": 1,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "missing",
+                "evidence": "",
+                "note": "You did not describe a specific situation or state who gave you advice.",
+                "model_answer": "A few years ago, my father / English teacher gave me valuable advice when I was preparing for university entrance exams."
+              },
+              {
+                "id": 2,
+                "status": "missing",
+                "evidence": "",
+                "note": "You did not mention what advice was given to you or whether you followed it.",
+                "model_answer": "He / She advised me to manage my study schedule carefully, and I decided to follow / ignore this advice because..."
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "In my opinion, young people should listen to older people, because older people have more experience. For example, our grandparents lived a long life and they saw many problems. But I also think young people should not follow all advice. Sometimes older people don't understand modern life, for example technology or new jobs. So young people must think and decide themselves.",
+                "note": "You clearly explained your opinion on whether young people should follow older people's advice, giving balanced reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B1",
+                "evidence": [
+                  "because older people have more experience.",
+                  "our grandparents lived a long life and they saw many problems.",
+                  "So young people must think and decide themselves.",
+                  "children usually respect their parents' advice."
+                ],
+                "note": "You used simple tenses accurately, but you did not include complex structures like conditionals or relative clauses.",
+                "how_to_improve": "Try using a second conditional sentence, such as 'If young people always followed advice, they might not learn from experience'.",
+                "how_to_check": "Check that your text contains at least one sentence starting with 'If' followed by a past simple verb and 'would' or 'might'."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "older people have more experience.",
+                  "they saw many problems.",
+                  "modern life, for example technology or new jobs.",
+                  "this is a good tradition."
+                ],
+                "note": "Your vocabulary covers the topic using simple everyday words, but it lacks natural topic-specific collocations.",
+                "how_to_improve": "Use topic phrases like 'gain experience', 'valuable guidance', or 'make independent decisions'.",
+                "how_to_check": "Check your answer to see if you used natural word pairs like 'gain experience' instead of plain words like 'have experience'."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "Everybody needs advice sometimes, because we cannot know everything.",
+                  "So young people must think and decide themselves.",
+                  "In conclusion, advice is useful, but we should choose good advice."
+                ],
+                "note": "You spoke smoothly without noticeable hesitations, but your answer was short and finished early.",
+                "how_to_improve": "Plan two points for each question during prep time so you can continue speaking for the full time.",
+                "how_to_check": "Check that your speaking duration reaches between 100 and 120 seconds."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "because older people have more experience.",
+                  "For example, our grandparents lived a long life",
+                  "But I also think young people should not follow all advice.",
+                  "So young people must think and decide themselves."
+                ],
+                "note": "You linked your sentences with basic connectors such as 'because', 'for example', 'but', and 'so'.",
+                "how_to_improve": "Introduce more varied connectors such as 'however', 'on the one hand', or 'as a result'.",
+                "how_to_check": "Check your text to ensure you replace simple words like 'but' with transition words like 'however'."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [
+              {
+                "quote": "in our life",
+                "correction": "in our lives",
+                "type": "grammar",
+                "pattern": ""
+              },
+              {
+                "quote": "decide themselves",
+                "correction": "decide for themselves",
+                "type": "grammar",
+                "pattern": ""
+              }
+            ],
+            "error_patterns": [],
+            "strengths": [],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 1,
+            "language_level": "B1",
+            "language_mean": 1,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 1,
+            "language_cap": 2,
+            "band": 1,
+            "label": "Lower B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "question_coverage",
+              "question_id": 1
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+              "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+              "target": {
+                "kind": "question",
+                "question_id": 1
+              }
+            },
+            {
+              "objective": "Try using a second conditional sentence, such as 'If young people always followed advice, they might not learn from experience'.",
+              "success_check": "Check that your text contains at least one sentence starting with 'If' followed by a past simple verb and 'would' or 'might'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 31353,
+        "modelCalls": 1,
+        "inputTokens": 6265,
+        "outputTokens": 5990
+      }
+    },
+    {
+      "run": 2,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "missing",
+                "evidence": "",
+                "note": "You did not describe a specific situation where someone gave you advice.",
+                "model_answer": "A person who gave me advice was my parent / teacher when I was choosing my future career."
+              },
+              {
+                "id": 2,
+                "status": "missing",
+                "evidence": "",
+                "note": "You did not mention what advice you received or whether you followed it.",
+                "model_answer": "They advised me to focus on my studies, and I decided / chose not to follow it."
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "In my opinion, young people should listen to older people, because older people have more experience. For example, our grandparents lived a long life and they saw many problems. But I also think young people should not follow all advice. Sometimes older people don't understand modern life, for example technology or new jobs. So young people must think and decide themselves.",
+                "note": "You clearly explained your opinion on following advice from older people with reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B1",
+                "evidence": [
+                  "because we cannot know everything",
+                  "young people should listen to older people",
+                  "our grandparents lived a long life and they saw many problems",
+                  "young people must think and decide themselves"
+                ],
+                "note": "You used simple tenses and modal verbs accurately, but you did not include complex structures.",
+                "how_to_improve": "Use a relative clause with 'who' to connect your sentences together.",
+                "how_to_check": "Check your attempt to see if you used a phrase like 'older people who have experience'."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "older people have more experience",
+                  "modern life, for example technology or new jobs",
+                  "children usually respect their parents' advice"
+                ],
+                "note": "Your words are clear and accurate, but rely on basic everyday vocabulary.",
+                "how_to_improve": "Use topic-specific phrases such as 'make a decision' or 'valuable guidance' instead of repeating basic words.",
+                "how_to_check": "Make sure you used specific phrases instead of repeating words like 'advice' many times."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "In my opinion, young people should listen to older people, because older people have more experience.",
+                  "So young people must think and decide themselves."
+                ],
+                "note": "You spoke without fillers, but your answer was made of short sentences.",
+                "how_to_improve": "Plan the first sentence of each point during prep time to help you speak in longer phrases.",
+                "how_to_check": "Check that you can connect sentences without stopping after every short idea."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "because older people have more experience",
+                  "For example, our grandparents lived a long life",
+                  "But I also think young people should not follow all advice",
+                  "In conclusion, advice is useful"
+                ],
+                "note": "You connected your ideas using basic linkers like 'because', 'for example', and 'but'.",
+                "how_to_improve": "Use linking phrases like 'however' or 'on the other hand' when presenting contrasting points.",
+                "how_to_check": "Verify that your attempt contains at least one linking phrase like 'on the other hand'."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [
+              {
+                "quote": "decide themselves",
+                "correction": "decide for themselves",
+                "type": "grammar",
+                "pattern": ""
+              },
+              {
+                "quote": "in our life",
+                "correction": "in our lives",
+                "type": "grammar",
+                "pattern": ""
+              }
+            ],
+            "error_patterns": [],
+            "strengths": [],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 1,
+            "language_level": "B1",
+            "language_mean": 1,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 1,
+            "language_cap": 2,
+            "band": 1,
+            "label": "Lower B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "question_coverage",
+              "question_id": 1
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+              "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+              "target": {
+                "kind": "question",
+                "question_id": 1
+              }
+            },
+            {
+              "objective": "Use a relative clause with 'who' to connect your sentences together.",
+              "success_check": "Check your attempt to see if you used a phrase like 'older people who have experience'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 32239,
+        "modelCalls": 1,
+        "inputTokens": 6265,
+        "outputTokens": 5968
+      }
+    },
+    {
+      "run": 3,
+      "qualityPassed": true,
+      "evaluation": {
+        "result": {
+          "kind": "multilevel",
+          "rubric_id": "multilevel-q7",
+          "part": 2,
+          "official_question": 7,
+          "assessment": {
+            "questions": [
+              {
+                "id": 1,
+                "status": "missing",
+                "evidence": "",
+                "note": "You did not describe a specific time when someone gave you advice.",
+                "model_answer": "My teacher gave me advice when I was deciding which university course to study."
+              },
+              {
+                "id": 2,
+                "status": "missing",
+                "evidence": "",
+                "note": "You did not state what advice you received or whether you followed it.",
+                "model_answer": "He advised me to focus on my strengths, and I followed his advice with great results."
+              },
+              {
+                "id": 3,
+                "status": "on_topic",
+                "evidence": "young people should listen to older people, because older people have more experience. For example, our grandparents lived a long life and they saw many problems. But I also think young people should not follow all advice. Sometimes older people don't understand modern life, for example technology or new jobs. So young people must think and decide themselves.",
+                "note": "You gave a clear opinion on whether young people should follow older people's advice and gave reasons.",
+                "model_answer": ""
+              }
+            ],
+            "features": {
+              "grammar": {
+                "level": "B1",
+                "evidence": [
+                  "young people should listen to older people",
+                  "grandparents lived a long life",
+                  "older people don't understand modern life"
+                ],
+                "note": "You used simple tenses and modals correctly, but did not use complex structures like relative clauses or conditionals.",
+                "how_to_improve": "Try adding a conditional sentence using 'if', such as 'If young people listen to older people, they can avoid mistakes.'",
+                "how_to_check": "Listen to your recording and verify you included at least one 'if' sentence."
+              },
+              "vocabulary": {
+                "level": "B1",
+                "evidence": [
+                  "very important",
+                  "more experience",
+                  "modern life",
+                  "good tradition"
+                ],
+                "note": "Your words were clear and correct, but mostly basic everyday terms.",
+                "how_to_improve": "Use topic phrases like 'gain experience' or 'make independent decisions' instead of simple words.",
+                "how_to_check": "Check your recording to confirm you used fixed topic phrases instead of single basic words."
+              },
+              "fluency": {
+                "level": "B1",
+                "evidence": [
+                  "Everybody needs advice sometimes, because we cannot know everything.",
+                  "So young people must think and decide themselves."
+                ],
+                "note": "You spoke continuously without major hesitations, but you only answered one of the three questions.",
+                "how_to_improve": "Plan one short answer for each of the three prompt questions during your preparation time.",
+                "how_to_check": "Ensure your spoken attempt covers all three questions within the available time."
+              },
+              "cohesion": {
+                "level": "B1",
+                "evidence": [
+                  "because we cannot know everything",
+                  "For example",
+                  "But I also think",
+                  "So young people must think"
+                ],
+                "note": "You linked ideas clearly using simple words like 'because', 'but', and 'so'.",
+                "how_to_improve": "Use more formal linking words such as 'however', 'on the other hand', or 'as a result'.",
+                "how_to_check": "Check that you used at least one word like 'however' or 'on the other hand' to contrast points."
+              },
+              "pronunciation": {
+                "level": "not_assessed",
+                "evidence": [],
+                "note": "",
+                "how_to_improve": "",
+                "how_to_check": ""
+              }
+            },
+            "memorized_or_irrelevant": false,
+            "errors": [
+              {
+                "quote": "decide themselves",
+                "correction": "decide for themselves",
+                "type": "grammar",
+                "pattern": ""
+              },
+              {
+                "quote": "in our life",
+                "correction": "in our lives",
+                "type": "grammar",
+                "pattern": ""
+              }
+            ],
+            "error_patterns": [],
+            "strengths": [],
+            "retry_review": null
+          },
+          "feature_sources": {
+            "grammar": "transcript",
+            "vocabulary": "transcript",
+            "pronunciation": "none",
+            "fluency": "transcript",
+            "cohesion": "transcript"
+          },
+          "audio": {
+            "status": "not_assessed",
+            "reason": "disabled",
+            "provider": null,
+            "model": null
+          },
+          "scoring": {
+            "on_topic_count": 1,
+            "language_level": "B1",
+            "language_mean": 1,
+            "assessed_features": [
+              "grammar",
+              "vocabulary",
+              "fluency",
+              "cohesion"
+            ],
+            "topic_cap": 1,
+            "language_cap": 2,
+            "band": 1,
+            "label": "Lower B1",
+            "band_max": 5,
+            "target_band": 3,
+            "meets_target": false,
+            "provisional": true,
+            "zero_reason": null,
+            "biggest_fix": {
+              "kind": "question_coverage",
+              "question_id": 1
+            }
+          },
+          "retry_focus": [
+            {
+              "objective": "Answer question 1: \"Who gave you the advice, and what situation were you in?\"",
+              "success_check": "You say at least two sentences that answer question 1, with one reason or example.",
+              "target": {
+                "kind": "question",
+                "question_id": 1
+              }
+            },
+            {
+              "objective": "Try adding a conditional sentence using 'if', such as 'If young people listen to older people, they can avoid mistakes.'",
+              "success_check": "Listen to your recording and verify you included at least one 'if' sentence.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
+              }
+            }
+          ]
+        },
+        "evaluatorVersion": "speaking-evaluator/3.5.0",
+        "rubricVersion": "multilevel-q7/2.1.0",
+        "schemaVersion": 3,
+        "promptHash": "h2:93f97202b0931e2d519fcc02d91ef8b59285e2e7411cf214d8ab225a4ea149ae",
+        "provider": "gemini",
+        "model": "gemini-3.6-flash",
+        "modelConfig": {
+          "maxTokens": 24000,
+          "structuredOutput": "schema",
+          "thinkingLevel": "high",
+          "temperature": 0,
+          "audioAssessment": "off:disabled"
+        },
+        "isDevelopmentProvider": false,
+        "latencyMs": 20657,
+        "modelCalls": 1,
+        "inputTokens": 6265,
+        "outputTokens": 3952
+      }
+    }
+  ]
+}

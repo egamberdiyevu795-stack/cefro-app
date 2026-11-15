@@ -41,7 +41,7 @@ export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   /** "anonymous": a browser's low-trust cookie identity. "registered": an account with credentials (see auth_accounts). */
   kind: text("kind", { enum: ["anonymous", "registered"] }).notNull().default("anonymous"),
-  /** Registered users only: lower-cased sign-in email. Unverified (no email is sent yet). Null for anonymous users. */
+  /** Registered users only: lower-cased sign-in email. Unverified (email is sent only for "Forgot password"). Null for anonymous users. */
   email: text("email"),
   name: text("name"),
   /** Required by the auth library's user model; profile images are not used. */
@@ -54,6 +54,30 @@ export const users = sqliteTable("users", {
    * cookie keeps resolving to the surviving user.
    */
   mergedIntoUserId: text("merged_into_user_id").references((): AnySQLiteColumn => users.id),
+  /** The student's exam date, "YYYY-MM-DD" (a calendar day in Uzbekistan). Null until they give one. */
+  examDate: text("exam_date"),
+  /** When the student answered "When is your exam?" with Skip (ISO time). Cleared when they save a date. */
+  examDateSkippedAt: text("exam_date_skipped_at"),
+  /**
+   * "student" (everyone) or "teacher" (docs/teacher-plan.md). Set only by the owner's script (scripts/set-role.mjs),
+   * never by any API or by the auth library.
+   */
+  role: text("role", { enum: ["student", "teacher"] }).notNull().default("student"),
+  /**
+   * Pilot consent (docs/consent-design.md, "Pilot route"; migration 0007_pilot_consent). Null = none recorded,
+   * "granted" = recording unlocked (a parent or guardian, or an adult tester, confirmed by hand), "withdrawn" = locked
+   * again. Set only by the owner's script (scripts/set-consent.mjs), never by any API, page or the auth library.
+   */
+  consentStatus: text("consent_status", { enum: ["granted", "withdrawn"] }),
+  /** When the owner last set `consent_status` (ISO time). */
+  consentAt: text("consent_at"),
+  /**
+   * Which text the person agreed to when consent was granted (e.g. "pilot-consent-v1"). Set by the owner's script with the
+   * consent; null while none was granted.
+   */
+  consentNoticeVersion: text("consent_notice_version"),
+  /** Teacher sharing was agreed too (`--teacher-sharing`). Only counts while `consent_status` is "granted". */
+  consentTeacherSharing: integer("consent_teacher_sharing", { mode: "boolean" }).notNull().default(false),
   createdAt: dateTimestamps.createdAt,
 }, (table) => [uniqueIndex("users_email_uq").on(table.email)]);
 
@@ -100,8 +124,8 @@ export const authAccounts = sqliteTable(
 );
 
 /**
- * Short-lived tokens for email verification and password reset. Part of the library's required schema; nothing writes to it
- * yet because CEFRO sends no email (see docs/ARCHITECTURE_DECISIONS.md).
+ * Short-lived tokens for email verification and password reset. Part of the library's required schema. "Forgot password"
+ * writes one row per link (`reset-password:<token>` → user id, 60 minutes, deleted when used: docs/password-reset.md).
  */
 export const authVerifications = sqliteTable(
   "auth_verifications",
@@ -116,21 +140,33 @@ export const authVerifications = sqliteTable(
 );
 
 /**
- * One sitting of practice. Today every session covers a single task ("single_task"); the table exists
- * so that several responses can later belong to one exam-style session without renaming attempts.
- * Created by the server only; its id is also the correlation key on analytics events.
+ * One sitting of practice. A session is either one task ("single_task") or a full mock exam ("full_mock": Parts 1.1,
+ * 1.2, 2 and 3 back to back, one attempt per part, docs/v1-plan.md section 3.2). Created by the server only; its id is
+ * also the correlation key on analytics events.
+ *
+ * `status` and `finished_at` exist for full mocks only (migration 0008); a single_task row keeps both null. A mock is
+ * "in_progress" until its fourth part is uploaded ("finished") or 24 hours pass ("not_finished"; its finished parts keep
+ * their results). Which parts are done is not stored here: it is the session's attempts (`speaking_attempts.session_id`).
  */
 export const practiceSessions = sqliteTable(
   "practice_sessions",
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull().references(() => users.id),
-    kind: text("kind", { enum: ["single_task"] }).notNull().default("single_task"),
+    kind: text("kind", { enum: ["single_task", "full_mock"] }).notNull().default("single_task"),
+    status: text("status", { enum: ["in_progress", "finished", "not_finished"] }),
+    finishedAt: text("finished_at"),
+    /**
+     * Migration 0010. Set when the mock was taken on a teacher's exam laptop ("In class"); null = taken at home. A plain text
+     * id with no foreign key on purpose: it is a label that must survive its teacher's account being deleted.
+     */
+    classMockId: text("class_mock_id"),
     ...timestamps,
   },
+  // The only query by user is the mock's: "this user's full mocks, and the one in progress".
+  (table) => [index("practice_sessions_user_kind_idx").on(table.userId, table.kind, table.status)],
 );
-// No secondary indexes on practice_sessions or analytics_events.session_id yet: nothing queries by them.
-// Add one with the first query that needs it.
+// No secondary index on analytics_events.session_id yet: nothing queries by it. Add one with the first query that needs it.
 
 /**
  * Snapshot of each task version that has been attempted. Task content is
@@ -182,6 +218,13 @@ export const speakingAttempts = sqliteTable(
     completedAt: text("completed_at"),
     /** Deterministic speech metrics (see domain/speaking/metrics.ts). */
     metrics: text("metrics", { mode: "json" }),
+    /**
+     * The student's one answer to "Was this feedback helpful?" on the result page (true = Yes, false = No), null
+     * until they answer. One answer per attempt: the first one is kept.
+     */
+    feedbackHelpful: integer("feedback_helpful", { mode: "boolean" }),
+    /** When they answered it. */
+    feedbackHelpfulAt: text("feedback_helpful_at"),
     ...timestamps,
     updatedAt: text("updated_at").notNull(),
   },
@@ -214,6 +257,11 @@ export const recordings = sqliteTable(
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     durationMs: integer("duration_ms").notNull(),
+    /**
+     * When the audio bytes were deleted by the daily retention job (30 days after scoring; migration 0007). The row
+     * stays, so the result page can say so; the transcript and result are kept. Null = the audio is still stored.
+     */
+    audioDeletedAt: text("audio_deleted_at"),
     ...timestamps,
   },
   (table) => [uniqueIndex("recordings_attempt_uq").on(table.attemptId)],
@@ -306,4 +354,172 @@ export const analyticsEvents = sqliteTable(
     index("analytics_events_name_idx").on(table.name),
     index("analytics_events_user_idx").on(table.userId),
   ],
+);
+
+/**
+ * Teacher view (docs/teacher-plan.md, migration 0006_teachers). A teacher's class; students join it with `join_code`
+ * (6 characters from 23456789ABCDEFGHJKMNPQRSTUVWXYZ). Closing a class ends every membership; it is never reopened.
+ */
+export const classes = sqliteTable(
+  "classes",
+  {
+    id: text("id").primaryKey(),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    joinCode: text("join_code").notNull(),
+    ...timestamps,
+    closedAt: text("closed_at"),
+  },
+  (table) => [uniqueIndex("classes_join_code_uq").on(table.joinCode), index("classes_teacher_idx").on(table.teacherUserId)],
+);
+
+/**
+ * A student sharing with a class, from the tap on "Share with this teacher" (`shared_at`). Only attempts created after
+ * `shared_at` are shared. Ended by the student (Leave), the teacher (Remove) or Close: `ended_at` / `ended_by`; rejoining
+ * is a new row. At most one open row per class and student.
+ */
+export const classMembers = sqliteTable(
+  "class_members",
+  {
+    id: text("id").primaryKey(),
+    classId: text("class_id").notNull().references(() => classes.id),
+    studentUserId: text("student_user_id").notNull().references(() => users.id),
+    /** "Name your teacher sees", confirmed by the student for this class only. */
+    shownName: text("shown_name").notNull(),
+    sharedAt: text("shared_at").notNull(),
+    /** Which wording of the Share screen the student agreed to. */
+    shareTextVersion: text("share_text_version").notNull(),
+    endedAt: text("ended_at"),
+    endedBy: text("ended_by", { enum: ["student", "teacher", "class_closed"] }),
+    /**
+     * Migration 0009. A membership made on the first Share wording ("2026-11-07": Part 2 attempts only, no recordings)
+     * keeps it. When its student taps "Share recordings too?" on the Account page, this is that moment: from then on
+     * every part, every mock and the recordings are shared. Null: never (and always null on the current wording).
+     */
+    allPartsFrom: text("all_parts_from"),
+    /** Migration 0009. When the student answered "Not now" to that one-time card; the card is not shown again. */
+    upgradeDeclinedAt: text("upgrade_declined_at"),
+    /**
+     * Migration 0010. The student's 4-digit class PIN for the exam laptop, hashed (scrypt, per-row salt; `server/exam-laptop/pin.ts`).
+     * Never sent to anyone, never shown, never logged. Null = no PIN yet (the student can't be picked on a laptop).
+     */
+    pinHash: text("pin_hash"),
+    /** Migration 0010. Wrong PINs per laptop, JSON `{"<laptop id>": n}`. 5 on one laptop lock the student there until the teacher unlocks. */
+    pinFailures: text("pin_failures"),
+  },
+  (table) => [
+    uniqueIndex("class_members_open_uq").on(table.classId, table.studentUserId).where(sql`${table.endedAt} IS NULL`),
+    index("class_members_student_idx").on(table.studentUserId),
+  ],
+);
+
+/**
+ * A teacher's level for one shared attempt: Agree (`agrees`, no band) or their own band (0–5). Kept beside the app's
+ * band and the methodology that produced it. Never read by the scorer, the result page, the dashboard or History.
+ */
+export const teacherRatings = sqliteTable(
+  "teacher_ratings",
+  {
+    id: text("id").primaryKey(),
+    attemptId: text("attempt_id").notNull().references(() => speakingAttempts.id),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    classId: text("class_id").notNull().references(() => classes.id),
+    agrees: integer("agrees", { mode: "boolean" }).notNull(),
+    /** Null when the teacher agreed. */
+    teacherBand: integer("teacher_band"),
+    appBand: integer("app_band").notNull(),
+    evaluatorVersion: text("evaluator_version").notNull(),
+    rubricVersion: text("rubric_version").notNull(),
+    ...timestamps,
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("teacher_ratings_attempt_teacher_uq").on(table.attemptId, table.teacherUserId), index("teacher_ratings_class_idx").on(table.classId)],
+);
+
+/**
+ * A teacher's level for a whole mock (migration 0009): Agree with the estimate (`agrees`) or their own level. The
+ * per-part ratings are `teacher_ratings` (one per part attempt). Never read by the scorer, the dashboard or History. When
+ * the membership ends the row is deleted and no pair is kept (a level is not a band).
+ */
+export const teacherMockRatings = sqliteTable(
+  "teacher_mock_ratings",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull().references(() => practiceSessions.id),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    classId: text("class_id").notNull().references(() => classes.id),
+    agrees: integer("agrees", { mode: "boolean" }).notNull(),
+    /** "Below B1" | "B1" | "B2" | "C1"; null when the teacher agreed. */
+    teacherLevel: text("teacher_level"),
+    /** The estimate shown when they rated; null when it was not ready. */
+    appLevel: text("app_level"),
+    ...timestamps,
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("teacher_mock_ratings_session_teacher_uq").on(table.sessionId, table.teacherUserId), index("teacher_mock_ratings_class_idx").on(table.classId)],
+);
+
+/**
+ * Anonymous (teacher band, app band) pairs, kept when a membership ends (Leave, Remove, Close) to improve scoring.
+ * Deliberately nothing that links a pair to a student, an attempt, a teacher or an exact time: no ids, no names, no
+ * transcript, only the month. They can't be found again, so they are never deleted (the Share screen says so).
+ */
+export const ratingPairs = sqliteTable("rating_pairs", {
+  /** The teacher's band; the app's band when the teacher agreed. */
+  teacherBand: integer("teacher_band").notNull(),
+  appBand: integer("app_band").notNull(),
+  evaluatorVersion: text("evaluator_version").notNull(),
+  rubricVersion: text("rubric_version").notNull(),
+  /** The exam part ("2"). */
+  part: text("part").notNull(),
+  /** "YYYY-MM". */
+  month: text("month").notNull(),
+});
+
+/**
+ * Exam laptop mode (docs/v1-plan.md section 6, migration 0010): one row per "Start exam laptop". Two laptops in two rooms
+ * share the open row of a class. `task_*` hold the one paper everyone sits; all four null = a different paper for each student.
+ */
+export const classMocks = sqliteTable(
+  "class_mocks",
+  {
+    id: text("id").primaryKey(),
+    classId: text("class_id").notNull().references(() => classes.id),
+    teacherUserId: text("teacher_user_id").notNull().references(() => users.id),
+    title: text("title").notNull(),
+    task11: text("task_1_1"),
+    task12: text("task_1_2"),
+    task2: text("task_2"),
+    task3: text("task_3"),
+    openedAt: text("opened_at").notNull(),
+    /** Set by "End exam laptop > close": no new pass or mock can start. Never reopened. */
+    closedAt: text("closed_at"),
+    ...timestamps,
+  },
+  (table) => [index("class_mocks_class_idx").on(table.classId)],
+);
+
+/**
+ * The one-mock pass (docs/v1-plan.md section 6): a correct PIN gives ONE laptop the right to take one mock as ONE student, for
+ * about 30 minutes. Every recording made with it is saved to `student_user_id`'s account. The pass id is the secret the
+ * laptop's browser holds (an unguessable id, only ever sent to the teacher's own signed-in session). Ends at `used_up_at`
+ * (the end screen, a new pass for the same student, or End exam laptop) or `expires_at`.
+ */
+export const examPasses = sqliteTable(
+  "exam_passes",
+  {
+    id: text("id").primaryKey(),
+    classMockId: text("class_mock_id").notNull().references(() => classMocks.id),
+    studentUserId: text("student_user_id").notNull().references(() => users.id),
+    /** "Room 2": what the other laptop's list shows. */
+    deviceLabel: text("device_label").notNull(),
+    /** A random id the laptop made for itself (never shown): the pass works from that browser only. */
+    laptopId: text("laptop_id").notNull(),
+    /** The mock the pass started (null until the student taps Start mock). Plain text, no foreign key. */
+    sessionId: text("session_id"),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    usedUpAt: text("used_up_at"),
+  },
+  (table) => [index("exam_passes_class_mock_idx").on(table.classMockId), index("exam_passes_student_idx").on(table.studentUserId)],
 );

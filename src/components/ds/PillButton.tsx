@@ -1,0 +1,125 @@
+import Link from "next/link";
+import { cx } from "./cx";
+import { Icon, type IconName } from "./Icon";
+import { FOCUS_RING, ICON_BUTTON } from "./styles";
+
+type Variant = "primary" | "quiet" | "light";
+type Size = "lg" | "md" | "sm";
+
+const VARIANTS: Record<Variant, string> = {
+  primary: "bg-primary text-on-primary hover:bg-primary/85",
+  quiet: "bg-well text-fg hover:bg-line",
+  // For pills that sit on a `well` surface (e.g. exam-part tiles), where `quiet` would disappear.
+  light: "bg-card text-fg hover:bg-line",
+};
+
+const SIZES: Record<Size, string> = {
+  // The one main action of a full-screen step (practice: "Start preparation", "Finish"): 44 px, easy to hit on a phone.
+  lg: "h-11 gap-2 px-6 text-body",
+  md: "h-9 gap-2 px-5 text-body",
+  sm: "h-7 gap-1.5 px-3 text-label",
+};
+
+/** Pill-shaped link. Primary = near-black; quiet = grey well (like "View detailed report"); light = card-white on a well. */
+export function PillButton({
+  href,
+  variant = "primary",
+  size = "md",
+  icon,
+  label,
+  className,
+  children,
+}: {
+  href: string;
+  variant?: Variant;
+  size?: Size;
+  icon?: IconName;
+  /** Accessible name, when the visible text alone is ambiguous (e.g. several "Practise" pills). */
+  label?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className={cx(
+        "inline-flex items-center justify-center rounded-full font-medium transition-colors",
+        SIZES[size],
+        FOCUS_RING,
+        VARIANTS[variant],
+        className,
+      )}
+    >
+      {icon && <Icon name={icon} size={size === "sm" ? 14 : 16} />}
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * The same pill as a `<button>`, for actions that stay on the page (start, finish, try again). `type="submit"` makes it
+ * a form's submit button (sign in, create account); the form's own `onSubmit` handles it then, so `onClick` is optional.
+ */
+export function PillAction({
+  onClick,
+  type = "button",
+  variant = "primary",
+  size = "md",
+  icon,
+  disabled,
+  autoFocus,
+  className,
+  testId,
+  label,
+  children,
+}: {
+  /** `data-testid`, for the browser tests. */
+  testId?: string;
+  /** Accessible name when the visible text alone is ambiguous. */
+  label?: string;
+  onClick?: () => void;
+  type?: "button" | "submit";
+  variant?: Variant;
+  size?: Size;
+  icon?: IconName;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      autoFocus={autoFocus}
+      data-testid={testId}
+      aria-label={label}
+      className={cx(
+        "inline-flex items-center justify-center rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+        SIZES[size],
+        FOCUS_RING,
+        VARIANTS[variant],
+        className,
+      )}
+    >
+      {icon && <Icon name={icon} size={size === "sm" ? 14 : 16} />}
+      {children}
+    </button>
+  );
+}
+
+/** Round icon-only button (top bar bell, row menus). `label` is its accessible name. */
+export function IconButton({ icon, label, size = 32, className }: { icon: IconName; label: string; size?: number; className?: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      style={{ width: size, height: size }}
+      className={cx(ICON_BUTTON, className)}
+    >
+      <Icon name={icon} size={18} />
+    </button>
+  );
+}

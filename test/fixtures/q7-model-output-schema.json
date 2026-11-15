@@ -1,0 +1,493 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "questions": {
+   "minItems": 1,
+   "maxItems": 6,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "Question number, 1-based, exactly as numbered in <task>."
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "on_topic",
+       "partial",
+       "minimal",
+       "missing",
+       "off_topic"
+      ],
+      "description": "on_topic: answered, with a reason, detail or example. partial: touched on but not really answered. minimal: answered in one bare sentence with no reason, detail or example. missing: not addressed. off_topic: talks about something else."
+     },
+     "evidence": {
+      "type": "string",
+      "description": "Exact substring of the transcript where the student answers this question, or an empty string."
+     },
+     "note": {
+      "type": "string",
+      "description": "One short sentence about what the student said for this question."
+     },
+     "model_answer": {
+      "type": "string",
+      "description": "For partial, minimal, missing or off_topic: one or two short sentences (at most 30 words) the student could say, one level above their language level. Keep any view they gave; if they gave none, a frame with both options (should / shouldn't … because …). Empty string for on_topic."
+     }
+    },
+    "required": [
+     "id",
+     "status",
+     "evidence",
+     "note",
+     "model_answer"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "features": {
+   "type": "object",
+   "properties": {
+    "grammar": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "above_B2"
+       ],
+       "description": "Best fit against the official descriptors: above_B2, B2, B1 or below_B1."
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript (the student's own words, mistakes included). Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "vocabulary": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "above_B2"
+       ],
+       "description": "Best fit against the official descriptors: above_B2, B2, B1 or below_B1."
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript (the student's own words, mistakes included). Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "fluency": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "above_B2"
+       ],
+       "description": "Best fit against the official descriptors: above_B2, B2, B1 or below_B1."
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript (the student's own words, mistakes included). Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "cohesion": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "above_B2"
+       ],
+       "description": "Best fit against the official descriptors: above_B2, B2, B1 or below_B1."
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript (the student's own words, mistakes included). Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    },
+    "pronunciation": {
+     "type": "object",
+     "properties": {
+      "level": {
+       "type": "string",
+       "enum": [
+        "below_B1",
+        "B1",
+        "B2",
+        "above_B2",
+        "not_assessed"
+       ],
+       "description": "Always not_assessed when judging from a transcript."
+      },
+      "evidence": {
+       "maxItems": 4,
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Exact substrings copied from the transcript (the student's own words, mistakes included). Never paraphrase."
+      },
+      "note": {
+       "type": "string",
+       "description": "One short sentence for the student: why this level, referring to the quotes."
+      },
+      "how_to_improve": {
+       "type": "string",
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
+      },
+      "how_to_check": {
+       "type": "string",
+       "description": "How the student can tell, after the next attempt, that they did it."
+      }
+     },
+     "required": [
+      "level",
+      "evidence",
+      "note",
+      "how_to_improve",
+      "how_to_check"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "required": [
+    "grammar",
+    "vocabulary",
+    "fluency",
+    "cohesion",
+    "pronunciation"
+   ],
+   "additionalProperties": false
+  },
+  "memorized_or_irrelevant": {
+   "type": "boolean",
+   "description": "true only if the whole answer is clearly a memorised/prepared text that ignores the questions, or is irrelevant to the task."
+  },
+  "errors": {
+   "maxItems": 8,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "quote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact substring of the transcript containing the error."
+     },
+     "correction": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The same words, corrected. Keep the student's meaning."
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "grammar",
+       "vocabulary"
+      ]
+     },
+     "pattern": {
+      "type": "string",
+      "description": "The name of the error pattern in error_patterns this error belongs to (copied exactly), or an empty string for a one-off error."
+     }
+    },
+    "required": [
+     "quote",
+     "correction",
+     "type",
+     "pattern"
+    ],
+    "additionalProperties": false
+   },
+   "description": "The most important grammar and vocabulary errors, most serious first."
+  },
+  "error_patterns": {
+   "maxItems": 4,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short name of a repeated error type, e.g. 'Missing -s after he/she/it'."
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "grammar",
+       "vocabulary"
+      ]
+     },
+     "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence explaining the rule, with a short correct example."
+     },
+     "how_to_fix": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One concrete habit for the next attempt that prevents this error."
+     }
+    },
+    "required": [
+     "name",
+     "type",
+     "rule",
+     "how_to_fix"
+    ],
+    "additionalProperties": false
+   },
+   "description": "0-4 error types that occur more than once (or one important type), most important first. Each must be used by at least one entry in errors."
+  },
+  "strengths": {
+   "maxItems": 2,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "feature": {
+      "type": "string",
+      "enum": [
+       "grammar",
+       "vocabulary",
+       "fluency",
+       "cohesion"
+      ]
+     },
+     "quote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact substring of the transcript that shows B2-or-better language for this feature."
+     },
+     "note": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One short sentence: what is good about it."
+     }
+    },
+    "required": [
+     "feature",
+     "quote",
+     "note"
+    ],
+    "additionalProperties": false
+   },
+   "description": "0-2 strengths. Only for a feature you judged B2 or above_B2, each with an exact quote. Empty if there is none."
+  },
+  "retry_review": {
+   "anyOf": [
+    {
+     "type": "object",
+     "properties": {
+      "objectives": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "objective": {
+          "type": "string",
+          "minLength": 1
+         },
+         "outcome": {
+          "type": "string",
+          "enum": [
+           "achieved",
+           "partly_achieved",
+           "not_achieved"
+          ]
+         },
+         "evidence": {
+          "type": "string",
+          "minLength": 1
+         }
+        },
+        "required": [
+         "objective",
+         "outcome",
+         "evidence"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "summary": {
+       "type": "string",
+       "minLength": 1,
+       "description": "Honest comparison with the previous attempt. Never invent improvement."
+      }
+     },
+     "required": [
+      "objectives",
+      "summary"
+     ],
+     "additionalProperties": false
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "description": "Only for retries (see <previous_attempt>); otherwise null."
+  },
+  "sentence_fixes": {
+   "maxItems": 8,
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "you_said": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The student's own words, copied exactly from the transcript with the mistake in them: one clause or sentence, at most 25 words."
+     },
+     "better": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The same words with ONLY that one mistake fixed. Keep the student's words, order and idea. Never add an idea, a reason or an example; at most 3 words longer. Never a rewritten answer."
+     },
+     "why": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One short line (at most 20 words) naming the rule, in plain words. About grammar or word choice only."
+     }
+    },
+    "required": [
+     "you_said",
+     "better",
+     "why"
+    ],
+    "additionalProperties": false
+   },
+   "description": "Up to 8 sentences or phrases of the student's own words with one mistake each, most important first (a mistake that hides the meaning, or one that repeats, before a small slip). Empty list if there is no clear mistake. Without audio, never about pauses, fillers, speed or pronunciation."
+  }
+ },
+ "required": [
+  "questions",
+  "features",
+  "memorized_or_irrelevant",
+  "errors",
+  "error_patterns",
+  "strengths",
+  "retry_review",
+  "sentence_fixes"
+ ],
+ "additionalProperties": false
+}

@@ -1,7 +1,7 @@
 import type { Db } from "@/server/db/client";
 import { analyticsEvents, practiceSessions, speakingAttempts, speakingTasks, users } from "@/server/db/schema";
 
-export const TASK_ID = "b2-part2-technology-young-people";
+export const TASK_ID = "b2-part2-advice-from-someone";
 
 /** Insert users (idempotent) and the task snapshot that attempts must reference. */
 export async function seedUsers(db: Db, ...ids: string[]) {

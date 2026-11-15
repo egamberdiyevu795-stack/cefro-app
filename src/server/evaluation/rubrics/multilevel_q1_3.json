@@ -1,0 +1,61 @@
+{
+  "id": "multilevel-q1-3",
+  "version": "multilevel-q1-3/1.0.0",
+  "exam": "uzbmb-multilevel-speaking",
+  "part": 1,
+  "official_question": 1,
+  "first_question_number": 1,
+  "target_level": "A2",
+  "question_count": 3,
+  "band_max": 5,
+  "meets_target_band": 3,
+  "levels": ["below_A1", "A1", "A2", "above_A2"],
+  "features": ["grammar", "vocabulary", "pronunciation", "fluency"],
+  "question_statuses": ["on_topic", "missing", "off_topic"],
+  "bands": [
+    { "band": 5, "label": "Above A2", "descriptor": "Performance is above A2." },
+    { "band": 4, "label": "Higher A2", "descriptor": "A2 descriptors; all three questions on topic." },
+    { "band": 3, "label": "Lower A2", "descriptor": "A2 descriptors; two questions on topic." },
+    { "band": 2, "label": "Higher A1", "descriptor": "A1 descriptors; at least two questions on topic." },
+    { "band": 1, "label": "Lower A1", "descriptor": "A1 descriptors; one question on topic." },
+    {
+      "band": 0,
+      "label": "Below A1",
+      "descriptor": "No meaningful language, or all responses completely off-topic (e.g. memorized answers, guessing)."
+    }
+  ],
+  "descriptors": {
+    "A2": {
+      "grammar": "Some simple grammatical structures are used correctly but basic mistakes systematically occur.",
+      "vocabulary": "Vocabulary is sufficient to respond to the questions, although inappropriate word choices are noticeable.",
+      "pronunciation": "Mispronunciations are noticeable and frequently place a strain on the listener.",
+      "fluency": "There is frequent pausing, false starts, and reformulations, but the meaning is still clear."
+    },
+    "A1": {
+      "grammar": "Grammatical structure is limited to words and phrases. Errors in basic patterns and simple grammar structures impede understanding.",
+      "vocabulary": "Vocabulary is limited to very basic words related to personal information.",
+      "pronunciation": "Pronunciation is mostly unintelligible except for isolated words.",
+      "fluency": "Frequent pausing, false starts, and reformulations impede understanding."
+    },
+    "above_A2": {
+      "grammar": "Simple grammatical structures are used correctly. Errors occur when attempting complex structures.",
+      "vocabulary": "There is sufficient range and control of vocabulary for the task. Errors occur when expressing complex thoughts.",
+      "pronunciation": "Pronunciation is generally intelligible but mispronunciations put an occasional strain on the listener.",
+      "fluency": "There is some pausing, false starts, and reformulations."
+    }
+  },
+  "descriptor_sources": {
+    "A2": "Official UZBMB Multilevel speaking rating scale, Questions 1-3, A2 (bands 4 and 3).",
+    "A1": "Official UZBMB Multilevel speaking rating scale, Questions 1-3, A1 (bands 2 and 1).",
+    "above_A2": "Reference only: the official Questions 4-6 B1 text, used only to recognise language above A2. Never band text.",
+    "below_A1": "No text: in Part 1.1 below_A1 means only that there is no meaningful language."
+  },
+  "scoring": {
+    "topic_cap": { "0": 0, "1": 1, "2": 3, "3": 4 },
+    "above_target_full_coverage_cap": 5,
+    "above_target_requires": ["grammar", "vocabulary"],
+    "min_words": 0,
+    "min_relevant_words": 0,
+    "language_cap": { "below_A1": 0, "A1": 2, "A2": 4, "above_A2": 5 }
+  }
+}

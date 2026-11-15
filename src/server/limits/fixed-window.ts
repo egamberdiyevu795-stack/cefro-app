@@ -35,6 +35,11 @@ export class FixedWindowLimiter {
     return { blocked: true, retryAfterSeconds: Math.max(1, Math.ceil((current.start + this.windowMs - now) / 1000)) };
   }
 
+  /** Forgets every counter whose key matches (e.g. an account's wrong-password counts after its password was reset). */
+  forget(matches: (key: string) => boolean) {
+    for (const key of this.windows.keys()) if (matches(key)) this.windows.delete(key);
+  }
+
   private prune(now: number) {
     for (const [key, window] of this.windows) {
       if (now - window.start >= this.windowMs) this.windows.delete(key);

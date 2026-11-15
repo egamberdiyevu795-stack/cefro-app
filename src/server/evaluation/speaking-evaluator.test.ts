@@ -8,7 +8,7 @@ import { evaluateSpeaking, validateEvaluationOutput } from "./speaking-evaluator
 import type { AudioAssessor, EvaluationInput, EvaluationModel } from "./types";
 import { EVALUATOR_VERSION } from "./versions";
 
-const task = getSpeakingTask("b2-part2-technology-young-people")!;
+const task = getSpeakingTask("b2-part2-advice-from-someone")!;
 const input: EvaluationInput = {
   task,
   rubric: getSpeakingRubric(task),
@@ -82,7 +82,7 @@ describe("evaluateSpeaking", () => {
     const first = await evaluateSpeaking(input, modelReturning([makeModelOutput()]));
     expect(first).toMatchObject({
       evaluatorVersion: EVALUATOR_VERSION,
-      rubricVersion: "multilevel-q7/2.0.0",
+      rubricVersion: "multilevel-q7/2.1.0",
       schemaVersion: 3,
       provider: "test",
       model: "test-model-2026",
@@ -121,10 +121,30 @@ describe("evaluateSpeaking", () => {
 
   it("names the missing question by its real number when coverage limits the band", async () => {
     const output = makeModelOutput();
-    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f].level = "B2";
+    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f]!.level = "B2";
     const { result } = await evaluateSpeaking(input, modelReturning([output]));
     expect(result.scoring).toMatchObject({ band: 3, topic_cap: 3, language_cap: 4, meets_target: true, biggest_fix: { kind: "question_coverage", question_id: 3 } });
-    expect(result.retry_focus[0].objective).toBe('Answer question 3: "Should schools limit the use of smartphones? Why or why not?"');
+    expect(result.retry_focus[0].objective).toBe('Answer question 3: "Do you think young people should always follow advice from older people? Why or why not?"');
+  });
+
+  it("makes fluency the biggest fix and the first retry focus when it is clearly the lowest feature", async () => {
+    const output = makeModelOutput();
+    for (const f of ["grammar", "vocabulary", "cohesion"] as const) output.features[f]!.level = "B1";
+    output.features.fluency.level = "below_B1";
+    const { result } = await evaluateSpeaking(input, modelReturning([output]));
+    expect(result.scoring.biggest_fix).toEqual({ kind: "feature", feature: "fluency" });
+    expect(result.retry_focus.map((f) => f.target)).toEqual([
+      { kind: "feature", feature: "fluency" },
+      { kind: "question", question_id: 3 },
+    ]);
+  });
+
+  it("gives band 0 to an answer too short to rate (under 30 words)", async () => {
+    // The fixture transcript without its last sentence: 29 words, and every quote the fixture output uses is still in it.
+    const transcript = FIXTURE_TRANSCRIPT.replace(" My friend said the maps were very useful for us.", "");
+    const short = { ...input, transcript, metrics: computeSpeechMetrics(transcript, 20_000, task.speakingSeconds) };
+    const { result } = await evaluateSpeaking(short, modelReturning([makeModelOutput()]));
+    expect(result.scoring).toMatchObject({ band: 0, zero_reason: "too_short" });
   });
 
   it("regenerates once after malformed output, then succeeds", async () => {
@@ -190,7 +210,7 @@ describe("evaluateSpeaking", () => {
       model,
     );
     const prompt = model.evaluate.mock.calls[0][0];
-    expect(prompt.user).toContain("Question 3: Should schools limit");
+    expect(prompt.user).toContain("Question 3: Do you think young people should always follow advice");
     expect(prompt.user).not.toMatch(/^\s*[02]: /m);
     expect(prompt.user).toContain("old answer");
     expect(prompt.user).toContain("Answer question 3");

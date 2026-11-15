@@ -4,9 +4,11 @@ import { MAX_AUDIO_BYTES, createAttempt } from "@/server/attempts/attempt-servic
 import { claimAttempt, runClaimedAttempt } from "@/server/attempts/attempt-processing";
 import { getEnv } from "@/server/config/env";
 import { validateProviderConfig } from "@/server/config/provider-config";
+import { assertCanRecord } from "@/server/consent/consent";
 import { HttpError } from "@/server/errors";
 import { parseFormData, readBodyWithLimit, withErrorHandling } from "@/server/http";
-import { getOrCreateCurrentUserId } from "@/server/identity/anonymous-user";
+import { actingUser } from "@/server/exam-laptop/acting-user";
+import { assertPassSession } from "@/server/exam-laptop/exam-store";
 
 // Processing (transcription + evaluation) continues after the response via `after`.
 export const maxDuration = 300;
@@ -17,6 +19,10 @@ const fieldsSchema = z.object({
   previousAttemptId: z.string().uuid().optional(),
   sessionId: z.string().uuid().optional(),
   clientAttemptId: z.string().uuid().optional(),
+  /** Part 1: JSON array of the start of each question's speaking window (ms, recording time). */
+  questionOffsetsMs: z.string().max(200).optional(),
+  /** Part 3: JSON array of the points the student ticked ("F1".."A3"). Feedback only. */
+  chosenPoints: z.string().max(100).optional(),
 });
 
 /** The audio limit plus room for the multipart framing and the small text fields. */
@@ -28,9 +34,10 @@ const MAX_BODY_BYTES = MAX_AUDIO_BYTES + 64 * 1024;
  * background; the client polls GET /api/speaking/attempts/:id for progress.
  */
 export const POST = withErrorHandling(async (request: Request) => {
-  // Fail before buffering anything when the server cannot evaluate answers (the student keeps the
-  // recording in the browser and can send it again once this is fixed).
-  if (validateProviderConfig(getEnv()).length > 0) {
+  // Fail before buffering anything when the server cannot record and transcribe answers (the student keeps the
+  // recording in the browser and can send it again once this is fixed). A missing AI SCORING key is not one: the
+  // recording and transcript are kept and the result page says "AI score not ready yet" (scoring: false).
+  if (validateProviderConfig(getEnv(), { scoring: false }).length > 0) {
     throw new HttpError(
       503,
       "service_not_configured",
@@ -38,7 +45,10 @@ export const POST = withErrorHandling(async (request: Request) => {
       300,
     );
   }
-  const userId = await getOrCreateCurrentUserId();
+  // With an exam laptop's one-mock pass the owner is the STUDENT the pass is for, never the signed-in teacher.
+  const { userId, pass } = await actingUser(request);
+  // Pilot consent (CONSENT_REQUIRED): refused before the recording is read or stored. With a pass it is the student's.
+  await assertCanRecord(userId);
 
   // The body is counted as it arrives: Content-Length is only a fast path and may be missing or wrong.
   const body = await readBodyWithLimit(request, MAX_BODY_BYTES);
@@ -53,8 +63,15 @@ export const POST = withErrorHandling(async (request: Request) => {
     previousAttemptId: form.get("previousAttemptId") || undefined,
     sessionId: form.get("sessionId") || undefined,
     clientAttemptId: form.get("clientAttemptId") || undefined,
+    questionOffsetsMs: form.get("questionOffsetsMs") || undefined,
+    chosenPoints: form.get("chosenPoints") || undefined,
   });
   if (!fields.success) throw new HttpError(400, "invalid_fields", "The upload was missing information.");
+  // A pass records only into the mock it started, and never a retry of something else.
+  if (pass) {
+    assertPassSession(pass, fields.data.sessionId);
+    if (fields.data.previousAttemptId) throw new HttpError(403, "exam_pass_wrong_student", "This pass can only record the mock.");
+  }
 
   const attempt = await createAttempt({
     userId,
@@ -65,6 +82,8 @@ export const POST = withErrorHandling(async (request: Request) => {
     previousAttemptId: fields.data.previousAttemptId ?? null,
     sessionId: fields.data.sessionId ?? null,
     clientAttemptId: fields.data.clientAttemptId ?? null,
+    questionOffsetsMs: parseJsonField(fields.data.questionOffsetsMs),
+    chosenPoints: parseJsonField(fields.data.chosenPoints),
   });
 
   // A resent recording returns the existing attempt; claiming is a no-op unless it never started processing.
@@ -72,3 +91,12 @@ export const POST = withErrorHandling(async (request: Request) => {
   if (claimed) after(() => runClaimedAttempt(attempt.id));
   return Response.json({ attempt: claimed ? { ...attempt, status: "processing" } : attempt }, { status: 201 });
 });
+
+function parseJsonField(value: string | undefined): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}

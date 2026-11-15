@@ -1,4 +1,4 @@
-import { FEATURES, levelValue, NOT_ASSESSED, type Feature, type PronunciationLevel } from "@/domain/evaluation/multilevel/levels";
+import { FEATURES, ladderOf, levelValue, NOT_ASSESSED, type Feature, type PronunciationLevel } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelResult, MultilevelRetryFocus } from "@/domain/evaluation/multilevel/result";
 import type { SpeechMetrics } from "./metrics";
 
@@ -56,11 +56,14 @@ export interface ComparableAttempt {
 export function compareAttempts(before: ComparableAttempt, after: ComparableAttempt): AttemptComparison {
   const a = before.evaluation;
   const b = after.evaluation;
-  const features = FEATURES.map((feature): FeatureComparison => {
-    const from = a.assessment.features[feature].level;
-    const to = b.assessment.features[feature].level;
+  // A part's own features only (Part 1.1 has no cohesion); levels are compared on that part's ladder.
+  const rated = FEATURES.filter((f) => a.assessment.features[f] && b.assessment.features[f]);
+  const ladder = ladderOf(rated.flatMap((f) => [a.assessment.features[f]!.level, b.assessment.features[f]!.level]));
+  const features = rated.map((feature): FeatureComparison => {
+    const from = a.assessment.features[feature]!.level;
+    const to = b.assessment.features[feature]!.level;
     if (from === NOT_ASSESSED || to === NOT_ASSESSED) return { feature, before: from, after: to, direction: "not_comparable" };
-    return { feature, before: from, after: to, direction: directionOf(levelValue(to) - levelValue(from)) };
+    return { feature, before: from, after: to, direction: directionOf(levelValue(to, ladder) - levelValue(from, ladder)) };
   });
   const delta = b.scoring.band - a.scoring.band;
   const band = {

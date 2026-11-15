@@ -2,7 +2,7 @@
 #
 # Why this exists: the secret below can only be read by GitHub Actions, and the
 # development sandbox cannot reach the Gemini API. Running here validates the
-# evaluator on the 14-sample B2 Part 2 set and uploads a review report.
+# evaluator on the Part 2 band anchors and the S01–S15 samples (each repeated) and uploads a review report.
 #
 # Setup (once): Repository → Settings → Secrets and variables → Actions →
 # New repository secret, name: GEMINI_API_KEY.
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       samples:
-        description: "Optional comma-separated sample id prefixes (e.g. S01,S04). Empty = all 14."
+        description: "Optional comma-separated id prefixes (e.g. A2,S15; P1 = injection check, RETRY = retry pair). Empty = all."
         required: false
         default: ""
       provider:
@@ -30,6 +30,18 @@ on:
         description: "Optional model override for the chosen provider. Empty = that provider's configured default."
         required: false
         default: ""
+      thinking_level:
+        description: "Gemini thinking level (minimal / low / medium / high). Empty = configured default (high)."
+        required: false
+        default: ""
+      max_tokens:
+        description: "Gemini max output tokens (4000–65000). Empty = configured default."
+        required: false
+        default: ""
+      repeat:
+        description: "Evaluate every sample this many times and report any band that changes between runs."
+        required: false
+        default: "3"
 
 # Starting a new run of this workflow on the same ref cancels the older one.
 concurrency:
@@ -42,7 +54,7 @@ permissions:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -74,6 +86,9 @@ jobs:
           # Only the chosen provider's override is set; the other stays empty (= default).
           GEMINI_EVALUATION_MODEL: ${{ inputs.provider == 'gemini' && inputs.model || '' }}
           ANTHROPIC_EVALUATION_MODEL: ${{ inputs.provider == 'anthropic' && inputs.model || '' }}
+          GEMINI_THINKING_LEVEL: ${{ inputs.thinking_level }}
+          GEMINI_EVALUATION_MAX_TOKENS: ${{ inputs.max_tokens }}
+          EVAL_REPEAT: ${{ inputs.repeat }}
         run: npm run eval:live
 
       # The artifact host may be unreachable from some environments, so also print the report in

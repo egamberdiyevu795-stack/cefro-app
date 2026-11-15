@@ -4,5 +4,11 @@
     "deploymentEnabled": {
       "main": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/audio-retention",
+      "schedule": "17 3 * * *"
+    }
+  ]
 }

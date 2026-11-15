@@ -14,7 +14,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const TASK_ID = "b2-part2-technology-young-people";
+export const TASK_ID = "b2-part2-advice-from-someone";
 const COOKIE = "cefro_uid";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

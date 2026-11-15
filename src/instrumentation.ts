@@ -1,4 +1,7 @@
-/** Runs once per server start. Provider configuration is validated here (see server/config/boot-check.ts). */
+/**
+ * Runs once per server start: logs any provider or sign-in configuration problem (variable names only). It never
+ * throws: a throwing hook makes every route return 500. Enforcement is per route (see server/config/boot-check.ts).
+ */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   // `next build` collects page data in production mode with no runtime secrets: not a deploy-time check.

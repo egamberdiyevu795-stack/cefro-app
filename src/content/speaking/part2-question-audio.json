@@ -1,0 +1,44 @@
+{
+  "voice": {
+    "engine": "Piper text-to-speech (https://github.com/rhasspy/piper, MIT licence)",
+    "model": "en-us-libritts-high (Piper voice release v0.0.2: voice-en-us-libritts-high.tar.gz)",
+    "modelLicence": "Trained on LibriTTS (Zen et al., 2019, http://www.openslr.org/60/), CC BY 4.0",
+    "speaker": "6426",
+    "speakerIndex": 80,
+    "lengthScale": 1,
+    "noiseScale": 0.667,
+    "noiseW": 0.8,
+    "sentenceSilence": 0.3,
+    "tempo": 1.0
+  },
+  "files": [
+    {
+      "path": "/audio/speaking/part2/b2-part2-advice-from-someone/v3/questions.wav",
+      "text": "Describe a time when you received advice from someone. Who gave you the advice, and what situation were you in? What was the advice, and did you follow it? Do you think young people should always follow advice from older people? Why or why not?"
+    },
+    {
+      "path": "/audio/speaking/part2/b2-part2-important-decision/v1/questions.wav",
+      "text": "Describe an important decision you made. What was the decision, and when did you make it? Why did you decide this, and how did it change your life? Is it better to make big decisions alone or to ask others for help? Why?"
+    },
+    {
+      "path": "/audio/speaking/part2/b2-part2-goal-you-set/v1/questions.wav",
+      "text": "Describe a goal you set for yourself. What was the goal, and why did you choose it? What did you do to reach it, and did you succeed? Why do some people never reach their goals?"
+    },
+    {
+      "path": "/audio/speaking/part2/b2-part2-working-in-a-team/v1/questions.wav",
+      "text": "Describe a time when you worked in a team. What was the task, and who was in the team? What was your role, and how did the team do? Do people achieve more working alone or in a team? Why?"
+    },
+    {
+      "path": "/audio/speaking/part2/b2-part2-trying-and-failing/v1/questions.wav",
+      "text": "Describe a time when you tried to do something and failed. What were you trying to do, and why? What went wrong, and how did you feel? Can failure be useful for young people? Why or why not?"
+    },
+    {
+      "path": "/audio/speaking/part2/b2-part2-a-tradition/v1/questions.wav",
+      "text": "Describe a tradition in your family or your country. What is the tradition, and when does it happen? How does your family take part, and what do you enjoy about it? Should young people keep old traditions in the modern world? Why?"
+    },
+    {
+      "path": "/audio/speaking/part2/b2-part2-happy-day/v1/questions.wav",
+      "text": "Describe a very happy day in your life. When and where was it, and who were you with? What happened that made you so happy? Does money make people happier? Why or why not?"
+    }
+  ]
+}

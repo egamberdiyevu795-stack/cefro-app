@@ -74,6 +74,10 @@ export async function mergeUsers(db: Db, input: { fromUserId: string; intoUserId
       await tx.update(practiceSessions).set({ userId: intoUserId }).where(eq(practiceSessions.userId, fromUserId)).run()
     ).rowsAffected;
     await tx.update(analyticsEvents).set({ userId: intoUserId }).where(eq(analyticsEvents.userId, fromUserId)).run();
+    // The exam date the visitor gave (or their Skip) carries over, unless the account already has its own answer.
+    if (!into.examDate && !into.examDateSkippedAt && (from.examDate || from.examDateSkippedAt)) {
+      await tx.update(users).set({ examDate: from.examDate, examDateSkippedAt: from.examDateSkippedAt }).where(eq(users.id, intoUserId)).run();
+    }
 
     // 2. One sequence per task: first to temporary distinct negatives, then to the final 1..n.
     const taskIds = (

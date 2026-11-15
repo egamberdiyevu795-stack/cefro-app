@@ -80,6 +80,12 @@ export interface AttemptView {
   /** True when processing has been "in progress" for too long and can be restarted. */
   isStalled: boolean;
   recordingDurationMs: number;
+  /**
+   * The stored audio (docs/consent-design.md: deleted 30 days after scoring). `deletedAt`: when the daily job deleted
+   * it (null while it is stored). `deletesAt`: when it is due (null while the attempt is still being processed).
+   * Null when the attempt has no recording row.
+   */
+  audio: { deletedAt: string | null; deletesAt: string | null } | null;
   /** The focus the student was given before recording this attempt (retries only). */
   retryFocus: RetryFocusItem[] | null;
   transcript: { text: string; provider: string; model: string } | null;
@@ -87,6 +93,11 @@ export interface AttemptView {
   evaluation: { result: StoredEvaluation; meta: EvaluationMeta } | null;
   createdAt: string;
   completedAt: string | null;
+  /**
+   * The student's answer to "Was this feedback helpful?" (true = Yes, false = No; null = not answered yet). Only the
+   * student's own attempt from the database carries it; absent elsewhere (demo data, the teacher's view).
+   */
+  feedbackHelpful?: boolean | null;
 }
 
 /** Compact attempt row for history lists. */

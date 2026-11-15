@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { FEATURE_LEVELS, NOT_ASSESSED, QUESTION_STATUSES } from "./levels";
+import { sentenceFixesProviderSchema, sentenceFixesStoredSchema } from "../sentence-fixes";
+import { ALL_FEATURE_LEVELS, FEATURE_LEVELS, FEATURES, NOT_ASSESSED, QUESTION_STATUSES, type Feature, type LevelLadder, type QuestionStatus } from "./levels";
 
 /**
  * What the Multilevel evaluator model returns. It contains JUDGEMENTS AND EVIDENCE ONLY: no band, no score, no overall
@@ -18,31 +19,59 @@ const featureFields = {
   note: z.string().describe("One short sentence for the student: why this level, referring to the quotes."),
   how_to_improve: z
     .string()
-    .describe("One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."),
+    .describe("One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."),
   how_to_check: z.string().describe("How the student can tell, after the next attempt, that they did it."),
 };
 
-const featureAssessment = z.object({
-  level: z.enum(FEATURE_LEVELS).describe("Best fit against the official descriptors: above_B2, B2, B1 or below_B1."),
-  ...featureFields,
-});
+function featureAssessmentFor(levels: readonly [string, ...string[]]) {
+  return z.object({
+    level: z.enum(levels).describe(`Best fit against the official descriptors: ${[...levels].reverse().join(", ").replace(/, ([^,]*)$/, " or $1")}.`),
+    ...featureFields,
+  });
+}
 
-const pronunciationAssessment = z.object({
-  level: z.enum([...FEATURE_LEVELS, NOT_ASSESSED]).describe("Always not_assessed when judging from a transcript."),
-  ...featureFields,
-});
+function pronunciationAssessmentFor(levels: readonly [string, ...string[]]) {
+  return z.object({
+    level: z.enum([...levels, NOT_ASSESSED] as [string, ...string[]]).describe("Always not_assessed when judging from a transcript."),
+    ...featureFields,
+  });
+}
+
+const STATUS_HELP: Record<QuestionStatus, string> = {
+  on_topic: "on_topic: answered, with a reason, detail or example.",
+  partial: "partial: touched on but not really answered.",
+  minimal: "minimal: answered in one bare sentence with no reason, detail or example.",
+  missing: "missing: not addressed.",
+  off_topic: "off_topic: talks about something else.",
+};
+
+function questionAssessmentFor(statuses: readonly QuestionStatus[], help: Partial<Record<QuestionStatus, string>> = {}) {
+  return z.object({
+    id: z.number().int().min(1).describe("Question number, 1-based, exactly as numbered in <task>."),
+    status: z.enum(statuses as [QuestionStatus, ...QuestionStatus[]]).describe(statuses.map((s) => help[s] ?? STATUS_HELP[s]).join(" ")),
+    evidence: z.string().describe("Exact substring of the transcript where the student answers this question, or an empty string."),
+    note: z.string().describe("One short sentence about what the student said for this question."),
+    model_answer: z
+      .string()
+      .describe(
+        "For partial, minimal, missing or off_topic: one or two short sentences (at most 30 words) the student could say, one level above their language level. Keep any view they gave; if they gave none, a frame with both options (should / shouldn't … because …). Empty string for on_topic.",
+      ),
+  });
+}
 
 export const questionAssessmentSchema = z.object({
   id: z.number().int().min(1).describe("Question number, 1-based, exactly as numbered in <task>."),
   status: z
     .enum(QUESTION_STATUSES)
-    .describe("on_topic: answered. partial: touched on but not really answered. missing: not addressed. off_topic: talks about something else."),
+    .describe(
+      "on_topic: answered, with a reason, detail or example. partial: touched on but not really answered. minimal: answered in one bare sentence with no reason, detail or example. missing: not addressed. off_topic: talks about something else.",
+    ),
   evidence: z.string().describe("Exact substring of the transcript where the student answers this question, or an empty string."),
   note: z.string().describe("One short sentence about what the student said for this question."),
   model_answer: z
     .string()
     .describe(
-      "For partial, missing or off_topic: one or two short sentences (at most 30 words) the student could say to answer this question, at a realistic B2 level, consistent with opinions they expressed elsewhere. Empty string for on_topic.",
+      "For partial, minimal, missing or off_topic: one or two short sentences (at most 30 words) the student could say, one level above their language level. Keep any view they gave; if they gave none, a frame with both options (should / shouldn't … because …). Empty string for on_topic.",
     ),
 });
 
@@ -68,7 +97,7 @@ export const strengthSchema = z.object({
   note: z.string().min(1).describe("One short sentence: what is good about it."),
 });
 
-const retryReviewSchema = z.object({
+export const retryReviewSchema = z.object({
   objectives: z.array(
     z.object({
       objective: z.string().min(1),
@@ -79,14 +108,23 @@ const retryReviewSchema = z.object({
   summary: z.string().min(1).describe("Honest comparison with the previous attempt. Never invent improvement."),
 });
 
+const anyLevelFeature = z.object({ level: z.enum(ALL_FEATURE_LEVELS), ...featureFields });
+const anyLevelPronunciation = z.object({ level: z.enum([...ALL_FEATURE_LEVELS, NOT_ASSESSED]), ...featureFields });
+
+/**
+ * Any rubric's output (every level name, every status; cohesion may be absent because Part 1.1 does not rate it).
+ * Used for stored results and as the first parse of a model draft; the quality gate then checks the draft against
+ * its own rubric (levels, statuses, features). `rubricModelOutputSchema` is the strict, per-rubric shape the
+ * providers are asked for.
+ */
 export const multilevelModelOutputSchema = z.object({
   questions: z.array(questionAssessmentSchema).min(1).max(6),
   features: z.object({
-    grammar: featureAssessment,
-    vocabulary: featureAssessment,
-    fluency: featureAssessment,
-    cohesion: featureAssessment,
-    pronunciation: pronunciationAssessment,
+    grammar: anyLevelFeature,
+    vocabulary: anyLevelFeature,
+    fluency: anyLevelFeature,
+    cohesion: anyLevelFeature.optional(),
+    pronunciation: anyLevelPronunciation,
   }),
   memorized_or_irrelevant: z
     .boolean()
@@ -101,9 +139,59 @@ export const multilevelModelOutputSchema = z.object({
     .max(2)
     .describe("0-2 strengths. Only for a feature you judged B2 or above_B2, each with an exact quote. Empty if there is none."),
   retry_review: retryReviewSchema.nullable().describe("Only for retries (see <previous_attempt>); otherwise null."),
+  /**
+   * Evaluator 3.6.0: the student's own sentences with one mistake each and a better version (domain/evaluation/
+   * sentence-fixes.ts). Optional so that results stored before 3.6.0 (no list) still parse and render; the quality gate
+   * always writes the checked list, so every new result has it (possibly empty).
+   */
+  sentence_fixes: sentenceFixesStoredSchema.optional(),
 });
 
 export type MultilevelModelOutput = z.infer<typeof multilevelModelOutputSchema>;
+
+/** What a rubric declares about its output shape. */
+export interface RubricOutputShape {
+  levels: LevelLadder;
+  features: readonly Feature[];
+  question_statuses: readonly QuestionStatus[];
+}
+
+/**
+ * The strict model-output schema of one rubric (docs/part1-plan.md §3: "the model-output Zod schema is built from the
+ * rubric's names"): only its level names, its question statuses and its features. Part 2's rubric gives the same
+ * shape as before (`multilevelModelOutputSchema` restricted to below_B1 … above_B2).
+ */
+export function rubricModelOutputSchema(shape: RubricOutputShape) {
+  const levels = shape.levels as unknown as readonly [string, ...string[]];
+  const feature = featureAssessmentFor(levels);
+  const textFeatures = FEATURES.filter((f) => f !== "pronunciation" && shape.features.includes(f));
+  const top = shape.levels[3];
+  const target = shape.levels[2];
+  return z.object({
+    // The same bounds as the generic schema (the quality gate checks the count against the rubric).
+    questions: z.array(questionAssessmentFor(shape.question_statuses)).min(1).max(6),
+    features: z.object({
+      ...Object.fromEntries(textFeatures.map((f) => [f, feature])),
+      pronunciation: pronunciationAssessmentFor(levels),
+    }),
+    memorized_or_irrelevant: multilevelModelOutputSchema.shape.memorized_or_irrelevant,
+    errors: multilevelModelOutputSchema.shape.errors,
+    error_patterns: multilevelModelOutputSchema.shape.error_patterns,
+    strengths: z
+      .array(
+        z.object({
+          feature: z.enum(textFeatures as [Feature, ...Feature[]]),
+          quote: z.string().min(1).describe(`Exact substring of the transcript that shows ${target}-or-better language for this feature.`),
+          note: z.string().min(1).describe("One short sentence: what is good about it."),
+        }),
+      )
+      .max(2)
+      .describe(`0-2 strengths. Only for a feature you judged ${target} or ${top}, each with an exact quote. Empty if there is none.`),
+    retry_review: multilevelModelOutputSchema.shape.retry_review,
+    // Required of the model (evaluator 3.6.0); stored results from before it have no list (optional in the stored schema).
+    sentence_fixes: sentenceFixesProviderSchema,
+  });
+}
 export type QuestionAssessment = z.infer<typeof questionAssessmentSchema>;
 export type FeatureAssessment = MultilevelModelOutput["features"]["grammar"];
 export type PronunciationAssessment = MultilevelModelOutput["features"]["pronunciation"];
@@ -116,10 +204,12 @@ export type RetryReview = z.infer<typeof retryReviewSchema>;
  * What the audio step returns (Gemini listening to the recording). It judges intelligibility / listener strain and
  * pausing only. Accent is not an error.
  */
-export const audioAssessmentSchema = z.object({
+export function audioAssessmentSchemaFor(levels: LevelLadder = FEATURE_LEVELS) {
+  const level = z.enum(levels as unknown as readonly [string, ...string[]]);
+  return z.object({
   speech_audible: z.boolean().describe("false if the recording is too unclear to judge pronunciation."),
   pronunciation: z.object({
-    level: z.enum(FEATURE_LEVELS).describe("Best fit against the official pronunciation descriptors (intelligibility and listener strain only)."),
+    level: level.describe("Best fit against the official pronunciation descriptors (intelligibility and listener strain only)."),
     evidence: z
       .array(z.string())
       .max(4)
@@ -129,9 +219,28 @@ export const audioAssessmentSchema = z.object({
     how_to_check: z.string().describe("How the student can tell they did it."),
   }),
   fluency: z.object({
-    level: z.enum(FEATURE_LEVELS).describe("Best fit against the official fluency descriptors, judged from pausing you can hear."),
+    level: level.describe("Best fit against the official fluency descriptors, judged from pausing you can hear."),
     note: z.string().describe("One short sentence for the student about pausing, false starts and reformulation."),
   }),
-});
+  });
+}
 
-export type AudioAssessment = z.infer<typeof audioAssessmentSchema>;
+/** Part 2's audio schema (the providers' default). */
+export const audioAssessmentSchema = audioAssessmentSchemaFor(FEATURE_LEVELS);
+
+export type AudioAssessment = Omit<z.infer<typeof audioAssessmentSchema>, "pronunciation" | "fluency"> & {
+  pronunciation: Omit<z.infer<typeof audioAssessmentSchema>["pronunciation"], "level"> & { level: (typeof ALL_FEATURE_LEVELS)[number] };
+  fluency: Omit<z.infer<typeof audioAssessmentSchema>["fluency"], "level"> & { level: (typeof ALL_FEATURE_LEVELS)[number] };
+};
+
+/**
+ * The output schema the providers are asked for, for a rubric config. Without one (or for Part 2's rubric) it is
+ * Part 2's shape, exactly as it was before Part 1 (test/fixtures/q7-model-output-schema.json).
+ */
+export function providerOutputSchema(config?: Partial<RubricOutputShape>) {
+  return rubricModelOutputSchema({
+    levels: config?.levels ?? FEATURE_LEVELS,
+    features: config?.features ?? FEATURES,
+    question_statuses: config?.question_statuses ?? QUESTION_STATUSES,
+  });
+}

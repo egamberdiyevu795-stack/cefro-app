@@ -1,18 +1,26 @@
 import "server-only";
 import { parseStoredEvaluation, type RetryFocusItem } from "@/domain/evaluation/stored";
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
-import { getSpeakingTask } from "@/content/speaking";
+import type { HistoryAttempt } from "@/domain/speaking/history";
+import { getAnySpeakingTask } from "@/content/speaking";
+import { fullMockLive } from "@/config/features";
+import { isTaskLive as isPartLive } from "@/config/part-live";
+import type { AnySpeakingTask } from "@/domain/speaking/any-task";
+import { isArgumentTask } from "@/domain/speaking/any-task";
+import { validChosenPoints } from "@/domain/speaking/argument-task";
+import { validQuestionOffsets } from "@/domain/speaking/metrics";
 import { trackServerEvent } from "@/server/analytics/track";
 import { HttpError } from "@/server/errors";
 import { assertOwnedOrNotFound, ownsResource } from "@/server/identity/authorization";
 import { newId } from "@/server/ids";
 import { assertCanSubmitAttempt } from "@/server/limits/usage-limits";
 import { logger } from "@/server/logging/logger";
+import { assertMockAcceptsPart, findOwnedMockSession } from "@/server/sessions/mock-service";
 import { createPracticeSession, resolveOwnedSessionId } from "@/server/sessions/session-service";
 import { getAudioStorage } from "@/server/storage";
 import * as repo from "./attempt-repository";
 import { containerForMime, sniffAudioContainer } from "./audio-format";
-import { toAttemptSummary, toAttemptView } from "./attempt-views";
+import { toAttemptSummary, toAttemptView, toHistoryAttempt } from "./attempt-views";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -33,7 +41,18 @@ export interface CreateAttemptInput {
    * after a lost response returns the attempt that was already created instead of making a second one.
    */
   clientAttemptId?: string | null;
+  /** Part 1 (one recording per part): the start of each question's speaking window, in recording time. */
+  questionOffsetsMs?: unknown;
+  /** Part 3: the points the student ticked on the preparation screen. Feedback only; the evaluator judges what was said. */
+  chosenPoints?: unknown;
 }
+
+/**
+ * Real attempts only for parts that are live (`PART_LIVE`). Part 1.1, 1.2 and 3 are not yet: their tasks open only in
+ * mock mode, which never uploads. Tests pass their own rule.
+ */
+export type PartLiveRule = (task: AnySpeakingTask) => boolean;
+export const isTaskLive: PartLiveRule = isPartLive;
 
 /** The attempt already created for this idempotency key, or undefined. Someone else's id is a conflict. */
 async function findResubmittedAttempt(userId: string, clientAttemptId: string | null | undefined) {
@@ -50,9 +69,14 @@ async function findResubmittedAttempt(userId: string, clientAttemptId: string | 
  * Audio is written to storage BEFORE the database row, so an attempt never
  * points at audio that does not exist.
  */
-export async function createAttempt(input: CreateAttemptInput): Promise<AttemptView> {
-  const task = getSpeakingTask(input.taskId);
+export async function createAttempt(input: CreateAttemptInput, options: { isLive?: PartLiveRule; fullMockLive?: boolean } = {}): Promise<AttemptView> {
+  const task = getAnySpeakingTask(input.taskId);
   if (!task) throw new HttpError(404, "task_not_found", "This task does not exist.");
+  // A recording that belongs to one of the caller's full mocks needs the mock to be open (all four parts live), not
+  // each part on its own; every other recording needs its own part to be live.
+  const mockSession = await findOwnedMockSession(input.userId, input.sessionId);
+  const taskLive = (options.isLive ?? isTaskLive)(task);
+  if (!taskLive && !(mockSession && (options.fullMockLive ?? fullMockLive()))) throw new HttpError(404, "task_not_found", "This task does not exist.");
   if (input.clientAttemptId && !UUID_PATTERN.test(input.clientAttemptId)) {
     throw new HttpError(400, "invalid_fields", "The upload was missing information.");
   }
@@ -75,8 +99,11 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
     throw new HttpError(415, "unsupported_audio", "This file doesn't look like a valid recording.");
   }
 
+  // A mock that ended, ran out of its 24 hours, or already has this part takes nothing more.
+  if (mockSession) await assertMockAcceptsPart(mockSession, task.id);
+
   // Cost protection comes before anything is stored or any provider is called.
-  await assertCanSubmitAttempt(input.userId);
+  await assertCanSubmitAttempt(input.userId, Date.now(), { fullMock: mockSession !== null });
 
   // Retry: the previous attempt must be the user's own, for the same task, and evaluated.
   let retryFocus: RetryFocusItem[] | null = null;
@@ -90,6 +117,13 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
       ? (parseStoredEvaluation(previousEvaluation.schemaVersion, previousEvaluation.result)?.retry_focus ?? null)
       : null;
   }
+
+  // Part 1: offsets that don't fit the task (count, order, length) are dropped; the answer is still scored.
+  const questionOffsetsMs = !isArgumentTask(task) && task.delivery
+    ? validQuestionOffsets(input.questionOffsetsMs, task.prompts.length, Math.round(input.durationMs))
+    : null;
+  // Part 3: ticked points that don't fit the task (unknown ids, repeats, more than two per side) are dropped too.
+  const chosenPoints = isArgumentTask(task) ? validChosenPoints(input.chosenPoints) : null;
 
   const attemptId = input.clientAttemptId ?? newId();
   const storage = getAudioStorage();
@@ -116,6 +150,8 @@ export async function createAttempt(input: CreateAttemptInput): Promise<AttemptV
     task,
     previousAttemptId: input.previousAttemptId,
     retryFocus,
+    questionOffsetsMs,
+    chosenPoints,
     recording: {
       storageProvider: storage.provider,
       storageKey,
@@ -168,10 +204,33 @@ export async function getAttemptViewForUser(userId: string, attemptId: string): 
   return toAttemptView(attempt, { recording, transcript, evaluation });
 }
 
+/**
+ * The student's answer to "Was this feedback helpful?" for their own scored attempt. One answer per attempt: the
+ * first is kept and returned; a later, different answer is ignored (not an error), so the page always shows what is
+ * stored. Only a completed (scored) attempt has feedback to rate.
+ */
+export async function saveFeedbackHelpful(userId: string, attemptId: string, helpful: unknown): Promise<{ helpful: boolean }> {
+  if (typeof helpful !== "boolean") throw new HttpError(400, "invalid_body", "Answer Yes or No.");
+  const attempt = await getOwnedAttempt(userId, attemptId);
+  if (attempt.status !== "completed") throw new HttpError(409, "attempt_not_scored", "This answer has no feedback to rate yet.");
+  const stored = await repo.saveFeedbackHelpfulOnce(attempt.id, helpful);
+  return { helpful: stored ?? helpful };
+}
+
 export async function listAttemptSummaries(userId: string, taskId: string): Promise<AttemptSummary[]> {
   const attempts = await repo.listAttemptsForUserTask(userId, taskId);
   const evaluationsByAttempt = await repo.findLatestEvaluationsFor(attempts.map((a) => a.id));
   return attempts.map((attempt) => toAttemptSummary(attempt, evaluationsByAttempt.get(attempt.id)));
+}
+
+/**
+ * The History page's list: every attempt the user owns, newest first. The same owner rule as the result page: only
+ * rows recorded under the caller's canonical user id are read, so no one else's attempt can ever appear.
+ */
+export async function listAttemptHistory(userId: string): Promise<HistoryAttempt[]> {
+  const rows = await repo.listAttemptsForUser(userId);
+  const evaluationsByAttempt = await repo.findLatestEvaluationsFor(rows.map((row) => row.attempt.id));
+  return rows.map((row) => toHistoryAttempt(row, evaluationsByAttempt.get(row.attempt.id)));
 }
 
 export async function getRecordingAudio(

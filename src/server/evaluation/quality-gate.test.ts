@@ -19,6 +19,52 @@ describe("quality gate (Multilevel)", () => {
     expect(result).toEqual(makeModelOutput());
   });
 
+  describe("sentence fixes (the model proposes, code decides)", () => {
+    const good = { you_said: "I have went to Samarkand", better: "I went to Samarkand", why: "A finished time takes the simple past." };
+    const withFixes = (...sentence_fixes: NonNullable<MultilevelModelOutput["sentence_fixes"]>) => makeModelOutput({ sentence_fixes });
+
+    it("keeps a good item as it is, and never rejects the draft over a bad one", () => {
+      expect(gate(makeModelOutput()).result.sentence_fixes).toEqual([good]); // the fixture's own list
+      const { result, report } = gate(withFixes(good));
+      expect(result.sentence_fixes).toEqual([good]);
+      expect(report).toEqual({ passed: true, violations: [] });
+    });
+
+    it("drops an item whose words are not in the transcript, with a warning (the draft still passes)", () => {
+      const { result, report } = gate(withFixes({ ...good, you_said: "Last year I have gone to Samarkand" }, good));
+      expect(result.sentence_fixes).toEqual([good]);
+      expect(report.passed).toBe(true);
+      expect(report.violations.map((v) => `${v.severity}:${v.code}@${v.path}`)).toEqual(["warn:sentence_fix_dropped@sentence_fixes[0]"]);
+    });
+
+    it("drops an item that adds an idea, or is about pauses, or names an internal field", () => {
+      const output = withFixes(
+        { ...good, better: "I went to Samarkand with my friend to see the old city and the market" },
+        { ...good, why: "You paused before this sentence." },
+        { ...good, why: "See how_to_improve." },
+      );
+      const { result, report } = gate(output);
+      expect(result.sentence_fixes).toEqual([]);
+      expect(report.violations.filter((v) => v.code === "sentence_fix_dropped")).toHaveLength(3);
+    });
+
+    it("a draft with no list at all (an old-style or lazy answer) gets an empty list, not a failure", () => {
+      const output = makeModelOutput();
+      delete output.sentence_fixes;
+      const { result, report } = gate(output);
+      expect(result.sentence_fixes).toEqual([]);
+      expect(report.passed).toBe(true);
+    });
+
+    it("keeps the model's order and at most 8", () => {
+      const transcript = Array.from({ length: 10 }, (_, i) => `he don't like thing${"x".repeat(i)}.`).join(" ");
+      const fixes = Array.from({ length: 10 }, (_, i) => ({ you_said: `he don't like thing${"x".repeat(i)}`, better: `he doesn't like thing${"x".repeat(i)}`, why: "Use doesn't." }));
+      const { result } = applyQualityGate(withFixes(...fixes), { ...context, transcript });
+      expect(result.sentence_fixes).toHaveLength(8);
+      expect(result.sentence_fixes!.map((f) => f.you_said)).toEqual(fixes.slice(0, 8).map((f) => f.you_said));
+    });
+  });
+
   describe("question numbering is 1-based and complete", () => {
     it("rejects 0-based ids", () => {
       const output = makeModelOutput();
@@ -104,6 +150,15 @@ describe("quality gate (Multilevel)", () => {
       expect(codes(long)).toContain("reject:model_answer_too_long");
     });
 
+    it("allows a pronunciation practice tip in how_to_improve, but not a judgement", () => {
+      const tip = makeModelOutput();
+      tip.features.grammar.how_to_improve = "Add -s after he/she/it, and pronounce the -s in 'she likes' clearly.";
+      expect(codes(tip)).not.toContain("reject:pronunciation_claim");
+      const judged = makeModelOutput();
+      judged.features.grammar.note = "Your pronunciation of the -s ending was unclear.";
+      expect(codes(judged)).toContain("reject:pronunciation_claim");
+    });
+
     it("rejects pronunciation talk in a model answer like any student-facing text", () => {
       const output = makeModelOutput();
       output.questions[2].model_answer = "Pronounce 'schools' clearly and say they should limit phones.";
@@ -153,12 +208,12 @@ describe("quality gate (Multilevel)", () => {
     output.strengths = [{ feature: "grammar", quote: "I think phones are good", note: "Correct sentence." }];
     const { result, report } = gate(output);
     expect(result.strengths).toEqual([]);
-    expect(report.violations.map((v) => v.code)).toContain("strength_below_b2");
+    expect(report.violations.map((v) => v.code)).toContain("strength_below_target");
   });
 
   it("requires a concrete fix for every assessed feature", () => {
     const empty = makeModelOutput();
-    empty.features.cohesion.how_to_improve = " ";
+    empty.features.cohesion!.how_to_improve = " ";
     expect(codes(empty)).toContain("reject:missing_fix");
     const generic = makeModelOutput();
     generic.features.vocabulary.how_to_improve = "Use more advanced vocabulary.";
@@ -214,9 +269,26 @@ describe("helpers", () => {
     expect(findUnmetTarget("Reach at least 130 words per minute.", measured)).toBeNull();
   });
 
-  it("findPronunciationClaim names the sentence and ignores 'cannot be assessed'", () => {
-    expect(findPronunciationClaim("Good. Pronounce the final -s clearly.")).toBe("Pronounce the final -s clearly.");
+  it("findPronunciationClaim names a judgement sentence and ignores 'cannot be assessed'", () => {
+    expect(findPronunciationClaim("Good. Your pronunciation of 'th' is unclear.")).toBe("Your pronunciation of 'th' is unclear.");
+    expect(findPronunciationClaim("You mispronounced 'thirty'.")).toBe("You mispronounced 'thirty'.");
+    expect(findPronunciationClaim("Your accent is very clear.")).toBe("Your accent is very clear.");
+    expect(findPronunciationClaim("The intonation was flat.")).toBe("The intonation was flat.");
     expect(findPronunciationClaim("Pronunciation cannot be assessed from a transcript.")).toBeNull();
+  });
+
+  it("findPronunciationClaim allows practice tips phrased as instructions", () => {
+    for (const tip of [
+      "Pronounce the final -s clearly.",
+      "Pronounce the -s in 'she likes' clearly, so the listener hears it.",
+      "Make sure you pronounce the -ed in 'worked'.",
+      "Practise saying 'third' slowly before the exam.",
+      "Good point. Stress the second word in 'make sure'.",
+    ]) {
+      expect(findPronunciationClaim(tip), tip).toBeNull();
+    }
+    // An instruction that still judges the student is blocked.
+    expect(findPronunciationClaim("Pronounce words more carefully because your pronunciation is unclear.")).not.toBeNull();
   });
 
   it("isGeneric flags advice with no specifics", () => {

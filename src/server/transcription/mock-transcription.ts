@@ -7,15 +7,13 @@ import type { TranscriptionInput, TranscriptionOutput, TranscriptionProvider } f
  * audio. Never enable in production (see provider factory).
  */
 const SAMPLES = [
-  "Um, I think technology is very important for young people. I think we use phones every day for, uh, talking with friends. " +
-    "For example I use Telegram and Instagram. I think social media is good because we can talk with friends. " +
-    "But also it is bad because people spend too much time. I think schools should, um, limit phones because students are not concentrate in lessons. " +
-    "So I think technology is good and bad.",
-  "In my opinion, technology helps young people stay in touch, although it can also reduce face-to-face interaction. " +
-    "Personally, I message my classmates every day, and when my best friend moved to another city, video calls helped us keep our friendship. " +
-    "On the other hand, social media can be a distraction, and some of my friends compare themselves with others, which makes them, uh, less confident. " +
-    "As for schools, I believe they should limit phones during lessons, because students who check notifications cannot focus. " +
-    "However, banning phones completely would be unfair, since we use them for research. So overall, technology makes us more connected if we use it wisely.",
+  "Um, I want to talk about advice from my father. I think when I was sixteen, I want to stop school and work. " +
+    "My father say no, you must study. I think he was right, so I listen him. Now I am study in university. " +
+    "I think young people should, um, listen older people because they know many thing. So I think advice is good.",
+  "I'd like to talk about some advice my aunt gave me when I was choosing a university. I was, uh, really confused, because my friends were all applying to economics. " +
+    "She told me to visit a few universities and talk to students before deciding, and although it took a lot of time, I followed her advice. " +
+    "As a result, I chose a programme I really enjoy. On the other hand, I don't think young people should always follow advice from older people, " +
+    "because the world is changing quickly and some advice may be out of date. However, they should listen carefully before making their own decision.",
 ];
 
 export class MockTranscriptionProvider implements TranscriptionProvider {

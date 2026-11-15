@@ -1,0 +1,1364 @@
+[
+  {
+    "id": "1.1-low",
+    "expected": 1,
+    "bands": [
+      1
+    ],
+    "seconds": [
+      38.469
+    ],
+    "errors": [
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q1-3",
+        "part": 1,
+        "official_question": 1,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "Weekend… um… I sleep. I sleep and… television.",
+              "note": "You mentioned sleeping and television for your weekend activities.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "missing",
+              "evidence": "",
+              "note": "You asked to skip the question and did not name any favourite food.",
+              "model_answer": "My favourite food is plov because it is delicious."
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "Family is… um… my city is Samarkand. Is big city.",
+              "note": "You described your city instead of naming a family member you spend time with.",
+              "model_answer": "I spend the most time with my mother because she helps me every day."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "A1",
+              "evidence": [
+                "I sleep and… television.",
+                "Is big city."
+              ],
+              "note": "Your grammar consists of isolated words and basic phrases with missing subjects and verbs.",
+              "how_to_improve": "Add a subject pronoun before the verb to make a complete sentence (for example, 'It is cold outside').",
+              "how_to_check": "Every verb in your answer has a subject noun or pronoun directly before it."
+            },
+            "vocabulary": {
+              "level": "A1",
+              "evidence": [
+                "sleep",
+                "television",
+                "city",
+                "big"
+              ],
+              "note": "Your vocabulary is limited to a few basic everyday words.",
+              "how_to_improve": "Use action verbs to describe daily actions clearly (for example, 'read' or 'swim').",
+              "how_to_check": "Your sentences include clear action verbs instead of only naming objects."
+            },
+            "fluency": {
+              "level": "A1",
+              "evidence": [
+                "Weekend… um…",
+                "I sleep and… television.",
+                "Family is… um… my city is Samarkand."
+              ],
+              "note": "You spoke for 13 of the 90 seconds, used repeated fillers like 'um', and left sentences unfinished.",
+              "how_to_improve": "Complete each sentence with a full idea before moving on to the next thought.",
+              "how_to_check": "Every sentence in your transcript ends with a full thought rather than stopping midway."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "Is big city.",
+              "correction": "It is a big city.",
+              "type": "grammar",
+              "pattern": "Missing subject pronoun"
+            },
+            {
+              "quote": "I sleep and… television.",
+              "correction": "I sleep and watch television.",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Missing subject pronoun",
+              "type": "grammar",
+              "rule": "Every English sentence needs a subject pronoun before the verb, such as 'It is raining.'",
+              "how_to_fix": "Always place a pronoun like 'it' or 'they' before verbs that describe places or objects."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 1,
+          "language_level": "A1",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency"
+          ],
+          "topic_cap": 1,
+          "language_cap": 2,
+          "band": 1,
+          "label": "Lower A1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 2
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 2: \"What is your favourite food? Why?\"",
+            "success_check": "You say at least two sentences that answer question 2, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 2
+            }
+          },
+          {
+            "objective": "Add a subject pronoun before the verb to make a complete sentence (for example, 'It is cold outside').",
+            "success_check": "Every verb in your answer has a subject noun or pronoun directly before it.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [
+          {
+            "code": "sentence_fix_dropped",
+            "severity": "warn",
+            "path": "sentence_fixes[0]",
+            "message": "Dropped a sentence fix: several_mistakes."
+          },
+          {
+            "code": "sentence_fix_dropped",
+            "severity": "warn",
+            "path": "sentence_fixes[1]",
+            "message": "Dropped a sentence fix: not_in_transcript."
+          }
+        ],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 5380,
+        "output": 4871,
+        "calls": 1
+      }
+    ]
+  },
+  {
+    "id": "1.1-middle",
+    "expected": 3,
+    "bands": [
+      3
+    ],
+    "seconds": [
+      90.371
+    ],
+    "errors": [
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q1-3",
+        "part": 1,
+        "official_question": 1,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "At weekend I usually go bazaar with my mother. Then we cooking plov. In evening I watching film.",
+              "note": "You talked about what you do at the weekend.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "My favourite food is manti. I like because is very tasty and my grandmother make every Sunday.",
+              "note": "You named your favourite dish and explained why you like it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "off_topic",
+              "evidence": "Um… I like football. I play football with my friends in the school. Is very interesting.",
+              "note": "You spoke about your friends and school instead of answering about a family member.",
+              "model_answer": "I spend the most time with my [brother / mother] because we share the same hobbies and talk every day."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "A2",
+              "evidence": [
+                "we cooking plov",
+                "In evening I watching film",
+                "because is very tasty",
+                "my grandmother make every Sunday"
+              ],
+              "note": "You can make simple sentences, but basic grammar mistakes happen regularly.",
+              "how_to_improve": "Use the present simple base form of the verb for habits, for example 'The museum opens at nine'.",
+              "how_to_check": "Every routine action in your response uses a base verb without an -ing ending."
+            },
+            "vocabulary": {
+              "level": "A2",
+              "evidence": [
+                "usually",
+                "favourite food",
+                "tasty",
+                "friends"
+              ],
+              "note": "You have enough words to talk about simple everyday topics.",
+              "how_to_improve": "Use specific descriptive adjectives to give more details about objects or places, for example 'The library is quiet'.",
+              "how_to_check": "You can find at least one descriptive adjective that gives extra detail about an object or place."
+            },
+            "fluency": {
+              "level": "A2",
+              "evidence": [
+                "At weekend I usually go bazaar with my mother.",
+                "My favourite food is manti."
+              ],
+              "note": "You spoke for 23 of the 90 seconds, using short sentences and one filler.",
+              "how_to_improve": "Extend each answer by adding one detail to speak for at least fifteen seconds per question.",
+              "how_to_check": "The timer shows that you spoke for at least 15 seconds on each question."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "we cooking plov",
+              "correction": "we cook plov",
+              "type": "grammar",
+              "pattern": "Using -ing instead of the present simple"
+            },
+            {
+              "quote": "I watching film",
+              "correction": "I watch film",
+              "type": "grammar",
+              "pattern": "Using -ing instead of the present simple"
+            },
+            {
+              "quote": "because is very tasty",
+              "correction": "because it is very tasty",
+              "type": "grammar",
+              "pattern": "Missing subject pronoun 'it'"
+            },
+            {
+              "quote": "Is very interesting",
+              "correction": "It is very interesting",
+              "type": "grammar",
+              "pattern": "Missing subject pronoun 'it'"
+            },
+            {
+              "quote": "my grandmother make",
+              "correction": "my grandmother makes",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "go bazaar",
+              "correction": "go to the bazaar",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "At weekend",
+              "correction": "At the weekend",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "In evening",
+              "correction": "In the evening",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Using -ing instead of the present simple",
+              "type": "grammar",
+              "rule": "Use the present simple form for routine actions, for example 'The train arrives at six'.",
+              "how_to_fix": "When describing regular habits, use the base form of the verb without adding -ing."
+            },
+            {
+              "name": "Missing subject pronoun 'it'",
+              "type": "grammar",
+              "rule": "Every English clause needs a subject before the verb, for example 'It is very cold outside'.",
+              "how_to_fix": "Check that each clause begins with a subject word such as 'it'."
+            }
+          ],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "My favourite food is manti.",
+              "note": "You formed a clear and correct simple sentence with the verb to be."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "is very tasty",
+              "note": "You chose a good adjective to describe why you enjoy the dish."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "Then we cooking plov.",
+              "better": "Then we cook plov.",
+              "why": "Use the present simple form 'cook' for routine actions."
+            },
+            {
+              "you_said": "I watching film.",
+              "better": "I watch film.",
+              "why": "Use the present simple form 'watch' for regular activities."
+            },
+            {
+              "you_said": "because is very tasty",
+              "better": "because it is very tasty",
+              "why": "Add the subject pronoun 'it' before the verb 'is'."
+            },
+            {
+              "you_said": "Is very interesting.",
+              "better": "It is very interesting.",
+              "why": "Add the subject pronoun 'It' before the verb 'is'."
+            },
+            {
+              "you_said": "my grandmother make every Sunday.",
+              "better": "my grandmother makes every Sunday.",
+              "why": "Add an 's' to the verb after 'grandmother'."
+            },
+            {
+              "you_said": "go bazaar with my mother.",
+              "better": "go to the bazaar with my mother.",
+              "why": "Add the preposition 'to' after 'go' when naming a destination."
+            },
+            {
+              "you_said": "At weekend",
+              "better": "At the weekend",
+              "why": "Add the word 'the' before 'weekend'."
+            },
+            {
+              "you_said": "In evening",
+              "better": "In the evening",
+              "why": "Add the word 'the' before 'evening'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 2,
+          "language_level": "A2",
+          "language_mean": 2,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency"
+          ],
+          "topic_cap": 3,
+          "language_cap": 4,
+          "band": 3,
+          "label": "Lower A2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 3
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 3: \"Who do you spend the most time with in your family?\"",
+            "success_check": "You say at least two sentences that answer question 3, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 3
+            }
+          },
+          {
+            "objective": "Use the present simple base form of the verb for habits, for example 'The museum opens at nine'.",
+            "success_check": "Every routine action in your response uses a base verb without an -ing ending.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [
+          {
+            "code": "quote_not_found",
+            "severity": "warn",
+            "path": "features.fluency.evidence[0]",
+            "message": "Removed unverifiable quote: \"Um…\""
+          }
+        ],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 5403,
+        "output": 12547,
+        "calls": 1
+      }
+    ]
+  },
+  {
+    "id": "1.1-high",
+    "expected": 5,
+    "bands": [
+      5
+    ],
+    "seconds": [
+      45.376
+    ],
+    "errors": [
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q1-3",
+        "part": 1,
+        "official_question": 1,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "Usually I spend Saturday with my friends. We go to the park or, if the weather is bad, we play games at my friend's house. On Sunday I help my parents at home.",
+              "note": "You described your typical weekend activities with friends and family.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "I really love lagman, especially the one my father makes. It's spicy and filling, and I've eaten it since I was a child, so it reminds me of home.",
+              "note": "You named your favourite food and gave clear reasons why you like it.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Probably my younger sister. We share a room, so we talk a lot, and I help her with her English homework, although sometimes she's lazy.",
+              "note": "You named your younger sister and explained why you spend the most time with her.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "above_A2",
+              "evidence": [
+                "We go to the park or, if the weather is bad, we play games at my friend's house.",
+                "and I've eaten it since I was a child, so it reminds me of home.",
+                "although sometimes she's lazy."
+              ],
+              "note": "You used both simple and complex structures accurately throughout your answers.",
+              "how_to_improve": "Use a second conditional sentence to talk about an imaginary situation, for example: 'If I had more free time, I would learn how to play guitar.'",
+              "how_to_check": "Check that your sentence uses 'if' with a past verb and 'would' with a base verb."
+            },
+            "vocabulary": {
+              "level": "above_A2",
+              "evidence": [
+                "spicy and filling",
+                "it reminds me of home",
+                "We share a room"
+              ],
+              "note": "You used a good range of descriptive phrases and natural collocations.",
+              "how_to_improve": "Use precise compound nouns when describing an activity, for example: 'tennis racket' or 'swimming pool'.",
+              "how_to_check": "Check your transcript to confirm you used specific compound nouns instead of general words."
+            },
+            "fluency": {
+              "level": "above_A2",
+              "evidence": [
+                "We go to the park or, if the weather is bad, we play games at my friend's house.",
+                "It's spicy and filling, and I've eaten it since I was a child, so it reminds me of home.",
+                "We share a room, so we talk a lot, and I help her with her English homework, although sometimes she's lazy."
+              ],
+              "note": "You spoke for 40 of the 90 seconds, producing complete, multi-clause sentences with no repeated words or restarted phrases in the transcript.",
+              "how_to_improve": "Add an extra sentence with an example to extend your answer, for example: 'At school, my favourite subject was geography because we studied different countries.'",
+              "how_to_check": "You used at least 20 seconds on the timer for each question."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "We go to the park or, if the weather is bad, we play games at my friend's house.",
+              "note": "You used a conditional clause accurately to explain different plans."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "It's spicy and filling, and I've eaten it since I was a child, so it reminds me of home.",
+              "note": "You used descriptive adjectives and a natural collocation accurately."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "above_A2",
+          "language_mean": 3,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency"
+          ],
+          "topic_cap": 5,
+          "language_cap": 5,
+          "band": 5,
+          "label": "Above A2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a second conditional sentence to talk about an imaginary situation, for example: 'If I had more free time, I would learn how to play guitar.'",
+            "success_check": "Check that your sentence uses 'if' with a past verb and 'would' with a base verb.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use precise compound nouns when describing an activity, for example: 'tennis racket' or 'swimming pool'.",
+            "success_check": "Check your transcript to confirm you used specific compound nouns instead of general words.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 5456,
+        "output": 5949,
+        "calls": 1
+      }
+    ]
+  },
+  {
+    "id": "1.2-low",
+    "expected": 1,
+    "bands": [
+      1
+    ],
+    "seconds": [
+      67.441
+    ],
+    "errors": [
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q4-6",
+        "part": 1,
+        "official_question": 4,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "In first picture is a market. A man selling vegetable outside. Second picture, big supermarket, a man with trolley. First is outside, second is inside.",
+              "note": "You described both pictures and compared them by pointing out that one is outside and the other is inside.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "missing",
+              "evidence": "",
+              "note": "You said that you did not understand the question and gave no answer.",
+              "model_answer": "People like local markets because the vegetables are fresh and you can talk to the sellers."
+            },
+            {
+              "id": 3,
+              "status": "missing",
+              "evidence": "",
+              "note": "You said that you did not know and gave no reasons.",
+              "model_answer": "Some people prefer supermarkets because they have parking spaces and everything is in one building."
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "A2",
+              "evidence": [
+                "In first picture is a market.",
+                "A man selling vegetable outside.",
+                "First is outside, second is inside."
+              ],
+              "note": "You used simple clauses to compare the pictures, but basic errors such as missing verbs and articles occurred regularly.",
+              "how_to_improve": "Use the auxiliary verb 'is' or 'are' before -ing verbs when describing actions in progress.",
+              "how_to_check": "Check that every -ing verb in your sentences has 'is' or 'are' right before it, for example 'The athlete is running on the track'."
+            },
+            "vocabulary": {
+              "level": "A2",
+              "evidence": [
+                "market",
+                "supermarket",
+                "trolley"
+              ],
+              "note": "You had enough basic words to identify key items in the pictures, but you lacked words to answer the other two questions.",
+              "how_to_improve": "Use descriptive adjectives to explain why you like or dislike a place.",
+              "how_to_check": "Check that your answer includes at least two descriptive adjectives, such as describing a classroom as 'bright' or 'noisy'."
+            },
+            "fluency": {
+              "level": "A2",
+              "evidence": [
+                "sorry, I don't understand.",
+                "I don't know. Sorry."
+              ],
+              "note": "You spoke for only 19 of the 105 seconds, using short sentence fragments and repeated fillers like 'um'.",
+              "how_to_improve": "Keep speaking for more of the available time by adding one extra detail to each answer.",
+              "how_to_check": "The timer shows that you spoke for at least 20 seconds on each question."
+            },
+            "cohesion": {
+              "level": "A2",
+              "evidence": [
+                "In first picture",
+                "Second picture",
+                "First is outside, second is inside."
+              ],
+              "note": "Your answer relied on simple listing words like 'first' and 'second' to present your ideas.",
+              "how_to_improve": "Use the linking word 'while' to join two contrasting ideas into a single sentence.",
+              "how_to_check": "Check that you connected two contrasting facts with 'while', for example 'I like playing tennis, while my brother prefers swimming'."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "A man selling",
+              "correction": "A man is selling",
+              "type": "grammar",
+              "pattern": "Missing auxiliary verb 'be'"
+            },
+            {
+              "quote": "selling vegetable",
+              "correction": "selling vegetables",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "In first picture",
+              "correction": "In the first picture",
+              "type": "grammar",
+              "pattern": "Missing articles before singular nouns"
+            },
+            {
+              "quote": "with trolley",
+              "correction": "with a trolley",
+              "type": "grammar",
+              "pattern": "Missing articles before singular nouns"
+            },
+            {
+              "quote": "In first picture is a market",
+              "correction": "In the first picture there is a market",
+              "type": "grammar",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Missing auxiliary verb 'be'",
+              "type": "grammar",
+              "rule": "Use 'is' or 'are' before an -ing verb when describing an action in progress, for example 'The girl is reading a book'.",
+              "how_to_fix": "Always place 'is' or 'are' immediately before any action verb ending in -ing."
+            },
+            {
+              "name": "Missing articles before singular nouns",
+              "type": "grammar",
+              "rule": "Singular countable nouns require an article like 'a' or 'the', for example 'He caught a train to the city'.",
+              "how_to_fix": "Check every singular noun in your sentence to ensure it has 'a', 'an', or 'the' in front of it."
+            }
+          ],
+          "strengths": [],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "A man selling vegetable outside.",
+              "better": "A man is selling vegetable outside.",
+              "why": "Use 'is' before an -ing verb to form the present continuous tense."
+            },
+            {
+              "you_said": "In first picture is a market.",
+              "better": "In the first picture is a market.",
+              "why": "Use the definite article 'the' before ordinal numbers like 'first'."
+            },
+            {
+              "you_said": "Second picture, big supermarket, a man with trolley.",
+              "better": "Second picture, big supermarket, a man with a trolley.",
+              "why": "Singular countable nouns like 'trolley' need an article such as 'a'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 1,
+          "language_level": "A2",
+          "language_mean": 1,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 1,
+          "language_cap": 2,
+          "band": 1,
+          "label": "Lower A2",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": false,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "question_coverage",
+            "question_id": 2
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Answer question 5: \"Why do many people like shopping at local markets?\"",
+            "success_check": "You say at least two sentences that answer question 5, with one reason or example.",
+            "target": {
+              "kind": "question",
+              "question_id": 2
+            }
+          },
+          {
+            "objective": "Use the auxiliary verb 'is' or 'are' before -ing verbs when describing actions in progress.",
+            "success_check": "Check that every -ing verb in your sentences has 'is' or 'are' right before it, for example 'The athlete is running on the track'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [
+          {
+            "code": "quote_not_found",
+            "severity": "warn",
+            "path": "features.fluency.evidence[0]",
+            "message": "Removed unverifiable quote: \"Um…\""
+          },
+          {
+            "code": "quote_not_found",
+            "severity": "warn",
+            "path": "features.fluency.evidence[1]",
+            "message": "Removed unverifiable quote: \"Um… Um…\""
+          }
+        ],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 6076,
+        "output": 8837,
+        "calls": 1
+      }
+    ]
+  },
+  {
+    "id": "1.2-middle",
+    "expected": 2,
+    "bands": [
+      4
+    ],
+    "seconds": [
+      141.996
+    ],
+    "errors": [
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q4-6",
+        "part": 1,
+        "official_question": 4,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "In the first picture there is a small market where a man is selling fruit and vegetables outside. In the second picture a man is pushing a trolley in a big supermarket. The first one looks more friendly, but the second is bigger.",
+              "note": "You described both pictures and compared them clearly.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "People like market because the vegetables is more fresh and the price is cheaper. Also my mother know the seller and she talk with him.",
+              "note": "You gave clear reasons why people like local markets, including fresh food and knowing the seller.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Supermarket is big and have everything in one place. People go there with car and buy many thing for all week.",
+              "note": "You explained why people prefer supermarkets, mentioning convenience and buying for the week.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "A2",
+              "evidence": [
+                "the vegetables is more fresh",
+                "my mother know the seller",
+                "she talk with him",
+                "Supermarket is big and have everything"
+              ],
+              "note": "You used simple structures to answer all three questions, but basic subject-verb agreement mistakes occurred repeatedly.",
+              "how_to_improve": "Match every present-tense verb to its subject by adding an -s ending for singular subjects and using the base form for plural subjects, for example 'My brother plays tennis' and 'My brothers play tennis'.",
+              "how_to_check": "Every present-tense verb in your answer has an -s ending when the subject is singular, and no -s when the subject is plural."
+            },
+            "vocabulary": {
+              "level": "B1",
+              "evidence": [
+                "a man is pushing a trolley in a big supermarket.",
+                "the price is cheaper",
+                "my mother know the seller",
+                "everything in one place"
+              ],
+              "note": "You showed a good range of topic words like 'trolley' and 'seller', though words like 'price' were combined incorrectly.",
+              "how_to_improve": "Use the adjectives 'high' or 'low' when describing prices, for example 'Ticket prices for the concert are very low'.",
+              "how_to_check": "Every time you mention the word 'price', you use 'high' or 'low' to describe it."
+            },
+            "fluency": {
+              "level": "B1",
+              "evidence": [
+                "In the first picture there is a small market where a man is selling fruit and vegetables outside.",
+                "The first one looks more friendly, but the second is bigger.",
+                "Supermarket is big and have everything in one place."
+              ],
+              "note": "You spoke for 40 of the 105 seconds, using complete sentences with no written fillers or restarted sentences.",
+              "how_to_improve": "Add a second detail or an example to each point so you use more of your speaking time, for example explaining which swimming stroke you practice when talking about sports.",
+              "how_to_check": "You used at least 20 of your 30 seconds for Question 5 and Question 6 on the timer."
+            },
+            "cohesion": {
+              "level": "B1",
+              "evidence": [
+                "where a man is selling",
+                "The first one looks more friendly, but the second is bigger.",
+                "People like market because the vegetables is more fresh",
+                "Also my mother know the seller"
+              ],
+              "note": "You linked your ideas with simple connecting words like 'because', 'but', and 'also'.",
+              "how_to_improve": "Use a contrasting clause to compare two ideas in a single sentence, for example 'While I enjoy running, my friend prefers cycling'.",
+              "how_to_check": "You have at least one sentence comparing two ideas using a contrasting conjunction."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [
+            {
+              "quote": "the vegetables is",
+              "correction": "the vegetables are",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement"
+            },
+            {
+              "quote": "my mother know",
+              "correction": "my mother knows",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement"
+            },
+            {
+              "quote": "she talk",
+              "correction": "she talks",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement"
+            },
+            {
+              "quote": "have everything",
+              "correction": "has everything",
+              "type": "grammar",
+              "pattern": "Subject-verb agreement"
+            },
+            {
+              "quote": "more fresh",
+              "correction": "fresher",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "buy many thing",
+              "correction": "buy many things",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "with car",
+              "correction": "by car",
+              "type": "grammar",
+              "pattern": ""
+            },
+            {
+              "quote": "price is cheaper",
+              "correction": "prices are lower",
+              "type": "vocabulary",
+              "pattern": ""
+            }
+          ],
+          "error_patterns": [
+            {
+              "name": "Subject-verb agreement",
+              "type": "grammar",
+              "rule": "A singular subject takes a singular verb, and a plural subject takes a plural verb, as in 'The teacher speaks clearly' or 'The students speak clearly'.",
+              "how_to_fix": "Check every verb in the present tense to make sure it matches whether the subject is singular or plural."
+            }
+          ],
+          "strengths": [
+            {
+              "feature": "vocabulary",
+              "quote": "a man is pushing a trolley in a big supermarket.",
+              "note": "You used accurate shopping words like 'trolley' and 'supermarket'."
+            },
+            {
+              "feature": "cohesion",
+              "quote": "The first one looks more friendly, but the second is bigger.",
+              "note": "You used 'but' and comparative forms to contrast the two pictures clearly."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": [
+            {
+              "you_said": "because the vegetables is more fresh",
+              "better": "because the vegetables are more fresh",
+              "why": "Plural subjects take the plural verb 'are', not 'is'."
+            },
+            {
+              "you_said": "Also my mother know the seller",
+              "better": "Also my mother knows the seller",
+              "why": "Third-person singular subjects take a verb ending in -s."
+            },
+            {
+              "you_said": "and she talk with him.",
+              "better": "and she talks with him.",
+              "why": "Use a verb ending in -s after 'she' in the present simple."
+            },
+            {
+              "you_said": "and have everything in one place.",
+              "better": "and has everything in one place.",
+              "why": "A singular subject takes the singular verb 'has', not 'have'."
+            },
+            {
+              "you_said": "and buy many thing for all week.",
+              "better": "and buy many things for all week.",
+              "why": "Use a plural noun after the word 'many'."
+            },
+            {
+              "you_said": "People go there with car",
+              "better": "People go there by car",
+              "why": "Use the preposition 'by' with types of transport."
+            },
+            {
+              "you_said": "and the price is cheaper.",
+              "better": "and the price is lower.",
+              "why": "Use 'lower' or 'higher' to describe prices, not 'cheaper'."
+            }
+          ]
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "B1",
+          "language_mean": 1.75,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 4,
+          "language_cap": 4,
+          "band": 4,
+          "label": "Higher B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Match every present-tense verb to its subject by adding an -s ending for singular subjects and using the base form for plural subjects, for example 'My brother plays tennis' and 'My brothers play tennis'.",
+            "success_check": "Every present-tense verb in your answer has an -s ending when the subject is singular, and no -s when the subject is plural.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Use the adjectives 'high' or 'low' when describing prices, for example 'Ticket prices for the concert are very low'.",
+            "success_check": "Every time you mention the word 'price', you use 'high' or 'low' to describe it.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 6121,
+        "output": 19879,
+        "calls": 1
+      }
+    ]
+  },
+  {
+    "id": "1.2-high",
+    "expected": 5,
+    "bands": [
+      5
+    ],
+    "seconds": [
+      62.27
+    ],
+    "errors": [
+      null
+    ],
+    "results": [
+      {
+        "kind": "multilevel",
+        "rubric_id": "multilevel-q4-6",
+        "part": 1,
+        "official_question": 4,
+        "assessment": {
+          "questions": [
+            {
+              "id": 1,
+              "status": "on_topic",
+              "evidence": "Both pictures show places to buy food, but they feel very different. The first is a small open-air market, where a seller is chatting with a customer, which looks friendly and personal. The second is a huge supermarket, so it's probably faster but far less personal.",
+              "note": "You used 21 of your 45 seconds to describe both pictures and contrast their atmosphere.",
+              "model_answer": ""
+            },
+            {
+              "id": 2,
+              "status": "on_topic",
+              "evidence": "I think people love local markets because the fruit and vegetables are fresher and often cheaper. Besides, you can bargain and get to know the sellers, which you can't really do in a supermarket.",
+              "note": "You used 15 of your 30 seconds to give multiple clear reasons why people like local markets.",
+              "model_answer": ""
+            },
+            {
+              "id": 3,
+              "status": "on_topic",
+              "evidence": "Mainly for convenience. You can find everything under one roof, pay by card and park easily, so busy families save a lot of time, even though the food isn't always as fresh.",
+              "note": "You used 15 of your 30 seconds to explain why some shoppers prefer supermarkets.",
+              "model_answer": ""
+            }
+          ],
+          "features": {
+            "grammar": {
+              "level": "above_B1",
+              "evidence": [
+                "where a seller is chatting with a customer, which looks friendly and personal",
+                "which you can't really do in a supermarket",
+                "so busy families save a lot of time, even though the food isn't always as fresh"
+              ],
+              "note": "You used complex structures accurately, including relative clauses and clauses of concession.",
+              "how_to_improve": "Use a second conditional sentence to talk about an imagined situation, for example: If I had more free time, I would join a swimming club.",
+              "how_to_check": "Check that your sentence contains an 'if' clause with a past verb and a main clause with 'would'."
+            },
+            "vocabulary": {
+              "level": "above_B1",
+              "evidence": [
+                "open-air market",
+                "far less personal",
+                "bargain and get to know the sellers",
+                "under one roof"
+              ],
+              "note": "You used a wide and precise range of words, including natural collocations and idioms.",
+              "how_to_improve": "Add specific adverbs of degree before adjectives when describing experiences, for example saying that a long train journey was remarkably comfortable.",
+              "how_to_check": "Check that an adverb of degree appears directly in front of your descriptive adjective."
+            },
+            "fluency": {
+              "level": "above_B1",
+              "evidence": [
+                "Both pictures show places to buy food, but they feel very different.",
+                "I think people love local markets because the fruit and vegetables are fresher and often cheaper.",
+                "You can find everything under one roof, pay by card and park easily, so busy families save a lot of time, even though the food isn't always as fresh."
+              ],
+              "note": "You spoke for 51 of the 105 seconds in complete sentences, with no repeated words or restarted phrases in your transcript.",
+              "how_to_improve": "Add an extra supporting detail or example to each answer to speak for more of the available time.",
+              "how_to_check": "Check the timer to ensure you speak for at least 30 seconds on Question 4 and at least 20 seconds on Question 5 and Question 6."
+            },
+            "cohesion": {
+              "level": "above_B1",
+              "evidence": [
+                "The first is a small open-air market",
+                "The second is a huge supermarket",
+                "Besides, you can bargain and get to know the sellers",
+                "even though the food isn't always as fresh"
+              ],
+              "note": "You connected your ideas clearly using linking words for addition, contrast, and comparison.",
+              "how_to_improve": "Use a cause-and-effect transition to introduce a result, for example stating that a tennis match was cancelled as a consequence of heavy rain.",
+              "how_to_check": "Check that your transition word links an action directly to its consequence."
+            },
+            "pronunciation": {
+              "level": "not_assessed",
+              "evidence": [],
+              "note": "",
+              "how_to_improve": "",
+              "how_to_check": ""
+            }
+          },
+          "memorized_or_irrelevant": false,
+          "errors": [],
+          "error_patterns": [],
+          "strengths": [
+            {
+              "feature": "grammar",
+              "quote": "so busy families save a lot of time, even though the food isn't always as fresh.",
+              "note": "You used a complex sentence with a concession clause accurately."
+            },
+            {
+              "feature": "vocabulary",
+              "quote": "You can find everything under one roof, pay by card and park easily",
+              "note": "You used the natural idiom 'under one roof' correctly in context."
+            }
+          ],
+          "retry_review": null,
+          "sentence_fixes": []
+        },
+        "feature_sources": {
+          "grammar": "transcript",
+          "vocabulary": "transcript",
+          "pronunciation": "none",
+          "fluency": "transcript",
+          "cohesion": "transcript"
+        },
+        "audio": {
+          "status": "not_assessed",
+          "reason": "disabled",
+          "provider": null,
+          "model": null
+        },
+        "scoring": {
+          "on_topic_count": 3,
+          "language_level": "above_B1",
+          "language_mean": 3,
+          "assessed_features": [
+            "grammar",
+            "vocabulary",
+            "fluency",
+            "cohesion"
+          ],
+          "topic_cap": 5,
+          "language_cap": 5,
+          "band": 5,
+          "label": "Above B1",
+          "band_max": 5,
+          "target_band": 3,
+          "meets_target": true,
+          "provisional": true,
+          "zero_reason": null,
+          "biggest_fix": {
+            "kind": "feature",
+            "feature": "grammar"
+          }
+        },
+        "retry_focus": [
+          {
+            "objective": "Use a second conditional sentence to talk about an imagined situation, for example: If I had more free time, I would join a swimming club.",
+            "success_check": "Check that your sentence contains an 'if' clause with a past verb and a main clause with 'would'.",
+            "target": {
+              "kind": "feature",
+              "feature": "grammar"
+            }
+          },
+          {
+            "objective": "Add specific adverbs of degree before adjectives when describing experiences, for example saying that a long train journey was remarkably comfortable.",
+            "success_check": "Check that an adverb of degree appears directly in front of your descriptive adjective.",
+            "target": {
+              "kind": "feature",
+              "feature": "vocabulary"
+            }
+          }
+        ]
+      }
+    ],
+    "quality": [
+      {
+        "passed": true,
+        "violations": [],
+        "rejectedDrafts": []
+      }
+    ],
+    "tokens": [
+      {
+        "input": 6161,
+        "output": 8212,
+        "calls": 1
+      }
+    ]
+  }
+]

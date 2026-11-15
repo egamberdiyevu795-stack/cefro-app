@@ -53,7 +53,7 @@ afterEach(async () => {
 async function newAttempt() {
   return createAttempt({
     userId: USER,
-    taskId: "b2-part2-technology-young-people",
+    taskId: "b2-part2-advice-from-someone",
     audio: fakeWebm(),
     mimeType: "audio/webm;codecs=opus",
     durationMs: 95_000,

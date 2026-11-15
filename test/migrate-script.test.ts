@@ -8,6 +8,8 @@ import { startHranaEmulator, type Emulator } from "./hrana-emulator";
 vi.setConfig({ testTimeout: 30_000 });
 
 const ROOT = process.cwd();
+/** How many migrations the app has (the journal), so a new migration doesn't need these tests edited. */
+const N = (JSON.parse(fs.readFileSync(path.join(ROOT, "src/server/db/migrations/meta/_journal.json"), "utf8")) as { entries: unknown[] }).entries.length;
 const TOKEN = "emu-secret-token-0123456789abcdef";
 const JWT = "eyJhbGciOiJFZERTQSJ9.eyJhIjoicnciLCJpYXQiOjE3MDAwMDAwMDB9.c2lnbmF0dXJlLWJ5dGVzLXRlc3Q";
 
@@ -61,10 +63,10 @@ describe("npm run db:migrate (scripts/migrate.mjs)", () => {
     emulator = await startHranaEmulator({ token: TOKEN });
     const env = { TURSO_DATABASE_URL: emulator.url, TURSO_AUTH_TOKEN: TOKEN };
     const first = await runMigrate(env, "--require-remote");
-    expect(first.out).toMatch(/db:migrate: OK\. 5 migrations applied, foreign key check clean/);
+    expect(first.out).toMatch(new RegExp(`db:migrate: OK\\. ${N} migrations applied, foreign key check clean`));
     expect(first.code).toBe(0);
     const second = await runMigrate(env, "--require-remote");
-    expect(second.out).toMatch(/OK\. 5 migrations applied/);
+    expect(second.out).toMatch(new RegExp(`OK\\. ${N} migrations applied`));
     expect(second.code).toBe(0);
     expect(first.out + second.out).not.toContain(TOKEN);
   });
@@ -183,12 +185,12 @@ describe("npm run db:migrate (scripts/migrate.mjs)", () => {
       emulator = await startHranaEmulator({ token: TOKEN });
       const result = await runMigrate({ TURSO_DATABASE_URL: emulator.url, TURSO_AUTH_TOKEN: TOKEN }, "--check", "--require-remote");
       expect(result.code).toBe(0);
-      expect(result.out).toMatch(/0 of 5 migrations applied, 5 pending/);
+      expect(result.out).toMatch(new RegExp(`0 of ${N} migrations applied, ${N} pending`));
       expect(emulator.requests.length).toBeGreaterThan(0);
       expect(emulator.requests.filter((sql) => !isRead(sql))).toEqual([]);
       // Nothing was created: a later migrate still sees an empty database.
       const after = await runMigrate({ TURSO_DATABASE_URL: emulator.url, TURSO_AUTH_TOKEN: TOKEN }, "--check");
-      expect(after.out).toMatch(/0 of 5 migrations applied/);
+      expect(after.out).toMatch(new RegExp(`0 of ${N} migrations applied`));
     });
 
     it("--require-current fails while migrations are pending and passes once they are applied", async () => {
@@ -196,11 +198,11 @@ describe("npm run db:migrate (scripts/migrate.mjs)", () => {
       const env = { TURSO_DATABASE_URL: emulator.url, TURSO_AUTH_TOKEN: TOKEN };
       const pending = await runMigrate(env, "--check", "--require-remote", "--require-current");
       expect(pending.code).toBe(1);
-      expect(pending.out).toMatch(/5 migration\(s\) are not applied yet/);
+      expect(pending.out).toMatch(new RegExp(`${N} migration\\(s\\) are not applied yet`));
       expect((await runMigrate(env, "--require-remote")).code).toBe(0);
       const current = await runMigrate(env, "--check", "--require-remote", "--require-current");
       expect(current.code).toBe(0);
-      expect(current.out).toMatch(/5 of 5 migrations applied, 0 pending/);
+      expect(current.out).toMatch(new RegExp(`${N} of ${N} migrations applied, 0 pending`));
     });
   });
 

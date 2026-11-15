@@ -72,7 +72,7 @@ function buildSystem(input: EvaluationInput): string {
         : '"on_topic": the student says anything relevant to the question, even a single word or a short phrase (e.g. naming a food for a question about food). The language level, not the status, deals with how good it is.';
     }
     if (s === "partial") {
-      return `"partial": a bare one-sentence answer with no reason or detail${isPictures ? `; in Question ${first}, describing only one picture, or both without comparing them` : ""}. A partial answer COUNTS as answered; its note says what to add.`;
+      return `"partial": a bare one-sentence answer with no reason or detail${isPictures ? `; in Question ${first}, describing only one picture` : ""}. A partial answer COUNTS as answered; its note says what to add.`;
     }
     return STATUS_RULES[s];
   });

@@ -72,7 +72,7 @@ export type FeatureSource = (typeof FEATURE_SOURCES)[number];
 /**
  * Retry focus text for answering (or fully answering) a question. `questionId` is the 1-based id within the task;
  * the text uses the number the student sees (`shownNumber`, e.g. 4 for the first question of Part 1.2). A partial
- * answer with a `partialHint` (Part 1.2 Question 4: "compare the two pictures") gets that hint word for word.
+ * answer with a `partialHint` (Part 1.2 Question 4: "talk about both pictures") gets that hint word for word.
  */
 export function questionFocus(questionId: number, questionText: string, partial: boolean, shownNumber = questionId, partialHint?: string): MultilevelRetryFocus {
   const n = shownNumber;

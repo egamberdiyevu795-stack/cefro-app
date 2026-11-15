@@ -69,7 +69,7 @@ async function audit(page: Page, blacks: number) {
   expect(report.low).toEqual([]);
 }
 
-test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal goal, retry, Goal met", async ({ page }) => {
+test("Part 3 mock loop: Pros / Cons table (nothing to tick), record, result with the rebuttal goal, retry, Goal met", async ({ page }) => {
   const seen = watch(page);
   await shortPartIntros(page);
 
@@ -91,14 +91,12 @@ test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal go
   await expect(page.getByText("Cities should ban private cars from their centres.")).toHaveCount(0);
   await audit(page, 0);
 
-  // Preparation: tick two per side; a third on a side is not possible. No black button.
+  // Preparation: the statement with its Pros / Cons lists, as in the real exam: nothing to tick. No black button.
   await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible();
-  await page.getByLabel("F1 Cleaner air and less noise").check();
-  await page.getByLabel("F2 Safer streets for pedestrians and cyclists").check();
-  await expect(page.getByLabel("F3 More people would use public transport")).toBeDisabled();
-  await page.getByLabel("A1 Difficult for elderly and disabled people").check();
-  await page.getByLabel("A2 Shops and businesses in the centre may lose customers").check();
-  await expect(page.getByTestId("choice-summary")).toHaveText("FOR 2 of 2 · AGAINST 2 of 2");
+  await expect(page.getByTestId("list-for")).toContainText("Pros");
+  await expect(page.getByTestId("list-against")).toContainText("Cons");
+  await expect(page.getByText("F1 Cleaner air and less noise")).toBeVisible();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
   await audit(page, 0);
   await page.getByRole("button", { name: "Start speaking now" }).click();
 
@@ -110,8 +108,8 @@ test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal go
   await finish.click();
   await page.getByRole("button", { name: "Finish anyway" }).click();
 
-  // Scoring… then the result for the points chosen.
-  await expect(page).toHaveURL(new RegExp(`/result/part3\\?demo=p3\\.${CARS}\\.F1F2A1A2&state=scoring&next=1&mock=1$`));
+  // Scoring… then the result (no points ticked: the demo answer argues F1, F2, A1, A2).
+  await expect(page).toHaveURL(new RegExp(`/result/part3\\?demo=p3\\.${CARS}\\.&state=scoring&next=1&mock=1$`));
   await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
   await audit(page, 0);
   await expect(page.getByRole("heading", { name: "Part 3 · Band 4 · Higher B2" })).toBeVisible({ timeout: 20_000 });
@@ -119,13 +117,12 @@ test("Part 3 mock loop: choose 2 + 2 points, record, result with the rebuttal go
   await expect(page.getByText("Before you argue against a point, give one real reason that supports it.").first()).toBeVisible();
   await audit(page, 1);
 
-  // Retry with this goal: the goal on every screen, the same points ticked.
+  // Retry with this goal: the goal on every screen.
   await page.getByRole("link", { name: "Retry with this goal" }).click();
   await expect(page.getByTestId("goal-card")).toContainText("Support A1");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.getByTestId("part3-intro")).toBeVisible();
   await expect(page.getByTestId("goal-card")).toBeVisible();
-  await expect(page.getByLabel("A1 Difficult for elderly and disabled people")).toBeChecked();
   await expect(page.getByTestId("goal-card")).toBeVisible();
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(page.getByTestId("goal-card")).toBeVisible();

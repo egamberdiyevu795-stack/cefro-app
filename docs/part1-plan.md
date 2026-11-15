@@ -1,5 +1,7 @@
 # Part 1 plan: Part 1.1 (Questions 1–3) and Part 1.2 (Questions 4–6)
 
+**2026-11-15: Part 1.1 questions now come from a weighted question bank (the teacher list, word for word): see docs/part1-question-bank.md.**
+
 Status: **plan only, nothing built; all open questions decided** (owner, 2026-11-04; see §5). Part 1
 implementation starts **only after Part 2 is merged and live-tested**, on a fresh branch from `main` (§6).
 
@@ -61,7 +63,7 @@ Question audio:
   versioned with it, so every student hears the same audio and nothing depends on a speech API at practice time.
   The voice and the generator settings are recorded with the content, so changed wording can be regenerated with
   the same voice.
-  **Built 2026-11-08:** Piper, voice `en-us-libritts-high` speaker 6426 (LibriTTS, CC BY 4.0), 0.75 tempo; settings in
+  **Built 2026-11-08:** Piper, voice `en-us-libritts-high` speaker 6426 (LibriTTS, CC BY 4.0), normal speed (tempo 1.0 since 2026-11-15, was 0.75; the owner found it too slow, and the exam speaks at a normal pace); settings in
   `src/content/speaking/part1/question-audio.json`, script `scripts/make-part1-question-audio.mjs`.
 - One short chime sound file (original or freely licensed, source recorded like the pictures).
   **Changed 2026-11-08:** no file. The chime is the same two soft tones as Part 2, made in code with Web Audio

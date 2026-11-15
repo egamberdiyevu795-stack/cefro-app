@@ -3,6 +3,30 @@
 Checked 2026-11-06 against `main` at `b597b4f` (Merge PR #6). **Nothing has been merged.** (The first section below, "Pilot-ready", is the current plan, 2026-11-12.) Every branch below starts
 from that `main` (none is behind it), and every check here was a dry run in a throwaway worktree.
 
+## After `claude/p1-stability`: `claude/project-thread-naroeq` (Part 1 question bank, 2026-11-15)
+
+Cut from `claude/p1-stability` (`5118cf8`), so it merges **after it**, merge commit, no squash. No migration, no new
+variable, no Gemini call; Part 1.1 and 1.2 stay off (`PART_LIVE`). Details in docs/part1-question-bank.md.
+
+- **Part 1.1 is now a question bank:** the teacher's 30 questions word for word, sets of three (home → daily life →
+  preference) picked with tier weights 6 : 3 : 1. The task list's Part 1.1 card (`a2-part1-1-questions`) redirects to a
+  fresh set; the full mock and the exam laptop pick a set too. `a2-part1-1-daily-life` is retired but still opens by id.
+- **30 new audio files** under `public/audio/speaking/part1/a2-part1-1-bank/v1/` (same Piper voice).
+- **Part 1.2 bank (data only):** nine tasks from the lists in `part1-2-bank.ts`, none live until our own pictures exist.
+- **Shared code touched (small):** `content/speaking/index.ts` (`getSpeakingTask` resolves sets), `mock-service.ts`
+  (`resolvePart11Pick`, `pickPart11SetForUser`), `exam-store.ts` (paper check accepts any task of the part by id),
+  the practice page (redirect), `mock-part1-rules.ts` and `features/demo/demo-answers.ts` (one fallback line each),
+  `sample-frequency.ts` (key renamed).
+- **Owner's answers (2026-11-15):** Part 1.2 Question 4 is the exam's "What can you see in these pictures?" (shopping task
+  version 2, evaluator 3.8.1, only the Part 1.2 "partial" clause changed); Part 3 lists say Pros / Cons and nothing is ticked;
+  every audio file remade at normal speed (no 0.75 slow-down). Set `PART_1_1_LIVE=true` on Vercel; Part 3 waits for its anchor run.
+- **Part 3 topic bank:** 17 new topics with our own FOR / AGAINST points (`c1/part-3-bank.ts`), 20 topics in all (gambling left out); the
+  mock and the exam laptop pick Part 3 by frequency weight, never one of the latest three (docs/part3-topic-bank.md).
+  Small touches: `domain/speaking/full-mock.ts` (`pickWeightedTask`), `mock-argument-rules.ts` and
+  `features/demo/part3-demo-answers.ts` (fallbacks for topics with no hand-written mock data).
+- Two other branches were cut from the same tip at the same time (demo-data cleanup, result-page helpful button):
+  expect small conflicts only in `features/demo/demo-answers.ts` if the demo-data branch edits `demoAnswerText`.
+
 ## Pilot-ready: the exact merge order (2026-11-12, `claude/pilot-ready`)
 
 **The owner has not decided to merge. Nothing has been merged, pushed to `main`, migrated or deployed.** This section is the

@@ -238,7 +238,7 @@ describe("task list page (/practice)", () => {
 
   it("mock mode: the parts that are not live list their tasks too, opening their mock pages, under Coming soon", async () => {
     const html = await homePage({ mock: "1" });
-    expect(sectionOf(html, "part-1-1")).toContain('href="/practice/speaking/a2-part1-1-daily-life?mock=1"');
+    expect(sectionOf(html, "part-1-1")).toContain('href="/practice/speaking/a2-part1-1-questions?mock=1"');
     expect(sectionOf(html, "part-1-2")).toContain('href="/practice/speaking/b1-part1-2-shopping?mock=1"');
     expect(sectionOf(html, "part-3")).toMatch(/href="\/practice\/part3\/c1-part3-[^"?]+\?mock=1"/);
     for (const id of ["part-1-1", "part-1-2", "part-3"]) expect(sectionOf(html, id)).toContain("You can try the demo below; it is not scored.");

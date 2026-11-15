@@ -126,7 +126,7 @@ export interface QuestionRow {
   verdictLabel: string;
   /** One line: the evaluator's note on what the student said. */
   reason: string;
-  /** A partly answered question's own hint, word for word from the task (Part 1.2 Question 4: "compare the two pictures"). */
+  /** A partly answered question's own hint, word for word from the task (Part 1.2 Question 4: "talk about both pictures"). */
   hint: string | null;
 }
 

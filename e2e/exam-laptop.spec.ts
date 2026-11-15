@@ -49,7 +49,7 @@ async function playMock(page: Page) {
   await page.getByRole("button", { name: "Finish anyway" }).click();
   await expect(progress).toContainText("Part 4 of 4");
   await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible({ timeout: 30_000 });
-  for (const label of [/^F1 /, /^F2 /, /^A1 /, /^A2 /]) await page.getByLabel(label).check();
+  await expect(page.getByRole("checkbox")).toHaveCount(0); // Part 3: the Pros / Cons table, nothing to tick
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(finish).toBeVisible();
   await page.waitForTimeout(800);

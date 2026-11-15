@@ -34,6 +34,8 @@ import { openDatabase, setDbForTesting, type Db } from "@/server/db/client";
 import { practiceSessions, speakingAttempts, users } from "@/server/db/schema";
 import { createPracticeSession } from "@/server/sessions/session-service";
 import { findInProgressMock, mockTasksForPart, planMockTasks, startOrResumeMock } from "@/server/sessions/mock-service";
+import { parsePart11SetId } from "@/content/speaking/part1/part1-1-sets";
+import { seededRandom } from "@/domain/speaking/weighted-pick";
 import { setAudioStorageForTesting } from "@/server/storage";
 import { LocalAudioStorage } from "@/server/storage/local-audio-storage";
 import { PASSWORD, signUp } from "../../../test/auth-helpers";
@@ -255,10 +257,24 @@ describe("resume", () => {
     for (const part of ["1.1", "1.2", "2", "3"] as const) await upload(part, mock.id);
     await finish(mock.id);
     const plan = await planMockTasks(alice);
-    for (const part of ["1.1", "1.2", "2", "3"] as const) {
+    for (const part of ["1.2", "2", "3"] as const) {
       const options = mockTasksForPart(part);
       if (options.length > 1) expect(plan[part], part).not.toBe(TASKS[part]);
       expect(options.map((o) => o.id)).toContain(plan[part]);
+    }
+    // Part 1.1 is the question bank: a fresh weighted set of three questions (content/speaking/part1/part1-1-sets.ts).
+    expect(parsePart11SetId(plan["1.1"]!)).not.toBeNull();
+  });
+
+  it("Part 1.1: a new mock leaves out the questions of the student's last set", async () => {
+    const alice = await userId("alice");
+    as(browsers.alice);
+    const { mock } = await startMock();
+    const first = (await planMockTasks(alice, ["1.1"], seededRandom(5)))["1.1"]!;
+    expect((await upload("1.1", mock.id, { taskId: first })).response.status).toBe(201);
+    for (const seed of [1, 2, 3, 4, 6, 7]) {
+      const next = (await planMockTasks(alice, ["1.1"], seededRandom(seed)))["1.1"]!;
+      for (const n of parsePart11SetId(next)!) expect(parsePart11SetId(first)).not.toContain(n);
     }
   });
 });

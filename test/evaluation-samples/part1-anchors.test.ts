@@ -165,7 +165,7 @@ describe("Part 1 edge cases (docs/part1-plan.md §4)", () => {
     expect(five.result.scoring.band).toBeGreaterThan(0);
   });
 
-  it("Part 1.2, Question 4 partial (one picture only) counts, and the goal says 'compare the two pictures'", async () => {
+  it("Part 1.2, Question 4 partial (one picture only) counts, and the goal says 'talk about both pictures'", async () => {
     const anchor = PART1_ANCHORS[3];
     const output = modelOutput({ ...anchor, statuses: ["partial", "missing", "missing"] });
     const evaluation = await evaluateSpeaking(inputFor(part12, anchor.answers.join(" ")), returning(output));
@@ -177,8 +177,8 @@ describe("Part 1 edge cases (docs/part1-plan.md §4)", () => {
     const all = await evaluateSpeaking(inputFor(part12, anchor.answers.join(" ")), returning(modelOutput({ ...anchor, statuses: ["partial", "on_topic", "on_topic"] })));
     const q4 = all.result.retry_focus.find((f) => f.target.kind === "question")!;
     expect(q4.objective).toMatch(/^Answer question 4 fully: /);
-    expect(q4.objective).toContain("compare the two pictures");
-    expect(q4.success_check).toContain("compare the two pictures");
+    expect(q4.objective).toContain("talk about both pictures");
+    expect(q4.success_check).toContain("talk about both pictures");
   });
 
   it("Part 1.2, Q5 = 'I prefer home.' is partial: it counts, and the goal asks for a reason", () => {

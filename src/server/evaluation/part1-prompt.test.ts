@@ -47,7 +47,7 @@ describe("Part 1 prompt: everything from the rubric (docs/part1-plan.md §3, Pro
     const { system, user } = buildMultilevelEvaluationPrompt(input(part12));
     expect(system).toContain("Part 1.2 (official Questions 4–6)");
     expect(system).toContain("target level B1");
-    expect(system).toContain('tell the student to "compare the two pictures"');
+    expect(system).toContain('tell the student to "talk about both pictures"');
     expect(system).toContain("Allowed statuses: on_topic, partial, missing, off_topic.");
     expect(system).toContain("(reference)");
     expect(system).not.toMatch(/"minimal"/);
@@ -65,10 +65,10 @@ describe("Part 1 prompt: everything from the rubric (docs/part1-plan.md §3, Pro
     expect(p12).toContain("above_B1, B1, A2, below_A2");
   });
 
-  it("Part 2's prompt hash is pinned (changed on purpose by evaluator 3.8.0: the advice and fluency wording rules, docs/feedback-review.md issues 1–4)", () => {
+  it("Part 2's prompt hash is pinned (changed on purpose by evaluator 3.8.0: the advice and fluency wording rules; 3.8.1 changes only the version in the hash, the Part 2 prompt text is the same)", () => {
     const i = input(part2, "I think so.");
     const plain = { ...i, metrics: computeSpeechMetrics("I think so.", 60_000, 120) };
-    expect(computePromptHash(plain, buildMultilevelEvaluationPrompt(plain))).toBe("h2:959cad15ef07698ffbbb216de54e66ef65d3db6a855631808ca4bf78c89f3790");
+    expect(computePromptHash(plain, buildMultilevelEvaluationPrompt(plain))).toBe("h2:d288aedac4eee0d2e773bac9dca36dc640f3105674cc63dab9cdc5e714e168d9");
     expect(computePromptHash(input(part11), buildMultilevelEvaluationPrompt(input(part11)))).not.toBe(
       computePromptHash(input(part12), buildMultilevelEvaluationPrompt(input(part12))),
     );

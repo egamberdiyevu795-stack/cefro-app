@@ -150,7 +150,7 @@ test("Part 1.1 mock: brief → three questions in one recording → Scoring… �
   expect(api).toEqual([]);
 });
 
-test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two pictures' on the result", async ({ page }) => {
+test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'talk about both pictures' on the result", async ({ page }) => {
   const api = watchApi(page);
   await shortIntro(page);
   await page.goto(`/practice/speaking/b1-part1-2-shopping?mock=1&timeScale=${SCALE}`);
@@ -167,7 +167,7 @@ test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two
   await runPart(page, 4);
   await expect(page.getByText("Part 1.2 ·", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Question 4", { exact: true })).toBeVisible();
-  await expect(page.getByText(/compare the two pictures/).first()).toBeVisible();
+  await expect(page.getByText(/talk about both pictures/).first()).toBeVisible();
   await expect(page.getByText("Cohesion")).toBeVisible();
   await auditPhone(page, ["Retry with this goal"]);
   expect(api).toEqual([]);
@@ -227,4 +227,9 @@ test("Part 1 is not live: real pages are 404, the dashboard and home still say C
   }
   await page.goto("/?mock=1");
   await expect(page.getByText("Part 1 · A1–B1").locator("..")).toContainText("Coming soon");
+});
+
+test("Part 1.1 card opens a fresh question set from the bank, keeping the query", async ({ page }) => {
+  await page.goto("/practice/speaking/a2-part1-1-questions?mock=1&timeScale=0.05");
+  await expect(page).toHaveURL(/\/practice\/speaking\/a2-part1-1-set-\d{2}-\d{2}-\d{2}\?mock=1&timeScale=0\.05$/);
 });

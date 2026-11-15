@@ -9,7 +9,7 @@
     "noiseScale": 0.667,
     "noiseW": 0.8,
     "sentenceSilence": 0.3,
-    "tempo": 0.75
+    "tempo": 1.0
   },
   "files": [
     {

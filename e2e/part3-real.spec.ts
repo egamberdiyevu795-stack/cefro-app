@@ -5,8 +5,8 @@ import { shortPartIntros } from "./short-intro";
  * The REAL Part 3 flow at 390 px (run by `npm run test:e2e:part3`, playwright.part3.config.ts: Part 3 is not live, so
  * the server sets the test-only switch CEFRO_TEST_PART3_LIVE). Mock providers only; no model is called.
  *
- * "scored" server (mock transcriber and Part 3 mock evaluator): task list → brief → introduction → preparation (tick two
- * points per side) → recording → upload → Scoring… → the real result at /result/<attempt id> (points, recording player,
+ * "scored" server (mock transcriber and Part 3 mock evaluator): task list → brief → introduction → preparation (the Pros / Cons
+ * table, nothing to tick) → recording → upload → Scoring… → the real result at /result/<attempt id> (points, recording player,
  * 30-day note) → History and the dashboard → Retry with this goal.
  * "no key" server (AI scoring cannot run): the recording and transcript are kept, and the page says "AI score not ready
  * yet", not an error: for Part 3 and for Part 2.
@@ -62,14 +62,14 @@ async function audit(page: Page, blacks: number) {
   expect(report.low).toEqual([]);
 }
 
-/** Brief → introduction → preparation (tick the four points) → recording → Finish → upload. */
+/** Brief → introduction → preparation (the Pros / Cons table) → recording → Finish → upload. */
 async function recordPart3(page: Page, options: { tick: boolean } = { tick: true }) {
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.getByTestId("part3-intro")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Preparation" })).toBeVisible();
   if (options.tick) {
-    for (const id of ["F1", "F2", "A1", "A2"]) await page.getByRole("checkbox", { name: new RegExp(`^${id} `) }).check();
-    await expect(page.getByTestId("choice-summary")).toHaveText("FOR 2 of 2 · AGAINST 2 of 2");
+    // Nothing to tick any more (as in the real exam): the Pros / Cons table only.
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
     await audit(page, 0); // preparation: no black button
   }
   await page.getByRole("button", { name: "Start speaking now" }).click();
@@ -98,7 +98,7 @@ test.describe("scored (mock evaluator) @scored", () => {
     await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled(); // enabled once the page is ready
     await audit(page, 1); // "Start"
 
-    // Record: the points are ticked in the minute of preparation; Finish uploads.
+    // Record: the minute of preparation shows the Pros / Cons table; Finish uploads.
     await recordPart3(page);
     await expect(page.getByRole("heading", { name: "Scoring…" })).toBeVisible();
     await expect(part3Heading(page)).toBeVisible({ timeout: 60_000 });
@@ -109,10 +109,8 @@ test.describe("scored (mock evaluator) @scored", () => {
     for (const title of ["Your points", "Biggest fix", "Words from the list", "Skills", "Your answer"]) {
       await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
     }
-    // chosen_points: the four ticked points are marked, the others are not.
-    await expect(page.getByText("You chose this point")).toHaveCount(4);
-    for (const id of ["F1", "F2", "A1", "A2"]) await expect(page.getByTestId(`point-${id}`)).toContainText("You chose this point");
-    for (const id of ["F3", "A3"]) await expect(page.getByTestId(`point-${id}`)).not.toContainText("You chose this point");
+    // Nothing is ticked any more, so no point says "You chose this point".
+    await expect(page.getByText("You chose this point")).toHaveCount(0);
     // The stored recording plays, and says when it will be deleted (30 days after scoring).
     const audio = page.locator("audio").first();
     await expect.poll(() => audio.evaluate((el: HTMLAudioElement) => (Number.isFinite(el.duration) ? el.duration : -1)), { timeout: 15_000 }).toBeGreaterThan(1);

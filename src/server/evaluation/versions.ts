@@ -101,8 +101,11 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   Part 1 prompt only: the 3.7.0 vocabulary rule for its own ladder (when grammar is at the lower level, vocabulary at the
  *   target needs correct quotes). Live (gemini-3.8-flash): Part 2 anchors 23/23 exact, Part 1 anchors 6/6 exact,
  *   issues 1–3 at 0 (docs/feedback-review.md, "Evaluator 3.8.0").
+ * - speaking-evaluator/3.8.1 — Part 1.2 only (owner decision 2026-11-15): Question 4 is the exam's own "What can you see in these
+ *   pictures?", so describing only one picture is partial and comparing is no longer required. One clause of the Part 1 prompt's
+ *   "partial" rule changed; Parts 1.1 and 2 prompts unchanged. NOT live-tested: rerun the Part 1.2 anchors before Part 1.2 goes live.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.8.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.8.1";
 
 /**
  * Version of the Part 3 evaluation (prompt, gate and post-processing; argument-evaluator.ts). Stored with every
@@ -116,7 +119,11 @@ export const EVALUATOR_VERSION = "speaking-evaluator/3.8.0";
  * - argument-evaluator/0.2.0 — Sentences with mistakes and better versions (docs/v1-plan.md §3.3, step 5): the model also
  *   returns "sentence_fixes" (you_said / better / why, up to 8), with the same rules and code checks as Part 2's. Still NOT
  *   live-tested. The stored Part 3 schema version is unchanged (the list is optional, older results have none).
+ * - argument-evaluator/0.3.0 — First live anchor run (2026-11-15, gemini-3.8-flash): 7 of 11 exact, all within one band;
+ *   weak answers that read the lists scored one band low. Prompt rules: a short simple reason counts as "developed"; one
+ *   developed point means at most "heavily_dependent"; reading the lists never lowers a language level (dependence
+ *   already judges it). Part 3 is live by default from this version (docs/part3-topic-bank.md).
  */
-export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.2.0";
+export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.3.0";
 
 export { EVALUATION_SCHEMA_VERSION };

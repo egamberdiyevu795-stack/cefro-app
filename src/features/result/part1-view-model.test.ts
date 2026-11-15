@@ -21,7 +21,7 @@ describe("Part 1 result view", () => {
     const v = state.view;
     expect(v.partLabel).toBe("Part 1.2");
     expect(v.questions.map((q) => q.number)).toEqual([4, 5, 6]);
-    expect(v.questions[0]).toMatchObject({ verdictLabel: "Partly answered", hint: "Next time, compare the two pictures." });
+    expect(v.questions[0]).toMatchObject({ verdictLabel: "Partly answered", hint: "Next time, talk about both pictures." });
     expect(v.skills.map((s) => s.name)).toContain("Cohesion");
     expect(v.skills.find((s) => s.name === "Grammar")!.levelLabel).toBe("B1");
     expect(v.fix.label).toBe("Question 6 · Not answered");

@@ -47,7 +47,7 @@ describe("mock evaluators fill the list from the demo answers (the real evaluato
     const firstKey = demoPracticeKey(taskId, null);
     const one = (await demoEvaluation(firstKey))!;
     expect(one.evaluatorVersion).toBe(EVALUATOR_VERSION);
-    expect(EVALUATOR_VERSION).toBe("speaking-evaluator/3.8.0");
+    expect(EVALUATOR_VERSION).toBe("speaking-evaluator/3.8.1");
     expectCleanList(demoAnswerText(taskId, "first")!, one.result.assessment.sentence_fixes, first);
     const two = (await demoEvaluation(demoPracticeKey(taskId, firstKey)))!;
     expectCleanList(demoAnswerText(taskId, "full")!, two.result.assessment.sentence_fixes, full);
@@ -55,11 +55,11 @@ describe("mock evaluators fill the list from the demo answers (the real evaluato
     expect(parseStoredEvaluation(3, one.result)).not.toBeNull();
   });
 
-  it("Part 3: the demo answer's list is clean, and the evaluator version is argument-evaluator/0.2.0", async () => {
+  it("Part 3: the demo answer's list is clean, and the evaluator version is argument-evaluator/0.3.0", async () => {
     const key = "p3.c1-part3-cars-in-city-centres.F1F2A1A2";
     const evaluation = (await part3DemoEvaluation(key))!;
     expect(evaluation.evaluatorVersion).toBe(ARGUMENT_EVALUATOR_VERSION);
-    expect(ARGUMENT_EVALUATOR_VERSION).toBe("argument-evaluator/0.2.0");
+    expect(ARGUMENT_EVALUATOR_VERSION).toBe("argument-evaluator/0.3.0");
     expectCleanList(part3DemoTranscriptFor(part3DemoSpec(key)!), evaluation.result.assessment.sentence_fixes, 2);
     expect(parseStoredEvaluation(4, evaluation.result)).not.toBeNull();
   });

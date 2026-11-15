@@ -28,7 +28,7 @@ const PART_NOTES: Record<ExamPartId, string> = {
   "1.1": "Three short personal questions, one at a time.",
   "1.2": "Three questions about two pictures.",
   "2": "Three questions and one picture. Answer the questions: describing the picture answers none of them.",
-  "3": "One statement with a FOR and an AGAINST list. Argue both sides.",
+  "3": "One statement with a list of Pros and a list of Cons. Argue both sides.",
 };
 
 /** Each part's target level (docs/part1-plan.md: 1.1 targets A2, 1.2 B1). */

@@ -66,8 +66,8 @@ for (const file of manifests.flatMap((m) => m.files).filter((f) => !only || f.pa
     ],
     { input: file.text, stdio: ["pipe", "ignore", "inherit"] },
   );
-  // This voice speaks fast for B1 learners and Piper's length scale barely changes it: slow it down without changing
-  // the pitch (ffmpeg's atempo), and add a short silence at the start so the first word is never clipped.
+  // `tempo` slows the voice without changing the pitch (ffmpeg atempo; 1.0 = normal speed, the setting since 2026-11-15)
+  // and a short silence is added at the start so the first word is never clipped.
   execFileSync(
     "ffmpeg",
     ["-v", "error", "-y", "-i", `${out}.raw.wav`, "-af", `adelay=150,atempo=${v.tempo}`, "-ac", "1", "-ar", "22050", "-c:a", "pcm_s16le", out],

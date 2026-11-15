@@ -1,3 +1,4 @@
+import { listArgumentTasks } from "@/content/speaking/part3";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -318,5 +319,5 @@ describe("History, dashboard and the task list show Part 3 attempts like Part 2"
 });
 
 function listIds(): string[] {
-  return ["c1-part3-cars-in-city-centres", "c1-part3-smartphones-under-14", "c1-part3-sugar-tax"];
+  return listArgumentTasks().map((t) => t.id);
 }

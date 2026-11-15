@@ -3,6 +3,7 @@ import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
 import { questionNumber } from "@/domain/speaking/task";
+import { part11MockKeywords } from "@/content/speaking/part1/part1-1-bank-mock";
 import { mockSentenceFixes } from "./mock-sentence-fixes";
 import type { EvaluationInput } from "./types";
 
@@ -14,8 +15,8 @@ import type { EvaluationInput } from "./types";
  * - A question counts when its key words appear (Part 1.1: one is enough, even a single-word answer; there is no
  *   partial or minimal). Part 1.2: two or more key words = on topic, one = partial; an answer of one bare sentence of
  *   at most 6 words is partial (it counts; the note asks for a reason).
- * - Part 1.2 Question 4: words from only one picture, or both without a comparison word, = partial, with the task's
- *   own hint ("compare the two pictures") in the note.
+ * - Part 1.2 Question 4 ("What can you see in these pictures?"): words from only one picture = partial, with the task's
+ *   own hint ("talk about both pictures") in the note.
  * - Levels come from the rubric's own ladder: a rough level from length and word variety, scaled to the part's time.
  *   Part 1.1's lowest level means "no meaningful language", so any real answer is at least its second level.
  */
@@ -36,12 +37,11 @@ export const MOCK_PART1_KEYWORDS: Record<string, readonly (readonly string[])[]>
   ],
 };
 
-/** Words of each picture of Part 1.2's Question 4, and words that make a comparison. */
+/** Words of each picture of Part 1.2's Question 4. */
 const PICTURE_WORDS: readonly (readonly string[])[] = [
   ["market", "stall", "seller", "outside", "fruit", "vegetables", "bag", "street"],
   ["supermarket", "shelves", "trolley", "inside", "packets", "bottles", "checkout", "aisle"],
 ];
-const COMPARISON = /\b(but|whereas|while|both|different|difference|bigger|smaller|than|unlike|however|instead)\b/i;
 
 export const MOCK_PART1_BARE_MAX_WORDS = 6;
 
@@ -53,7 +53,7 @@ export function mockPart1Output(input: EvaluationInput): MultilevelModelOutput {
   const statuses = config.question_statuses;
   const sentences = transcript.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => evidenceTokens(s).length >= 1);
   const words = new Set(evidenceTokens(transcript));
-  const keywordLists = MOCK_PART1_KEYWORDS[task.id] ?? task.prompts.map((p) => evidenceTokens(p).filter((w) => w.length > 4));
+  const keywordLists = MOCK_PART1_KEYWORDS[task.id] ?? part11MockKeywords(task.id) ?? task.prompts.map((p) => evidenceTokens(p).filter((w) => w.length > 4));
 
   // A rough level from length and variety, scaled to the part's own speaking time (Part 2's thresholds are for 120 s).
   const scale = task.speakingSeconds / 120;
@@ -86,13 +86,11 @@ export function mockPart1Output(input: EvaluationInput): MultilevelModelOutput {
       }
       const hint = task.delivery?.questions[index]?.partialHint;
       if (index === 0 && status !== "missing") {
+        // "What can you see in these pictures?" (the exam's wording): both pictures needed; comparing is welcome, not required.
         const both = PICTURE_WORDS.every((list) => list.some((w) => words.has(w)));
-        // A comparison: a sentence about the pictures with a comparing word ("but", "bigger", "both" …).
-        const pictureWords = PICTURE_WORDS.flat();
-        const compared = sentences.some((s) => COMPARISON.test(s) && evidenceTokens(s).some((w) => pictureWords.includes(w)));
-        if (!both || !compared) {
+        if (!both) {
           status = "partial";
-          note = `Development estimate: ${both ? "you describe both pictures but don't compare them" : "you describe only one picture"}. Next time, ${hint ?? "compare the two pictures"}.`;
+          note = `Development estimate: you describe only one picture. Next time, ${hint ?? "talk about both pictures"}.`;
         }
       }
     }

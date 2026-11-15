@@ -125,7 +125,7 @@ test("Part 1.2: 45 + 30 + 30 s from the content, offsets follow", async ({ page 
   await page.goto(`/dev/part1-player?task=b1-part1-2-shopping&timeScale=${SCALE}`);
   await expect(page.getByTestId("content-timings")).toContainText("45 s · 30 s · 30 s (preparation 10 s · 5 s · 5 s)");
   await page.getByRole("button", { name: "Start" }).click();
-  await expect(page.getByTestId("question-text")).toHaveText("Look at the two pictures. Describe them and say how they are different.");
+  await expect(page.getByTestId("question-text")).toHaveText("What can you see in these pictures?");
   const offsets = await readOffsets(page);
   expect(offsets).toHaveLength(3);
   expect(offsets[1]! - offsets[0]!).toBeGreaterThan(2050); // 45 s × 0.05 = 2.25 s

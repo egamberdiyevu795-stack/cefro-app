@@ -118,7 +118,7 @@ describe("Part 1 attempts", () => {
     const result = (await getAttemptViewForUser(USER, created.id)).evaluation!.result as MultilevelResult;
     expect(result.rubric_id).toBe("multilevel-q4-6");
     expect(result.assessment.questions[0].status).toBe("partial");
-    expect(result.assessment.questions[0].note).toContain("compare the two pictures");
+    expect(result.assessment.questions[0].note).toContain("talk about both pictures");
     expect(result.assessment.questions[2].status).toBe("missing");
     expect(result.retry_focus.some((f) => /^Answer question 6: /.test(f.objective))).toBe(true);
   });

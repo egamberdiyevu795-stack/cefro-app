@@ -1,13 +1,15 @@
 import type { SpeakingTask } from "@/domain/speaking/task";
 import { PART1_QUESTION_AUDIO, part1AudioDir } from "./question-audio";
 
-const AUDIO = part1AudioDir("b1-part1-2-shopping", 1);
+const AUDIO = part1AudioDir("b1-part1-2-shopping", 2);
 
 /** Spoken before Question 4 (our own wording), then the sample chime. */
-const INTRO = "Part 1.2. Now you will compare two pictures, and then answer two more questions about them. Start speaking when you hear this sound.";
+const INTRO = "Part 1.2. Now you will look at two pictures and answer three questions about them. Start speaking when you hear this sound.";
 
 const QUESTIONS = [
-  "Look at the two pictures. Describe them and say how they are different.",
+  // The exam's own words (owner decision 2026-11-15, replacing our "Look at the two pictures. Describe them and say how they
+  // are different."). Version 2.
+  "What can you see in these pictures?",
   "Why do many people like shopping at local markets?",
   "Why do some people prefer big supermarkets?",
 ];
@@ -26,7 +28,7 @@ const CEFRO_PICTURE = {
  */
 export const b1Part12Shopping: SpeakingTask = {
   id: "b1-part1-2-shopping",
-  version: 1,
+  version: 2,
   level: "B1",
   part: 1,
   taskType: "picture_questions",
@@ -67,7 +69,7 @@ export const b1Part12Shopping: SpeakingTask = {
         audio: `${AUDIO}/q4.wav`,
         prepSeconds: 10,
         speakingSeconds: 45,
-        partialHint: "compare the two pictures",
+        partialHint: "talk about both pictures",
       },
       { text: QUESTIONS[1], audio: `${AUDIO}/q5.wav`, prepSeconds: 5, speakingSeconds: 30 },
       { text: QUESTIONS[2], audio: `${AUDIO}/q6.wav`, prepSeconds: 5, speakingSeconds: 30 },
@@ -77,8 +79,8 @@ export const b1Part12Shopping: SpeakingTask = {
   evaluatorGuidance: [
     "Picture A shows a small open-air market: a seller behind a wooden stall of fresh fruit and vegetables, a customer with a cloth bag, outdoors.",
     "Picture B shows a large supermarket: long shelves of packaged goods and bottles, bright lights, a man pushing a full trolley indoors.",
-    "Question 4 (the student's first question) is on topic when the student describes BOTH pictures and compares them. Differences that count as a comparison: outdoors vs indoors, small vs big, fresh / loose food vs packets and bottles, talking to a seller vs serving yourself, a cloth bag vs a trolley, busy street vs quiet aisle.",
-    "Question 4 is partial when the student describes only one picture, or describes both without comparing them.",
+    "Question 4 (the student's first question, 'What can you see in these pictures?') is on topic when the student describes BOTH pictures. Comparing them is welcome and is good evidence for language and cohesion, but it is not needed for on topic: outdoors vs indoors, small vs big, fresh / loose food vs packets and bottles, talking to a seller vs serving yourself, a cloth bag vs a trolley.",
+    "Question 4 is partial when the student describes only one picture.",
     "Question 5 asks why people like local markets (e.g. fresh food, lower prices, bargaining, knowing the seller, supporting local farmers).",
     "Question 6 asks why some people prefer supermarkets (e.g. everything in one place, fixed prices, opening hours, parking, cards accepted, clean and cool inside).",
     "A bare one-sentence answer with no reason or detail (e.g. 'Because it is cheap.') is partial in Part 1.2: it counts, but the feedback asks for a reason or detail.",

@@ -15,7 +15,8 @@ export const POINT_IDS = ["F1", "F2", "F3", "A1", "A2", "A3"] as const;
 export type PointId = (typeof POINT_IDS)[number];
 export type Side = "for" | "against";
 
-export const SIDE_LABELS: Record<Side, string> = { for: "For", against: "Against" };
+/** What the student sees, as in the real exam (owner, 2026-11-15). Code and the model keep "for" / "against". */
+export const SIDE_LABELS: Record<Side, string> = { for: "Pros", against: "Cons" };
 
 export interface ArgumentPoint {
   id: PointId;
@@ -71,7 +72,7 @@ export function pointById(task: Pick<BalancedArgumentTask, "points">, id: PointI
 /** The student instructions (plan section 1), the same for every topic. */
 export const ARGUMENT_INSTRUCTIONS = [
   "You have 1 minute to prepare. You may make notes.",
-  "Choose two points from FOR and two from AGAINST.",
+  "Talk about two points from the Pros and two from the Cons.",
   "Speak for up to 2 minutes. Explain each point in your own words with a reason or an example.",
   "Don't read the points out: the list is a prompt, not your answer.",
 ];

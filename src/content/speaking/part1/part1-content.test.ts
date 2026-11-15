@@ -7,8 +7,19 @@ import { totalSpeakingSeconds } from "@/domain/speaking/question-sequence";
 import { examPartOf } from "@/domain/speaking/exam-part";
 import { toPublicTask } from "@/domain/speaking/task";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
-import { PART1_SPEAKING_TASKS, PART1_TASKS, getPart1Task } from ".";
+import { PART1_RETIRED_TASKS, PART1_SPEAKING_TASKS, PART1_TASKS as LISTED_TASKS, getPart1Task, toQuestionSequenceTask } from ".";
 import { PART1_AUDIO_FILES } from "./question-audio";
+import { part11Question, spokenQuestionText } from "./part1-1-bank";
+import { PART11_BANK_AUDIO_DIR, PART11_DEFAULT_SET, isPart11BankTaskId, part11BankAudioTexts, part11SetId } from "./part1-1-sets";
+
+// The listed tasks, the retired ones (still opened by id) and one Part 1.1 set (every set is checked in part1-1-sets.test.ts).
+const PART1_TASKS = [
+  ...LISTED_TASKS,
+  ...PART1_RETIRED_TASKS.map(toQuestionSequenceTask),
+  getPart1Task(part11SetId([4, 13, 9]))!,
+];
+/** Where a task's audio lives: its own folder, or the bank's (shared by every Part 1.1 set). */
+const audioDirOf = (task: { id: string; version: number }) => (isPart11BankTaskId(task.id) ? PART11_BANK_AUDIO_DIR : `/audio/speaking/part1/${task.id}/v${task.version}`);
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const readme = fs.readFileSync(path.join(PUBLIC_DIR, "tasks", "README.md"), "utf8");
@@ -32,12 +43,13 @@ describe("Part 1 content: official timings (docs/part1-plan.md §1, decision 13)
 
   it.each(PART1_TASKS.map((t) => [t.id, t] as const))("%s: opens with a spoken introduction that ends with the chime sample", (_id, task) => {
     expect(task.intro?.text).toMatch(/Start speaking when you hear this sound\.$/);
-    expect(task.intro?.audio).toBe(`/audio/speaking/part1/${task.id}/v${task.version}/intro.wav`);
+    expect(task.intro?.audio).toBe(`${audioDirOf(task)}/intro.wav`);
     expect(PART1_AUDIO_FILES.find((f) => f.path === task.intro!.audio)?.text).toBe(task.intro!.text);
   });
 
-  it("there is at least one task for each part", () => {
-    expect(PART1_TASKS.map((t) => t.part).sort()).toEqual(["1.1", "1.2"]);
+  it("there is one task list entry for each part (Part 1.1 is the question bank)", () => {
+    expect(LISTED_TASKS.map((t) => t.part).sort()).toEqual(["1.1", "1.2"]);
+    expect(LISTED_TASKS[0]!.questions.map((q) => q.text)).toEqual(PART11_DEFAULT_SET.map((n) => part11Question(n)!.text));
   });
 
   it.each(PART1_SPEAKING_TASKS.map((t) => [t.id, t] as const))("%s: the task's own totals match its questions", (_id, task) => {
@@ -62,12 +74,14 @@ describe("Part 1 content: tasks, rubrics, release switch", () => {
     for (const t of PART1_SPEAKING_TASKS) expect(getSpeakingTask(t.id)).toBe(t);
   });
 
-  it("Question 4's partial hint is exactly 'compare the two pictures' (shown word for word)", () => {
-    for (const t of part12) expect(t.delivery!.questions[0].partialHint).toBe("compare the two pictures");
+  it("Question 4 is the exam's own 'What can you see in these pictures?'; its partial hint is 'talk about both pictures' (word for word)", () => {
+    for (const t of part12) expect(t.delivery!.questions[0].text).toBe("What can you see in these pictures?");
+    for (const t of part12) expect(t.delivery!.questions[0].partialHint).toBe("talk about both pictures");
   });
 
   it("no task reuses the official sample questions (decision 9)", () => {
-    const official = [/walking over driving/i, /car of their own/i, /what do you see in these pictures/i];
+    // Question 4 of Part 1.2 uses the exam's own "What can you see in these pictures?" (owner decision 2026-11-15).
+    const official = [/walking over driving/i, /car of their own/i];
     for (const t of PART1_SPEAKING_TASKS) for (const p of t.prompts) for (const o of official) expect(p).not.toMatch(o);
   });
 
@@ -123,16 +137,19 @@ describe("Part 1 content: audio files", () => {
     const made = new Map(PART1_AUDIO_FILES.map((f) => [f.path, f.text]));
     for (const task of PART1_TASKS) {
       for (const q of task.questions) {
-        expect(made.get(q.audio), q.audio).toBe(q.text);
-        // Versioned with the task: a new task version gets new files.
-        expect(q.audio.startsWith(`/audio/speaking/part1/${task.id}/v${task.version}/`)).toBe(true);
+        // The voice reads the list's "a / b" as "a or b" (Part 1.1 bank); every other text is spoken as written.
+        expect(made.get(q.audio), q.audio).toBe(spokenQuestionText(q.text));
+        // Versioned with the task (or the bank): a new version gets new files.
+        expect(q.audio.startsWith(`${audioDirOf(task)}/`)).toBe(true);
       }
     }
-    // Plus one introduction per task.
-    expect(made.size).toBe(PART1_TASKS.reduce((n, t) => n + t.questions.length + 1, 0));
+    // One file per question and one introduction per fixed task, plus the bank's 30 questions and its introduction.
+    const fixed = [...LISTED_TASKS, ...PART1_RETIRED_TASKS.map(toQuestionSequenceTask)].filter((t) => !isPart11BankTaskId(t.id));
+    expect(made.size).toBe(fixed.reduce((n, t) => n + t.questions.length + 1, 0) + part11BankAudioTexts().length);
+    for (const f of part11BankAudioTexts()) expect(made.get(f.path), f.path).toBe(f.text);
   });
 
-  it("each audio file is real speech, not a placeholder: a WAV of 1.5–8 s (introductions up to 25 s)", () => {
+  it("each audio file is real speech, not a placeholder: a WAV of 0.9–8 s (introductions up to 25 s)", () => {
     const seconds = (src: string) => {
       const buf = fs.readFileSync(path.join(PUBLIC_DIR, src));
       expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");
@@ -146,7 +163,7 @@ describe("Part 1 content: audio files", () => {
         expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");
         const byteRate = buf.readUInt32LE(28);
         const seconds = (buf.length - 44) / byteRate;
-        expect(seconds, q.audio).toBeGreaterThan(1.5);
+        expect(seconds, q.audio).toBeGreaterThan(0.9);
         expect(seconds, q.audio).toBeLessThan(8);
       }
     }
@@ -154,6 +171,7 @@ describe("Part 1 content: audio files", () => {
 
   it("ids are unique and resolvable", () => {
     expect(new Set(PART1_TASKS.map((t) => t.id)).size).toBe(PART1_TASKS.length);
-    for (const task of PART1_TASKS) expect(getPart1Task(task.id)).toBe(task);
+    for (const task of LISTED_TASKS) expect(getPart1Task(task.id)).toBe(task);
+    for (const task of PART1_TASKS) expect(getPart1Task(task.id)).toEqual(task);
   });
 });

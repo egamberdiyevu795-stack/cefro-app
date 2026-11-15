@@ -36,7 +36,7 @@ import { getDb } from "@/server/db/client";
 import { classMembers, classMocks, examPasses, practiceSessions, users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
 import { newId, nowIso } from "@/server/ids";
-import { finishMock, getMock, mockTasksForPart, planMockTasks, resolvePart11Pick, type MockView } from "@/server/sessions/mock-service";
+import { finishMock, getMock, mockTasksForPart, pickForPart, planMockTasks, resolvePart11Pick, type MockView } from "@/server/sessions/mock-service";
 import { notFound, openMembers, ownOpenClass } from "@/server/teacher/teacher-store";
 import { verifyPin } from "./pin";
 
@@ -115,8 +115,8 @@ export async function suggestPaper(teacherId: string, classId: string, random: (
   const histories = await Promise.all(members.map((m) => repo.listAttemptsForUser(m.studentUserId)));
   const history = histories.flat().map((r) => ({ taskId: r.attempt.taskId, createdAt: r.attempt.createdAt }));
   const suggested = suggestClassPaper((part) => mockTasksForPart(part), history, random);
-  // Part 1.1: a frequency-weighted question set (one set for the whole class), not the bank's entry.
-  const paper = suggested["1.1"] ? { ...suggested, "1.1": resolvePart11Pick(suggested["1.1"], history, random) } : suggested;
+  // Part 1.1 (a question set) and Part 3 (a topic) are picked by how often the exam asks them, one for the whole class.
+  const paper = { ...suggested, "1.1": pickForPart("1.1", history, random) ?? suggested["1.1"], "3": pickForPart("3", history, random) ?? suggested["3"] };
   return MOCK_PARTS.flatMap((part) => (paper[part] ? [{ part, taskId: paper[part]!, title: getAnySpeakingTask(paper[part]!)?.title ?? paper[part]! }] : []));
 }
 

@@ -1,3 +1,4 @@
+import { weightedPick } from "./weighted-pick";
 import { EXAM_PART_IDS, type ExamPartId } from "./exam-part";
 
 /*
@@ -85,6 +86,31 @@ export interface PickableTask {
 export interface TaskHistory {
   taskId: string;
   createdAt: string;
+}
+
+/**
+ * A weighted random task (`weight`: how often the exam asks it), leaving out the tasks of the latest `recent` attempts in
+ * `history` (and never every task). Used for Part 3, whose topics come up by frequency (owner decision 2026-11-15) rather
+ * than in turn: a frequent topic can come back after a few mocks, a rare one stays rare.
+ */
+export function pickWeightedTask<T extends PickableTask>(
+  tasks: readonly T[],
+  weight: (task: T) => number,
+  history: readonly TaskHistory[],
+  random: () => number = Math.random,
+  recent = 3,
+): T | null {
+  if (tasks.length === 0) return null;
+  const ids = new Set(tasks.map((t) => t.id));
+  const latest = [...history]
+    .filter((h) => ids.has(h.taskId))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const avoid = new Set<string>();
+  for (const h of latest) {
+    if (avoid.size >= Math.min(recent, tasks.length - 1)) break;
+    avoid.add(h.taskId);
+  }
+  return weightedPick(tasks.filter((t) => !avoid.has(t.id)), weight, random);
 }
 
 /**

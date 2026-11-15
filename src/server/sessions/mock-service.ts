@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { getAnySpeakingTask, listAllSpeakingTasks } from "@/content/speaking";
-import { listArgumentTasks } from "@/content/speaking/part3";
+import { listArgumentTasks, part3TopicWeight } from "@/content/speaking/part3";
 import { PART11_BANK_ENTRY_ID, parsePart11SetId, pickPart11SetId } from "@/content/speaking/part1/part1-1-sets";
 import { examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
 import {
@@ -12,6 +12,7 @@ import {
   mockRefusal,
   nextMockPart,
   pickTaskForPart,
+  pickWeightedTask,
   type FinishedPart,
   type MockRefusal,
   type MockStatus,
@@ -241,10 +242,20 @@ export async function planMockTasks(
   const history = userId ? (await repo.listAttemptsForUser(userId)).map((r) => ({ taskId: r.attempt.taskId, createdAt: r.attempt.createdAt })) : [];
   const plan: Partial<Record<ExamPartId, string>> = {};
   for (const part of parts) {
-    const pick = pickTaskForPart(mockTasksForPart(part), history, random);
-    if (pick) plan[part] = resolvePart11Pick(pick.id, history, random);
+    const id = pickForPart(part, history, random);
+    if (id) plan[part] = id;
   }
   return plan;
+}
+
+/**
+ * The task for one part: Part 1.1 a frequency-weighted question set, Part 3 a frequency-weighted topic (not one of the
+ * latest three done), the other parts the task not done for longest (pickTaskForPart).
+ */
+export function pickForPart(part: ExamPartId, history: readonly { taskId: string; createdAt: string }[], random: () => number = Math.random): string | null {
+  if (part === "3") return pickWeightedTask(mockTasksForPart(part), (t) => part3TopicWeight(t.id), history, random)?.id ?? null;
+  const pick = pickTaskForPart(mockTasksForPart(part), history, random);
+  return pick ? resolvePart11Pick(pick.id, history, random) : null;
 }
 
 /**

@@ -228,3 +228,8 @@ test("Part 1 is not live: real pages are 404, the dashboard and home still say C
   await page.goto("/?mock=1");
   await expect(page.getByText("Part 1 · A1–B1").locator("..")).toContainText("Coming soon");
 });
+
+test("Part 1.1 card opens a fresh question set from the bank, keeping the query", async ({ page }) => {
+  await page.goto("/practice/speaking/a2-part1-1-questions?mock=1&timeScale=0.05");
+  await expect(page).toHaveURL(/\/practice\/speaking\/a2-part1-1-set-\d{2}-\d{2}-\d{2}\?mock=1&timeScale=0\.05$/);
+});

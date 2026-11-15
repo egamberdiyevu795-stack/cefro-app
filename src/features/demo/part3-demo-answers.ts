@@ -91,8 +91,44 @@ export const PART3_DEMO_ANSWERS: Record<string, Part3DemoAnswer> = {
 export const DEFAULT_POINTS: readonly PointId[] = ["F1", "F2", "A1", "A2"];
 
 /** The demo answer for a task, the chosen points and a variant; null for a task without a demo answer. */
-export function part3DemoTranscript(taskId: string, chosen: readonly PointId[], variant: Part3DemoVariant): string | null {
-  const answer = PART3_DEMO_ANSWERS[taskId];
+/**
+ * A plain demo answer made from a topic's own points, for the topics without a hand-written one (the Part 3 bank,
+ * 2026-11-15). Same shape and the same "first" mistake (AGAINST points stated, then argued against).
+ */
+export function templateDemoAnswer(statement: string, points: readonly { id: PointId; text: string }[]): Part3DemoAnswer {
+  const text = (id: PointId) => points.find((p) => p.id === id)?.text ?? "";
+  const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+  // Varied reasons and examples, so the demo's language reads like one student, not one sentence six times.
+  const support: Record<PointId, string> = {
+    F1: "because this affects ordinary families every single day. My neighbours, for instance, talk about it constantly.",
+    F2: "since the consequences can last for years. A friend of mine experienced exactly this situation last spring.",
+    F3: "which means society as a whole would benefit in the long run. Several countries have already shown that it works.",
+    A1: "because real life is rarely as simple as the rule suggests. My uncle, for example, faced this problem himself.",
+    A2: "since people value their freedom and their habits. In my city, many residents complained about similar changes.",
+    A3: "which is a practical difficulty that cannot simply be ignored. Experts in my country have warned about it repeatedly.",
+  };
+  const developed = Object.fromEntries(POINT_IDS.map((id) => [id, `${text(id)}, ${support[id]}`])) as Record<PointId, string>;
+  return {
+    intro: `The statement "${statement.replace(/\.$/, "")}" is a question that divides opinion, and I think both sides have a point.`,
+    developed,
+    rebutted: {
+      A1: `Some people say that ${lower(text("A1"))}, but in my view this problem is not so serious.`,
+      A2: `Some people say that ${lower(text("A2"))}, but I am not convinced by this at all.`,
+      A3: `Some people say that ${lower(text("A3"))}, but there are simple ways to deal with it.`,
+    },
+    turn: "That said, the arguments on the other side should not be dismissed.",
+    conclusion: "Having weighed up both sides, I would say the answer depends on how the idea is put into practice. On balance, a careful approach seems wisest.",
+  };
+}
+
+/** `topic`: the task's statement and points, for a topic with no hand-written answer (`templateDemoAnswer`). */
+export function part3DemoTranscript(
+  taskId: string,
+  chosen: readonly PointId[],
+  variant: Part3DemoVariant,
+  topic?: { statement: string; points: readonly { id: PointId; text: string }[] },
+): string | null {
+  const answer = PART3_DEMO_ANSWERS[taskId] ?? (topic ? templateDemoAnswer(topic.statement, topic.points) : undefined);
   if (!answer) return null;
   const ordered = POINT_IDS.filter((id) => chosen.includes(id));
   const forPoints = ordered.filter((id) => sideOf(id) === "for").map((id) => answer.developed[id]);

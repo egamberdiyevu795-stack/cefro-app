@@ -42,7 +42,7 @@ export function part3DemoSpec(key: string): Part3DemoSpec | null {
 }
 
 export function part3DemoTranscriptFor(spec: Part3DemoSpec): string {
-  return part3DemoTranscript(spec.task.id, spec.spoken, spec.variant) ?? "";
+  return part3DemoTranscript(spec.task.id, spec.spoken, spec.variant, spec.task) ?? "";
 }
 
 const cache = new Map<string, Promise<ArgumentEvaluation | null>>();

@@ -54,13 +54,16 @@ const noop = () => undefined;
 const CARS = "c1-part3-cars-in-city-centres";
 
 describe("Part 3 content", () => {
-  it("three v1 topics (plan decision 9), each with exactly F1–F3 and A1–A3, 1 min + 2 min, C1", () => {
-    expect(listArgumentTasks().map((t) => t.statement)).toEqual([
+  it("the three v1 topics (plan decision 9) plus the topic bank, each with exactly F1–F3 and A1–A3, 1 min + 2 min, C1", () => {
+    const statements = listArgumentTasks().map((t) => t.statement);
+    expect(statements).toEqual(expect.arrayContaining([
       "Cities should ban private cars from their centres.",
       "Children under 14 should not be allowed to own a smartphone.",
       "Governments should put a special tax on sugary drinks and fast food.",
-    ]);
-    for (const task of listArgumentTasks()) expect(argumentTaskProblems(task)).toEqual([]);
+    ]));
+    expect(listArgumentTasks()).toHaveLength(21);
+    expect(new Set(listArgumentTasks().map((t) => t.id)).size).toBe(21);
+    for (const task of listArgumentTasks()) expect(argumentTaskProblems(task), task.id).toEqual([]);
   });
 
   it("our own content: not the official sample's topic, none of the topics to avoid", () => {

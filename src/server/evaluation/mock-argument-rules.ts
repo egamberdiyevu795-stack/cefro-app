@@ -2,6 +2,7 @@ import "server-only";
 import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { POINT_IDS, type PointId } from "@/domain/speaking/argument-task";
 import type { PointStatus } from "@/domain/evaluation/q8/model-output";
+import { getArgumentTask } from "@/content/speaking/part3";
 
 /**
  * Mock-only rules for the Part 3 development evaluator (`mock-argument-model.ts`, which is the only importer). Real
@@ -64,9 +65,15 @@ export interface MockPointJudgement {
   development_evidence: string;
 }
 
+/** Topics without listed key phrases (the Part 3 bank): each point's own text is its key phrase. */
+function pointTextKeywords(taskId: string): Record<PointId, readonly string[]> | undefined {
+  const task = getArgumentTask(taskId);
+  return task ? (Object.fromEntries(task.points.map((p) => [p.id, [p.text]])) as unknown as Record<PointId, readonly string[]>) : undefined;
+}
+
 /** The mock judgement of each listed point, F1–A3 in order. Unknown task: every point not addressed. */
 export function mockJudgePoints(taskId: string, transcript: string): MockPointJudgement[] {
-  const keywords = MOCK_POINT_KEYWORDS[taskId];
+  const keywords = MOCK_POINT_KEYWORDS[taskId] ?? pointTextKeywords(taskId);
   const sentences = mockSentences(transcript);
   // Each sentence goes to the point with the most key-phrase hits (ties: the earlier point), or to none.
   const owner = sentences.map((sentence) => {

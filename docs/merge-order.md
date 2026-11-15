@@ -17,6 +17,10 @@ variable, no Gemini call; Part 1.1 and 1.2 stay off (`PART_LIVE`). Details in do
   (`resolvePart11Pick`, `pickPart11SetForUser`), `exam-store.ts` (paper check accepts any task of the part by id),
   the practice page (redirect), `mock-part1-rules.ts` and `features/demo/demo-answers.ts` (one fallback line each),
   `sample-frequency.ts` (key renamed).
+- **Part 3 topic bank:** 18 new topics with our own FOR / AGAINST points (`c1/part-3-bank.ts`), 21 topics in all; the
+  mock and the exam laptop pick Part 3 by frequency weight, never one of the latest three (docs/part3-topic-bank.md).
+  Small touches: `domain/speaking/full-mock.ts` (`pickWeightedTask`), `mock-argument-rules.ts` and
+  `features/demo/part3-demo-answers.ts` (fallbacks for topics with no hand-written mock data).
 - Two other branches were cut from the same tip at the same time (demo-data cleanup, result-page helpful button):
   expect small conflicts only in `features/demo/demo-answers.ts` if the demo-data branch edits `demoAnswerText`.
 

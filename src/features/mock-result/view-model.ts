@@ -4,8 +4,9 @@
  *
  * Top: the speaking-only estimate ("CEFRO: B2"), and "Your teacher: B2" beside it when a teacher has rated the parts the
  * rule needs. Then one row per part, then the biggest fix across the mock. Never a 0–75 or 0–30 score, never Passed / Failed,
- * never "certificate level" (docs/official-scale.md, section 5). A 0-75 speaking score appears only here, on the full mock, and
- * only when all four parts have a mark (`estimateMockSpeaking`); it is always labelled an estimate by the line under it.
+ * never "certificate level" (docs/official-scale.md, section 5). The level still comes from the official 0-75 table when all four
+ * parts have a mark (`estimateMockSpeaking`), but the student never sees the number: owner decision 15 Nov 2026, the level leads
+ * and a precise "49 / 75" from practice bands reads more official than it is. Teachers still see it (features/teacher/mock-view.ts).
  */
 import { placeLabel } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
@@ -26,8 +27,6 @@ export interface LevelTile {
   /** "CEFRO" or "Your teacher". */
   name: string;
   value: EstimatedLevel | null;
-  /** The official 0-75 speaking score for the tile ("Speaking: 58 / 75"); null when it cannot be computed (full mock only). */
-  score: number | null;
 }
 
 export type Headline =
@@ -172,8 +171,8 @@ export function buildMockResultView(source: MockResultSource): MockResultView {
     notFinishedNote: source.status === "not_finished" ? "Not finished. This mock took longer than 24 hours, so it is closed. The parts you finished keep their results." : null,
     headline,
     levels: [
-      { name: "CEFRO", value: estimate.kind === "ready" ? estimate.level : null, score: estimate.kind === "ready" ? estimate.score : null },
-      ...(teacher ? [{ name: "Your teacher", value: teacher.level, score: teacher.score }] : []),
+      { name: "CEFRO", value: estimate.kind === "ready" ? estimate.level : null },
+      ...(teacher ? [{ name: "Your teacher", value: teacher.level }] : []),
     ],
     line: SPEAKING_ONLY_LINE,
     rows: parts.map((p) => ({

@@ -34,7 +34,7 @@ describe("the estimate on the page", () => {
     const view = buildMockResultView(source(four([3, 3, 4, 4])));
     expect(view.headline).toEqual({ kind: "level", level: "B2" });
     // Bands 3 + 3 + 4 + 4 = raw 14 -> 51 / 75 (official table) -> B2 (official bands).
-    expect(view.levels).toEqual([{ name: "CEFRO", value: "B2", score: 51 }]);
+    expect(view.levels).toEqual([{ name: "CEFRO", value: "B2" }]);
     expect(view.line).toBe("Speaking only. An estimate from this mock, not an official UZBMB score.");
     expect(view.title).toBe("Mock exam · 11.11.26");
   });
@@ -52,7 +52,7 @@ describe("the estimate on the page", () => {
     const parts = [scored("1.1", 4), scored("1.2", 3), scoring("2"), { ...scored("3", 0), state: "not_scored" as const, reason: "ai_pending" as const, band: null, fix: null }];
     const view = buildMockResultView(source(parts));
     expect(view.headline).toEqual({ kind: "not_ready", title: "Estimate not ready yet", reason: "Part 2 is still being scored · Part 3 has no AI score yet." });
-    expect(view.levels).toEqual([{ name: "CEFRO", value: null, score: null }]);
+    expect(view.levels).toEqual([{ name: "CEFRO", value: null }]);
     const unfinished = buildMockResultView(source([scored("1.1", 4), NOT_DONE_PART("1.2"), NOT_DONE_PART("2"), NOT_DONE_PART("3")], "not_finished"));
     expect(unfinished.headline).toMatchObject({ kind: "not_ready", reason: "Part 1.2 was not done · Part 2 was not done · Part 3 was not done." });
     // A part that only Part 1.1 lacks does not stop the estimate: the rule does not read it.
@@ -67,8 +67,8 @@ describe("two levels side by side", () => {
     const view = buildMockResultView(source(parts));
     // The teacher rated 1.2, 2 and 3 only (not Part 1.1): no score from their marks, only the interim level.
     expect(view.levels).toEqual([
-      { name: "CEFRO", value: "B2", score: 51 },
-      { name: "Your teacher", value: "B2", score: null },
+      { name: "CEFRO", value: "B2" },
+      { name: "Your teacher", value: "B2" },
     ]);
     expect(view.rows.map((r) => r.teacherLevel)).toEqual([null, "B2", "B2", "B2"]);
   });
@@ -77,7 +77,8 @@ describe("two levels side by side", () => {
     // The teacher rated every part (5 + 5 + 5 + 5 = raw 20 -> 71 / 75 -> C1); the estimate stays ours (raw 14 -> 51 -> B2).
     const parts = four([3, 3, 4, 4]).map((p) => ({ ...p, teacher: p.part === "3" ? { band: 5, level: "C1" } : rated(5) }));
     const view = buildMockResultView(source(parts));
-    expect(view.levels.map((l) => [l.name, l.value, l.score])).toEqual([["CEFRO", "B2", 51], ["Your teacher", "C1", 71]]);
+    expect(view.levels.map((l) => [l.name, l.value])).toEqual([["CEFRO", "B2"], ["Your teacher", "C1"]]);
+    expect(teacherEstimate(parts)).toEqual({ level: "C1", score: 71 }); // the number is kept for the teacher view and records
   });
 
   it("shows nothing about a teacher when nobody rated, or when the rule's parts are only partly rated", () => {
@@ -93,8 +94,8 @@ describe("two levels side by side", () => {
     const parts = [scored("1.1", 3), { ...scored("1.2", 3), teacher: rated(3) }, { ...scored("2", 3), teacher: rated(3) }, { ...scoring("3"), teacher: rated(4) }];
     const view = buildMockResultView(source(parts));
     expect(view.levels).toEqual([
-      { name: "CEFRO", value: null, score: null },
-      { name: "Your teacher", value: "B2", score: null },
+      { name: "CEFRO", value: null },
+      { name: "Your teacher", value: "B2" },
     ]);
   });
 
@@ -202,19 +203,17 @@ describe("the demo mock (mock mode) goes through the real evaluator types", () =
     expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
     expect(html).not.toMatch(/\bpassed\b|\bfailed\b|certificate/i);
     expect(html).not.toMatch(/\b\d{1,3}\s?\/\s?(30|120)\b/);
-    // The official 0-75 score appears only when all four parts are scored, and is labelled an estimate by the line under it.
-    const full = options.state === undefined || options.state === "finished";
-    expect(/Speaking: \d{1,2} \/ 75/.test(html)).toBe(full);
+    // The student never sees the 0-75 number (owner decision 15 Nov 2026): the level leads.
+    expect(html).not.toMatch(/\/\s?75\b/);
     expect(html).toContain("Speaking only. An estimate from this mock, not an official UZBMB score.");
   });
 
-  it("the demo with a teacher shows 'CEFRO: B1' and 'Your teacher: B2' with their /75 scores, next to each other", async () => {
+  it("the demo with a teacher shows 'CEFRO: B1' and 'Your teacher: B2' next to each other, with no /75 number", async () => {
     const html = render(await demoMockResult({ teacher: true }));
     // Demo bands 3 + 3 + 3 + 4 = raw 13 -> 49 -> B1; the demo teacher gives Part 2 one band more: raw 14 -> 51 -> B2.
     expect(html).toMatch(/CEFRO:<\/span> <span[^>]*>B1<\/span>/);
     expect(html).toMatch(/Your teacher:<\/span> <span[^>]*>B2<\/span>/);
-    expect(html).toContain("Speaking: 49 / 75");
-    expect(html).toContain("Speaking: 51 / 75");
+    expect(html).not.toContain("/ 75");
     expect(html.indexOf("CEFRO:")).toBeLessThan(html.indexOf("Your teacher:"));
     const without = render(await demoMockResult());
     expect(without).not.toContain("Your teacher");
@@ -253,28 +252,27 @@ describe("the level a teacher gave the whole mock (docs/v1-plan.md step 6)", () 
   it("a whole-mock level is shown even when the AI estimate is not ready: the teacher's level carries it", () => {
     const parts = four([3, 3, 4, 4]).map((p) => (p.part === "3" ? { ...p, state: "not_scored" as const, reason: "ai_pending" as const, band: null } : p));
     const view = buildMockResultView({ id: "m", status: "finished", createdAt: "2026-11-01T09:00:00.000Z", finishedAt: null, parts, teacherLevel: "B2" });
-    expect(view.levels).toEqual([{ name: "CEFRO", value: null, score: null }, { name: "Your teacher", value: "B2", score: null }]);
+    expect(view.levels).toEqual([{ name: "CEFRO", value: null }, { name: "Your teacher", value: "B2" }]);
   });
 });
 
-describe("the 0-75 speaking score (official UZBMB table), full mock only", () => {
-  it("is on the CEFRO tile only when all four parts have a band, and carries its level from the official bands", () => {
-    expect(buildMockResultView(source(four([5, 5, 5, 5]))).levels).toEqual([{ name: "CEFRO", value: "C1", score: 71 }]); // raw 20
-    expect(buildMockResultView(source(four([3, 3, 3, 4]))).levels).toEqual([{ name: "CEFRO", value: "B1", score: 49 }]); // raw 13
+describe("the 0-75 speaking score (official UZBMB table): used for the level, never shown to the student", () => {
+  it("gives the level from the official bands when all four parts have a band, and the page shows no number", () => {
+    expect(buildMockResultView(source(four([5, 5, 5, 5]))).levels).toEqual([{ name: "CEFRO", value: "C1" }]); // raw 20 -> 71 -> C1
+    expect(buildMockResultView(source(four([3, 3, 3, 4]))).levels).toEqual([{ name: "CEFRO", value: "B1" }]); // raw 13 -> 49 -> B1
     const html = renderToStaticMarkup(createElement(MockResult, { initial: source(four([3, 3, 4, 4])), demo: true, practiceHref: "/practice?mock=1" }));
-    expect(html).toContain("Speaking: 51 / 75");
+    expect(html).toMatch(/CEFRO:<\/span> <span[^>]*>B2<\/span>/);
+    expect(html).not.toMatch(/\/\s?75\b|Speaking: \d/);
     expect(html).toContain("Speaking only. An estimate from this mock, not an official UZBMB score.");
   });
 
-  it("falls back to the interim level, with no score, when Part 1.1 has no band", () => {
+  it("falls back to the interim level when Part 1.1 has no band", () => {
     const parts = [scoring("1.1"), scored("1.2", 3), scored("2", 3), scored("3", 3)];
-    const view = buildMockResultView(source(parts));
-    expect(view.levels).toEqual([{ name: "CEFRO", value: "B2", score: null }]);
-    expect(renderToStaticMarkup(createElement(MockResult, { initial: source(parts), demo: true, practiceHref: "/practice?mock=1" }))).not.toMatch(/\/ 75/);
+    expect(buildMockResultView(source(parts)).levels).toEqual([{ name: "CEFRO", value: "B2" }]);
   });
 
   it("a teacher's level for the whole mock has no score", () => {
-    const view = buildMockResultView({ ...source(four([3, 3, 4, 4])), teacherLevel: "C1" });
-    expect(view.levels[1]).toEqual({ name: "Your teacher", value: "C1", score: null });
+    expect(teacherEstimate(four([3, 3, 4, 4]), "C1")).toEqual({ level: "C1", score: null });
+    expect(buildMockResultView({ ...source(four([3, 3, 4, 4])), teacherLevel: "C1" }).levels[1]).toEqual({ name: "Your teacher", value: "C1" });
   });
 });

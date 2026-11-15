@@ -320,15 +320,23 @@ The conversion that was "still missing" (section 1.4, "Still missing"; section 5
 | 5 | 26 | 10.5 | 42 | 16 | 57 | | |
 
 - **Level** comes from the 0–75 score by the official bands (C1 65–75, B2 51–64, B1 38–50, below B1 0–37).
-- **Where it shows:** the full mock result ("Speaking: 49 / 75" under the level, only when all four parts have a band) and the teacher's
-  mock view (the app's score, and "Your marks" from the teacher's own part marks when every part is rated). **Never** on a single part's
-  result, History or the dashboard (those show the level only). The line "Speaking only. An estimate from this mock, not an official
+- **Where it shows:** only the teacher's mock view (the app's score, and "Your marks" from the teacher's own part marks when every part
+  is rated). **Students never see the number** (owner decision 2026-11-15, see below): the full mock result, a single part's result,
+  History and the dashboard show the level only. The table still decides the student's level. The line "Speaking only. An estimate from this mock, not an official
   UZBMB score." stays: the marks are our AI's, not an examiner's.
 - **The interim rule (section 5) is replaced** for complete mocks (`estimateMockSpeaking` in `mock-score.ts`). `estimateSpeakingLevel`
   stays only as a fallback where no score can be computed (Part 1.1 has no band): it gives a level, never a /75 number.
 - **Effect to know:** the official bands are stricter than the interim rule. Band 3 on Parts 1.1, 1.2 and 2 and band 4 on Part 3
   (raw 13) is **49 / 75, B1** (the interim rule said B2). B2 starts at raw 14.
 - **Still not official:** the certificate level averages four skills; this is speaking only.
+
+### Update 2026-11-15: the student sees the level, not the /75 number
+
+The owner did not like "Speaking: 49 / 75" on the student's mock result, and it is removed there. Reasons: the level is what a student
+plans around (B1 → B2), and a precise number built from our AI's practice bands reads more official than it is, which works against "a
+score you can trust". The table, `rawToSpeaking75`, `levelOfSpeaking75` and `estimateMockSpeaking().score` all stay: the level still
+comes from the official table and bands, and teachers still see the number on their mock view. To bring it back for students later,
+restore the `score` field on `LevelTile` in `features/mock-result/view-model.ts`.
 
 ---
 

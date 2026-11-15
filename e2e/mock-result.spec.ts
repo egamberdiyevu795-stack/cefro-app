@@ -50,14 +50,13 @@ test("the mock result at 390 px: level, the exact line, a row per part, the bigg
   await expect(page.getByRole("heading", { name: /^Part 2 · / })).toBeVisible({ timeout: 20_000 });
 });
 
-test("two levels side by side: 'CEFRO: B1' and 'Your teacher: B2' with their /75 scores, next to each other", async ({ page }) => {
+test("two levels side by side: 'CEFRO: B1' and 'Your teacher: B2' next to each other, with no /75 number", async ({ page }) => {
   await page.goto(`${RESULT}&teacher=1`);
   const ours = page.getByTestId("level-cefro");
   const theirs = page.getByTestId("level-teacher");
-  await expect(ours).toHaveText("CEFRO: B1"); // demo bands 3+3+3+4 = raw 13 -> 49 / 75 (official table)
+  await expect(ours).toHaveText("CEFRO: B1"); // demo bands 3+3+3+4 = raw 13 -> 49 on the official table -> B1
   await expect(theirs).toHaveText("Your teacher: B2");
-  await expect(page.getByTestId("level-cefro-score")).toHaveText("Speaking: 49 / 75");
-  await expect(page.getByTestId("level-teacher-score")).toHaveText("Speaking: 51 / 75"); // the demo teacher gives Part 2 one band more
+  await expect(page.getByTestId("mock-level")).not.toContainText("/ 75"); // the student never sees the 0-75 number (owner, 15 Nov)
   const [a, b] = [await ours.boundingBox(), await theirs.boundingBox()];
   expect(Math.abs(a!.y - b!.y)).toBeLessThan(8); // the same line
   expect(b!.x).toBeGreaterThan(a!.x + a!.width - 1); // beside, never on top

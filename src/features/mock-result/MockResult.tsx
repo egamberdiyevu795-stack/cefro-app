@@ -114,11 +114,6 @@ function Tile({ tile }: { tile: LevelTile }) {
           <span className="text-lead font-medium text-fg">Estimate not ready yet</span>
         )}
       </p>
-      {tile.value && tile.score !== null && (
-        <p className="text-body font-medium text-fg" data-testid={`${testId}-score`}>
-          Speaking: {tile.score} / 75
-        </p>
-      )}
     </div>
   );
 }

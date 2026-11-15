@@ -57,6 +57,24 @@ second run of the six would cost about $0.25.
 
 **Spend for this work:** about $1.40 (Part 2 $1.08, Part 1 $0.33), plus the one failed call if it was billed.
 
+**Stability run (15 Nov 2026, second run of all six, evaluator 3.8.0, `gemini-3.8-flash`, thinking high):** 6 of 6 exact
+again, so every Part 1 anchor has now given its expected band on every run since the 1.2 fix (1.2-middle 3 of 3). Question
+statuses and levels match the first run. Saved: `test/fixtures/live-3.8-flash-eval3.8/part1-anchors-2026-11-15T04-18-38-841Z.*`.
+
+| Part 1 anchor | Expected | Band | Statuses | Levels (g/v/f/c) | Time | Output tokens | Cost |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1.1-low | 1 | 1 | on_topic, missing, off_topic | A1/A1/A1/- | 133 s | 18.1k | $0.072 |
+| 1.1-middle | 3 | 3 | on_topic, on_topic, off_topic | A2/A2/A2/- | 61 s | 8.0k | $0.034 |
+| 1.1-high | 5 | 5 | all on_topic | above_A2 ×3/- | 34 s | 4.5k | $0.021 |
+| 1.2-low | 1 | 1 | on_topic, missing, missing | A2 ×4 | 64 s | 8.8k | $0.038 |
+| 1.2-middle | 2 | 2 | all on_topic | A2/A2/B1/B1 | 77 s | 9.1k | $0.039 |
+| 1.2-high | 5 | 5 | all on_topic | above_B1 ×4 | 48 s | 6.5k | $0.029 |
+
+- **Watch:** 1.1-low (the shortest answer) took 133 s and 18.1k output tokens this time, against 39 s and 4.9k on the first
+  run; the band did not move. The model's thinking length varies a lot run to run on the hardest-to-read answers, so time
+  and cost per Part 1.1 scoring can be up to about 3× the average. Output cap is 24k, so this is still inside it.
+- **Spend:** $0.23 for this run. Part 1 live total so far about $0.56.
+
 ## Live run on gemini-3.8-flash (15 Nov 2026)
 
 **Result:** the Part 2 anchors hold on the production model, issue 5 is fixed by one prompt rule (evaluator 3.7.0), and

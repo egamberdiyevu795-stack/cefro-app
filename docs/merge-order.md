@@ -969,7 +969,7 @@ real pages and routes are a 404 and everything works only in `?mock=1` and in th
 - **Tests:** `domain/teacher/exam-laptop.test.ts`, `app/api/teacher/exam-laptop.test.ts`, `server/db/migrations.test.ts` (0010), `owner-delete-script.test.ts`, `app/api/account/account-routes.test.ts`,
   `features/teacher/teacher-pages.test.ts` (updated), `app/api/mock-exams.test.ts` (passes a request), `e2e/exam-laptop.spec.ts`, `e2e/exam-laptop-real.spec.ts`.
 
-## After `claude/p1-stability`: `claude/feedback-helpful` ("Was this feedback helpful?", **adds migration `0011`**)
+## After `claude/p1-stability`: `claude/project-thread-5mdcqy` ("Was this feedback helpful?", **adds migration `0011`**)
 
 Cut from `claude/p1-stability` (`5118cf8`, the chain tip on 2026-11-15), so it comes **after it**, merge commit, no squash. **No Gemini call, no new variable.**
 

@@ -16,6 +16,9 @@ import { FixedWindowLimiter } from "@/server/limits/fixed-window";
  *  - Sign-in also counts failures per client IP (100 per 15 minutes): it only stops one address trying many accounts,
  *    and is high because a classroom shares one address, so one student's typos never lock out the class.
  *  - Sign-up counts every attempt per IP (30 per hour, so a class of 30 can sign up together) and in total (300).
+ *  - "Forgot password" counts every request: 3 emails per address per hour (so nobody can flood a classmate's inbox)
+ *    and 30 per client IP per hour (a class on one Wi-Fi). Setting the new password counts attempts per IP (30 per
+ *    15 minutes); its token is long and random, so this only stops noise.
  * The client IP comes only from a header a trusted proxy sets (`clientIp`: Vercel's `x-real-ip`); a visitor's own
  * `X-Forwarded-For` is ignored outside test runs. The per-email limit and the global registration ceiling do not rely
  * on the IP at all.
@@ -31,6 +34,9 @@ interface Limiters {
   loginByIp: FixedWindowLimiter;
   registerByIp: FixedWindowLimiter;
   registerGlobal: FixedWindowLimiter;
+  resetEmailByEmail: FixedWindowLimiter;
+  resetEmailByIp: FixedWindowLimiter;
+  resetPasswordByIp: FixedWindowLimiter;
 }
 let limiters: Limiters | undefined;
 
@@ -43,6 +49,9 @@ export function authLimiters(): Limiters {
       loginByIp: new FixedWindowLimiter(env.LIMIT_LOGIN_FAILURES_PER_IP_15MIN, FIFTEEN_MIN),
       registerByIp: new FixedWindowLimiter(env.LIMIT_REGISTRATIONS_PER_IP_HOUR, HOUR),
       registerGlobal: new FixedWindowLimiter(env.LIMIT_REGISTRATIONS_GLOBAL_HOUR, HOUR),
+      resetEmailByEmail: new FixedWindowLimiter(3, HOUR),
+      resetEmailByIp: new FixedWindowLimiter(30, HOUR),
+      resetPasswordByIp: new FixedWindowLimiter(30, FIFTEEN_MIN),
     };
   }
   return limiters;
@@ -73,6 +82,17 @@ export function countPasswordFailure(email: string, ip: string): void {
   const key = accountKey(email);
   limits.loginByEmailAndIp.hit(`${key}|ip:${ip}`);
   limits.loginByEmail.hit(key);
+}
+
+/**
+ * After a password reset: forget the account's wrong-password counts (from every address), so a student who was locked
+ * out by their own guesses can sign in with the new password straight away.
+ */
+export function clearPasswordFailures(email: string): void {
+  const limits = authLimiters();
+  const key = accountKey(email);
+  limits.loginByEmail.forget((k) => k === key);
+  limits.loginByEmailAndIp.forget((k) => k.startsWith(`${key}|ip:`));
 }
 
 /** Test seam: forget all counters. */

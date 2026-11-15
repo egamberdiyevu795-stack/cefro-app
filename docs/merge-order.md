@@ -122,6 +122,13 @@ Only the three above and `full-mock` should print `NOT IN` (`full-mock` because 
 
 ---
 
+### Forgot password (`claude/project-thread-je2jm7`, 2026-11-15, no migration)
+
+From `claude/p1-stability` (`5118cf8`), in parallel with `brlw7w`, `5mdcqy` (migration 0011) and `naroeq`. It adds **no
+migration**, so it cannot clash with 0011. Merge it any time after `p1-stability`. Files it shares with the others are
+ordinary text changes (`e2e/no-dead-controls.spec.ts` page lists, `docs/launch-checklist.md` new section 14, `package.json` adds
+`nodemailer`). Production needs the SMTP variables in `docs/password-reset.md` before "Forgot password?" appears.
+
 ## Safe order
 
 | # | Branch | PR | Merge as | Rebase needed? |

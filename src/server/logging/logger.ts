@@ -13,7 +13,7 @@ type Context = Record<string, unknown>;
  * Credentials must never reach a log line, whatever error carried them. Any configured secret (database token and
  * address, signing secret, provider keys) is replaced in the serialised line.
  */
-const SECRET_VARIABLES = ["TURSO_AUTH_TOKEN", "TURSO_DATABASE_URL", "AUTH_SECRET", "GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
+const SECRET_VARIABLES = ["TURSO_AUTH_TOKEN", "TURSO_DATABASE_URL", "AUTH_SECRET", "SMTP_PASSWORD", "GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
 
 export function redactSecrets(line: string, env: NodeJS.ProcessEnv = process.env): string {
   const secrets = new Set<string>();

@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { and, eq, like } from "drizzle-orm";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
@@ -10,6 +11,8 @@ import { INSECURE_DEV_AUTH_SECRET } from "./secret";
 import { mergeAnonymousCookieIdentity } from "@/server/identity/convert-anonymous";
 import { AUTH_COOKIE_PREFIX, USER_COOKIE_NAME } from "@/server/identity/user-cookie";
 import { logger } from "@/server/logging/logger";
+import { clearPasswordFailures } from "./auth-limits";
+import { RESET_LINK_MINUTES, sendPasswordResetEmail } from "./password-reset";
 
 /**
  * The authentication boundary. Credentials, password hashing (scrypt), session tokens, cookie signing, origin
@@ -44,9 +47,20 @@ function createAuth(db: Db) {
       enabled: true,
       minPasswordLength: 8,
       maxPasswordLength: 128,
-      // No email can be sent yet, so addresses are NOT verified: documented limitation.
+      // Addresses are NOT verified (documented limitation): a student must be able to start without an inbox.
       requireEmailVerification: false,
       autoSignIn: true,
+      // "Forgot password" (server/auth/password-reset.ts, docs/password-reset.md). Reached only through
+      // /api/account/forgot-password and /api/account/reset-password, never through /api/auth.
+      sendResetPassword: async ({ user, url, token }) => sendPasswordResetEmail({ to: user.email, origin: new URL(url).origin, token }),
+      resetPasswordTokenExpiresIn: RESET_LINK_MINUTES * 60,
+      // A new password signs the account out everywhere (whoever knew the old one is out), and lifts its lock.
+      revokeSessionsOnPasswordReset: true,
+      // Other links still waiting in the inbox stop working too: one reset per request, nothing left to replay.
+      onPasswordReset: async ({ user }) => {
+        clearPasswordFailures(user.email);
+        await db.delete(authVerifications).where(and(like(authVerifications.identifier, "reset-password:%"), eq(authVerifications.value, user.id)));
+      },
     },
     session: {
       expiresIn: 60 * 60 * 24 * SESSION_DAYS,

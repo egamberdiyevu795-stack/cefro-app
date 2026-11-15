@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Notice, PillAction, TextField } from "@/components/ds";
+import { Notice, PillAction, TextField, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/domain/account";
+import { SIGN_IN } from "@/features/entry/content";
 
 /**
  * Sign-in / registration form. It only talks to the auth endpoints; the server decides everything (the browser never
@@ -24,8 +26,11 @@ import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/domain/account";
  * not an email address) still apply to any name a sign-up request sends.
  *
  * Mock mode (`mock`, the pages' `?mock=1`): the same form, but nothing is ever sent; submitting says so.
+ *
+ * `forgotHref` (sign in only): the "Forgot password?" link under the password, given only when this server can send the
+ * reset email (server/email/email.ts), so it is never a link to a dead end.
  */
-export function AuthForm({ mode, next, mock = false }: { mode: "login" | "register"; next: string; mock?: boolean }) {
+export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "login" | "register"; next: string; mock?: boolean; forgotHref?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [demoSent, setDemoSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -79,6 +84,13 @@ export function AuthForm({ mode, next, mock = false }: { mode: "login" | "regist
         maxLength={PASSWORD_MAX_LENGTH}
         hint={isRegister ? "At least 8 characters." : undefined}
       />
+      {!isRegister && forgotHref && (
+        <p className="-mt-2 flex justify-end">
+          <Link href={forgotHref} className={cx("inline-flex min-h-11 items-center px-1 text-body text-fg-muted underline underline-offset-4", styles.FOCUS_RING)}>
+            {SIGN_IN.forgot}
+          </Link>
+        </p>
+      )}
       {error && <Notice tone="alert">{error}</Notice>}
       {demoSent && <Notice>Demo mode: nothing was sent and no account was used.</Notice>}
       <PillAction type="submit" size="lg" disabled={busy || !ready} className="w-full">

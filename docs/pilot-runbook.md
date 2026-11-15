@@ -60,6 +60,7 @@ Vercel's logs which one.
 | `ANTHROPIC_API_KEY` | a key | Only if you set `EVALUATION_PROVIDER=anthropic` instead of Gemini. | console.anthropic.com → API keys. |
 | `PART_1_1_LIVE`, `PART_1_2_LIVE`, `PART_3_LIVE` | `true` | Opens that single part for practice at home. Default off ("Coming soon"). Not needed for the pilot. | Part 3's AI prompt has never been tested with a real model. |
 | `PART_2_LIVE` | `false` | Closes single Part 2 practice. Default is on. | Normally leave it alone. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Gmail settings | Switches on **Forgot password?** (the reset link is emailed). Without them the link is simply not shown. | Step by step in `docs/password-reset.md` (a new Gmail account with an app password, about 10 minutes). |
 
 How the switches read: only the words `true` or `1` (on) and `false` or `0` (off) count, in any capital letters. Anything
 else (a typo, "yes") is ignored and the default is used, which is **off**. If a switch seems to do nothing, check the

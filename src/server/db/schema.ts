@@ -41,7 +41,7 @@ export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   /** "anonymous": a browser's low-trust cookie identity. "registered": an account with credentials (see auth_accounts). */
   kind: text("kind", { enum: ["anonymous", "registered"] }).notNull().default("anonymous"),
-  /** Registered users only: lower-cased sign-in email. Unverified (no email is sent yet). Null for anonymous users. */
+  /** Registered users only: lower-cased sign-in email. Unverified (email is sent only for "Forgot password"). Null for anonymous users. */
   email: text("email"),
   name: text("name"),
   /** Required by the auth library's user model; profile images are not used. */
@@ -124,8 +124,8 @@ export const authAccounts = sqliteTable(
 );
 
 /**
- * Short-lived tokens for email verification and password reset. Part of the library's required schema; nothing writes to it
- * yet because CEFRO sends no email (see docs/ARCHITECTURE_DECISIONS.md).
+ * Short-lived tokens for email verification and password reset. Part of the library's required schema. "Forgot password"
+ * writes one row per link (`reset-password:<token>` → user id, 60 minutes, deleted when used: docs/password-reset.md).
  */
 export const authVerifications = sqliteTable(
   "auth_verifications",

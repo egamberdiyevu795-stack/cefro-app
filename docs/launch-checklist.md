@@ -282,3 +282,9 @@ tested with a real model, which is acceptable only while AI scoring is off.
 (`src/config/features.ts`, tests in `src/config/features.test.ts`). Defaults are unchanged: all off except Part 2. Set them in
 Vercel Production, then Redeploy. `docs/pilot-runbook.md` section 1 lists them with `CONSENT_REQUIRED` and `CRON_SECRET`. The
 `CEFRO_TEST_*` switches are still ignored in production builds and on Vercel.
+
+## 14. Forgot password (added on `claude/project-thread-je2jm7`)
+
+No migration. Production shows **Forgot password?** only once email is configured: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASSWORD`, `EMAIL_FROM` in Vercel Production, then Redeploy. Setup and troubleshooting: `docs/password-reset.md`.
+`SMTP_PASSWORD` is a secret (the logger redacts it).

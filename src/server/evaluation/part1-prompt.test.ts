@@ -65,10 +65,10 @@ describe("Part 1 prompt: everything from the rubric (docs/part1-plan.md §3, Pro
     expect(p12).toContain("above_B1, B1, A2, below_A2");
   });
 
-  it("Part 2's prompt hash is pinned (changed on purpose by evaluator 3.6.0: the sentence_fixes rules, docs/v1-plan.md step 5)", () => {
+  it("Part 2's prompt hash is pinned (changed on purpose by evaluator 3.7.0: the below-B1 vocabulary rule, docs/feedback-review.md issue 5)", () => {
     const i = input(part2, "I think so.");
     const plain = { ...i, metrics: computeSpeechMetrics("I think so.", 60_000, 120) };
-    expect(computePromptHash(plain, buildMultilevelEvaluationPrompt(plain))).toBe("h2:114e346517c0c0374717331ecd24b247143211c9b39a446fdab6807b94e27363");
+    expect(computePromptHash(plain, buildMultilevelEvaluationPrompt(plain))).toBe("h2:010ddc3d294b8e321e0e15fb379d802a2e0cf33a38d81a9798710da91a8b4fbb");
     expect(computePromptHash(input(part11), buildMultilevelEvaluationPrompt(input(part11)))).not.toBe(
       computePromptHash(input(part12), buildMultilevelEvaluationPrompt(input(part12))),
     );

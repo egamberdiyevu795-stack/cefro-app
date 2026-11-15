@@ -14,6 +14,51 @@ evaluator `speaking-evaluator/3.6.0` and `argument-evaluator/0.2.0` (v1-plan ste
 - **What students see:** these fields reach the result page directly. The goal is the first `retry_focus`, the one
   "Retry with this goal" carries; "Try instead" is the error's `correction`.
 
+## Live run on gemini-3.8-flash (15 Nov 2026)
+
+**Result:** the Part 2 anchors hold on the production model, issue 5 is fixed by one prompt rule (evaluator 3.7.0), and
+issues 1–4 still show up. Saved outputs: `test/fixtures/live-3.8-flash/` (report JSON + markdown per run; read them with
+`node scripts/check-feedback-review.mjs <report.json>`). High thinking, transcript only, `EVAL_STREAM=1` (see below).
+
+| Anchor (expected band) | Bands, evaluator 3.6.0 | Bands, evaluator 3.7.0 |
+| --- | --- | --- |
+| A0-below-b1 (0) | 0, 0, 0, 0, **2** | 0, 0, 0, 0, 0 |
+| A1-b1-only-q3 (1) | 1, 1, 1 | not rerun (rule cannot apply) |
+| A2-b1-all-three (2) | 2, 2, 2 | not rerun |
+| A3-b2-q3-missing (3) | 3, 3, 3 | not rerun |
+| A4-b2-all-three (4) | 4, 4, 4 | not rerun |
+| A5-above-b2 (5) | 5, 5, 5 | not rerun |
+| A0-memorized-off-topic (0) | 0, 0, 0 | not rerun |
+| A0-picture-only (0) | 0, 0, 0 | not rerun |
+
+- **Issue 5 (fixed, prompt only):** the band-2 run rated grammar below_B1 but vocabulary B1, quoting "know many thing",
+  "work in market" as B1 evidence. New rule: when grammar is below_B1, vocabulary B1 needs evidence quotes that are
+  themselves correct. It only applies when grammar is already below_B1, and no other anchor has a below_B1 grammar run,
+  so the other anchors were not rerun. No scorer change (option b not needed).
+- **Issues 1–4 on 3.8-flash** (24 runs of evaluator 3.6.0): issue 1 goal joins two issues 4 runs; issue 2 fluency claim
+  without audio 19 runs; issue 3 on-topic example 15 runs; issue 4 set phrase in a check 3 runs. Same picture as on
+  3.6-flash, so the proposed rules below are still needed (not applied in this run).
+- **Part 1.2 warning:** one live call on the 1.2-middle anchor (expected band 2) gave **band 0**, with 23.7k output tokens
+  and 162 s. Part 1 has had no live anchor run; run the six Part 1 anchors before Part 1 scores are shown to students.
+
+**Cost per scoring, measured** (gemini-3.8-flash, $0.75 / $3.75 per M tokens, introductory price until 31 Dec 2026, unverified):
+
+| Part | Runs | Cost per scoring | Time |
+| --- | --- | --- | --- |
+| 1.1 | 1 | $0.022 | 38 s |
+| 1.2 | 1 | $0.093 (23.7k output tokens, see warning above) | 162 s |
+| 2 | 29 | $0.034 average, $0.016–0.078 (weak answers cost the most) | 24–136 s |
+| 3 | 1 | $0.032 | 54 s |
+
+Transcript scoring of a full mock: about $0.12–0.18; with speech-to-text (~$0.04) and the audio step (not measured)
+plan on **about $0.20–0.25 per full mock**, double after 31 Dec. Thinking is 75–90 % of output tokens.
+
+**Sandbox note:** the Claude Code cloud sandbox's network proxy cuts a request that sends nothing for 30 s (HTTP 502
+"upstream request failed"), and a high-thinking scoring takes 25–160 s. Live runs from the sandbox therefore need
+`NODE_USE_ENV_PROXY=1 EVAL_STREAM=1 EVAL_SDK_RETRIES=0` (test/live/stream-fetch.ts streams the call, live tests only).
+The app itself on Vercel is not affected; but a 1.2 scoring of 162 s is close to the `EVALUATION_TIMEOUT_MS` default
+(180 s) and, with speech-to-text and the audio step in the same request, to the 300 s `maxDuration` of the process route.
+
 ## Plan for the next live run
 
 1. Run the Part 2 anchor set on `gemini-3.8-flash` with the **current** prompt, 3 runs per anchor, and save the full
@@ -206,7 +251,8 @@ comparison: the next run's `retry_review` would mark it "achieved" for any sente
 
 ## 5. A0-below-b1 run 1: grammar "Below B1 in almost every sentence", yet Band 2
 
-**Status:** to test live before changing the prompt, and retest on `gemini-3.8-flash` before touching the scorer.
+**Status:** fixed on 15 Nov 2026 by option a (prompt), evaluator 3.7.0: 5 of 5 runs band 0 on `gemini-3.8-flash`
+(was 4 of 5 on 3.6.0). See "Live run on gemini-3.8-flash" above.
 
 **Seen:** the same answer got band 2 twice and band 0 once.
 

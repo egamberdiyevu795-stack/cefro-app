@@ -47,7 +47,7 @@ describe("mock evaluators fill the list from the demo answers (the real evaluato
     const firstKey = demoPracticeKey(taskId, null);
     const one = (await demoEvaluation(firstKey))!;
     expect(one.evaluatorVersion).toBe(EVALUATOR_VERSION);
-    expect(EVALUATOR_VERSION).toBe("speaking-evaluator/3.6.0");
+    expect(EVALUATOR_VERSION).toBe("speaking-evaluator/3.7.0");
     expectCleanList(demoAnswerText(taskId, "first")!, one.result.assessment.sentence_fixes, first);
     const two = (await demoEvaluation(demoPracticeKey(taskId, firstKey)))!;
     expectCleanList(demoAnswerText(taskId, "full")!, two.result.assessment.sentence_fixes, full);

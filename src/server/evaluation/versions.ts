@@ -86,8 +86,13 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   one mistake, or that is about pauses or pronunciation (domain/evaluation/sentence-fixes.ts). Scoring, rubrics and the
  *   stored schema version are unchanged: the list is optional in stored results, so results from 3.5.0 and earlier have
  *   none and render as before. New prompt hash and provider schema (test fixtures updated).
+ * - speaking-evaluator/3.7.0 — First live run on gemini-3.8-flash (3.6.0, high thinking): Part 2 anchors 7/8 exact on
+ *   every run, but A0-below-b1 gave band 2 in 1 of 5 runs (grammar below_B1, vocabulary B1 justified by quotes that
+ *   themselves had basic mistakes: "know many thing", "work in market"). One prompt rule (docs/feedback-review.md
+ *   issue 5, option a): when grammar is below_B1, vocabulary B1 needs correct quotes. It only applies to answers whose
+ *   grammar is already below_B1, so no other anchor can move. Scoring, schema and gate unchanged; new prompt hash.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.6.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.7.0";
 
 /**
  * Version of the Part 3 evaluation (prompt, gate and post-processing; argument-evaluator.ts). Stored with every

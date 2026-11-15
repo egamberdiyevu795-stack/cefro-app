@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { streamingFetch } from "./stream-fetch";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURES, levelValue } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
@@ -80,11 +81,13 @@ const anchorById = (prefix: string) => PART2_BAND_ANCHORS.find((a) => a.id.start
 const SEQUENTIAL = process.env.EVAL_SEQUENTIAL === "1";
 const PAUSE_MS = Math.max(0, Number(process.env.EVAL_PAUSE_MS || 0));
 const NO_SDK_RETRIES = process.env.EVAL_SDK_RETRIES === "0";
+/** EVAL_STREAM=1 (Gemini only): send each call as a stream, for networks that cut silent requests (test/live/stream-fetch.ts). */
+const STREAM = process.env.EVAL_STREAM === "1";
 
 /** The configured evaluator; with EVAL_SDK_RETRIES=0 (Gemini) the same client with the SDK's retries switched off. */
 function liveModel(): EvaluationModel {
   const env = getEnv();
-  if (!NO_SDK_RETRIES || env.EVALUATION_PROVIDER !== "gemini" || !env.GEMINI_API_KEY) return getEvaluationModel();
+  if ((!NO_SDK_RETRIES && !STREAM) || env.EVALUATION_PROVIDER !== "gemini" || !env.GEMINI_API_KEY) return getEvaluationModel();
   return new GeminiEvaluationModel({
     apiKey: env.GEMINI_API_KEY,
     model: env.GEMINI_EVALUATION_MODEL,
@@ -93,7 +96,8 @@ function liveModel(): EvaluationModel {
     temperature: env.GEMINI_TEMPERATURE,
     structuredOutput: env.GEMINI_STRUCTURED_OUTPUT,
     timeoutMs: env.EVALUATION_TIMEOUT_MS,
-    maxRetries: 0,
+    maxRetries: NO_SDK_RETRIES ? 0 : undefined,
+    ...(STREAM ? { fetch: streamingFetch } : {}),
   });
 }
 

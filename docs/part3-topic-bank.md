@@ -54,3 +54,29 @@ Changed on 2026-11-15 (owner's answers):
 Still different (not changed): the exam shows the points as full sentences (12–20 words) in a two-column table with
 1-2-3 progress circles; ours are short phrases (at most 10 words, so reading the list out is easy to spot) in two lists
 with a countdown.
+
+## Live check on Gemini (2026-11-15)
+
+The 11 Part 3 anchors run on `gemini-3.8-flash` (evaluator 3.8.1), as the app now sends them: no ticked points.
+`test/live/part3-anchors.live.test.ts`. Cost **$0.49** in total.
+
+| Anchor | Expected | Got |
+|---|---|---|
+| cars-A0 | 0 | 0 |
+| cars-A1 | 1 | **0** |
+| cars-A2 | 2 | 2 |
+| cars-A3 | 3 | 3 |
+| cars-A4 | 4 | 4 |
+| cars-A5 | 5 | 5 |
+| cars-R1 | 4 | 4 |
+| phones-A2 | 2 | **1** |
+| phones-A4 | 4 | 4 |
+| tax-A1 | 1 | **0** |
+| tax-A5 | 5 | **6** |
+
+**7 of 11 exact, 11 of 11 within one band.** Pattern: weak answers that mostly read the points out get one band
+too low (1 → 0, 2 → 1), and one excellent answer got the top band 6 instead of 5. Time per answer 33–96 s (cars-A0
+needed a second call, 216 s, $0.12). Removing the tick step did no harm: the middle and upper bands (2–5) are exact.
+
+Verdict: safe to open for practice (`PART_3_LIVE=true`). Possible follow-up: a prompt rule for "reads the points but
+adds a little" (band 1, not 0), then rerun the low anchors (about $0.10).

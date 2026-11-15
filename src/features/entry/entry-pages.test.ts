@@ -51,7 +51,7 @@ describe("signed-out home", () => {
       ["See your own words quoted", "What worked and what to improve."],
       ["Fix one thing, then retry", "See whether it worked."],
     ]);
-    for (const words of ["CEFRO", "Sign in", HOME.eyebrow, HOME.heading, HOME.line, "Start practising", "See a demo result", ...HOME.steps.flatMap((s) => [s.title, s.detail])]) {
+    for (const words of ["CEFRO", "Sign in", HOME.eyebrow, HOME.heading, HOME.line, "Start practising", ...HOME.steps.flatMap((s) => [s.title, s.detail])]) {
       expect(page).toContain(words);
     }
     // One icon per step.
@@ -68,16 +68,15 @@ describe("signed-out home", () => {
     expect(page).not.toMatch(/Passed|Failed|under 18|under-18|18 or older|\bfree\b|rating|review|testimonial|students|★/i);
   });
 
-  it("one black button (Start practising, to Create account); See a demo result is grey and opens a demo result with ?mock=1", async () => {
+  it("one black button (Start practising, to Create account); no demo link in normal use", async () => {
     const markup = await render(HomePage(props()));
     expect(markup.match(BLACK) ?? []).toHaveLength(1);
     const tag = (label: string) => new RegExp(`<a\\b[^>]*>${label}</a>`).exec(markup)?.[0] ?? "";
     expect(tag("Start practising")).toMatch(/href="\/register"/);
     expect(tag("Start practising")).toContain("bg-primary");
-    expect(DEMO_HREF).toBe("/result?demo=demo-5&mock=1");
-    expect(tag("See a demo result")).toContain('href="/result?demo=demo-5&amp;mock=1"');
-    expect(tag("See a demo result")).toContain("bg-well");
-    expect(tag("See a demo result")).not.toContain("bg-primary");
+    // Normal use shows only the visitor's own work: no demo result link (mock mode keeps it, below).
+    expect(markup).not.toContain(HOME.demo);
+    expect(markup).not.toContain("demo=");
     // The small grey Sign in in the top row (muted, underlined, never black).
     const signIn = /<header\b[\s\S]*?<\/header>/.exec(markup)?.[0] ?? "";
     const link = /<a\b[^>]*>Sign in<\/a>/.exec(signIn)?.[0] ?? "";
@@ -87,11 +86,16 @@ describe("signed-out home", () => {
     expect(signIn).not.toContain("bg-primary");
   });
 
-  it("mock mode: Start practising and Sign in keep ?mock=1; the demo result is always mock", async () => {
+  it("mock mode: Start practising and Sign in keep ?mock=1; a grey See a demo result opens a demo result with ?mock=1", async () => {
     const markup = await render(HomePage(props({ mock: "1" })));
     expect(markup).toContain('href="/register?mock=1"');
     expect(markup).toContain('href="/login?mock=1"');
-    expect(markup).toContain('href="/result?demo=demo-5&amp;mock=1"');
+    expect(markup.match(BLACK) ?? []).toHaveLength(1);
+    expect(DEMO_HREF).toBe("/result?demo=demo-5&mock=1");
+    const demo = new RegExp(`<a\\b[^>]*>${HOME.demo}</a>`).exec(markup)?.[0] ?? "";
+    expect(demo).toContain('href="/result?demo=demo-5&amp;mock=1"');
+    expect(demo).toContain("bg-well");
+    expect(demo).not.toContain("bg-primary");
   });
 
   it("after Delete my account: the deleted message on top (never in mock mode)", async () => {

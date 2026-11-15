@@ -198,7 +198,6 @@ describe("mock pages on a Preview with no configuration", () => {
       { mock: "1" },
       { mock: "1", state: "retry" },
       { mock: "1", state: "scoring", next: "1" },
-      { demo: "demo-1" },
       { mock: "1", demo: "demo-1" },
       { mock: "1", demo: "demo-6" },
       { mock: "1", demo: "demo-3" },
@@ -210,8 +209,8 @@ describe("mock pages on a Preview with no configuration", () => {
     }
   });
 
-  it("a bare /result (no demo key, no mock mode) is not found: never the saved demo results", async () => {
-    for (const query of [{}, { anchor: "A2-b1-all-three" }, { state: "retry" }, { mock: "0" }]) {
+  it("a bare /result or a demo key without mock mode is not found: never the saved demo results", async () => {
+    for (const query of [{}, { anchor: "A2-b1-all-three" }, { state: "retry" }, { mock: "0" }, { demo: "demo-1" }, { demo: "demo-5", mock: "0" }]) {
       await expect(ResultPage(props(query)), JSON.stringify(query)).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
     }
   });

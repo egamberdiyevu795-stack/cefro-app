@@ -22,8 +22,9 @@ Home (`/`), sign in (`/login`) and Create account (`/register`) on the design sy
 (`docs/design-system.md`, "Signed-out pages").
 
 - **Home** says what the app does for the whole exam: answer exam-style questions out loud, see your own words quoted,
-  fix one thing and try again. One black button, "Start practising" (to Create account); a grey "See a demo result"
-  opens a real demo result in mock mode (`/result?demo=demo-5&mock=1`). Three steps show the loop. A small status
+  fix one thing and try again. One black button, "Start practising" (to Create account). **Changed (Asadbek, 2026-11-15): no demo in normal use.**
+  The grey "See a demo result" (`/result?demo=demo-5&mock=1`) is shown only on the mock home page (`/?mock=1`), and a
+  demo result address without `?mock=1` is not found. Three steps show the loop. A small status
   list says which exam parts are open, read from the same release switches as the dashboard (`PART_LIVE` in
   `src/config/features.ts`), so it can never be wrong.
 - **Create account** asks only for email and password ("Save your results"). The name is set later on the Account page.
@@ -34,8 +35,7 @@ Home (`/`), sign in (`/login`) and Create account (`/register`) on the design sy
 
 **Changed (Asadbek, 2026-11-08, `docs/consent-design.md` section 0): guests cannot record until consent exists.**
 A guest's recording is personal data of someone whose age we do not know, so the old phase 2 ("a guest records one
-real answer, then Save your result") is dropped. Before an account, a visitor sees only the demo result
-(`/result?demo=demo-5&mock=1`).
+real answer, then Save your result") is dropped. Before an account, a visitor sees only the home page (since 2026-11-15 normal use has no demo result link).
 
 Instead: Create account → the first real answer as soon as recording is allowed (18+: straight away once age is
 asked; under 18: once a parent has agreed; during the pilot: once the owner has recorded consent). The practice page

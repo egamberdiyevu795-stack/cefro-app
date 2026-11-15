@@ -10,12 +10,12 @@ import { isSignedIn } from "@/server/identity/current-user";
  * The signed-out home page. A signed-in visitor goes straight to the dashboard. The task list is at `/practice`.
  *
  * - Top row: the CEFRO wordmark, and a small grey "Sign in" on the right.
- * - What it is, the black "Start practising" (Create account) and the grey "See a demo result" (a real demo result
- *   page, always `?mock=1`), three steps, and which exam parts are open (`examStatus`, from `PART_LIVE`).
+ * - What it is, the black "Start practising" (Create account), three steps, and which exam parts are open (`examStatus`, from `PART_LIVE`).
  * - `?deleted=1` (after "Delete my account", which signs the browser out): "Your account and all your data were
  *   deleted." on top.
- * - `?mock=1`: the same page for a Preview with no variables; nobody is looked up, and Start practising / Sign in
- *   keep `?mock=1`.
+ * - `?mock=1`: the same page for a Preview with no variables; nobody is looked up, Start practising / Sign in
+ *   keep `?mock=1`, and a grey "See a demo result" (a demo result page, `?mock=1`) sits under Start practising. Normal
+ *   use has no demo link: a new visitor sees only their own work.
  *
  * One black control: "Start practising". The two actions sit on a card because the grey pill would vanish on the grey page.
  */
@@ -43,9 +43,11 @@ export default async function HomePage(props: PageProps<"/">) {
         <PillButton href={entryHref("/register", { mock })} size="lg" className="w-full">
           {HOME.start}
         </PillButton>
-        <PillButton href={DEMO_HREF} variant="quiet" size="lg" className="w-full">
-          {HOME.demo}
-        </PillButton>
+        {mock && (
+          <PillButton href={DEMO_HREF} variant="quiet" size="lg" className="w-full">
+            {HOME.demo}
+          </PillButton>
+        )}
       </Card>
 
       <Card aria-labelledby="how-it-works">

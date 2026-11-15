@@ -132,7 +132,7 @@ describe("result view model", () => {
     const result = (await part3DemoEvaluation(key))!.result;
     const view = buildPart3View(result, { task: spec.task, transcript: part3DemoTranscriptFor(spec), durationMs: 90_000, bandLabels: [{ band: 5, label: "C1" }], previous: null, isDevelopmentProvider: true });
     expect(view.headline).toBe("Part 3 · Band 4 · Higher B2");
-    expect(view.targetText).toBe("Target: band 5 (C1). You are 1 band below it.");
+    expect(view.targetText).toBe("Target: Band 5 (C1). You are 1 band below it.");
     expect(view.sides[1].points.find((p) => p.id === "A1")).toMatchObject({ verdictLabel: "Stated, then argued against", chosen: true });
     expect(view.fix.tryInstead).toBe("Before you argue against a point, give one real reason that supports it.");
     expect(view.chooseTwo).toBe(false);

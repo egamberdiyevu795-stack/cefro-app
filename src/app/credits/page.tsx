@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Card } from "@/components/ds";
 
 export const metadata: Metadata = { title: "Credits" };
@@ -12,7 +13,11 @@ export default function CreditsPage() {
   return (
     <div className="min-h-dvh bg-page px-4 pb-8 pt-8 font-ui text-fg sm:pt-16">
       <main id="main" className="mx-auto w-full max-w-2xl">
-        <p className="mb-4 text-body font-semibold tracking-[0.08em] text-fg">CEFRO</p>
+        <p className="mb-4 text-body font-semibold tracking-[0.08em] text-fg">
+          <Link href="/" className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="CEFRO home">
+            CEFRO
+          </Link>
+        </p>
         <Card aria-labelledby="credits-title">
           <h1 id="credits-title" className="text-title font-medium tracking-[-0.01em] text-fg">
             Credits

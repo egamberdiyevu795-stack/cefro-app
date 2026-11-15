@@ -6,7 +6,7 @@ export const lessonT4B2: Lesson = {
   id: "L-T4",
   slug: "l-t4-b2",
   variant: "B2",
-  variantLabel: "B2 (Part 2)",
+  variantLabel: "Part 2 (B2)",
   version: 2,
   title: "Answer, reason, example",
   targetLevel: "B2",

@@ -38,7 +38,7 @@ export function TeacherMock({ mock, ratingUrl, mockRatingUrl, demo }: { mock: Te
         </p>
         {header.note && <p className="mt-2 text-label text-fg-muted">{header.note}</p>}
         <p className="mt-4 text-caption text-fg-muted">Estimated speaking level (CEFRO)</p>
-        <p className="text-stat font-light tracking-[-0.03em] text-fg" data-testid="mock-estimate">
+        <p className={header.estimate ? "text-stat font-light tracking-[-0.03em] text-fg" : "text-lead font-medium text-fg"} data-testid="mock-estimate">
           {header.estimate ?? header.estimateText}
         </p>
         {header.scoreText && (

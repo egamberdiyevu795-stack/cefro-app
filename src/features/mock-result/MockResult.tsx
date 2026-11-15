@@ -164,7 +164,7 @@ function PartRow({ row }: { row: MockRowView }) {
       )}
       {open && (
         <>
-          <span className="shrink-0 text-label font-medium text-fg">See details</span>
+          <span className="hidden shrink-0 text-label font-medium text-fg sm:inline">See details</span>
           <Icon name="chevronDown" size={16} className="-rotate-90 shrink-0 text-fg-subtle" />
         </>
       )}

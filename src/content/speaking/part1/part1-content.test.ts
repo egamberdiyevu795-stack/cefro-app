@@ -74,12 +74,14 @@ describe("Part 1 content: tasks, rubrics, release switch", () => {
     for (const t of PART1_SPEAKING_TASKS) expect(getSpeakingTask(t.id)).toBe(t);
   });
 
-  it("Question 4's partial hint is exactly 'compare the two pictures' (shown word for word)", () => {
-    for (const t of part12) expect(t.delivery!.questions[0].partialHint).toBe("compare the two pictures");
+  it("Question 4 is the exam's own 'What can you see in these pictures?'; its partial hint is 'talk about both pictures' (word for word)", () => {
+    for (const t of part12) expect(t.delivery!.questions[0].text).toBe("What can you see in these pictures?");
+    for (const t of part12) expect(t.delivery!.questions[0].partialHint).toBe("talk about both pictures");
   });
 
   it("no task reuses the official sample questions (decision 9)", () => {
-    const official = [/walking over driving/i, /car of their own/i, /what do you see in these pictures/i];
+    // Question 4 of Part 1.2 uses the exam's own "What can you see in these pictures?" (owner decision 2026-11-15).
+    const official = [/walking over driving/i, /car of their own/i];
     for (const t of PART1_SPEAKING_TASKS) for (const p of t.prompts) for (const o of official) expect(p).not.toMatch(o);
   });
 
@@ -147,7 +149,7 @@ describe("Part 1 content: audio files", () => {
     for (const f of part11BankAudioTexts()) expect(made.get(f.path), f.path).toBe(f.text);
   });
 
-  it("each audio file is real speech, not a placeholder: a WAV of 1.2–8 s (introductions up to 25 s)", () => {
+  it("each audio file is real speech, not a placeholder: a WAV of 0.9–8 s (introductions up to 25 s)", () => {
     const seconds = (src: string) => {
       const buf = fs.readFileSync(path.join(PUBLIC_DIR, src));
       expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");
@@ -161,7 +163,7 @@ describe("Part 1 content: audio files", () => {
         expect(buf.subarray(0, 4).toString("ascii")).toBe("RIFF");
         const byteRate = buf.readUInt32LE(28);
         const seconds = (buf.length - 44) / byteRate;
-        expect(seconds, q.audio).toBeGreaterThan(1.2);
+        expect(seconds, q.audio).toBeGreaterThan(0.9);
         expect(seconds, q.audio).toBeLessThan(8);
       }
     }

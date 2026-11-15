@@ -198,7 +198,7 @@ describe("Gemini through the shared evaluation pipeline", () => {
     expect(result).toMatchObject({
       provider: "gemini",
       model: "gemini-test-001",
-      evaluatorVersion: "speaking-evaluator/3.8.0",
+      evaluatorVersion: "speaking-evaluator/3.8.1",
       schemaVersion: 3,
       modelCalls: 1,
       inputTokens: 1500,

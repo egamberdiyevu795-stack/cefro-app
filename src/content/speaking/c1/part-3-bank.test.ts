@@ -8,7 +8,7 @@ describe("Part 3 topic bank (2026-11-15)", () => {
   it("has the teacher's frequent topics (university row split in two), the rarer ones and the screenshot topic", () => {
     const by = (source: string) => PART3_BANK_TASKS.filter((t) => PART3_BANK_META[t.id]!.source === source).length;
     expect(by("frequent")).toBe(9);
-    expect(by("rare")).toBe(8);
+    expect(by("rare")).toBe(7); // gambling left out on purpose
     expect(by("exam screenshot")).toBe(1);
   });
 

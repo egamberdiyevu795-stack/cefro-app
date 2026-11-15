@@ -6,7 +6,7 @@ Branch `claude/project-thread-naroeq`. Mock only: Part 3 is still off (`PART_LIV
 
 ## What was added
 
-18 new topics in `src/content/speaking/c1/part-3-bank.ts`, plus our three v1 topics (kept): 21 in all.
+17 new topics in `src/content/speaking/c1/part-3-bank.ts`, plus our three v1 topics (kept): 20 in all. "Gambling should be banned" (on the teacher's rare list) is left out on purpose: not a topic for teenagers.
 The **statements** are the exam's topics. **Every FOR / AGAINST point is our own writing**, three per side; the
 screenshots were used only as a format reference (a test checks none of their wording is in the bank).
 
@@ -22,7 +22,6 @@ screenshots were used only as a format reference (a test checks none of their wo
 | University education should be free for everyone. | frequent (row of 4×, shared) | 2 |
 | A university degree is necessary for success. | frequent (row of 4×, shared) | 2 |
 | Single-use plastics should be banned. | rare | 1 |
-| Gambling should be banned. | rare | 1 |
 | Handwriting should still be taught in schools. | rare | 1 |
 | Online education should replace traditional classrooms. | rare | 1 |
 | Working from home should be the standard. | rare | 1 |
@@ -37,26 +36,21 @@ screenshots were used only as a format reference (a test checks none of their wo
 - **Full mock and exam laptop:** weighted random by the table's weight (`pickWeightedTask`), leaving out the
   student's (or, for "same paper", the class's) latest three Part 3 topics. Frequent topics make up about 70% of
   picks; a weight-5 topic comes up 5× as often as a rare one. Rare topics stay rare even for students who do many mocks.
-- **Practice list:** shows all 21 topics, frequent first, then our v1 topics, then the rarer ones. The student chooses.
+- **Practice list:** shows all 20 topics, frequent first, then our v1 topics, then the rarer ones. The student chooses.
 
 ## Mock mode
 
 The new topics have no hand-written demo answer: a plain one is made from each topic's own points
 (`templateDemoAnswer`), and the mock evaluator uses each point's text as its key phrase. Never read by real scoring.
 
-## Our Part 3 screen vs the real exam (flags, not changed)
+## Our Part 3 screen vs the real exam
 
-| Real exam (screenshots) | Ours |
-|---|---|
-| Labels **Pros / Cons** | Labels **FOR / AGAINST** |
-| Statement as the title of a two-column table | Statement above two lists (side by side on a laptop, stacked on a phone) |
-| Points are full sentences, often 12–20 words | Points are short phrases of at most 10 words (our content rule, so "reading the list out" is easy to spot) |
-| No ticking: the student just sees the table | The student ticks two points per side during preparation |
-| 1-2-3 progress circles with ticks, timer top right | A countdown ("to prepare" / "left"); no 1-2-3 circles on the Part 3 practice screens |
+Changed on 2026-11-15 (owner's answers):
+- The lists are labelled **Pros** and **Cons**, as in the exam (`SIDE_LABELS`; code and the model still say for / against).
+- **No ticking.** Preparation shows the statement with its Pros / Cons lists and the timer; the student plans two points per
+  side in their head, as in the exam. Scoring never used the ticked points (they were only shown on the result), so the
+  evaluator is unchanged; new answers are stored with no chosen points, and the result no longer says "You chose this point".
 
-Worth deciding: (1) rename FOR / AGAINST to Pros / Cons on the screen (small change), (2) whether to keep the
-tick-two-points step, since the real exam does not seem to have it (it would change the Part 3 evaluator's
-"chosen points" input, so it is a bigger change).
-
-**Topics to check for teenagers:** gambling is on the teacher's list, so it is in the bank as a rare topic; remove it if
-you prefer.
+Still different (not changed): the exam shows the points as full sentences (12–20 words) in a two-column table with
+1-2-3 progress circles; ours are short phrases (at most 10 words, so reading the list out is easy to spot) in two lists
+with a countdown.

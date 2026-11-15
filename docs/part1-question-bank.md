@@ -81,8 +81,10 @@ Questions to check (our classification, easy to change): **breakfast** is daily 
 ### Audio
 
 30 new files, `public/audio/speaking/part1/a2-part1-1-bank/v1/q01.wav` … `q30.wav`, made with the same Piper voice and
-settings as every other Part 1 file (`scripts/make-part1-question-audio.mjs`, texts in `question-audio.json`). The
-introduction is a copy of the first Part 1.1 task's (same words). **The owner should listen to them**, especially the
+settings as every other Part 1 file (`scripts/make-part1-question-audio.mjs`, texts in `question-audio.json`).
+**Normal speed since 2026-11-15:** the 0.75 slow-down is gone (the owner found it too slow; the exam speaks at a normal
+pace), and every Part 1, Part 2 and Part 3 audio file was made again. The voice is to be replaced by one the owner picks
+on ElevenLabs. **The owner should listen to them**, especially the
 "a or b" ones (Q2, Q9, Q13, Q14, Q21, Q28, Q29).
 
 ### Mock mode
@@ -118,11 +120,10 @@ board games" (matches the pictures); the holidays task's unnumbered first questi
   meant "eating out vs eating at home", but its questions are not on the list.
 - **Overlap:** "Supermarket vs open-air market" is the same topic as our live-in-mock task `b1-part1-2-shopping`. Use
   one or the other.
-- **To decide before any of these goes live:** every task on the list opens with "What can/do you see in these
-  pictures?". Our own Question 4 asks the student to **describe and compare** ("Look at the two pictures. Describe them
-  and say how they are different."), the evaluator counts an answer without a comparison as partial, and decision 9
-  kept the official sample's "What do you see in these pictures?" out of our tasks. Taking the list word for word
-  means changing that rule (and the Part 1.2 evaluator's partial rule for Question 4).
+- **Question 4 (owner decision 2026-11-15):** the exam's own "What can you see in these pictures?" for every Part 1.2
+  task, our live one included (`b1-part1-2-shopping` is now version 2). Describing only one picture is partial (hint
+  "talk about both pictures"); comparing is welcome but no longer required. Evaluator 3.8.1: rerun the Part 1.2 anchors
+  before Part 1.2 goes live.
 
 ## Part 2: their themes vs ours (reference only, our own wording stays)
 

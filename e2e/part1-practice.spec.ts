@@ -150,7 +150,7 @@ test("Part 1.1 mock: brief → three questions in one recording → Scoring… �
   expect(api).toEqual([]);
 });
 
-test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two pictures' on the result", async ({ page }) => {
+test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'talk about both pictures' on the result", async ({ page }) => {
   const api = watchApi(page);
   await shortIntro(page);
   await page.goto(`/practice/speaking/b1-part1-2-shopping?mock=1&timeScale=${SCALE}`);
@@ -167,7 +167,7 @@ test("Part 1.2 mock: pictures from Question 4, questions 4–6, 'compare the two
   await runPart(page, 4);
   await expect(page.getByText("Part 1.2 ·", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Question 4", { exact: true })).toBeVisible();
-  await expect(page.getByText(/compare the two pictures/).first()).toBeVisible();
+  await expect(page.getByText(/talk about both pictures/).first()).toBeVisible();
   await expect(page.getByText("Cohesion")).toBeVisible();
   await auditPhone(page, ["Retry with this goal"]);
   expect(api).toEqual([]);

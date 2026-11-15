@@ -36,10 +36,10 @@ import { listArgumentTasks } from "@/content/speaking/part3";
 import { PART2_INTRO, PART3_INTRO, PART_INTRO_AUDIO_FILES, PART_INTRO_VOICE, introBody } from "@/content/speaking/part-intro-audio";
 import part1AudioManifest from "@/content/speaking/part1/question-audio.json";
 import { listSpeakingTasks } from "@/content/speaking";
-import { argumentTaskProblems, toPublicArgumentTask, type PointId } from "@/domain/speaking/argument-task";
+import { SIDE_LABELS, argumentTaskProblems, toPublicArgumentTask, type PointId } from "@/domain/speaking/argument-task";
 import { part3DemoEvaluation, part3DemoSpec, part3DemoTranscriptFor } from "@/server/demo/part3-demo";
 import { decodePoints, encodePoints, nextPart3Key, parsePart3Key, part3PracticeHref, part3ResultHref, previousPart3Key } from "./links";
-import { Part3BriefCard, Part3IntroCard, Part3PreparationCard, Part3RecordingCard, StatementCard, canToggle, choiceSummary } from "./screens";
+import { Part3BriefCard, Part3IntroCard, Part3PreparationCard, Part3RecordingCard, StatementCard } from "./screens";
 import { Part3ScoredResult } from "./result-sections";
 import { buildPart3View, markCopied } from "./view-model";
 import { PracticeLayout } from "@/features/speaking-practice/components/screens";
@@ -61,8 +61,8 @@ describe("Part 3 content", () => {
       "Children under 14 should not be allowed to own a smartphone.",
       "Governments should put a special tax on sugary drinks and fast food.",
     ]));
-    expect(listArgumentTasks()).toHaveLength(21);
-    expect(new Set(listArgumentTasks().map((t) => t.id)).size).toBe(21);
+    expect(listArgumentTasks()).toHaveLength(20);
+    expect(new Set(listArgumentTasks().map((t) => t.id)).size).toBe(20);
     for (const task of listArgumentTasks()) expect(argumentTaskProblems(task), task.id).toEqual([]);
   });
 
@@ -111,11 +111,8 @@ describe("links and demo keys", () => {
     }
   });
 
-  it("at most two points per side can be ticked", () => {
-    expect(canToggle(["F1", "F2"], "F3")).toBe(false);
-    expect(canToggle(["F1", "F2"], "F1")).toBe(true);
-    expect(canToggle(["F1", "F2"], "A1")).toBe(true);
-    expect(choiceSummary(["F1", "A3"] as PointId[])).toBe("FOR 1 of 2 · AGAINST 1 of 2");
+  it("the lists are labelled Pros and Cons, as in the real exam", () => {
+    expect(SIDE_LABELS).toEqual({ for: "Pros", against: "Cons" });
   });
 });
 
@@ -146,15 +143,15 @@ describe("result view model", () => {
 describe("screens", () => {
   const task = toPublicArgumentTask(listArgumentTasks()[0]);
   const goal = { objective: "Before you argue against a point, give one real reason that supports it. Support A1 first.", check: "check" };
-  const screen = (step: React.ReactElement, chosen: PointId[] = ["F1", "A1"], toggle = false) =>
-    renderToStaticMarkup(createElement(PracticeLayout, { task: createElement(StatementCard, { task, chosen, onToggle: toggle ? noop : undefined }), step }));
+  const screen = (step: React.ReactElement, chosen: PointId[] = []) =>
+    renderToStaticMarkup(createElement(PracticeLayout, { task: createElement(StatementCard, { task, chosen }), step }));
   const SCREENS: [string, string, number][] = [
     ["brief", screen(createElement(Part3BriefCard, { task, goal: null, onStart: noop })), 1],
     ["brief (retry)", screen(createElement(Part3BriefCard, { task, goal, onStart: noop })), 1],
     ["introduction (retry)", screen(createElement(Part3IntroCard, { text: PART3_INTRO.text, goal })), 0],
-    ["preparation", screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, chosen: ["F1", "A1"], goal, onSkip: noop }), ["F1", "A1"], true), 0],
-    ["recording", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 90_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: false, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
-    ["recording, early warning", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 100_000, level: 0.4, chosen: ["F1", "A1"], goal, earlyWarning: true, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
+    ["preparation", screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, goal, onSkip: noop })), 0],
+    ["recording", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 90_000, level: 0.4, goal, earlyWarning: false, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
+    ["recording, early warning", screen(createElement(Part3RecordingCard, { totalMs: 120_000, remainingMs: 100_000, level: 0.4, goal, earlyWarning: true, onFinish: noop, onKeepSpeaking: noop, onFinishAnyway: noop })), 1],
   ];
 
   it.each(SCREENS)("%s: the screen has the right black buttons, no text under 11 px, the statement and all six points", (_name, markup, expected) => {
@@ -164,11 +161,16 @@ describe("screens", () => {
     for (const point of task.points) expect(markup).toContain(point.text);
   });
 
-  it("preparation: checkboxes, two per side, the third disabled", () => {
-    const markup = screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, chosen: ["F1", "F2"], goal: null, onSkip: noop }), ["F1", "F2"], true);
-    expect((markup.match(/type="checkbox"/g) ?? []).length).toBe(6);
-    expect(markup).toMatch(/<input type="checkbox" disabled=""/);
-    expect(markup).toContain("2 of 2 chosen");
+  it("preparation: the Pros / Cons lists with nothing to tick, as in the real exam", () => {
+    const markup = screen(createElement(Part3PreparationCard, { totalMs: 60_000, remainingMs: 40_000, goal: null, onSkip: noop }));
+    expect(markup).not.toContain('type="checkbox"');
+    expect(markup).toContain(">Pros<");
+    expect(markup).toContain(">Cons<");
+    expect(markup).not.toContain("text-fg-muted\"><span class=\"font-semibold\">F1");
+  });
+
+  it("a retry of an older attempt that ticked points still marks them 'Chosen'", () => {
+    expect(screen(createElement(Part3IntroCard, { text: PART3_INTRO.text, goal: null }), ["F1", "A1"]).match(/>Chosen</g)).toHaveLength(2);
   });
 
   it("the goal is on every retry screen", () => {

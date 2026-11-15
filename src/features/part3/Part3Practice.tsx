@@ -25,7 +25,7 @@ import type { PartIntro } from "@/domain/speaking/question-sequence";
 import type { EmbeddedPart } from "@/features/speaking-practice/lib/mock-embed";
 import { isEarlyFinish, type RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
 import { nextPart3Key, part3RealPracticeHref, part3ResultHref } from "./links";
-import { Part3BriefCard, Part3IntroCard, Part3PreparationCard, Part3RecordingCard, StatementCard, canToggle } from "./screens";
+import { Part3BriefCard, Part3IntroCard, Part3PreparationCard, Part3RecordingCard, StatementCard } from "./screens";
 
 type Phase =
   | { kind: "brief" }
@@ -91,7 +91,9 @@ export function Part3Practice({
   const ready = useHydrated();
   const recorder = useAudioRecorder();
   const [phase, setPhase] = useState<Phase>({ kind: "brief" });
-  const [chosen, setChosen] = useState<PointId[]>([...initialChosen]);
+  // No ticking (owner, 2026-11-15): like the real exam, the student sees the Pros / Cons table and plans in their head. A retry of an
+  // older attempt still shows the points it ticked; a new answer is sent with none, which the evaluator never needed.
+  const chosen = initialChosen;
   const [earlyWarning, setEarlyWarning] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const isReal = mode === "real" && !embedded;
@@ -109,10 +111,6 @@ export function Part3Practice({
       cuePlayerRef.current?.stop();
       releaseChime();
     };
-  }, []);
-
-  const toggle = useCallback((id: PointId) => {
-    setChosen((current) => (current.includes(id) ? current.filter((p) => p !== id) : canToggle(current, id) ? [...current, id] : current));
   }, []);
 
   // The "Start" tap: unlock sound (the introduction's audio element and the chime) and ask for the microphone at once.
@@ -290,8 +288,8 @@ export function Part3Practice({
   } else if (phase.kind === "preparing") {
     content = (
       <PracticeLayout
-        task={<StatementCard task={task} chosen={chosen} onToggle={toggle} />}
-        step={<Part3PreparationCard totalMs={prepMs} remainingMs={remainingMs} chosen={chosen} goal={goal} onSkip={() => void startRecording()} />}
+        task={<StatementCard task={task} chosen={chosen} />}
+        step={<Part3PreparationCard totalMs={prepMs} remainingMs={remainingMs} goal={goal} onSkip={() => void startRecording()} />}
       />
     );
   } else if (phase.kind === "uploadFailed") {
@@ -321,7 +319,6 @@ export function Part3Practice({
             totalMs={speakMs}
             remainingMs={phase.kind === "recording" ? remainingMs : 0}
             level={level}
-            chosen={chosen}
             goal={goal}
             earlyWarning={earlyWarning}
             onFinish={requestFinish}

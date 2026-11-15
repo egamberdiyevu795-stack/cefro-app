@@ -114,7 +114,7 @@ export type Q8Overlap = z.infer<typeof q8OverlapSchema>;
 /** The two headlines of the plan (section 4, item 2). */
 export const OWN_WORDS_HEADLINE = "Say the ideas in your own words.";
 export const EXPLAIN_HEADLINE = "Explain each point in your own words with a reason or an example.";
-export const CHOOSE_TWO = "Choose two points from each list.";
+export const CHOOSE_TWO = "Talk about two points from each list.";
 export const REBUTTAL_HEADLINE = "Before you argue against a point, give one real reason that supports it.";
 
 type TaskPoints = Pick<BalancedArgumentTask, "points">;
@@ -143,18 +143,18 @@ export function q8FocusFor(fix: Q8BiggestFix, assessment: Q8ModelOutput, task: T
             target: { kind: "prompt_dependence" },
           };
     case "section_coverage": {
-      const side = fix.missing_side === "both" ? "both lists" : `the ${SIDE_LABELS[fix.missing_side].toUpperCase()} list`;
+      const side = fix.missing_side === "both" ? "both lists" : `the ${SIDE_LABELS[fix.missing_side]} list`;
       return {
         objective: `${CHOOSE_TWO} Add two points from ${side}, for example ${quotePoint(task, fix.point_id)}.`,
-        success_check: "You talk about two FOR points and two AGAINST points.",
+        success_check: "You talk about two Pros and two Cons.",
         target: { kind: "coverage", side: fix.missing_side },
       };
     }
     case "point_development":
       if (fix.reason === "too_few_points" || fix.point_id === null) {
         return {
-          objective: `${CHOOSE_TWO} Add a second point from the ${SIDE_LABELS[fix.side].toUpperCase()} list.`,
-          success_check: "You talk about two FOR points and two AGAINST points.",
+          objective: `${CHOOSE_TWO} Add a second point from the ${SIDE_LABELS[fix.side]} list.`,
+          success_check: "You talk about two Pros and two Cons.",
           target: { kind: "coverage", side: fix.side },
         };
       }

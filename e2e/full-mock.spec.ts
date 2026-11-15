@@ -107,14 +107,11 @@ test("the whole mock in mock mode: four parts back to back, progress line, no re
   await finish.click();
   await page.getByRole("button", { name: "Finish anyway" }).click();
 
-  // Part 3: tick two points per side, record.
+  // Part 3: the Pros / Cons table (nothing to tick), record.
   await expect(progress).toContainText("Part 4 of 4");
   await expect(page.getByTestId("part3-intro")).toBeVisible();
   await expect(page.getByRole("button", { name: "Start speaking now" })).toBeVisible({ timeout: 30_000 });
-  await page.getByLabel(/^F1 /).check();
-  await page.getByLabel(/^F2 /).check();
-  await page.getByLabel(/^A1 /).check();
-  await page.getByLabel(/^A2 /).check();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(finish).toBeVisible();
   await page.waitForTimeout(800);

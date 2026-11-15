@@ -8,6 +8,8 @@ import { ARGUMENT_INSTRUCTIONS, POINT_IDS, type BalancedArgumentTask, type Point
  * The STATEMENTS are the exam's topics (standard wording, lightly edited). Every FOR / AGAINST point is OUR OWN writing,
  * three per side like the real exam; the screenshots were used only as a format reference.
  *
+ * Left out on purpose (owner, 2026-11-15): "Gambling should be banned" (on the teacher's rare list), not a topic for teenagers.
+ *
  * `weight` is how often the topic comes up in a mock (content/speaking/part3.ts): the teacher's count for the frequent
  * topics (5, 4 or 3; a row with two topics shares its count), 1 for the rarer ones.
  */
@@ -172,20 +174,6 @@ const TOPICS: readonly BankTopic[] = [
       ["Plastic is cheap and convenient for shops", "prices, small shops, packaging costs"],
       ["Some alternatives, like paper, also harm the environment", "cutting trees, energy, water used to make paper"],
       ["Plastic keeps food and medicine clean and safe", "hygiene, hospitals, food lasting longer"],
-    ],
-  },
-  {
-    slug: "ban-gambling", title: "Gambling", topic: "Society", weight: 1, source: "rare",
-    statement: "Gambling should be banned.",
-    for: [
-      ["Many people lose their savings and homes", "losing money, debts, selling things, families left with nothing"],
-      ["Gambling can become an addiction like smoking", "addiction, not being able to stop, mental health"],
-      ["Families suffer when one member gambles", "arguments, children, broken families, trust"],
-    ],
-    against: [
-      ["Adults should be free to spend their own money", "freedom, personal choice, the state deciding for adults"],
-      ["A ban could push gambling into illegal places", "secret places, illegal websites, no rules or protection"],
-      ["Taxes on betting can fund public services", "tax money, sport, schools, hospitals"],
     ],
   },
   {

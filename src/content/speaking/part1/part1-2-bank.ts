@@ -3,7 +3,7 @@
  *
  * Source: a teacher's "Part 1.2 full list" (owner upload, 2026-11-15, /mnt/project-files/uzbmb/teacher-lists/
  * part1.2-list-1.jpg … part1.2-list-5.jpg). Each page shows TWO tasks (two pictures + three questions each); they are
- * split here into one entry per task, as the owner asked. Wording is the list's (owner's Part 1 decision), with obvious
+ * split here into one entry per task, as the owner asked. Question 4 is always the exam's "What can you see in these pictures?". Wording is the list's (owner's Part 1 decision), with obvious
  * errors fixed and each fix recorded in `fixes`.
  *
  * The pictures on those pages are stock / AI images from a teacher's channel: they are NOT copied. Each entry says what
@@ -89,13 +89,14 @@ export const PART12_BANK: readonly Part12BankEntry[] = [
     slug: "grow-or-buy-vegetables",
     theme: "Growing your own vegetables vs buying them in a supermarket",
     questions: [
-      "What do you see in these pictures?",
+      "What can you see in these pictures?",
       "What are the advantages of growing vegetables at home?",
       "Why do some people think that vegetables in a supermarket are better?",
     ],
     pictures: ["A person looking after vegetables they grow in a greenhouse or garden.", "A shopper choosing vegetables from supermarket shelves."],
     source: "part1.2-list-5 (IMG_4033), top",
     fixes: [
+      ["What do you see in these pictures?", "What can you see in these pictures?"],
       ["…growing veges at home?", "…growing vegetables at home?"],
       ["Why do some people think that vegetables in a supermarket?", "Why do some people think that vegetables in a supermarket are better?"],
     ],
@@ -103,10 +104,10 @@ export const PART12_BANK: readonly Part12BankEntry[] = [
   {
     slug: "festivals-or-museums",
     theme: "Traditional holidays vs visiting museums",
-    questions: ["What do you see in these pictures?", "Are traditional holidays better than visiting museums?", "Why do some people think that museums are boring?"],
+    questions: ["What can you see in these pictures?", "Are traditional holidays better than visiting museums?", "Why do some people think that museums are boring?"],
     pictures: ["A crowded street festival or holiday parade.", "A person looking at paintings in a quiet museum."],
     source: "part1.2-list-5 (IMG_4033), bottom",
-    fixes: [["(Question 4 had no number on the list)", "What do you see in these pictures?"]],
+    fixes: [["What do you see in these pictures? (no number on the list)", "What can you see in these pictures?"]],
     note: "Our pictures should show a holiday that feels local (for example Navruz celebrations), not the list's Chinese New Year parade.",
   },
 ];

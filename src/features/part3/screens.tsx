@@ -1,13 +1,13 @@
 import { Card, CardHeader, Icon, PillAction, ProgressBar, cx } from "@/components/ds";
-import { POINTS_PER_SIDE, SIDE_LABELS, pointsOn, type PointId, type PublicArgumentTask, type Side } from "@/domain/speaking/argument-task";
+import { SIDE_LABELS, pointsOn, type PointId, type PublicArgumentTask } from "@/domain/speaking/argument-task";
 import { MicCheck } from "@/features/speaking-practice/components/MicCheck";
 import { Countdown, GoalCard, LevelMeter, PartIntroCard, SPEAK_NOW_MS } from "@/features/speaking-practice/components/screens";
 import { formatClock, formatDuration } from "@/features/speaking-practice/lib/format";
 import type { RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
 
 /*
- * The Part 3 practice screens (official Question 8): brief → spoken introduction → preparation, where the student chooses two points from
- * each list during the minute → recording. Presentational only; Part3Practice owns the recorder and timers.
+ * The Part 3 practice screens (official Question 8): brief → spoken introduction → preparation (the statement and its Pros / Cons table,
+ * nothing to tick, as in the real exam) → recording. Presentational only; Part3Practice owns the recorder and timers.
  * One black button per screen: "Start" (brief), none during the spoken introduction or while preparing ("Start speaking
  * now" is quiet),
  * "Finish" (recording), "Keep speaking" while the early-finish warning is open.
@@ -15,86 +15,39 @@ import type { RetryGoal } from "@/features/speaking-practice/lib/practice-flow";
  * Phone: the step card first, then the statement and the lists. Desktop: [statement and lists] | [step card].
  */
 
-const countOn = (chosen: readonly PointId[], side: Side) => chosen.filter((id) => id.startsWith(side === "for" ? "F" : "A")).length;
-
-/** "FOR 1 of 2 · AGAINST 2 of 2". */
-export function choiceSummary(chosen: readonly PointId[]): string {
-  return `FOR ${countOn(chosen, "for")} of ${POINTS_PER_SIDE} · AGAINST ${countOn(chosen, "against")} of ${POINTS_PER_SIDE}`;
-}
-
-/** Can this point be ticked now? A side takes at most two; a ticked point can always be unticked. */
-export function canToggle(chosen: readonly PointId[], id: PointId): boolean {
-  return chosen.includes(id) || countOn(chosen, id.startsWith("F") ? "for" : "against") < POINTS_PER_SIDE;
-}
-
 /**
- * The statement and both lists, on every screen. `onToggle` (preparation): each point is a checkbox, at most two per
- * side. Without it, the chosen points are marked with a tick and the word "Chosen" (never colour alone).
+ * The statement and its Pros / Cons lists, on every screen. Nothing is ticked (as in the real exam). A retry of an older
+ * attempt that ticked points still marks them with a tick and the word "Chosen" (never colour alone).
  */
-export function StatementCard({
-  task,
-  chosen,
-  onToggle,
-}: {
-  task: PublicArgumentTask;
-  chosen: readonly PointId[];
-  onToggle?: (id: PointId) => void;
-}) {
+export function StatementCard({ task, chosen }: { task: PublicArgumentTask; chosen: readonly PointId[] }) {
+  const anyChosen = chosen.length > 0;
   return (
     <Card aria-labelledby="statement-title">
-      <CardHeader id="statement-title" title={onToggle ? "Choose two points from each list" : "The statement"} />
+      <CardHeader id="statement-title" title="The statement" />
       <p className="text-lead font-medium text-fg">{task.statement}</p>
       <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
         {(["for", "against"] as const).map((side) => (
-          <fieldset key={side} className="min-w-0" data-testid={`list-${side}`}>
-            <legend className="flex w-full items-baseline justify-between gap-2 text-label font-semibold text-fg">
-              <span>{SIDE_LABELS[side].toUpperCase()}</span>
-              {onToggle && (
-                <span className="font-normal text-fg-muted">
-                  {countOn(chosen, side)} of {POINTS_PER_SIDE} chosen
-                </span>
-              )}
-            </legend>
+          <section key={side} className="min-w-0" data-testid={`list-${side}`} aria-label={SIDE_LABELS[side]}>
+            <h3 className="text-label font-semibold text-fg">{SIDE_LABELS[side]}</h3>
             <ul className="mt-2 space-y-2">
               {pointsOn(task, side).map((point) => {
                 const isChosen = chosen.includes(point.id);
                 return (
                   <li key={point.id}>
-                    {onToggle ? (
-                      <label
-                        className={cx(
-                          "flex min-h-11 cursor-pointer items-start gap-3 rounded-tile px-3 py-2.5",
-                          isChosen ? "bg-well" : "bg-card ring-1 ring-inset ring-line",
-                          !canToggle(chosen, point.id) && "cursor-not-allowed",
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChosen}
-                          disabled={!canToggle(chosen, point.id)}
-                          onChange={() => onToggle(point.id)}
-                          className="mt-0.5 size-5 shrink-0 accent-[var(--color-primary)]"
-                        />
-                        <span className="text-body text-fg">
-                          <span className="font-semibold">{point.id}</span> {point.text}
-                        </span>
-                      </label>
-                    ) : (
-                      <p className={cx("flex items-start gap-3 rounded-tile px-3 py-2.5", isChosen ? "bg-well" : "")}>
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
-                          {isChosen ? <Icon name="check" size={16} className="text-fg" /> : <span aria-hidden="true" className="size-1.5 rounded-full bg-fg-subtle" />}
-                        </span>
-                        <span className={cx("min-w-0 flex-1 text-body", isChosen ? "text-fg" : "text-fg-muted")}>
-                          <span className="font-semibold">{point.id}</span> {point.text}
-                          {isChosen && <span className="ml-2 text-caption font-semibold text-fg">Chosen</span>}
-                        </span>
-                      </p>
-                    )}
+                    <p className={cx("flex items-start gap-3 rounded-tile px-3 py-2.5", isChosen ? "bg-well" : "")}>
+                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center">
+                        {isChosen ? <Icon name="check" size={16} className="text-fg" /> : <span aria-hidden="true" className="size-1.5 rounded-full bg-fg-subtle" />}
+                      </span>
+                      <span className={cx("min-w-0 flex-1 text-body", isChosen || !anyChosen ? "text-fg" : "text-fg-muted")}>
+                        <span className="font-semibold">{point.id}</span> {point.text}
+                        {isChosen && <span className="ml-2 text-caption font-semibold text-fg">Chosen</span>}
+                      </span>
+                    </p>
                   </li>
                 );
               })}
             </ul>
-          </fieldset>
+          </section>
         ))}
       </div>
     </Card>
@@ -140,8 +93,8 @@ export function Part3BriefCard({
               Start
             </PillAction>
             <p className="mt-3 text-label text-fg-muted">
-              Turn your sound on. You hear a short introduction and a chime, then the minute of preparation starts: choose
-              your points then. At 0:00 another chime, and recording starts by itself.
+              Turn your sound on. You hear a short introduction and a chime, then the minute of preparation starts: plan
+              your answer then. At 0:00 another chime, and recording starts by itself.
             </p>
           </>
         )}
@@ -164,18 +117,16 @@ export function Part3IntroCard({ text, goal }: { text: string; goal: RetryGoal |
   return <PartIntroCard part="Part 3" text={text} goal={goal} testId="part3-intro" />;
 }
 
-/** Preparation: one minute to choose 2 + 2 points and plan. "Start speaking now" (quiet) skips the rest. No black button. */
+/** Preparation: one minute to plan 2 + 2 points (no ticking, as in the real exam). "Start speaking now" (quiet) skips the rest. No black button. */
 export function Part3PreparationCard({
   totalMs,
   remainingMs,
-  chosen,
   goal,
   onSkip,
 }: {
   /** The whole preparation time. */
   totalMs: number;
   remainingMs: number;
-  chosen: readonly PointId[];
   goal: RetryGoal | null;
   onSkip: () => void;
 }) {
@@ -187,10 +138,8 @@ export function Part3PreparationCard({
       <Countdown remainingMs={remainingMs} label="to prepare" />
       <ProgressBar value={1 - remainingMs / totalMs} label="Preparation time used" className="mt-3" />
       <p className="mt-4 text-body text-fg">
-        Tick two points in each list and plan one reason or example for each. At 0:00 you hear the chime and recording starts by itself.
-      </p>
-      <p role="status" data-testid="choice-summary" className="mt-2 text-label font-semibold text-fg">
-        {choiceSummary(chosen)}
+        Choose two Pros and two Cons in your head and plan one reason or example for each. At 0:00 you hear the chime and recording
+        starts by itself.
       </p>
       {goal && <GoalCard goal={goal} className="mt-4" />}
       <div className="mt-5">
@@ -207,7 +156,6 @@ export function Part3RecordingCard({
   totalMs,
   remainingMs,
   level,
-  chosen,
   goal,
   earlyWarning,
   onFinish,
@@ -218,7 +166,6 @@ export function Part3RecordingCard({
   totalMs: number;
   remainingMs: number;
   level: number;
-  chosen: readonly PointId[];
   goal: RetryGoal | null;
   earlyWarning: boolean;
   onFinish: () => void;
@@ -245,7 +192,7 @@ export function Part3RecordingCard({
       <Countdown remainingMs={remainingMs} label="left" />
       <ProgressBar value={elapsedMs / totalMs} label="Speaking time used" className="mt-3" />
       <p className="mt-3 text-label text-fg-muted">
-        You&rsquo;ve spoken for <span className="font-semibold tabular-nums text-fg">{formatClock(elapsedMs)}</span>. Argue both sides: {choiceSummary(chosen)}.
+        You&rsquo;ve spoken for <span className="font-semibold tabular-nums text-fg">{formatClock(elapsedMs)}</span>. Argue both sides: two Pros and two Cons.
       </p>
       {goal && <GoalCard goal={goal} className="mt-4" />}
       <div className="mt-5">

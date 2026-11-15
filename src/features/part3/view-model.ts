@@ -200,7 +200,7 @@ export function buildPart3View(
     const count = s.sides[which];
     return {
       side: which,
-      title: SIDE_LABELS[which].toUpperCase(),
+      title: SIDE_LABELS[which],
       summary: `${count.covered} used · ${count.developed} developed`,
       points: rows,
     };
@@ -306,7 +306,7 @@ function fixView(result: Q8Result, task: Pick<PublicArgumentTask, "points">, cop
     }
     case "section_coverage": {
       const point = a.points.find((p) => p.id === fix.point_id);
-      const sideName = fix.missing_side === "both" ? "Both sides" : `${SIDE_LABELS[fix.missing_side].toUpperCase()} side`;
+      const sideName = fix.missing_side === "both" ? "Both sides" : `${SIDE_LABELS[fix.missing_side]} side`;
       const tryInstead = point?.model_answer || CHOOSE_TWO;
       return {
         label: `${sideName} · Not used`,
@@ -319,7 +319,7 @@ function fixView(result: Q8Result, task: Pick<PublicArgumentTask, "points">, cop
       };
     }
     case "point_development": {
-      const sideName = `${SIDE_LABELS[fix.side].toUpperCase()} side`;
+      const sideName = `${SIDE_LABELS[fix.side]} side`;
       if (fix.reason === "too_few_points" || fix.point_id === null) {
         const used = result.scoring.sides[fix.side].covered;
         return {
@@ -328,7 +328,7 @@ function fixView(result: Q8Result, task: Pick<PublicArgumentTask, "points">, cop
           quoteLabel: "What the task asks",
           quote: CHOOSE_TWO,
           adviceLabel: "Next step",
-          tryInstead: `Add a second ${SIDE_LABELS[fix.side].toUpperCase()} point and give it a reason or an example.`,
+          tryInstead: `Add a second point from the ${SIDE_LABELS[fix.side]} list and give it a reason or an example.`,
           ...goalFor(""),
         };
       }

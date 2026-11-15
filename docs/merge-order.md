@@ -17,7 +17,10 @@ variable, no Gemini call; Part 1.1 and 1.2 stay off (`PART_LIVE`). Details in do
   (`resolvePart11Pick`, `pickPart11SetForUser`), `exam-store.ts` (paper check accepts any task of the part by id),
   the practice page (redirect), `mock-part1-rules.ts` and `features/demo/demo-answers.ts` (one fallback line each),
   `sample-frequency.ts` (key renamed).
-- **Part 3 topic bank:** 18 new topics with our own FOR / AGAINST points (`c1/part-3-bank.ts`), 21 topics in all; the
+- **Owner's answers (2026-11-15):** Part 1.2 Question 4 is the exam's "What can you see in these pictures?" (shopping task
+  version 2, evaluator 3.8.1, only the Part 1.2 "partial" clause changed); Part 3 lists say Pros / Cons and nothing is ticked;
+  every audio file remade at normal speed (no 0.75 slow-down). Set `PART_1_1_LIVE=true` on Vercel; Part 3 waits for its anchor run.
+- **Part 3 topic bank:** 17 new topics with our own FOR / AGAINST points (`c1/part-3-bank.ts`), 20 topics in all (gambling left out); the
   mock and the exam laptop pick Part 3 by frequency weight, never one of the latest three (docs/part3-topic-bank.md).
   Small touches: `domain/speaking/full-mock.ts` (`pickWeightedTask`), `mock-argument-rules.ts` and
   `features/demo/part3-demo-answers.ts` (fallbacks for topics with no hand-written mock data).

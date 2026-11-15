@@ -63,7 +63,7 @@ Question audio:
   versioned with it, so every student hears the same audio and nothing depends on a speech API at practice time.
   The voice and the generator settings are recorded with the content, so changed wording can be regenerated with
   the same voice.
-  **Built 2026-11-08:** Piper, voice `en-us-libritts-high` speaker 6426 (LibriTTS, CC BY 4.0), 0.75 tempo; settings in
+  **Built 2026-11-08:** Piper, voice `en-us-libritts-high` speaker 6426 (LibriTTS, CC BY 4.0), normal speed (tempo 1.0 since 2026-11-15, was 0.75; the owner found it too slow, and the exam speaks at a normal pace); settings in
   `src/content/speaking/part1/question-audio.json`, script `scripts/make-part1-question-audio.mjs`.
 - One short chime sound file (original or freely licensed, source recorded like the pictures).
   **Changed 2026-11-08:** no file. The chime is the same two soft tones as Part 2, made in code with Web Audio

@@ -101,8 +101,11 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   Part 1 prompt only: the 3.7.0 vocabulary rule for its own ladder (when grammar is at the lower level, vocabulary at the
  *   target needs correct quotes). Live (gemini-3.8-flash): Part 2 anchors 23/23 exact, Part 1 anchors 6/6 exact,
  *   issues 1–3 at 0 (docs/feedback-review.md, "Evaluator 3.8.0").
+ * - speaking-evaluator/3.8.1 — Part 1.2 only (owner decision 2026-11-15): Question 4 is the exam's own "What can you see in these
+ *   pictures?", so describing only one picture is partial and comparing is no longer required. One clause of the Part 1 prompt's
+ *   "partial" rule changed; Parts 1.1 and 2 prompts unchanged. NOT live-tested: rerun the Part 1.2 anchors before Part 1.2 goes live.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.8.0";
+export const EVALUATOR_VERSION = "speaking-evaluator/3.8.1";
 
 /**
  * Version of the Part 3 evaluation (prompt, gate and post-processing; argument-evaluator.ts). Stored with every

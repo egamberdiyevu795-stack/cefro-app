@@ -32,8 +32,8 @@ export default async function Part3ListPage(props: PageProps<"/practice/part3">)
             Balanced argument
           </h1>
           <p className="mt-3 text-body text-fg">
-            A statement with a FOR list and an AGAINST list. Choose two points from each list, then argue both sides: 1 minute to
-            prepare, 2 minutes to speak.
+            A statement with a list of Pros and a list of Cons, as in the real exam. Argue both sides, with two points from each
+            list: 1 minute to prepare, 2 minutes to speak.
           </p>
           <p className="mt-2 text-label text-fg-muted">
             {PART_LIVE["3"] ? "Part 3 is open." : "Part 3 is coming soon. This demo shows made-up results; nothing you say is sent."}

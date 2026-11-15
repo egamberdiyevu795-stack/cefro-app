@@ -214,6 +214,22 @@ export async function claimAttemptForProcessing(attemptId: string, staleBefore: 
   return result.rowsAffected === 1;
 }
 
+/**
+ * Saves the answer to "Was this feedback helpful?" only if the attempt has none yet (the first answer is kept, so a
+ * second tap, a second tab or a replayed request changes nothing). Returns the answer now stored.
+ */
+export async function saveFeedbackHelpfulOnce(attemptId: string, helpful: boolean): Promise<boolean | null> {
+  const db = await getDb();
+  const at = nowIso();
+  await db
+    .update(speakingAttempts)
+    .set({ feedbackHelpful: helpful, feedbackHelpfulAt: at, updatedAt: at })
+    .where(and(eq(speakingAttempts.id, attemptId), sql`${speakingAttempts.feedbackHelpful} IS NULL`))
+    .run();
+  const row = await db.select({ helpful: speakingAttempts.feedbackHelpful }).from(speakingAttempts).where(eq(speakingAttempts.id, attemptId)).get();
+  return row?.helpful ?? null;
+}
+
 export async function setAttemptStatus(attemptId: string, status: AttemptStatus): Promise<void> {
   const db = await getDb();
   await db

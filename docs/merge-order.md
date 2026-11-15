@@ -968,3 +968,15 @@ real pages and routes are a 404 and everything works only in `?mock=1` and in th
   `TeacherMock`, `JoinClass`, the Account page's classes card, the demo class (a third demo mock, Jasur's; Bekzod's is "At home"), `POST /api/mock-exams` (now reads its request), `playwright.config.ts` (ignores the real spec).
 - **Tests:** `domain/teacher/exam-laptop.test.ts`, `app/api/teacher/exam-laptop.test.ts`, `server/db/migrations.test.ts` (0010), `owner-delete-script.test.ts`, `app/api/account/account-routes.test.ts`,
   `features/teacher/teacher-pages.test.ts` (updated), `app/api/mock-exams.test.ts` (passes a request), `e2e/exam-laptop.spec.ts`, `e2e/exam-laptop-real.spec.ts`.
+
+## After `claude/p1-stability`: `claude/project-thread-5mdcqy` ("Was this feedback helpful?", **adds migration `0011`**)
+
+Cut from `claude/p1-stability` (`5118cf8`, the chain tip on 2026-11-15), so it comes **after it**, merge commit, no squash. **No Gemini call, no new variable.**
+
+- **Migration 0011 (`0011_feedback_helpful.sql`), additive:** two **nullable** columns on `speaking_attempts`: `feedback_helpful` (integer 0/1, null = not answered) and
+  `feedback_helpful_at` (text). Nothing dropped, rewritten or made NOT NULL; old attempts read as "not answered". Run `npm run db:migrate` (or let the deploy do it) before the code is live.
+  **A branch that adds a migration after this one must be `0012`;** a parallel branch cut from the same tip that also made a `0011` must be renumbered (regenerate it with `npm run db:generate`).
+- **Route:** `POST /api/speaking/attempts/[attemptId]/feedback` `{ "helpful": true | false }`: owner only (404 otherwise, like every attempt route), scored attempts only (409), first answer kept.
+- **UI:** the result page's "Was this feedback helpful?" card (see docs/design-system.md). `AttemptView.feedbackHelpful` is a new optional field.
+- **Owner counts:** `npm run stats:feedback` (hosted database with `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`, else the local file): Yes / No / not answered per part and per scorer.
+- **Tests:** `app/api/feedback-helpful.test.ts`, `features/result/feedback-helpful.test.ts`, `test/feedback-stats.test.ts`, `server/db/migrations.test.ts` (0011), `e2e/feedback-helpful.spec.ts`.

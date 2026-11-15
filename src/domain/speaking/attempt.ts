@@ -93,6 +93,11 @@ export interface AttemptView {
   evaluation: { result: StoredEvaluation; meta: EvaluationMeta } | null;
   createdAt: string;
   completedAt: string | null;
+  /**
+   * The student's answer to "Was this feedback helpful?" (true = Yes, false = No; null = not answered yet). Only the
+   * student's own attempt from the database carries it; absent elsewhere (demo data, the teacher's view).
+   */
+  feedbackHelpful?: boolean | null;
 }
 
 /** Compact attempt row for history lists. */

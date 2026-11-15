@@ -66,6 +66,7 @@ export default async function Part3ResultPage(props: PageProps<"/result/part3">)
         view={view}
         retryHref={part3PracticeHref(task.id, { retry: key })}
         demo
+        helpful={{ demo: true }}
         yourTeacher={query.teacher === "1" ? demoYourTeacher(view.band, getArgumentRubric(spec.task).config.bands) : null}
       />
     </AppShell>

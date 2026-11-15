@@ -61,7 +61,7 @@ export default async function ResultPage(props: PageProps<"/result">) {
   return (
     <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} retryHref={retryHref} lesson={lesson} demo />
+        <ScoredResult view={state.view} task={task} retryHref={retryHref} lesson={lesson} demo helpful={{ demo: true }} />
       ) : state.kind === "scoring" ? (
         <ScoringResult state={state} demo />
       ) : state.kind === "not_scored" ? (
@@ -91,7 +91,7 @@ async function demoResult({ demoKey, scoring, next, flags, teacher }: { demoKey:
   return (
     <AppShell flags={flags} account="mock">
       {state.kind === "scored" ? (
-        <ScoredResult view={state.view} task={task} retryHref={retryHref} lesson={lesson} demo yourTeacher={yourTeacher} />
+        <ScoredResult view={state.view} task={task} retryHref={retryHref} lesson={lesson} demo yourTeacher={yourTeacher} helpful={{ demo: true }} />
       ) : state.kind === "scoring" ? (
         <ScoringResult state={state} demo />
       ) : state.kind === "not_scored" ? (

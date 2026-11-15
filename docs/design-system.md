@@ -452,6 +452,23 @@ is the not-found screen, so no student ever sees the saved runs as if they were 
 - Screenshots: `docs/design-system/result-{a2,a4,a0-below-b1,scoring,too-short,no-speech,retry}-{desktop,phone}.png`.
 
 
+## "Was this feedback helpful?" (result page)
+
+`features/result/FeedbackHelpful.tsx`, on every scored result: Part 1.1, 1.2 and 2 (`ScoredResult`) and Part 3 (`Part3ScoredResult`), real attempts and demo results alike. Never on the teacher's view.
+
+- **Where:** its own small card right after the Biggest fix (after "Patterns in this answer" when that card is shown), on phone and desktop. Asked there because that is the feedback the
+  student acts on; later cards (Skills, Your answer) stay below it.
+- **Ask:** "Was this feedback helpful?" (`text-body`, medium) with two quiet grey pills, **Yes** and **No** (`PillAction` `quiet`, `md`, 36 px tall, at least 80 px wide). Never black: the page's
+  one black button stays "Retry with this goal". Disabled until the page's scripts run (`useHydrated`) and while saving (the tapped pill says "Saving…").
+- **After the tap:** the question and pills are replaced by a check glyph and "**Thanks for telling us.** Your answer helps us make the feedback better." (in a `role="status"` live region, so a
+  screen reader hears it). On a later visit: "You found this feedback helpful." / "You told us this feedback wasn't helpful." No free-text field in this version.
+- **One answer per attempt:** stored on the attempt (`speaking_attempts.feedback_helpful`, `feedback_helpful_at`; migration 0011) by `POST /api/speaking/attempts/[id]/feedback`; the server keeps
+  the first answer, so a second tab or a repeated request changes nothing. A failed save keeps the question with "We couldn't save your answer. Please try again." (`role="alert"`).
+- **Demo results** (`?mock=1`, `?demo=`, `?anchor=`) show the same card; the thank-you appears and nothing is sent or stored.
+- **Owner counts:** `npm run stats:feedback` (Yes / No / not answered, per part and per scorer; the mock scorer is listed apart).
+- **Contrast and size:** `fg` on `card` 17.78:1, `fg-muted` on `card` 6.21:1, `fg` on `well` (the pills) 15.46:1; smallest text 12 px (the error line).
+- Screenshots (390 px): `docs/design-system/feedback-helpful-{before,after}-phone.png`.
+
 ## Transcript with mistakes and better versions ("Your answer" card)
 
 Step 5 of `docs/v1-plan.md` (section 3.3). Components: `features/result/TranscriptWithFixes.tsx` (client), `transcript-fixes.ts` (pure view model), the checks in

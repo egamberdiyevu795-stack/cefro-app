@@ -1,5 +1,6 @@
 import { Card, CardHeader, DeltaLabel, DemoLabel, Icon, Notice, PillButton, cx, styles, type IconName } from "@/components/ds";
 import { TranscriptWithFixes } from "@/features/result/TranscriptWithFixes";
+import { FeedbackHelpful, type FeedbackHelpfulTarget } from "@/features/result/FeedbackHelpful";
 import { audioRetentionNote } from "@/domain/audio-retention";
 import { BandMeter, type AnswerAudio } from "@/features/result/sections";
 import { formatDuration } from "@/features/result/view-model";
@@ -25,9 +26,12 @@ export function Part3ScoredResult({
   audio = null,
   teacher = null,
   yourTeacher = null,
+  helpful = null,
   children,
 }: {
   view: Part3ResultView;
+  /** "Was this feedback helpful?" under the Biggest fix: the student's own attempt, or a demo. Never on the teacher's view. */
+  helpful?: FeedbackHelpfulTarget | null;
   /** A teacher's read-only view (T5 for Part 3): the student's name, their player or the "deleted" note, no Retry. */
   teacher?: { studentName: string; listen?: TeacherListen | null } | null;
   /** The student's own page: the level their teacher gave, next to CEFRO's band. */
@@ -45,6 +49,7 @@ export function Part3ScoredResult({
         <ResultCard view={view} demo={demo} teacher={teacher} yourTeacher={yourTeacher} className="order-1 lg:order-none" />
         {children && <div className="order-1 lg:order-none">{children}</div>}
         <FixCard view={view} retryHref={teacher ? null : retryHref} className="order-3 lg:order-none" />
+        {helpful && !teacher && <FeedbackHelpful target={helpful} className="order-3 lg:order-none" />}
         <AnswerCard view={view} audio={teacher ? null : audio} listen={teacher?.listen ?? null} who={teacher?.studentName} title={teacher ? "Answer" : undefined} className="order-6 lg:order-none" />
       </div>
       <div className="contents lg:flex lg:flex-col lg:gap-4">

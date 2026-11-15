@@ -165,6 +165,7 @@ export function AttemptResult({
           yourTeacher={yourTeacher}
           audio={audio}
           retryHref={retryWithGoal}
+          helpful={{ attemptId: attempt.id, initial: attempt.feedbackHelpful ?? null }}
           lesson={lesson ? { href: lessonHref(lesson, { attempt: attempt.id }), title: lesson.title } : null}
           onCompare={view.view.retry && previous && isEvaluated(previous) ? () => {
             setComparing(true);

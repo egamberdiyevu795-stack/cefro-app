@@ -171,6 +171,16 @@ export function restartProcessing(attemptId: string): Promise<{ started: boolean
   return request(`/api/speaking/attempts/${encodeURIComponent(attemptId)}/process`, { method: "POST", retries: 3 });
 }
 
+/** "Was this feedback helpful?": the first answer is kept, so repeating the request is safe. Returns the stored answer. */
+export function saveFeedbackHelpful(attemptId: string, helpful: boolean): Promise<{ helpful: boolean }> {
+  return request(`/api/speaking/attempts/${encodeURIComponent(attemptId)}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ helpful }),
+    retries: 2,
+  });
+}
+
 export function fetchTaskAttempts(taskId: string): Promise<{ attempts: AttemptSummary[] }> {
   return request(`/api/speaking/tasks/${encodeURIComponent(taskId)}/attempts`, { retries: 3 });
 }

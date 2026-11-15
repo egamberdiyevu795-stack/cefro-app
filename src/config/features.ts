@@ -29,17 +29,18 @@ export function allFlags(on: boolean): FeatureFlags {
  * so `?flags=off` does not change them.
  */
 export const PART_LIVE: Record<ExamPartId, boolean> = {
-  "1.1": envSwitch(process.env.PART_1_1_LIVE, false),
+  "1.1": envSwitch(process.env.PART_1_1_LIVE, true),
   "1.2": envSwitch(process.env.PART_1_2_LIVE, false),
   "2": envSwitch(process.env.PART_2_LIVE, true),
-  "3": envSwitch(process.env.PART_3_LIVE, false) || part3LiveForTests(),
+  "3": envSwitch(process.env.PART_3_LIVE, true) || part3LiveForTests(),
 };
 
 /**
  * Release switches the owner can flip in Vercel (Settings > Environment Variables) without a new commit: `PART_1_1_LIVE`,
  * `PART_1_2_LIVE`, `PART_2_LIVE`, `PART_3_LIVE`, `FULL_MOCK_LIVE` and `TEACHER_LIVE`. Only the exact words `true` / `1`
  * (on) and `false` / `0` (off), in any letter case, count; unset, empty or anything else (a typo, "yes") keeps the
- * default, which is OFF for every switch except Part 2 (on, as before). A switch is read when the server starts, so a
+ * default: ON for Parts 1.1, 2 and 3 (owner decision 2026-11-15: no manual Vercel step; Part 3 passed its live anchor
+ * run), OFF for Part 1.2, the full mock and teacher marking. Set a switch to `false` in Vercel to close a part again. A switch is read when the server starts, so a
  * change needs a Redeploy in Vercel (no commit). They are server-only on purpose (no NEXT_PUBLIC_ prefix): no client
  * component reads them. docs/pilot-runbook.md says when to turn each on.
  */

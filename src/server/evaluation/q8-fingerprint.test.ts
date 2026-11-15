@@ -18,7 +18,7 @@ import { ARGUMENT_EVALUATOR_VERSION } from "./versions";
  * ARGUMENT_EVALUATOR_VERSION (versions.ts), then update PINNED_HASH and test/fixtures/q8-model-output-schema.json
  * (UPDATE_Q8_FIXTURES=1 npx vitest run src/server/evaluation/q8-fingerprint.test.ts).
  */
-const PINNED_HASH = "h2:a622c4d5f8ba6f39ab5f9ef1a881d145fb26bc1aafb15f2df5065d36dc425663";
+const PINNED_HASH = "h2:21e379cbd890c16eb01956d95c6f3954ace895760a9795ae8350ca8ff35f03b0";
 const SCHEMA_FIXTURE = path.join(process.cwd(), "test", "fixtures", "q8-model-output-schema.json");
 
 const anchor = PART3_ANCHORS.find((a) => a.id === "cars-A4")!;

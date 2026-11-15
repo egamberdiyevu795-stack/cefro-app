@@ -78,5 +78,21 @@ The 11 Part 3 anchors run on `gemini-3.8-flash` (evaluator 3.8.1), as the app no
 too low (1 → 0, 2 → 1), and one excellent answer got the top band 6 instead of 5. Time per answer 33–96 s (cars-A0
 needed a second call, 216 s, $0.12). Removing the tick step did no harm: the middle and upper bands (2–5) are exact.
 
-Verdict: safe to open for practice (`PART_3_LIVE=true`). Possible follow-up: a prompt rule for "reads the points but
-adds a little" (band 1, not 0), then rerun the low anchors (about $0.10).
+### Weak-answer fix (argument-evaluator 0.3.0, same day)
+
+Three prompt rules: a short simple reason ("…, because children can call") counts as developed; one developed point
+means at most "heavily_dependent"; reading the lists never lowers a language level (dependence already judges it).
+Rerun of the anchors that were off plus one middle check, $0.14:
+
+| Anchor | Expected | Before | After |
+|---|---|---|---|
+| cars-A1 | 1 | 0 | **1** |
+| tax-A1 | 1 | 0 | **1** |
+| phones-A2 | 2 | 1 | **2** |
+| cars-A2 | 2 | 2 | **2** |
+
+Not changed: tax-A5 (expected 5, got 6 once). The band-6 gate already needs grammar and vocabulary both above C1, so
+it is a judgement call on a very strong answer, not a rule gap.
+
+**Part 3 is live by default** (`PART_LIVE["3"]` on unless `PART_3_LIVE=false`), and so is Part 1.1 (owner decision
+2026-11-15: no manual Vercel step). Both open on the site once this branch is merged and deployed.

@@ -11,6 +11,10 @@ import { defineConfig, devices } from "@playwright/test";
  * Throwaway databases. `npm run test:e2e:part3` runs both.
  */
 const NO_KEY = process.env.E2E_P3_VARIANT === "nokey";
+// Parts 1.1 and 3 are live by default since 2026-11-15. These suites test them closed (Part 3 opens by its test switch
+// where a suite needs it); set here too so the specs, which read PART_LIVE themselves, agree with the server.
+process.env.PART_1_1_LIVE = "false";
+process.env.PART_3_LIVE = "false";
 const PORT = Number(process.env.E2E_P3_PORT ?? (NO_KEY ? 3161 : 3160));
 const runId = (process.env.E2E_RUN_ID ??= String(Date.now()));
 const executablePath =
@@ -41,6 +45,8 @@ export default defineConfig({
     // A cold start takes about 10 s; a slow disk was seen to take far longer, so allow five minutes.
     timeout: 300_000,
     env: {
+      PART_1_1_LIVE: "false",
+      PART_3_LIVE: "false",
       CEFRO_TEST_PART3_LIVE: "1",
       TRANSCRIPTION_PROVIDER: "mock",
       DATABASE_PATH: `./data/e2e/${runId}-p3-${NO_KEY ? "nokey" : "scored"}.db`,

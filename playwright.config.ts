@@ -6,6 +6,10 @@ import { defineConfig, devices } from "@playwright/test";
  * development (mock) providers and a throwaway database, and use Chromium's
  * fake microphone. Real providers are validated separately (npm run eval:live).
  */
+// Parts 1.1 and 3 are live by default since 2026-11-15. These suites test them closed (Part 3 opens by its test switch
+// where a suite needs it); set here too so the specs, which read PART_LIVE themselves, agree with the server.
+process.env.PART_1_1_LIVE = "false";
+process.env.PART_3_LIVE = "false";
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 // One id per run, shared with the test workers (they re-read this file), so a test can reach the run's database.
 const runId = (process.env.E2E_RUN_ID ??= String(Date.now()));
@@ -43,6 +47,9 @@ export default defineConfig({
     // A cold start takes about 10 s; a slow disk was seen to take far longer, so allow five minutes.
     timeout: 300_000,
     env: {
+      // Parts 1.1 and 3 are live by default (2026-11-15); this suite tests them closed, as the unit suite does.
+      PART_1_1_LIVE: "false",
+      PART_3_LIVE: "false",
       TRANSCRIPTION_PROVIDER: "mock",
       EVALUATION_PROVIDER: "mock",
       DATABASE_PATH: `./data/e2e/${runId}.db`,

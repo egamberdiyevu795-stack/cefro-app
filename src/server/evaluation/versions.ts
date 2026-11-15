@@ -119,7 +119,11 @@ export const EVALUATOR_VERSION = "speaking-evaluator/3.8.1";
  * - argument-evaluator/0.2.0 — Sentences with mistakes and better versions (docs/v1-plan.md §3.3, step 5): the model also
  *   returns "sentence_fixes" (you_said / better / why, up to 8), with the same rules and code checks as Part 2's. Still NOT
  *   live-tested. The stored Part 3 schema version is unchanged (the list is optional, older results have none).
+ * - argument-evaluator/0.3.0 — First live anchor run (2026-11-15, gemini-3.8-flash): 7 of 11 exact, all within one band;
+ *   weak answers that read the lists scored one band low. Prompt rules: a short simple reason counts as "developed"; one
+ *   developed point means at most "heavily_dependent"; reading the lists never lowers a language level (dependence
+ *   already judges it). Part 3 is live by default from this version (docs/part3-topic-bank.md).
  */
-export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.2.0";
+export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.3.0";
 
 export { EVALUATION_SCHEMA_VERSION };

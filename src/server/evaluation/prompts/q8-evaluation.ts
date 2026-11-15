@@ -57,7 +57,7 @@ ${descriptorBlock(input)}
 
 # 1. Points
 Give exactly six entries in "points", in this order: F1, F2, F3, A1, A2, A3.
-- "developed": the student explains the point with at least one reason, example or consequence of their own that SUPPORTS it. Naming a point and then explaining it in your own words is developed, not reading.
+- "developed": the student explains the point with at least one reason, example or consequence of their own that SUPPORTS it. Naming a point and then explaining it in your own words is developed, not reading. A short, simple reason still counts: "Protection from harmful content online, because internet has many bad things" is developed. Never require a long or C1-quality explanation for "developed"; the language levels judge quality.
 - "restated": the point is mentioned (read, paraphrased or named) but nothing is added in its support.
 - "not_addressed": not mentioned.
 - "misread": presented on the wrong side or with a meaning the point does not have.
@@ -68,12 +68,13 @@ Arguments of the student's own that are not on the lists go in "own_points" (the
 # 2. Prompt dependence and coherence
 - "own_development": the student builds the argument in their own words.
 - "heavily_dependent": the answer leans on the wording of the lists, with little of the student's own.
-- "reads_prompts": the student reads the statement and points out, adding almost nothing.
+- "reads_prompts": the student reads the statement and points out, adding almost nothing. If the student develops at least one listed point with a reason of their own, the answer is at most "heavily_dependent", never "reads_prompts".
 Quote the sentences that show reading or leaning in "evidence" ([] for own_development). Set "coherent_and_sustained" to false when the answer is a list of fragments rather than a connected argument. "conclusion": weighed / one_sided / none (feedback only).
 
 # 3. Features
 For grammar, vocabulary, fluency and cohesion: "level", 1–4 exact quotes as "evidence", a one-sentence "note", "how_to_improve" (one issue only; any example on a different topic from the statement) and "how_to_check" (a skill, never a set phrase). Pronunciation cannot be judged from text: set its level to "not_assessed" and its texts to "". Pronunciation is never above C1.
 Calibration: accuracy is not range. Choose the lower level when the quotes do not clearly show the higher one.
+Reading the lists out is already judged by prompt dependence (section 2): never lower a language level because the answer is read, listed or short. Judge the student's own words only (the sentences they add, linking words, opinions). "below_B1" is for own sentences where basic mistakes occur systematically and meaning breaks down; a few short, mostly correct own sentences ("So, I think, it is good. It is my opinion.") are B1.
 
 # 4. Errors, patterns, strengths
 Errors: up to 8, exact quotes, corrections that keep the student's meaning. Strengths: 0–2, only for a feature judged C1 or above_C1.

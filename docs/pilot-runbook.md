@@ -58,8 +58,8 @@ Vercel's logs which one.
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | a Google AI key | Turns on AI scoring and the pronunciation step. | aistudio.google.com → **Get API key**. Needs credit. Also check "request logging" is **off** for the project (`docs/launch-checklist.md`, section 11, item 5). |
 | `ANTHROPIC_API_KEY` | a key | Only if you set `EVALUATION_PROVIDER=anthropic` instead of Gemini. | console.anthropic.com → API keys. |
-| `PART_1_1_LIVE` | `true` | Opens Part 1.1 for practice at home (questions from the weighted bank). Default off ("Coming soon"). | **Ready (2026-11-15):** the six Part 1 anchors scored exactly, twice, on gemini-3.8-flash. Set it on Preview and Production. |
-| `PART_3_LIVE` | `true` | Opens Part 3 for practice at home. Default off ("Coming soon"). | **Ready (2026-11-15):** Part 3 anchors on live Gemini: 7 of 11 exact, all within one band, $0.49 (docs/part3-topic-bank.md). Weak answers may score one band low. |
+| `PART_1_1_LIVE` | `true` (default) | Part 1.1 practice at home (questions from the weighted bank). **Live by default since 2026-11-15** (owner: no manual Vercel step); set `false` to close it. | **Live:** the six Part 1 anchors scored exactly, twice, on gemini-3.8-flash. |
+| `PART_3_LIVE` | `true` (default) | Part 3 practice at home. **Live by default since 2026-11-15**; set `false` to close it. | **Live:** first anchor run 7 of 11 exact, all within one band; after the weak-answer fix (argument-evaluator 0.3.0) the 4 low/middle anchors rerun 4 of 4 exact (docs/part3-topic-bank.md). |
 | `PART_1_2_LIVE` | `true` | Opens Part 1.2 for practice at home. Default off ("Coming soon"). | **Not yet:** only one picture task, and the Question 4 rule changed on 2026-11-15 (evaluator 3.8.1): rerun the Part 1.2 anchors first. |
 | `PART_2_LIVE` | `false` | Closes single Part 2 practice. Default is on. | Normally leave it alone. |
 

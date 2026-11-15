@@ -19,7 +19,7 @@ const featureFields = {
   note: z.string().describe("One short sentence for the student: why this level, referring to the quotes."),
   how_to_improve: z
     .string()
-    .describe("One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."),
+    .describe("One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."),
   how_to_check: z.string().describe("How the student can tell, after the next attempt, that they did it."),
 };
 

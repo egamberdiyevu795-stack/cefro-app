@@ -3,6 +3,7 @@ import { FEATURE_LABELS, LEVEL_LABELS, type Feature, type QuestionStatus } from 
 import { questionNumber } from "@/domain/speaking/task";
 import type { EvaluationInput, EvaluationPrompt } from "../types";
 import { escapeUntrusted } from "./multilevel-evaluation";
+import { adviceRules, transcriptFluencyRule } from "./feedback-rules";
 import { sentenceFixesRules } from "./sentence-fixes";
 
 /**
@@ -100,10 +101,12 @@ ${hints.join("\n")}
 For every question that is not on_topic, "model_answer" is one or two short sentences (at most 25 words) the student could have said, written ONE level above the student's language. Never invent an opinion the student did not give: keep their view if they gave one; otherwise give a frame with a blank to complete. For on_topic questions "model_answer" is "".
 
 # 2. Features
-For ${features.join(", ")} give "level" (${[...config.levels].reverse().join(" / ")}), 1–4 exact quotes as "evidence" that justify that level, a one-sentence "note" for the student, "how_to_improve" (one concrete instruction that would move this feature towards the next level, naming the words or the structure) and "how_to_check" (how the student can tell they did it).${features.includes("cohesion") ? "" : " This part has no cohesion feature: do not include cohesion in \"features\"."}
-- Fluency from a transcript: only what the text shows (fillers such as "um", repeated words, restarted sentences) and the times in <speech_metrics>. Never say the student spoke smoothly, at a good pace, or without pauses: a transcript cannot show that.
+For ${features.join(", ")} give "level" (${[...config.levels].reverse().join(" / ")}), 1–4 exact quotes as "evidence" that justify that level, a one-sentence "note" for the student, "how_to_improve" (one concrete instruction about ONE issue that would move this feature towards the next level, naming the structure or the kind of words; see "Advice rules") and "how_to_check" (how the student can tell they did it).${features.includes("cohesion") ? "" : " This part has no cohesion feature: do not include cohesion in \"features\"."}
+- Fluency from a transcript: judge the level only from what the text shows (fillers such as "um", repeated words, restarted sentences) and the times in <speech_metrics>.
+${transcriptFluencyRule}
 - Pronunciation cannot be judged from text: set pronunciation.level to "not_assessed", evidence to [], and note, how_to_improve and how_to_check to "". Never say anything about how the student pronounced words.
 When the quotes do not clearly show the higher descriptor, choose the lower level.
+When grammar is ${lower} because basic mistakes occur systematically, give vocabulary ${target} only if its evidence quotes are themselves correct phrases. A quote with a basic mistake in it (a wrong verb form, a missing plural or article, a wrong word or preposition, e.g. "know many thing", "work in market") is evidence for ${lower} vocabulary, not ${target}. A few good topic words do not outweigh noticeable wrong word choices: that is the ${lower} vocabulary descriptor.
 
 # 3. Memorised or irrelevant
 Set memorized_or_irrelevant to true ONLY when the whole recording is clearly a prepared text that ignores these questions (e.g. one memorised paragraph for all of them), or has no meaningful language. Short or weak answers are NOT memorised: use the question statuses for that.
@@ -123,9 +126,10 @@ ${sentenceFixesRules(`${lower}–${target}`)}
 If <previous_attempt> is provided, judge the new answer on its own, then fill retry_review: for each focus the student was given, say achieved / partly_achieved / not_achieved with evidence from the NEW transcript, and an honest summary. Otherwise retry_review is null.
 
 # 7. Wording rules for the student
-- Examples you write must use a different topic from the questions (e.g. school, sport, travel), never the task's own topic.
 - Never write level codes such as "${top}" or "${bottom}" or any field name in student text: write "${LEVEL_LABELS[top]}" or "${LEVEL_LABELS[bottom]}".
-- Write to the student as "you", in short, simple sentences a ${lower}–${target} learner understands. No flattery.`;
+- Write to the student as "you", in short, simple sentences a ${lower}–${target} learner understands. No flattery.
+
+${adviceRules(`${task.topic} (${task.prompts.join(" / ")})`)}`;
 }
 
 function buildUser(input: EvaluationInput): string {

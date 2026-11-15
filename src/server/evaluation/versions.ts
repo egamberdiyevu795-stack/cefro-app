@@ -92,7 +92,17 @@ import { EVALUATION_SCHEMA_VERSION } from "@/domain/evaluation/schema";
  *   issue 5, option a): when grammar is below_B1, vocabulary B1 needs correct quotes. It only applies to answers whose
  *   grammar is already below_B1, so no other anchor can move. Scoring, schema and gate unchanged; new prompt hash.
  */
-export const EVALUATOR_VERSION = "speaking-evaluator/3.7.0";
+/* - speaking-evaluator/3.8.0 — Feedback wording (docs/feedback-review.md issues 1–4, seen on gemini-3.8-flash in 4, 19,
+ *   15 and 3 of 24 runs). One prompt revision for Parts 1.1, 1.2 and 2 (prompts/feedback-rules.ts): each how_to_improve /
+ *   how_to_check is about ONE issue, the first error's rule for grammar and vocabulary; it describes a skill and never
+ *   requires a set phrase; examples use another topic than the task's; transcript-only fluency text never claims
+ *   smoothness, pauses, hesitation or speed. The provider schema's how_to_improve description says the same. These rules
+ *   change only what the model writes, not how it judges a level; scoring and gate unchanged; new prompt hash and schema.
+ *   Part 1 prompt only: the 3.7.0 vocabulary rule for its own ladder (when grammar is at the lower level, vocabulary at the
+ *   target needs correct quotes). Live (gemini-3.8-flash): Part 2 anchors 23/23 exact, Part 1 anchors 6/6 exact,
+ *   issues 1–3 at 0 (docs/feedback-review.md, "Evaluator 3.8.0").
+ */
+export const EVALUATOR_VERSION = "speaking-evaluator/3.8.0";
 
 /**
  * Version of the Part 3 evaluation (prompt, gate and post-processing; argument-evaluator.ts). Stored with every

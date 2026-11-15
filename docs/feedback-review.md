@@ -1,7 +1,7 @@
 # Feedback review: evaluator issues for the next live run
 
-**Status of issues 1–5 below: to test live before changing the prompt.** Nothing there has been changed in the code
-or the prompt yet. No model was called to write this review.
+**Status of issues 1–5 below: all fixed live on gemini-3.8-flash** (issue 5 by evaluator 3.7.0, issues 1–4 by 3.8.0; see
+the two live-run sections). The issue sections keep the original findings.
 
 **One prompt change is already in, not live-tested:** the "Sentences to improve" list ([below](#sentences-to-improve-prompt-changed-not-live-tested)),
 evaluator `speaking-evaluator/3.6.0` and `argument-evaluator/0.2.0` (v1-plan step 5).
@@ -13,6 +13,49 @@ evaluator `speaking-evaluator/3.6.0` and `argument-evaluator/0.2.0` (v1-plan ste
   run 1). Prompt lines refer to `src/server/evaluation/prompts/multilevel-evaluation.ts` at this commit.
 - **What students see:** these fields reach the result page directly. The goal is the first `retry_focus`, the one
   "Retry with this goal" carries; "Try instead" is the error's `correction`.
+
+## Evaluator 3.8.0: issues 1–4 fixed, Part 1 anchors verified (15 Nov 2026)
+
+**Result:** one prompt revision fixed issues 1–4 without moving any band: Part 2 anchors 23 of 23 runs exact (one more run
+failed on the sandbox network, "terminated", not a model result), Part 1 anchors 6 of 6 exact. Saved outputs:
+`test/fixtures/live-3.8-flash-eval3.8/`. Rules: `src/server/evaluation/prompts/feedback-rules.ts`, used by the Part 1 and
+Part 2 prompts.
+
+| Issue | Before (3.6.0, 24 runs) | After (3.8.0, 23 runs) | What changed |
+| --- | --- | --- | --- |
+| 1. Goal joins two issues | 5 (checker fixed, see below) | **0**; every grammar goal names the first error's rule | Each how_to_improve / how_to_check is about ONE issue, the first error's rule for grammar and vocabulary; never two structures joined by "and"/"or" |
+| 2. "Spoke smoothly" without audio | 19 | **0** | Fluency text may only describe what the text shows and the seconds used; no smoothness, pauses, hesitation, pace, speed or words per minute. Notes now read "You spoke for 95 of the 120 seconds using short, simple sentences" |
+| 3. Example on the task's own topic | 15 | **1** flagged, a false positive ("older drivers", a word swap on another topic) | Examples in advice fields use another everyday topic; corrections, "better" and model_answer are exempt |
+| 4. Check demands a set phrase | 3 | **5** flagged, all read by hand: each names a structure with examples ("a contrasting word such as 'however' or 'although'", "a clause starting with 'who' or 'which'"); none demands one fixed phrase like "Not only" | Advice describes a skill and where to use it; a phrase only as "for example" |
+
+- **Checker change:** `scripts/check-feedback-review.mjs` counted a list of examples of one rule ("'gave', 'wanted', and
+  'said'") as two issues; it now flags only two different structures joined. With it the 3.6.0 baseline is 5, not 4.
+- **Cost and time went up:** Part 2 now averages **$0.047 per scoring** (was $0.034) and 42–127 s (was 24–136 s): the
+  stricter wording rules make the model think longer. Full mock estimate rises by about $0.03.
+
+**Part 1.2 band 0 / 162 s, diagnosed:** the live test was wrong, not the scorer. The 1.2 anchor answers were about home
+cooking vs fast food, but the only 1.2 task is "Where people shop" (market vs supermarket). The model, told to judge
+against the shopping questions, correctly found the answers off topic (band 0) and spent 23.7k output tokens (cap 24k)
+working through the mismatch. The 1.2 anchors are rewritten for the shopping task with the same language profile. On the
+first rerun 1.2-middle scored band 4 (vocabulary B1, justified by quotes with mistakes in them, "my mother know the
+seller", "the price is cheaper"): the same pattern as issue 5. The 3.7.0 vocabulary rule was added to the Part 1 prompt
+for its own ladder; then 1.2-middle gave band 2 on both runs. The other five anchors were run before that rule, but it can
+only lower vocabulary when grammar is at the lower level, and in those runs vocabulary was already at that level.
+
+| Part 1 anchor | Expected | Band | Time | Output tokens | Cost |
+| --- | --- | --- | --- | --- | --- |
+| 1.1-low | 1 | 1 | 39 s | 4.9k | $0.022 |
+| 1.1-middle | 3 | 3 | 90 s | 12.5k | $0.051 |
+| 1.1-high | 5 | 5 | 45 s | 5.9k | $0.026 |
+| 1.2-low | 1 | 1 | 67 s | 8.8k | $0.038 |
+| 1.2-middle (before / after the vocabulary rule) | 2 | 4 / **2, 2** | 142 s / **45 s, 78 s** | 19.9k / 6.2k, 11.4k | $0.079 / $0.028, $0.047 |
+| 1.2-high | 5 | 5 | 62 s | 8.2k | $0.035 |
+
+The live test now also sends per-question offsets, as the app does. One run per anchor (two for 1.2-middle) because of the
+budget: enough to show the bands are right, not to show they are stable. Before Part 1 AI scores go to students, a
+second run of the six would cost about $0.25.
+
+**Spend for this work:** about $1.40 (Part 2 $1.08, Part 1 $0.33), plus the one failed call if it was billed.
 
 ## Live run on gemini-3.8-flash (15 Nov 2026)
 

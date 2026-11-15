@@ -39,7 +39,10 @@ function loadRuns(p) {
 
 const FLUENCY_CLAIM = /smooth|fluent|without (any |noticeable |visible |major )?(pauses?|hesitations?|fillers?)|\bpace\b|\bslow|\bfast|speed/i;
 const SET_PHRASE = /(start(s|ing)? with|contains? (at least one|the)|include (a|the) (structure|phrase|sentence))\s.*'[^']+'/i;
-const TWO_STRUCTURES = /'[^']+'\s*,?\s*(and|or)\s+'[^']+'|\b(conditionals?|relative clauses?|passive)\b[^.]*\b(and|or)\b[^.]*\b(conditionals?|relative clauses?|passive)\b/i;
+// Two different structures joined in one goal or check. (Until 15 Nov this also flagged any two quoted words joined by
+// "and"/"or", which counted lists of examples of ONE rule, e.g. "'gave', 'wanted', and 'said'", as two issues.)
+const STRUCTURE = String.raw`(conditionals?|relative clauses?|passives?|participle clauses?|cleft sentences?|inversion|linking (words?|phrases?)|modal verbs?|reported speech|past perfect|present perfect)`;
+const TWO_STRUCTURES = new RegExp(String.raw`\b${STRUCTURE}\b[^.]*\b(and|or)\b[^.]*\b${STRUCTURE}\b|\b${STRUCTURE}\b[^.]*\b(or|and)\b[^.]*'[^']+'\s*\(?\s*(who|which|that)\b`, "i");
 const TASK_WORDS = /\b(advice|advise[ds]?|older|young people|follow(ed|ing)? (his|her|their|my) advice)\b/i;
 const QUOTED = /['"‘“]([^'"’”]{12,})['"’”]/g;
 

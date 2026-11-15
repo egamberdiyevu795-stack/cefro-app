@@ -5,6 +5,10 @@ import type { FeatureLevel, QuestionStatus } from "@/domain/evaluation/multileve
  * expect from the model and the band the code must compute from them. TEST-ONLY: never imported by app code and never
  * in a prompt (checked by part1-anchors.test.ts). Pronunciation is not assessed (transcript only), so each result is
  * provisional and the mean uses grammar, vocabulary, fluency (+ cohesion in 1.2).
+ *
+ * The answers must fit the task they are scored against: 1.1 = a2-part1-1-daily-life, 1.2 = b1-part1-2-shopping.
+ * (Until 15 Nov 2026 the 1.2 answers were about home cooking vs fast food, a topic with no task; the first live call
+ * scored them against the shopping task and correctly found them off topic: band 0 after 162 s.)
  */
 export interface Part1Anchor {
   id: string;
@@ -70,7 +74,7 @@ export const PART1_ANCHORS: readonly Part1Anchor[] = [
     id: "1.2-low",
     part: "1.2",
     answers: [
-      "In first picture is a family. They cooking in kitchen. Second picture, young people, they eat burger. First is home, second is café.",
+      "In first picture is a market. A man selling vegetable outside. Second picture, big supermarket, a man with trolley. First is outside, second is inside.",
       "Um… sorry, I don't understand. Um…",
       "Um… I don't know. Sorry.",
     ],
@@ -85,9 +89,9 @@ export const PART1_ANCHORS: readonly Part1Anchor[] = [
     id: "1.2-middle",
     part: "1.2",
     answers: [
-      "In the first picture there is a family who are cooking together at home. In the second picture some teenagers are eating burgers in a café. The first one looks more healthy and calm, but the second is more fun.",
-      "I prefer eat at home because my mother cook very good and is cheaper. But sometimes I go to café with friends.",
-      "Now people eat more fast food. Before, people eat at home every day. Now many fast food is in Tashkent.",
+      "In the first picture there is a small market where a man is selling fruit and vegetables outside. In the second picture a man is pushing a trolley in a big supermarket. The first one looks more friendly, but the second is bigger.",
+      "People like market because the vegetables is more fresh and the price is cheaper. Also my mother know the seller and she talk with him.",
+      "Supermarket is big and have everything in one place. People go there with car and buy many thing for all week.",
     ],
     statuses: ["on_topic", "on_topic", "on_topic"],
     levels: { grammar: "A2", vocabulary: "A2", fluency: "B1", cohesion: "B1" },
@@ -100,9 +104,9 @@ export const PART1_ANCHORS: readonly Part1Anchor[] = [
     id: "1.2-high",
     part: "1.2",
     answers: [
-      "Both pictures are about eating, but they show very different situations. In the first one, a family is preparing dinner together, which looks relaxed and quite healthy. The second shows teenagers grabbing burgers in a fast-food place, so it's quicker but probably less healthy.",
-      "Honestly, I'd rather eat at home. Home-cooked food is fresher, and it's a chance to talk to my family, although I don't mind eating out on special occasions.",
-      "I think they've changed a lot. Ten years ago fast food was rare, whereas now there are chains everywhere, so young people eat out much more and families cook together less.",
+      "Both pictures show places to buy food, but they feel very different. The first is a small open-air market, where a seller is chatting with a customer, which looks friendly and personal. The second is a huge supermarket, so it's probably faster but far less personal.",
+      "I think people love local markets because the fruit and vegetables are fresher and often cheaper. Besides, you can bargain and get to know the sellers, which you can't really do in a supermarket.",
+      "Mainly for convenience. You can find everything under one roof, pay by card and park easily, so busy families save a lot of time, even though the food isn't always as fresh.",
     ],
     statuses: ["on_topic", "on_topic", "on_topic"],
     levels: { grammar: "above_B1", vocabulary: "above_B1", fluency: "above_B1", cohesion: "above_B1" },

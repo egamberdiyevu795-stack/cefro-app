@@ -3,6 +3,7 @@ import { FEATURE_LABELS } from "@/domain/evaluation/multilevel/levels";
 import type { QualityViolation } from "../quality-gate";
 import type { EvaluationInput, EvaluationPrompt } from "../types";
 import { buildPart1EvaluationPrompt } from "./multilevel-part1-evaluation";
+import { adviceRules, transcriptFluencyRule } from "./feedback-rules";
 import { sentenceFixesRules } from "./sentence-fixes";
 
 /**
@@ -76,10 +77,10 @@ For every question that is partial, minimal, missing or off_topic, "model_answer
 For on_topic questions "model_answer" is "".
 
 # 2. Features
-For grammar, vocabulary, fluency and cohesion give "level" (above_B2 / B2 / B1 / below_B1), 1–4 exact quotes as "evidence" that justify that level, a one-sentence "note" for the student, "how_to_improve" (one concrete instruction that would move this feature towards the next level, naming the words or the structure) and "how_to_check" (how the student can tell they did it).
+For grammar, vocabulary, fluency and cohesion give "level" (above_B2 / B2 / B1 / below_B1), 1–4 exact quotes as "evidence" that justify that level, a one-sentence "note" for the student, "how_to_improve" (one concrete instruction about ONE issue that would move this feature towards the next level, naming the structure or the kind of words; see "Advice rules") and "how_to_check" (how the student can tell they did it).
 - Grammar: look for complex structures (conditionals, relative clauses, passives, modals, perfect tenses) and whether errors impede understanding.
 - Vocabulary: is the range enough for the topic of the questions? Do wrong word choices impede understanding?
-- Fluency: from the transcript, judge pausing, false starts and reformulations (fillers like "um", "uh", repeated words, self-corrections) and the numbers in <speech_metrics>. Do not invent hesitation that is not visible.
+- Fluency: you only have the transcript. Judge the level from what it shows (fillers like "um", "uh", repeated words, false starts, self-corrections) and the numbers in <speech_metrics>. Do not invent hesitation that is not visible. What you may WRITE about fluency is limited: see "Wording rules".
 - Cohesion: which linking devices are used (because, so, but vs. however, although, as a result, on the other hand) and whether links between ideas are clear.
 - Pronunciation cannot be judged from text: set pronunciation.level to "not_assessed", evidence to [], and note, how_to_improve and how_to_check to "". Never say anything about how the student pronounced words, their accent or their sounds. A practice tip phrased as an instruction is allowed where it helps a grammar point (e.g. "Pronounce the -s in 'she likes' clearly").
 
@@ -125,7 +126,10 @@ Corrections (and "better" in sentence_fixes) fix the error and keep the student'
 
 # 8. Wording rules for the student
 - Never write the level codes "above_B2" or "below_B1" (or any field name) in student text: say "above B2" or "below B1".
-- Fluency feedback is about pauses, fillers, restarts and speaking time only; do not mention intonation, accent or sounds. Its how_to_improve names one concrete technique (e.g. "Plan the first sentence of each answer during preparation", "Pause silently at a full stop instead of saying 'um'"), never "speak more fluently", "practise more" or "add more details".
+${transcriptFluencyRule}
+- Fluency feedback never mentions intonation, accent or sounds. Its how_to_improve names one concrete technique (e.g. "Plan the first sentence of each answer during preparation", "Pause silently at a full stop instead of saying 'um'"), never "speak more fluently", "practise more" or "add more details".
+
+${adviceRules(task.question)}
 
 # 9. Style
 Write notes and instructions to the student as "you", in short, simple sentences a ${task.level === "B2" ? "B1–B2" : task.level} learner understands. If you use a grammar term, add a short example. No flattery.`;

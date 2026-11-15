@@ -79,7 +79,7 @@
       },
       "how_to_improve": {
        "type": "string",
-       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
       },
       "how_to_check": {
        "type": "string",
@@ -122,7 +122,7 @@
       },
       "how_to_improve": {
        "type": "string",
-       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
       },
       "how_to_check": {
        "type": "string",
@@ -165,7 +165,7 @@
       },
       "how_to_improve": {
        "type": "string",
-       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
       },
       "how_to_check": {
        "type": "string",
@@ -208,7 +208,7 @@
       },
       "how_to_improve": {
        "type": "string",
-       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
       },
       "how_to_check": {
        "type": "string",
@@ -252,7 +252,7 @@
       },
       "how_to_improve": {
        "type": "string",
-       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. Name the words or structure."
+       "description": "One concrete instruction for the next attempt that would move this feature towards the next level. One issue only; name the structure, never require a set phrase."
       },
       "how_to_check": {
        "type": "string",

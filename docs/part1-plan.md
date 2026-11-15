@@ -1,5 +1,7 @@
 # Part 1 plan: Part 1.1 (Questions 1–3) and Part 1.2 (Questions 4–6)
 
+**2026-11-15: Part 1.1 questions now come from a weighted question bank (the teacher list, word for word): see docs/part1-question-bank.md.**
+
 Status: **plan only, nothing built; all open questions decided** (owner, 2026-11-04; see §5). Part 1
 implementation starts **only after Part 2 is merged and live-tested**, on a fresh branch from `main` (§6).
 

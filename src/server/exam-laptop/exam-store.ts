@@ -36,7 +36,7 @@ import { getDb } from "@/server/db/client";
 import { classMembers, classMocks, examPasses, practiceSessions, users } from "@/server/db/schema";
 import { HttpError } from "@/server/errors";
 import { newId, nowIso } from "@/server/ids";
-import { finishMock, getMock, mockTasksForPart, planMockTasks, type MockView } from "@/server/sessions/mock-service";
+import { finishMock, getMock, mockTasksForPart, planMockTasks, resolvePart11Pick, type MockView } from "@/server/sessions/mock-service";
 import { notFound, openMembers, ownOpenClass } from "@/server/teacher/teacher-store";
 import { verifyPin } from "./pin";
 
@@ -114,7 +114,9 @@ export async function suggestPaper(teacherId: string, classId: string, random: (
   const members = await openMembers(classId);
   const histories = await Promise.all(members.map((m) => repo.listAttemptsForUser(m.studentUserId)));
   const history = histories.flat().map((r) => ({ taskId: r.attempt.taskId, createdAt: r.attempt.createdAt }));
-  const paper = suggestClassPaper((part) => mockTasksForPart(part), history, random);
+  const suggested = suggestClassPaper((part) => mockTasksForPart(part), history, random);
+  // Part 1.1: a frequency-weighted question set (one set for the whole class), not the bank's entry.
+  const paper = suggested["1.1"] ? { ...suggested, "1.1": resolvePart11Pick(suggested["1.1"], history, random) } : suggested;
   return MOCK_PARTS.flatMap((part) => (paper[part] ? [{ part, taskId: paper[part]!, title: getAnySpeakingTask(paper[part]!)?.title ?? paper[part]! }] : []));
 }
 
@@ -168,10 +170,12 @@ async function chosenPaper(teacherId: string, classId: string, tasks: unknown, r
   const out: Partial<Record<ExamPartId, string>> = {};
   for (const part of MOCK_PARTS) {
     const id = (tasks as Record<string, unknown>)[part];
-    if (typeof id !== "string" || !mockTasksForPart(part).some((t) => t.id === id) || examPartOf(getAnySpeakingTask(id)!) !== part) {
+    // Any task of the part by id: a listed one, or a Part 1.1 question set (made from its id), or a retired one.
+    const task = typeof id === "string" ? getAnySpeakingTask(id) : undefined;
+    if (typeof id !== "string" || !task || examPartOf(task) !== part) {
       throw new HttpError(400, "invalid_paper", "Choose one task for every part.");
     }
-    out[part] = id;
+    out[part] = resolvePart11Pick(id, [], random);
   }
   return out;
 }

@@ -9,7 +9,7 @@ export type SampleFrequency = "Often asked" | "Sometimes asked" | "Rarely asked"
 const ORDER: readonly SampleFrequency[] = ["Often asked", "Sometimes asked", "Rarely asked"];
 
 const SAMPLE: Record<string, SampleFrequency> = {
-  "a2-part1-1-daily-life": "Often asked",
+  "a2-part1-1-questions": "Often asked",
   "b1-part1-2-shopping": "Sometimes asked",
   "b2-part2-advice-from-someone": "Often asked",
   "b2-part2-important-decision": "Often asked",

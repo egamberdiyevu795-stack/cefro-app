@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { getAnySpeakingTask, listAllSpeakingTasks } from "@/content/speaking";
 import { listArgumentTasks } from "@/content/speaking/part3";
+import { PART11_BANK_ENTRY_ID, parsePart11SetId, pickPart11SetId } from "@/content/speaking/part1/part1-1-sets";
 import { examPartOf, type ExamPartId } from "@/domain/speaking/exam-part";
 import {
   MOCK_EXPIRES_AFTER_MS,
@@ -241,9 +242,28 @@ export async function planMockTasks(
   const plan: Partial<Record<ExamPartId, string>> = {};
   for (const part of parts) {
     const pick = pickTaskForPart(mockTasksForPart(part), history, random);
-    if (pick) plan[part] = pick.id;
+    if (pick) plan[part] = resolvePart11Pick(pick.id, history, random);
   }
   return plan;
+}
+
+/**
+ * Part 1.1 is a question bank, not a list of fixed tasks: its one entry becomes a set of three questions picked by
+ * frequency (content/speaking/part1/part1-1-sets.ts), leaving out the questions of the latest set in `history` so two
+ * mocks in a row ask different questions. Any other id is returned as it is.
+ */
+export function resolvePart11Pick(taskId: string, history: readonly { taskId: string; createdAt: string }[], random: () => number = Math.random): string {
+  if (taskId !== PART11_BANK_ENTRY_ID) return taskId;
+  const latest = [...history]
+    .filter((h) => parsePart11SetId(h.taskId))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+  return pickPart11SetId(random, { avoid: latest ? parsePart11SetId(latest.taskId)! : [] });
+}
+
+/** A Part 1.1 set for one student's practice (the task list's Part 1.1 card), avoiding their latest set's questions. */
+export async function pickPart11SetForUser(userId: string | null, random: () => number = Math.random): Promise<string> {
+  const history = userId ? (await repo.listAttemptsForUser(userId)).map((r) => ({ taskId: r.attempt.taskId, createdAt: r.attempt.createdAt })) : [];
+  return resolvePart11Pick(PART11_BANK_ENTRY_ID, history, random);
 }
 
 /** Count of the session's attempts, for tests and the runner's sanity checks. */

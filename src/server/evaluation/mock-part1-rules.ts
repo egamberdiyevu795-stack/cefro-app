@@ -3,6 +3,7 @@ import { evidenceTokens } from "@/domain/evaluation/evidence";
 import { levelFromValue, type FeatureLevel, type QuestionStatus } from "@/domain/evaluation/multilevel/levels";
 import type { MultilevelModelOutput } from "@/domain/evaluation/multilevel/model-output";
 import { questionNumber } from "@/domain/speaking/task";
+import { part11MockKeywords } from "@/content/speaking/part1/part1-1-bank-mock";
 import { mockSentenceFixes } from "./mock-sentence-fixes";
 import type { EvaluationInput } from "./types";
 
@@ -53,7 +54,7 @@ export function mockPart1Output(input: EvaluationInput): MultilevelModelOutput {
   const statuses = config.question_statuses;
   const sentences = transcript.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => evidenceTokens(s).length >= 1);
   const words = new Set(evidenceTokens(transcript));
-  const keywordLists = MOCK_PART1_KEYWORDS[task.id] ?? task.prompts.map((p) => evidenceTokens(p).filter((w) => w.length > 4));
+  const keywordLists = MOCK_PART1_KEYWORDS[task.id] ?? part11MockKeywords(task.id) ?? task.prompts.map((p) => evidenceTokens(p).filter((w) => w.length > 4));
 
   // A rough level from length and variety, scaled to the part's own speaking time (Part 2's thresholds are for 120 s).
   const scale = task.speakingSeconds / 120;

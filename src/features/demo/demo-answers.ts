@@ -1,3 +1,5 @@
+import { part11DemoAnswers } from "@/content/speaking/part1/part1-1-bank-mock";
+
 /**
  * Made-up demo answers for mock mode, one per Part 2 task, written as a student might say them. Each is three parts,
  * one per question. The "first" answer leaves out question 3 (the common mistake), so its result has a question goal;
@@ -119,7 +121,7 @@ export const PART1_DEMO_ANSWERS: Record<string, { first: [string, string, string
  * ("picture"), or the story and a bare opinion ("bare"). Null when the task has no such answer.
  */
 export function demoAnswerText(taskId: string, variant: DemoAnswerVariant): string | null {
-  const part1 = PART1_DEMO_ANSWERS[taskId];
+  const part1 = PART1_DEMO_ANSWERS[taskId] ?? part11DemoAnswers(taskId);
   if (part1) return variant === "first" || variant === "full" ? part1[variant].join(" ") : null;
   const answer = DEMO_ANSWERS[taskId];
   if (!answer) return null;

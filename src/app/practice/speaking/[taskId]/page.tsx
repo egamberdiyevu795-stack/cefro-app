@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { getSpeakingTask } from "@/content/speaking";
 import { FEATURE_FLAGS, allFlags, type FeatureFlags } from "@/config/features";
@@ -15,6 +15,8 @@ import { assertServerConfigured } from "@/server/config/boot-check";
 import { parseLockPreview } from "@/domain/consent";
 import { consentRequired, recordingLockFor } from "@/server/consent/consent";
 import { findCurrentUserId } from "@/server/identity/current-user";
+import { PART11_BANK_ENTRY_ID } from "@/content/speaking/part1/part1-1-sets";
+import { pickPart11SetForUser } from "@/server/sessions/mock-service";
 
 export async function generateMetadata(props: PageProps<"/practice/speaking/[taskId]">): Promise<Metadata> {
   const { taskId } = await props.params;
@@ -48,6 +50,17 @@ export default async function SpeakingPracticePage(props: PageProps<"/practice/s
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const mock = one(query.mock) === "1";
   const flags: FeatureFlags = one(query.flags) === "off" ? allFlags(false) : FEATURE_FLAGS;
+
+  // Part 1.1's card on the task list opens a fresh question set, picked by how often each question is asked
+  // (content/speaking/part1/part1-1-sets.ts). The set's own page keeps every switch (?mock=1, ?timeScale=…), and a retry
+  // stays on the same set because a set's id names its questions.
+  if (taskId === PART11_BANK_ENTRY_ID && !one(query.retry)) {
+    await connection();
+    const setId = await pickPart11SetForUser(mock ? null : await findCurrentUserId());
+    const rest = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) for (const v of Array.isArray(value) ? value : value === undefined ? [] : [value]) rest.append(key, v);
+    redirect(`/practice/speaking/${setId}${rest.size > 0 ? `?${rest}` : ""}`);
+  }
 
   // The real flow needs the full server configuration (it used to get this check from the (site) layout); mock mode
   // calls no API and runs anywhere.

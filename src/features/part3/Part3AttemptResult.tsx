@@ -137,7 +137,7 @@ export function Part3AttemptResult({
       previous: previousResult,
       isDevelopmentProvider: attempt.evaluation?.meta.isDevelopmentProvider ?? false,
     });
-    return <Part3ScoredResult view={view} retryHref={part3RealPracticeHref(task.id, { retry: attempt.id })} demo={false} audio={audio} yourTeacher={yourTeacher} />;
+    return <Part3ScoredResult view={view} retryHref={part3RealPracticeHref(task.id, { retry: attempt.id })} demo={false} audio={audio} yourTeacher={yourTeacher} helpful={{ attemptId: attempt.id, initial: attempt.feedbackHelpful ?? null }} />;
   }
 
   // Failed (or completed without a Part 3 result we can read): "AI score not ready yet" when the transcript was

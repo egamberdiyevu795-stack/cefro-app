@@ -316,6 +316,34 @@ describe("exam laptop migration (0010)", () => {
   });
 });
 
+describe("feedback helpful migration (0011)", () => {
+  it("is additive: two nullable columns on speaking_attempts, nothing else", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0011_feedback_helpful.sql"), "utf8");
+    expect(sql).toContain("ALTER TABLE `speaking_attempts` ADD `feedback_helpful` integer;");
+    expect(sql).toContain("ALTER TABLE `speaking_attempts` ADD `feedback_helpful_at` text;");
+    expect(sql.replace(/^--.*$/gm, "")).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME|NOT NULL|CREATE TABLE/i);
+  });
+
+  it("upgrades a 0010 database: old attempts are unanswered (null), and an answer can be written", async () => {
+    const file = path.join(tempDir(), "old.db");
+    const old = await openRaw(file);
+    await migrateDatabase(old.db, migrationsUpTo(11));
+    const content = JSON.stringify({ id: "b2-part2-advice-from-someone", version: 1 });
+    await old.client.executeMultiple(`
+      INSERT INTO users (id) VALUES ('u1');
+      INSERT INTO speaking_tasks (id, version, level, part, title, content) VALUES ('b2-part2-advice-from-someone', 1, 'B2', 2, 'Advice', '${content}');
+      INSERT INTO speaking_attempts (id, user_id, task_id, task_version, attempt_number, status, updated_at) VALUES ('a1', 'u1', 'b2-part2-advice-from-someone', 1, 1, 'completed', 'x');
+    `);
+    old.client.close();
+    const { client, db } = await openRaw(file);
+    await migrateDatabase(db);
+    expect(await query(client, "SELECT feedback_helpful, feedback_helpful_at FROM speaking_attempts")).toEqual([{ feedback_helpful: null, feedback_helpful_at: null }]);
+    await client.execute("UPDATE speaking_attempts SET feedback_helpful = 0, feedback_helpful_at = 'now' WHERE id = 'a1'");
+    expect(await query(client, "SELECT feedback_helpful FROM speaking_attempts")).toEqual([{ feedback_helpful: 0 }]);
+    client.close();
+  });
+});
+
 describe("upgrading a database created by an earlier release", () => {
   /** Rows as the pre-Stage-3 application wrote them (migrations 0000 and 0001 only). */
   async function seedOldDatabase(file: string) {

@@ -204,6 +204,19 @@ export async function getAttemptViewForUser(userId: string, attemptId: string): 
   return toAttemptView(attempt, { recording, transcript, evaluation });
 }
 
+/**
+ * The student's answer to "Was this feedback helpful?" for their own scored attempt. One answer per attempt: the
+ * first is kept and returned; a later, different answer is ignored (not an error), so the page always shows what is
+ * stored. Only a completed (scored) attempt has feedback to rate.
+ */
+export async function saveFeedbackHelpful(userId: string, attemptId: string, helpful: unknown): Promise<{ helpful: boolean }> {
+  if (typeof helpful !== "boolean") throw new HttpError(400, "invalid_body", "Answer Yes or No.");
+  const attempt = await getOwnedAttempt(userId, attemptId);
+  if (attempt.status !== "completed") throw new HttpError(409, "attempt_not_scored", "This answer has no feedback to rate yet.");
+  const stored = await repo.saveFeedbackHelpfulOnce(attempt.id, helpful);
+  return { helpful: stored ?? helpful };
+}
+
 export async function listAttemptSummaries(userId: string, taskId: string): Promise<AttemptSummary[]> {
   const attempts = await repo.listAttemptsForUserTask(userId, taskId);
   const evaluationsByAttempt = await repo.findLatestEvaluationsFor(attempts.map((a) => a.id));

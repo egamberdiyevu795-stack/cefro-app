@@ -218,6 +218,13 @@ export const speakingAttempts = sqliteTable(
     completedAt: text("completed_at"),
     /** Deterministic speech metrics (see domain/speaking/metrics.ts). */
     metrics: text("metrics", { mode: "json" }),
+    /**
+     * The student's one answer to "Was this feedback helpful?" on the result page (true = Yes, false = No), null
+     * until they answer. One answer per attempt: the first one is kept.
+     */
+    feedbackHelpful: integer("feedback_helpful", { mode: "boolean" }),
+    /** When they answered it. */
+    feedbackHelpfulAt: text("feedback_helpful_at"),
     ...timestamps,
     updatedAt: text("updated_at").notNull(),
   },

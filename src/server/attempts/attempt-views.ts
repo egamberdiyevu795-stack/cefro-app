@@ -74,6 +74,7 @@ export function toAttemptView(
         : null,
     createdAt: attempt.createdAt,
     completedAt: attempt.completedAt,
+    feedbackHelpful: attempt.feedbackHelpful ?? null,
   };
 }
 

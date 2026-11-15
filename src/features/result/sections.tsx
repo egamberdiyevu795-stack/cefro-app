@@ -7,6 +7,7 @@ import { RecordingPlayer } from "@/features/speaking-practice/components/Recordi
 import { audioRetentionNote } from "@/domain/audio-retention";
 import { mockLink } from "@/features/demo/demo-mode";
 import { practiceHref as practiceLink } from "@/features/speaking-practice/lib/practice-flow";
+import { FeedbackHelpful, type FeedbackHelpfulTarget } from "./FeedbackHelpful";
 import { TranscriptWithFixes } from "./TranscriptWithFixes";
 import type { TranscriptFixesView } from "./transcript-fixes";
 import { GOAL_LABEL, GOAL_NOTE, formatDuration, type QuestionVerdict, type ResultPageState, type ResultView } from "./view-model";
@@ -81,9 +82,12 @@ export function ScoredResult({
   demo = false,
   teacher = null,
   yourTeacher = null,
+  helpful = null,
   children,
 }: {
   view: ResultView;
+  /** "Was this feedback helpful?" under the Biggest fix: the student's own attempt, or a demo. Never on the teacher's view. */
+  helpful?: FeedbackHelpfulTarget | null;
   /**
    * A teacher's read-only view of a student's shared attempt (Teacher view T5): the student's name instead of "Your",
    * no player, no Retry, no Learn how, no comparison. `children` goes under the result card ("Your view").
@@ -110,6 +114,7 @@ export function ScoredResult({
         {children && <div className="order-1 lg:order-none">{children}</div>}
         <BiggestFixCard view={view} retryHref={teacher ? null : (retryHref ?? practiceHref(task))} lesson={teacher ? null : lesson} className="order-3 lg:order-none" />
         {view.patterns.length > 0 && <PatternsCard patterns={view.patterns} className="order-4 lg:order-none" />}
+        {helpful && !teacher && <FeedbackHelpful target={helpful} className="order-4 lg:order-none" />}
         <AnswerCard
           title={teacher ? "Answer" : undefined}
           transcript={view.transcript}

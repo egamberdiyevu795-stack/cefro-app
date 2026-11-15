@@ -34,7 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     # The full chain has 119 browser tests in one worker (about 13 min on CI) after about 9 min of install, lint,
     # typecheck and unit tests: 15 minutes cancelled the run half way through the browser tests.
-    timeout-minutes: 35
+    # 2026-11-15: now 185 main browser tests plus the Part 3 and exam-laptop suites, after ~12 min of unit tests;
+    # 35 minutes cancelled the run inside the main browser tests (PR #9), so the limit is 60.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:

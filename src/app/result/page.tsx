@@ -31,7 +31,7 @@ export const metadata: Metadata = { title: "Your result" };
  * ?demo=<demo key> (mock mode's demo results, server/demo/demo-data.ts): a demo attempt's result, or the result of
  * a mock practice, for ITS OWN task, produced by the mock evaluator. &state=scoring&next=1: its "Scoring…" first.
  *
- * Only with ?demo=… or ?mock=1: a bare /result (no demo key, no mock mode, e.g. an old link or a guessed address) is
+ * Only with ?mock=1: a bare /result or /result?demo=… (no mock mode, e.g. an old link or a guessed address) is
  * the not-found screen, so a student never sees saved demo results as if they were theirs. Real attempts live at
  * /result/[attemptId]. Every link on this page keeps ?mock=1 (mock mode), so the loop
  * can be clicked through without API keys or a database: "Retry with this goal" opens the practice page's mock mode
@@ -40,9 +40,11 @@ export const metadata: Metadata = { title: "Your result" };
 export default async function ResultPage(props: PageProps<"/result">) {
   const query = await props.searchParams;
   const flags: FeatureFlags = query.flags === "off" ? allFlags(false) : FEATURE_FLAGS;
+  // Demo results are mock mode only: a bare /result?demo=… (no ?mock=1) is the not-found screen, so normal use never
+  // shows a made-up answer.
+  if (!isMockQuery(query)) notFound();
   const demoKey = typeof query.demo === "string" ? query.demo : null;
   if (demoKey) return demoResult({ demoKey, scoring: query.state === "scoring", next: query.next === "1", flags, teacher: query.teacher === "1" });
-  if (!isMockQuery(query)) notFound();
   const selection = selectMock(query);
 
   const speakingTask = getSpeakingTask("b2-part2-advice-from-someone");

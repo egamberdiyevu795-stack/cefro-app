@@ -3,7 +3,7 @@ import { PART_LIVE } from "../src/config/features";
 
 /*
  * The signed-out pages (home, sign in, Create account) at 390 px (phone) and 1440 px (laptop): one black control, no text
- * under 11 px, WCAG AA text contrast, no horizontal scroll, no header menu and no navigation tabs. "See a demo result" opens a real demo result
+ * under 11 px, WCAG AA text contrast, no horizontal scroll, no header menu and no navigation tabs. "See a demo result" (mock mode only) opens a real demo result
  * (?mock=1). The exam-parts list follows the release switches (PART_LIVE). A signed-in visitor on home goes to the
  * dashboard.
  *
@@ -120,12 +120,15 @@ for (const size of SIZES) {
   }
 }
 
-test("See a demo result keeps ?mock=1 and opens the real demo result page", async ({ page }) => {
-  for (const mock of PREVIEW ? [true] : [false, true]) {
-    await page.goto(mock ? "/?mock=1" : "/");
-    const demo = page.getByRole("link", { name: "See a demo result" });
-    await expect(demo).toHaveAttribute("href", "/result?demo=demo-5&mock=1");
+test("See a demo result is mock mode only and opens the real demo result page", async ({ page }) => {
+  if (!PREVIEW) {
+    // Normal use: no demo link, and a demo result address without ?mock=1 is not found.
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "See a demo result" })).toHaveCount(0);
+    expect((await page.goto("/result?demo=demo-5"))?.status()).toBe(404);
   }
+  await page.goto("/?mock=1");
+  await expect(page.getByRole("link", { name: "See a demo result" })).toHaveAttribute("href", "/result?demo=demo-5&mock=1");
   await page.getByRole("link", { name: "See a demo result" }).click();
   await expect(page).toHaveURL(/\/result\?demo=demo-5&mock=1$/);
   await expect(page.getByTestId("demo-label")).toBeVisible();

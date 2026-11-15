@@ -103,6 +103,10 @@ function namesResult(query: Query): boolean {
 }
 
 async function lessonContext(query: Query): Promise<LessonContext | null> {
+  // A demo result or a saved run is mock mode only: without ?mock=1 such a link is not found (normal use never shows
+  // made-up answers).
+  const demoOnly = query.demo !== undefined || query.anchor !== undefined || query.run !== undefined;
+  if (demoOnly && !isMockQuery(query)) return null;
   const demo = one(query.demo);
   if (demo) {
     const spec = demoResultSpec(demo);

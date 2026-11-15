@@ -178,13 +178,14 @@ const LOCK_TITLE: Record<RecordingLock, string> = {
   withdrawn: "Recording is locked",
 };
 
-/** The demo result every visitor may open (always mock data; the home page's "See a demo result"). */
+/** The demo result of mock mode (always mock data; the mock home page's "See a demo result"). */
 export const LOCKED_DEMO_HREF = "/result?demo=demo-5&mock=1";
 
 /**
  * Pilot consent (docs/consent-design.md, "Pilot route"): shown in the brief instead of Check microphone and Start
  * preparation while the caller may not record. Kind and plain, no blame. One black action: "Create account" for a
- * guest, otherwise "See a demo result" (what feedback looks like while they wait). Nothing here can unlock recording:
+ * guest, otherwise "Read a lesson" (the approved lessons, real content, while they wait). Normal use never offers demo
+ * data; mock mode (`?mock=1`) shows "See a demo result" there instead. Nothing here can unlock recording:
  * only the owner can, with scripts/set-consent.mjs.
  */
 export function RecordingLockedState({ lock, signInNext, mock = false }: { lock: RecordingLock; signInNext: string; mock?: boolean }) {
@@ -202,7 +203,9 @@ export function RecordingLockedState({ lock, signInNext, mock = false }: { lock:
       <p className="mt-2 text-label text-fg-muted">
         {lock === "guest"
           ? "You can read the task now. Once recording is unlocked, your answers are saved in your account."
-          : "You can read the task and see what feedback looks like while you wait. Testing as an adult? Ask the person who invited you."}
+          : mock
+            ? "You can read the task and see what feedback looks like while you wait. Testing as an adult? Ask the person who invited you."
+            : "You can read the task and a short lesson while you wait. Testing as an adult? Ask the person who invited you."}
       </p>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         {lock === "guest" ? (
@@ -214,9 +217,13 @@ export function RecordingLockedState({ lock, signInNext, mock = false }: { lock:
               Sign in
             </PillButton>
           </>
-        ) : (
+        ) : mock ? (
           <PillButton href={LOCKED_DEMO_HREF} size="lg" icon="play" className="w-full sm:w-auto">
             See a demo result
+          </PillButton>
+        ) : (
+          <PillButton href="/lessons" size="lg" icon="book" className="w-full sm:w-auto">
+            Read a lesson
           </PillButton>
         )}
       </div>

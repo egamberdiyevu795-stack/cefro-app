@@ -57,6 +57,9 @@ export default defineConfig({
       // Test runs only: lets a test choose its client address (x-forwarded-for) for the per-IP sign-up limit. Ignored
       // by production builds and on Vercel (src/server/auth/auth-limits.ts, clientIp).
       CEFRO_TEST_CLIENT_IP: "1",
+      // "Forgot password" emails are not sent by the dev server: they are appended here (one JSON line each), and
+      // e2e/forgot-password.spec.ts opens the link from this file.
+      EMAIL_OUTBOX_FILE: `./data/e2e/${runId}-outbox.jsonl`,
     },
   },
 });

@@ -13,6 +13,8 @@ const MOCK_PAGES = [
   "/?mock=1",
   "/login?mock=1",
   "/register?mock=1",
+  "/forgot-password?mock=1",
+  "/reset-password?mock=1&token=demo",
   "/dashboard?mock=1",
   "/dashboard?mock=1&as=teacher",
   "/practice?mock=1",
@@ -32,7 +34,7 @@ const MOCK_PAGES = [
 ];
 
 /** Real pages as a new visitor sees them (signed out; the e2e server has its own throwaway database). */
-const REAL_PAGES = ["/", "/login", "/register", "/dashboard", "/practice", "/practice/speaking/b2-part2-advice-from-someone", "/history", "/profile", "/lessons", "/lessons/l-t1"];
+const REAL_PAGES = ["/", "/login", "/register", "/forgot-password", "/reset-password?token=not-a-real-token", "/dashboard", "/practice", "/practice/speaking/b2-part2-advice-from-someone", "/history", "/profile", "/lessons", "/lessons/l-t1"];
 
 /**
  * Every control on the page that is disabled, does nothing, or links nowhere, described for the failure message.

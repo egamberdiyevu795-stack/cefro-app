@@ -62,6 +62,7 @@ Vercel's logs which one.
 | `PART_3_LIVE` | `true` (default) | Part 3 practice at home. **Live by default since 2026-11-15**; set `false` to close it. | **Live:** first anchor run 7 of 11 exact, all within one band; after the weak-answer fix (argument-evaluator 0.3.0) the 4 low/middle anchors rerun 4 of 4 exact (docs/part3-topic-bank.md). |
 | `PART_1_2_LIVE` | `true` | Opens Part 1.2 for practice at home. Default off ("Coming soon"). | **Not yet:** only one picture task, and the Question 4 rule changed on 2026-11-15 (evaluator 3.8.1): rerun the Part 1.2 anchors first. |
 | `PART_2_LIVE` | `false` | Closes single Part 2 practice. Default is on. | Normally leave it alone. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Gmail settings | Switches on **Forgot password?** (the reset link is emailed). Without them the link is simply not shown. | Step by step in `docs/password-reset.md` (a new Gmail account with an app password, about 10 minutes). |
 
 How the switches read: only the words `true` or `1` (on) and `false` or `0` (off) count, in any capital letters. Anything
 else (a typo, "yes") is ignored and the default is used, which is **off**. If a switch seems to do nothing, check the

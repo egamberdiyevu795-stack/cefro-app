@@ -161,6 +161,23 @@ const envSchema = z.object({
    */
   CRON_SECRET: z.string().optional(),
 
+  /**
+   * Email (only the "Forgot password" link today): server/email/email.ts and docs/password-reset.md. "auto" = SMTP
+   * when SMTP_HOST, SMTP_USER and SMTP_PASSWORD are set, otherwise the log in development and nothing in production
+   * (then "Forgot password?" is not shown).
+   */
+  EMAIL_PROVIDER: z.enum(["auto", "smtp", "log", "off"]).default("auto"),
+  SMTP_HOST: z.string().min(1).optional(),
+  /** 465 = TLS from the start (Gmail, Resend); 587 = STARTTLS. */
+  SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(465),
+  SMTP_USER: z.string().min(1).optional(),
+  /** Secret. For Gmail: an app password (Google account → Security → 2-Step Verification → App passwords). */
+  SMTP_PASSWORD: z.string().min(1).optional(),
+  /** Sender shown to students, e.g. `CEFRO <cefro.app@gmail.com>`. Default: `CEFRO <SMTP_USER>`. */
+  EMAIL_FROM: z.string().min(3).optional(),
+  /** Development and tests only: the "log" sender also appends each message to this file (one JSON line each). */
+  EMAIL_OUTBOX_FILE: z.string().min(1).optional(),
+
   /** Timeouts for external providers, in milliseconds. */
   TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
   EVALUATION_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),

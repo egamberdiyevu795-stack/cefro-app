@@ -371,7 +371,7 @@ real-validated.
 ## 11. Identity and accounts (Stage 4)
 
 Stage 4 adds registration, sign-in and sign-out on top of the Stage 3 identity boundary. It adds identity
-infrastructure only: no profile, roles, billing, password reset, social login or account settings.
+infrastructure only: no profile, roles, billing, password reset, social login or account settings. (Password reset by email came later: `docs/password-reset.md`.)
 
 ### The model
 
@@ -496,9 +496,11 @@ migration batch rolls back completely).
 
 ### Known limitations (not production-scale)
 
-- **Email is not verified and there is no password reset** (nothing can send email). A forgotten password means a
-  lost account; an address can be registered by someone who does not own it (no takeover path, since there is no reset, but
-  squatting is possible). Registration reveals whether an email exists.
+- **Email is not verified.** An address can be registered by someone who does not own it (squatting). Password reset
+  by email exists since 2026-11-15 (`docs/password-reset.md`): the link goes only to the account's address, so a squatter
+  cannot take over the real owner's inbox, but the real owner of an address someone else registered can reset that
+  account's password and take it over (acceptable: it is their address). Registration reveals whether an email exists;
+  "Forgot password" does not.
 - Sign-in/registration limits are in-memory and per process; with several instances or a restart they are weaker.
 - The in-memory login limiters are per process (section 8); the session table itself is in the shared database (section 12).
 - A session slides for as long as it is used; there is no absolute maximum lifetime and no "sign out everywhere".

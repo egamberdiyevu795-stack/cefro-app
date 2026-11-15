@@ -23,7 +23,28 @@ export const HOME = {
   builtBy: "Built by a student in Tashkent for UZBMB candidates.",
 } as const;
 
-export const SIGN_IN = { heading: "Welcome back", switchText: "New here?", switchLink: "Create account" } as const;
+export const SIGN_IN = { heading: "Welcome back", switchText: "New here?", switchLink: "Create account", forgot: "Forgot password?" } as const;
+
+/** "Forgot password?" (docs/password-reset.md): ask for the link, then choose a new password from it. */
+export const FORGOT = {
+  heading: "Forgot your password?",
+  line: "Type the email you signed up with. We will send you a link to choose a new password.",
+  submit: "Send link",
+  sent: "If an account uses this email, we have sent it a link. The link works for 60 minutes. Check your spam folder too.",
+  unavailable: "Password reset by email is not switched on yet. Ask your teacher for help.",
+  switchText: "Remembered it?",
+  switchLink: "Sign in",
+} as const;
+
+export const RESET = {
+  heading: "Choose a new password",
+  line: "After this, you are signed out on every device. Sign in again with the new password.",
+  submit: "Save new password",
+  done: "Your password is changed. Sign in with your new password.",
+  signIn: "Sign in",
+  expired: "This link has expired or was already used. Ask for a new one.",
+  askAgain: "Send a new link",
+} as const;
 
 export const REGISTER = {
   heading: "Save your results",
@@ -73,7 +94,7 @@ export function examStatus(live: Readonly<Record<ExamPartId, boolean>> = PART_LI
  * `/login` or `/register`, keeping where to go after signing in (`?next=`, only when it is not the default `/`) and mock
  * mode (`?mock=1`).
  */
-export function entryHref(path: "/login" | "/register", { next = "/", mock = false }: { next?: string; mock?: boolean } = {}): string {
+export function entryHref(path: "/login" | "/register" | "/forgot-password", { next = "/", mock = false }: { next?: string; mock?: boolean } = {}): string {
   const href = next === "/" ? path : `${path}?next=${encodeURIComponent(next)}`;
   return mockLink(href, mock);
 }

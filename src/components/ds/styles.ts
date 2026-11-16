@@ -17,5 +17,11 @@ export const TEXT_ACTION = `items-center gap-2 text-body font-medium text-fg hov
 /** Small muted text action (card header: "See all", "Last 30 days", "Edit"). */
 export const SMALL_ACTION = `inline-flex items-center gap-1 text-label text-fg-muted hover:text-fg ${FOCUS_RING}`;
 
+/** Small destructive text action (Close class, Leave class, Reset code): red, so the risk is visible before the confirm card. */
+export const SMALL_DANGER_ACTION = `inline-flex items-center gap-1 text-label font-medium text-danger hover:opacity-80 ${FOCUS_RING}`;
+
 /** The quiet pill (PillButton `quiet`, size md), as a class string for a control that is not a PillButton. */
 export const PILL_QUIET = `inline-flex h-9 items-center justify-center gap-2 rounded-full bg-well px-5 text-body font-medium text-fg transition-colors hover:bg-line ${FOCUS_RING}`;
+
+/** The danger pill (PillButton `danger`, size md) as a class string: destructive submit buttons (Delete everything). */
+export const PILL_DANGER = `inline-flex h-9 items-center justify-center gap-2 rounded-full bg-danger-soft px-5 text-body font-medium text-danger transition-colors hover:bg-danger-soft/70 ${FOCUS_RING}`;

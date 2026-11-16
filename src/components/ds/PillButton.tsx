@@ -3,7 +3,7 @@ import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
 import { FOCUS_RING, ICON_BUTTON } from "./styles";
 
-type Variant = "primary" | "quiet" | "light";
+type Variant = "primary" | "quiet" | "light" | "danger";
 type Size = "lg" | "md" | "sm";
 
 const VARIANTS: Record<Variant, string> = {
@@ -11,6 +11,8 @@ const VARIANTS: Record<Variant, string> = {
   quiet: "bg-well text-fg hover:bg-line",
   // For pills that sit on a `well` surface (e.g. exam-part tiles), where `quiet` would disappear.
   light: "bg-card text-fg hover:bg-line",
+  // Destructive confirm (Leave class, Close class, Delete everything): red on its soft red, never black.
+  danger: "bg-danger-soft text-danger hover:bg-danger-soft/70",
 };
 
 const SIZES: Record<Size, string> = {

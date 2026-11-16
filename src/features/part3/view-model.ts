@@ -177,10 +177,10 @@ export function buildPart3View(
   const gap = s.target_band - s.band;
   const targetText =
     gap > 0
-      ? `Target: band ${s.target_band} (${targetLabel}). You are ${gap} ${gap === 1 ? "band" : "bands"} below it.`
+      ? `Target: Band ${s.target_band} (${targetLabel}). You are ${gap} ${gap === 1 ? "band" : "bands"} below it.`
       : gap === 0
-        ? `You reached your target: band ${s.target_band} (${targetLabel}).`
-        : `Above your target of band ${s.target_band} (${targetLabel}).`;
+        ? `You reached your target: Band ${s.target_band} (${targetLabel}).`
+        : `Above your target of Band ${s.target_band} (${targetLabel}).`;
 
   const side = (which: Side): SideView => {
     const rows = a.points

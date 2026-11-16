@@ -233,7 +233,7 @@ export function BandMeter({ band, bandMax, target, className }: { band: number; 
   const segments = Array.from({ length: bandMax + 1 }, (_, i) => i);
   const columns = { gridTemplateColumns: `repeat(${bandMax + 1}, minmax(0, 1fr))` };
   return (
-    <div className={className} role="img" aria-label={`Band ${band} on a scale of 0 to ${bandMax}. Target: band ${target}.`}>
+    <div className={className} role="img" aria-label={`Band ${band} on a scale of 0 to ${bandMax}. Target: Band ${target}.`}>
       <div className="grid gap-1" style={columns}>
         {segments.map((n) => (
           <div key={n} className={cx("h-1.5 rounded-full", n <= band ? "bg-accent" : "bg-well")} />

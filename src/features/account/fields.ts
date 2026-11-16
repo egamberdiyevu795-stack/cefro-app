@@ -8,6 +8,8 @@ export const FIELD = cx(
 export const FIELD_LABEL = "block text-label text-fg-muted";
 /** The quiet pill as a submit / plain button, dimmed while disabled. */
 export const QUIET_BUTTON = cx(styles.PILL_QUIET, "disabled:cursor-not-allowed disabled:opacity-60");
+/** The danger pill as a submit / plain button (Delete my account), dimmed while disabled. */
+export const DANGER_BUTTON = cx(styles.PILL_DANGER, "disabled:cursor-not-allowed disabled:opacity-60");
 /** A small text action with a 36 px tap area (Edit, Cancel), as on the exam date. */
 export const TEXT_BUTTON = cx(styles.SMALL_ACTION, "min-h-9 px-1 disabled:cursor-wait");
 

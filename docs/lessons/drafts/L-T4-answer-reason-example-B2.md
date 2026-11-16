@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Id | `L-T4` |
-| Variant | B2 (Part 2) |
+| Variant | Part 2 (B2) |
 | Version | 2 |
 | Status | **approved** |
 | Target level | B2 |

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { Card, CardHeader, DemoLabel, PillButton } from "@/components/ds";
+import Link from "next/link";
+import { Card, CardHeader, DemoLabel, Icon, cx, styles } from "@/components/ds";
 import { FEATURE_FLAGS, PART_LIVE, allFlags, type FeatureFlags } from "@/config/features";
 import { listArgumentTasks } from "@/content/speaking/part3";
 import { isMockQuery } from "@/features/demo/demo-mode";
@@ -43,14 +44,21 @@ export default async function Part3ListPage(props: PageProps<"/practice/part3">)
           <CardHeader id="topics-title" title="Topics" />
           <ul className="-my-1 divide-y divide-line">
             {listArgumentTasks().map((task) => (
-              <li key={task.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
-                <div className="min-w-0 flex-1">
-                  <p className="text-body font-semibold text-fg">{task.title}</p>
-                  <p className="text-label text-fg-muted">{task.statement}</p>
-                </div>
-                <PillButton href={part3PracticeHref(task.id)} variant="quiet" label={`Start: ${task.title}`} className="self-start sm:self-center">
-                  Start
-                </PillButton>
+              <li key={task.id}>
+                <Link
+                  href={part3PracticeHref(task.id)}
+                  aria-label={`Start: ${task.title}`}
+                  className={cx("flex min-h-14 items-center gap-3 py-2.5 hover:text-fg", styles.FOCUS_RING)}
+                >
+                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-well text-fg">
+                    <Icon name="mic" size={16} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-body font-semibold text-fg">{task.title}</span>
+                    <span className="block text-label text-fg-muted">{task.statement}</span>
+                  </span>
+                  <Icon name="chevronDown" size={16} className="-rotate-90 shrink-0 text-fg-subtle" />
+                </Link>
               </li>
             ))}
           </ul>

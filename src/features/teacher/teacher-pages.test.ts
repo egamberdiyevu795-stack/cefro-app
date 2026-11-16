@@ -105,7 +105,7 @@ describe("the demo teacher", () => {
     expect(markup).toContain('data-testid="your-classes"');
     expect(markup).toContain("Demo class");
     expect(markup).toContain("6 students");
-    expect(markup.indexOf("Your classes")).toBeLessThan(markup.indexOf("Find your level"));
+    expect(markup).not.toContain("Find your level"); // a teacher's Home is about their classes, not student onboarding
     expectScreen(markup.slice(markup.indexOf('<main id="main"')), 1);
     expect(markup).toMatch(/<a[^>]*bg-primary text-on-primary[^>]*>.*Create class/);
     expect(markup).toContain('href="/teacher/classes/demo-class?mock=1&amp;as=teacher"');

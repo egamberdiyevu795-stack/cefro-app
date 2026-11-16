@@ -82,7 +82,9 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  * configuration at all (a Vercel Preview with no variables). Every link keeps ?mock=1, and the demo label is shown.
  *
  * Teacher view (docs/teacher-plan.md, T1): a teacher's Home starts with "Your classes", whose "Create class" is the
- * page's one black button (Practise next / Start practice are grey for a teacher). Real teachers only once the Teacher
+ * page's one black button (Practise next / Start practice are grey for a teacher). A teacher never sees the student
+ * "Find your level" onboarding card (their Home is about their classes; the Exam parts tiles stay, so they can still
+ * open a task). Real teachers only once the Teacher
  * view is on (parent consent); `?mock=1&as=teacher` is the demo teacher (Demo class, six made-up students, no
  * practice of their own).
  */
@@ -212,7 +214,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               </>
             ) : (
               <>
-                <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={quietNext} className="lg:col-span-2" />
+                {!isTeacher && <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={quietNext} className="lg:col-span-2" />}
                 {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}

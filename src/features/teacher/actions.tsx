@@ -102,7 +102,7 @@ export function JoinCodeCard({ code: initial, classId, demo, primary = true }: {
         <PillAction onClick={() => void copyLink()} variant="quiet" disabled={!ready}>
           Copy join link
         </PillAction>
-        <button type="button" onClick={() => void reset()} disabled={!ready || busy} className={cx(styles.SMALL_ACTION, "min-h-9 px-2 disabled:opacity-60")}>
+        <button type="button" onClick={() => void reset()} disabled={!ready || busy} className={cx(styles.SMALL_DANGER_ACTION, "min-h-9 px-2 disabled:opacity-60")}>
           Reset code
         </button>
       </div>
@@ -122,8 +122,9 @@ function demoCode(current: string): string {
 /* ------------------------------------------------------------------------------------- confirm card (quiet action) */
 
 /**
- * A quiet action that opens a confirm card (Close class, Remove from class, Leave class). Both buttons in the card are
- * grey: a destructive action is never black. Demo: confirming changes the page only (`demoDone`).
+ * A quiet action that opens a confirm card (Close class, Remove from class, Leave class). The trigger and the
+ * confirming button are red (danger), Cancel grey: a destructive action is never black, but its risk is visible.
+ * Demo: confirming changes the page only (`demoDone`).
  */
 export function ConfirmAction({
   label,
@@ -181,7 +182,7 @@ export function ConfirmAction({
   }
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} disabled={!ready} className={cx(styles.SMALL_ACTION, "min-h-9 disabled:opacity-60")} data-testid={testId}>
+      <button type="button" onClick={() => setOpen(true)} disabled={!ready} className={cx(styles.SMALL_DANGER_ACTION, "min-h-9 disabled:opacity-60")} data-testid={testId}>
         {label}
       </button>
     );
@@ -193,7 +194,7 @@ export function ConfirmAction({
       </p>
       <div className="mt-1 text-body text-fg-muted">{text}</div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <PillAction onClick={() => void confirm()} variant="quiet" disabled={busy} autoFocus>
+        <PillAction onClick={() => void confirm()} variant="danger" disabled={busy} autoFocus>
           {confirmLabel}
         </PillAction>
         <PillAction onClick={() => setOpen(false)} variant="quiet" disabled={busy}>

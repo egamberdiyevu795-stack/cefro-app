@@ -4,18 +4,18 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { DELETED_ITEMS, DELETE_CONFIRMATION, isDeleteConfirmed } from "@/domain/account";
-import { FIELD, FIELD_LABEL, QUIET_BUTTON, TEXT_BUTTON, errorMessage } from "@/features/account/fields";
+import { DANGER_BUTTON, FIELD, FIELD_LABEL, TEXT_BUTTON, errorMessage } from "@/features/account/fields";
 import { ACCOUNT_DELETED_HREF } from "./deleted";
 
 export const DEMO_NOT_DELETED = "Demo mode. Nothing was deleted.";
 
 /**
- * Delete my account, in two steps on the page. First a grey "Delete my account"; it opens the list of exactly what
+ * Delete my account, in two steps on the page. First a red (danger) "Delete my account"; it opens the list of exactly what
  * will be deleted (`items`, from `deletedItems`), the account's password and a field where the student types DELETE. "Delete
  * everything" stays disabled until both are filled and the field says DELETE (and until the page is ready). Then
  * `POST /api/account/delete`, which deletes it all, recordings included, and signs this browser out; the browser then
- * goes to the home page with "Your account and all your data were deleted." Grey, never black: a destructive action is never the page's main
- * one. `demo`: both steps are shown, nothing is sent, and the page says nothing was deleted.
+ * goes to the home page with "Your account and all your data were deleted." Red on soft red, never black: a destructive action is never
+ * the page's main one, but its risk is visible. `demo`: both steps are shown, nothing is sent, and the page says nothing was deleted.
  */
 export function DeleteAccount({
   demo = false,
@@ -43,7 +43,7 @@ export function DeleteAccount({
       <div className="flex flex-col gap-2">
         <p className="text-body text-fg-muted">Delete your account and everything CEFRO keeps about you.</p>
         <div>
-          <button type="button" disabled={!ready} onClick={() => setOpen(true)} className={QUIET_BUTTON}>
+          <button type="button" disabled={!ready} onClick={() => setOpen(true)} className={DANGER_BUTTON}>
             Delete my account
           </button>
         </div>
@@ -141,7 +141,7 @@ export function DeleteAccount({
         />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" disabled={!ready || busy || !password || !isDeleteConfirmed(typed)} className={QUIET_BUTTON}>
+        <button type="submit" disabled={!ready || busy || !password || !isDeleteConfirmed(typed)} className={DANGER_BUTTON}>
           {busy ? "Deleting…" : "Delete everything"}
         </button>
         <button type="button" disabled={busy} onClick={() => (setOpen(false), setTyped(""), setPassword(""), setError(null))} className={TEXT_BUTTON}>

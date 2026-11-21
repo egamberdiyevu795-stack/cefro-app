@@ -51,8 +51,12 @@ Sign out and Delete my account are grey (a destructive action is never black).
 
 Home (`/`), sign in (`/login`) and Create account (`/register`) are built only from `components/ds` and the tokens
 above (`src/app/(entry)/`, `src/features/entry/`), so a theme change restyles them. They have **no header menu and no
-navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `bg-page`, the CEFRO wordmark on top
-(`EntryFrame`). The `(entry)` layout runs the configuration check (as the `(site)` one did), except in mock mode.
+navigation tabs**, on `bg-page`, the CEFRO wordmark on top (`EntryFrame`). Phones: one column, 16 px gutters. From
+768 px the header row spans the page (max 1120 px: wordmark left, "Sign in" right) and the content is centred under it:
+the forms (sign in, Create account, password reset; `width="narrow"`) stay one column of at most 448 px, a form is
+easier to fill in narrow; home (`width="wide"`) is at most 1024 px and two columns from 1024 px (left: the pitch, the
+`text-display` heading and "Start practising"; right: the three steps and the exam parts; "Built by" last, under
+both). The `(entry)` layout runs the configuration check (as the `(site)` one did), except in mock mode.
 
 - **Home** (redesigned on `claude/landing`, `docs/growth-plan.md` phase 1; it speaks about the whole exam, never only
   one part): top row with the wordmark left and a small grey "Sign in" right (`EntryHeaderLink`: `fg-muted`, 5.26:1
@@ -94,7 +98,8 @@ navigation tabs**: one narrow column (max 448 px, 16 px gutters on phones) on `b
   `PART_LIVE`; no name at sign-up and the server's name rule; signed in → dashboard), `e2e/auth.spec.ts` (unchanged journeys; the sign-in pages have no Account menu now, so their
   state is read from `/api/account/me`).
 - **Laptop size and screenshots:** the 390 px audits of `e2e/entry-pages.spec.ts` also run at 1440 px (one black control,
-  no text under 11 px, AA contrast, no horizontal scroll, one centred column of at most 448 px, no menu or tabs; the
+  no text under 11 px, AA contrast, no horizontal scroll, one centred column (at most 448 px; home on a laptop: wider, at
+  most 1024 px, two columns, the header wider than the content), no menu or tabs; the
   "Built by" line is last and 11 px or more at both sizes), and a test reads the three pages for any price, "free" or
   cost wording. Screenshots of the real pages (mock providers, throwaway database):
   `docs/design-system/entry-{home,sign-in,create-account}-{desktop,phone}.png`. Retake them with
@@ -350,6 +355,7 @@ One family: Inter (`font-ui`, loaded with `next/font/google` in `src/app/layout.
 | `--text-lead` | 15 / 20 px | `text-lead` | The words beside the big number ("· target B2"), medium. |
 | `--text-title` | 17 / 24 px | `text-title` | Card titles, medium weight, slight negative tracking. Quiet: never bold. |
 | `--text-heading` | 28 / 36 px | `text-heading` | The one page heading of the signed-out pages ("Know exactly what to fix before your speaking exam", "Welcome back"), medium weight, tight tracking. |
+| `--text-display` | 44 / 52 px | `lg:text-display` | The home page heading on laptops (≥ 1024 px) only; phones keep `text-heading`. Medium weight, tight tracking. |
 | `--text-stat` | 36 px / 1 | `text-stat` | The one big figure per card (the level, "B1"), **light** (300), tight tracking. |
 
 Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for values and list names.
@@ -367,11 +373,17 @@ Weights: 300 for big numbers, 400 for text, 500 for titles and buttons, 600 for 
 
 ## Layout
 
-- **Desktop (≥ 1024 px):** `bg-page`, then a rounded `bg-shell` frame (max 1280 px, 24 px padding). Left: a 48 px icon
+- **Frame (≥ 768 px, `md`):** `bg-page`, then a rounded `bg-shell` frame (max 1280 px, 24 px padding). Left: a 48 px icon
   rail with the wordmark on top. Right: the top bar (quiet text actions on the right: "All tasks"; hidden on phones),
-  then a two-column grid (`1fr` | `~0.44fr`, 16 px gaps). Cards use 24 px padding.
-- **Phone (< 1024 px):** one column, 16 px side gutters, 20 px card padding. The rail becomes a fixed bottom bar with the
+  then the page. 768 px, not 1024 px, so a laptop at 125–150% zoom or a half-screen window (often 850–1000 px wide)
+  still gets the desktop frame, never the phone bottom bar. Covered by `e2e/responsive-frame.spec.ts` (390, 900, 1440 px).
+- **Two-column grid (≥ 1024 px, `lg`):** `1fr` | `~0.44fr`, 16 px gaps. Cards use 24 px padding. Between 768 and 1023 px
+  the cards stay one column (in their phone order) inside the desktop frame.
+- **Phone (< 768 px):** one column, 16 px side gutters, 20 px card padding. The rail becomes a fixed bottom bar with the
   same items and the same grey active square; the page gets bottom padding so nothing hides under it.
+- **Signed out on Home:** a quiet `GuestCard` on top of the dashboard ("You are not signed in", grey "Create account",
+  "Sign in" link, both back to `/dashboard`), so a student who opens the dashboard link first knows to make an account.
+  Never in mock mode. The page's one black button is unchanged.
 - A card may be split into separate cards on phones (the dashboard's progress card) by making it `display: contents`
   below `lg`; its halves then take their own `order`.
 

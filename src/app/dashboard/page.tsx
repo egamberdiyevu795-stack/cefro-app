@@ -26,6 +26,7 @@ import {
   BiggestFixCard,
   ExamPartsCard,
   FindYourLevelCard,
+  GuestCard,
   PractiseNextCard,
   ProgressCard,
   RECENT_ATTEMPT_COUNT,
@@ -40,7 +41,7 @@ import { listMockHistory } from "@/server/sessions/mock-history";
 import { getSpeakingRubric } from "@/server/evaluation/rubrics";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
 import { findInProgressMock } from "@/server/sessions/mock-service";
-import { findCurrentUserId } from "@/server/identity/current-user";
+import { findCurrentUserId, isSignedIn } from "@/server/identity/current-user";
 import { asDemoTeacher, isDemoTeacherQuery, teacherLinks } from "@/features/teacher/links";
 import { YourClassesCard } from "@/features/teacher/sections";
 import { classSummary, type ClassSummary } from "@/features/teacher/view-model";
@@ -67,6 +68,7 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *   [ Recent attempts ], [ Exam parts ]. No level, skills or biggest fix until an answer is scored.
  * First visit (no attempts): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
  * The Account tab (a link to the Account page) is always in the nav, whatever the flags.
+ * Signed out (no account, not mock mode): a quiet "You are not signed in" card on top (GuestCard), whatever the view.
  *
  * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
  *   small "Add exam date".
@@ -98,6 +100,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const demoTeacher = mock && isDemoTeacherQuery(query);
   // Mock mode reads nothing: no cookie, no database.
   const userId = mock ? null : await findCurrentUserId();
+  // Signed out (an anonymous browser, or nobody yet): the guest card on top. Mock mode is the demo account.
+  const guest = !mock && !(await isSignedIn());
   const isTeacher = demoTeacher || (userId !== null && teacherLive() && (await userRole(userId)) === "teacher");
   const classes: ClassSummary[] | null = !isTeacher
     ? null
@@ -153,10 +157,10 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const countdown = flags.examCountdown;
 
   return (
-    <div className="min-h-dvh bg-page font-ui text-fg lg:p-6">
-      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 lg:gap-6 lg:rounded-shell lg:bg-shell lg:p-6 lg:shadow-card">
-        <aside className="lg:flex lg:w-12 lg:shrink-0 lg:flex-col lg:items-center lg:gap-14">
-          <Wordmark className="hidden lg:flex lg:h-12" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
+    <div className="min-h-dvh bg-page font-ui text-fg md:p-6">
+      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:shadow-card">
+        <aside className="md:flex md:w-12 md:shrink-0 md:flex-col md:items-center md:gap-14">
+          <Wordmark className="hidden md:flex md:h-12" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
           <Sidebar
             items={navItemsFor(flags, mock).map((item) => (demoTeacher && item.href.startsWith("/dashboard") ? { ...item, href: asDemoTeacher("/dashboard") } : item))}
             activeHref="/dashboard"
@@ -165,8 +169,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="mb-4 flex flex-col gap-2 lg:mb-5">
-            <div className="flex h-11 items-center lg:hidden">
+          <header className="mb-4 flex flex-col gap-2 md:mb-5">
+            <div className="flex h-11 items-center md:hidden">
               <Wordmark mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
             </div>
             <div className="hidden sm:block">
@@ -181,7 +185,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
             {mock && <DemoLabel variant={demoTeacher ? "class" : "data"} className="self-start bg-card" />}
           </header>
 
-          <main id="main" className="grid grid-cols-1 gap-4 pb-28 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:pb-0">
+          <main id="main" className="grid grid-cols-1 gap-4 pb-28 md:pb-0 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)]">
+            {guest && <GuestCard className="order-first lg:col-span-2" />}
             {classes && (
               <YourClassesCard
                 classes={classes}

@@ -24,7 +24,7 @@ export function SidebarItem({ item, active }: { item: NavItem; active: boolean }
   );
 }
 
-/** Left icon rail on desktop; a fixed bottom bar on phones. Same items, same grey active square. `last` = an extra item at the end (account). */
+/** Left icon rail from 768 px (laptops, also at 150% zoom, and tablets); a fixed bottom bar on phones. Same items, same grey active square. `last` = an extra item at the end (account). */
 export function Sidebar({
   items,
   activeHref,
@@ -39,10 +39,10 @@ export function Sidebar({
       aria-label="Main"
       className={cx(
         "fixed inset-x-0 bottom-0 z-10 border-t border-line bg-card px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2",
-        "lg:static lg:border-0 lg:bg-transparent lg:p-0",
+        "md:static md:border-0 md:bg-transparent md:p-0",
       )}
     >
-      <ul className="flex items-center justify-around lg:flex-col lg:justify-start lg:gap-3">
+      <ul className="flex items-center justify-around md:flex-col md:justify-start md:gap-3">
         {items.map((item) => (
           <li key={item.label}>
             {/* The path decides (mock mode adds ?mock=1 to every link). */}

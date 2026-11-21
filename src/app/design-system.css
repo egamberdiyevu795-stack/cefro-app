@@ -21,6 +21,8 @@
   --text-title--line-height: 1.5rem;
   --text-heading: 1.75rem; /* 28px: the one page heading of the signed-out pages ("Practise the multilevel speaking exam") */
   --text-heading--line-height: 2.25rem;
+  --text-display: 2.75rem; /* 44px: the home page heading on laptops (>= 1024 px) only; phones keep --text-heading */
+  --text-display--line-height: 3.25rem;
   --text-stat: 2.25rem; /* 36px: the big number ("Band 3") */
   --text-stat--line-height: 1;
 

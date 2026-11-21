@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A passenger by the window inside a plane</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. Inside a plane: a woman sits in a window seat under the luggage lockers and looks out of a small round window at white clouds and the tip of the wing.</desc>
+  <!-- cabin wall, lockers -->
+  <rect width="480" height="360" fill="#f1ede6"/>
+  <path d="M0 0 H480 V64 Q240 84 0 64 Z" fill="#e2ddd3"/>
+  <path d="M0 64 Q240 84 480 64" stroke="#cbc4b6" stroke-width="4" fill="none"/>
+  <circle cx="120" cy="88" r="6" fill="#fff4c2"/>
+  <circle cx="142" cy="90" r="6" fill="#fff4c2"/>
+  <rect y="300" width="480" height="60" fill="#8b93a1"/>
+  <!-- window -->
+  <rect x="292" y="104" width="116" height="150" rx="52" fill="#d6d0c4"/>
+  <rect x="304" y="116" width="92" height="126" rx="44" fill="#9fd0f0"/>
+  <ellipse cx="336" cy="214" rx="26" ry="10" fill="#ffffff"/>
+  <ellipse cx="366" cy="208" rx="22" ry="9" fill="#ffffff"/>
+  <ellipse cx="350" cy="150" rx="18" ry="7" fill="#ffffff"/>
+  <path d="M396 196 L340 222 L396 214 Z" fill="#c4c9d1"/>
+  <!-- seat -->
+  <path d="M96 116 Q96 96 116 96 H228 Q248 96 248 116 V300 H96 Z" fill="#4f7cac"/>
+  <rect x="120" y="100" width="104" height="34" rx="10" fill="#dfe8f2"/>
+  <rect x="88" y="236" width="196" height="22" rx="8" fill="#3d6592"/>
+  <!-- passenger, seated, turned to the window -->
+  <path d="M190 236 H282 L286 262 H196 Z" fill="#2f3e57"/>
+  <path d="M276 238 L280 296" stroke="#2f3e57" stroke-width="18" stroke-linecap="round"/>
+  <rect x="270" y="290" width="26" height="10" rx="4" fill="#2f2f2f"/>
+  <path d="M168 244 Q166 186 204 176 Q238 182 240 244 Z" fill="#e4572e"/>
+  <path d="M232 192 L262 214 L276 206" stroke="#e4572e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="279" cy="205" r="6" fill="#d9a07a"/>
+  <circle cx="214" cy="150" r="20" fill="#d9a07a"/>
+  <path d="M192 152 Q190 124 214 126 Q236 128 232 146 Q222 138 212 140 Q206 150 200 172 Q190 166 192 152 Z" fill="#6b3b22"/>
+</svg>

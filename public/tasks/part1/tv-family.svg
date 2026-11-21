@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A family on a sofa watching TV together</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. In a living room, seen from behind: a mother, a father and a child sit on a sofa watching a big TV on the wall, which shows a picture of mountains. A lamp stands beside the TV.</desc>
+  <!-- wall, TV, lamp -->
+  <rect width="480" height="360" fill="#f4ecdf"/>
+  <rect x="130" y="50" width="220" height="130" rx="6" fill="#2f2f2f"/>
+  <rect x="140" y="60" width="200" height="110" rx="3" fill="#9fd0f0"/>
+  <path d="M140 170 L200 104 L236 140 L272 96 L340 170 Z" fill="#6f8fa8"/>
+  <path d="M260 110 L272 96 L284 110 Z M190 115 L200 104 L210 115 Z" fill="#ffffff"/>
+  <circle cx="306" cy="84" r="10" fill="#fbe7a1"/>
+  <rect x="150" y="190" width="180" height="20" rx="4" fill="#b7895c"/>
+  <path d="M400 210 V110" stroke="#5a5a5a" stroke-width="4"/>
+  <path d="M380 112 H420 L410 82 H390 Z" fill="#f2c94c"/>
+  <rect x="388" y="208" width="24" height="6" rx="2" fill="#5a5a5a"/>
+  <rect y="270" width="480" height="90" fill="#c9a77d"/>
+  <!-- heads above the sofa back (seen from behind) -->
+  <circle cx="160" cy="214" r="24" fill="#c98b5f"/>
+  <path d="M136 214 Q134 186 160 186 Q186 186 184 214 Q186 236 170 240 H150 Q134 236 136 214 Z" fill="#3b2a1f"/>
+  <path d="M120 290 Q122 238 160 236 Q198 238 200 290 Z" fill="#6c3f73"/>
+  <circle cx="250" cy="236" r="17" fill="#c98b5f"/>
+  <path d="M233 236 Q232 216 250 216 Q268 216 267 236 Q266 248 256 252 H244 Q234 248 233 236 Z" fill="#1f1a17"/>
+  <path d="M222 296 Q224 258 250 254 Q276 258 278 296 Z" fill="#f2c94c"/>
+  <circle cx="330" cy="212" r="25" fill="#c98b5f"/>
+  <path d="M305 212 Q304 186 330 186 Q356 186 355 212 Q354 228 346 232 H314 Q306 228 305 212 Z" fill="#1f1a17"/>
+  <path d="M288 290 Q290 236 330 234 Q370 236 372 290 Z" fill="#4f7cac"/>
+  <!-- sofa back -->
+  <rect x="70" y="262" width="340" height="80" rx="20" fill="#4f7c6a"/>
+  <rect x="56" y="250" width="40" height="92" rx="16" fill="#456e5e"/>
+  <rect x="384" y="250" width="40" height="92" rx="16" fill="#456e5e"/>
+</svg>

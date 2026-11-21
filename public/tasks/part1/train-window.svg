@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A passenger looking out of a train window at green hills</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. Inside a train: a young man sits at a small table with a cup of tea and looks out of a large window at green hills, trees and a river going past.</desc>
+  <!-- carriage wall -->
+  <rect width="480" height="360" fill="#efe3cf"/>
+  <rect y="0" width="480" height="30" fill="#e2d3b9"/>
+  <rect y="290" width="480" height="70" fill="#9a8a74"/>
+  <!-- big window with the view -->
+  <rect x="150" y="54" width="300" height="176" rx="14" fill="#cbbfa8"/>
+  <rect x="162" y="66" width="276" height="152" rx="10" fill="#cfe6f5"/>
+  <path d="M162 170 Q230 124 300 158 T438 146 V218 H162 Z" fill="#9cc77f"/>
+  <path d="M162 196 Q250 172 330 190 T438 182 V218 H162 Z" fill="#7fb069"/>
+  <path d="M250 218 Q300 200 360 206 Q400 210 438 200 V212 Q400 220 360 216 Q306 212 262 218 Z" fill="#8ec5e6"/>
+  <rect x="214" y="150" width="6" height="18" fill="#7a5a3c"/>
+  <circle cx="217" cy="144" r="12" fill="#4f8a43"/>
+  <rect x="380" y="140" width="6" height="18" fill="#7a5a3c"/>
+  <circle cx="383" cy="134" r="12" fill="#4f8a43"/>
+  <circle cx="404" cy="96" r="16" fill="#fbe7a1"/>
+  <!-- table and cup -->
+  <rect x="180" y="232" width="250" height="12" rx="4" fill="#8c5f3a"/>
+  <rect x="300" y="244" width="12" height="46" fill="#6e4a2d"/>
+  <rect x="352" y="214" width="20" height="20" rx="3" fill="#ffffff"/>
+  <path d="M372 218 Q382 222 372 230" stroke="#ffffff" stroke-width="4" fill="none"/>
+  <!-- seat -->
+  <path d="M40 120 Q40 100 60 100 H128 Q148 100 148 120 V300 H40 Z" fill="#4f7cac"/>
+  <rect x="56" y="104" width="76" height="30" rx="10" fill="#dfe8f2"/>
+  <!-- passenger -->
+  <path d="M120 240 H190 L192 262 H124 Z" fill="#3b3b4a"/>
+  <path d="M186 244 L190 296" stroke="#3b3b4a" stroke-width="18" stroke-linecap="round"/>
+  <rect x="180" y="290" width="26" height="10" rx="4" fill="#2f2f2f"/>
+  <path d="M96 250 Q94 192 132 182 Q166 188 168 250 Z" fill="#3f8f4a"/>
+  <path d="M160 200 L186 226 L214 230" stroke="#3f8f4a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="218" cy="230" r="6" fill="#c98b5f"/>
+  <circle cx="142" cy="156" r="20" fill="#c98b5f"/>
+  <path d="M122 154 Q122 130 144 132 Q164 134 160 150 Q150 142 140 144 Q132 146 122 154 Z" fill="#1f1a17"/>
+</svg>

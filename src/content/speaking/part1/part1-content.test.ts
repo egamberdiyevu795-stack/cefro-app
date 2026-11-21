@@ -47,8 +47,8 @@ describe("Part 1 content: official timings (docs/part1-plan.md §1, decision 13)
     expect(PART1_AUDIO_FILES.find((f) => f.path === task.intro!.audio)?.text).toBe(task.intro!.text);
   });
 
-  it("there is one task list entry for each part (Part 1.1 is the question bank)", () => {
-    expect(LISTED_TASKS.map((t) => t.part).sort()).toEqual(["1.1", "1.2"]);
+  it("one task list entry for Part 1.1 (the question bank), then six Part 1.2 picture tasks", () => {
+    expect(LISTED_TASKS.map((t) => t.part)).toEqual(["1.1", "1.2", "1.2", "1.2", "1.2", "1.2", "1.2"]);
     expect(LISTED_TASKS[0]!.questions.map((q) => q.text)).toEqual(PART11_DEFAULT_SET.map((n) => part11Question(n)!.text));
   });
 
@@ -70,7 +70,7 @@ describe("Part 1 content: tasks, rubrics, release switch", () => {
     expect(PART_LIVE["1.1"]).toBe(false);
     expect(PART_LIVE["1.2"]).toBe(false);
     expect(listSpeakingTasks().some((t) => t.part === 1)).toBe(false);
-    expect(listAllSpeakingTasks().filter((t) => t.part === 1)).toHaveLength(2);
+    expect(listAllSpeakingTasks().filter((t) => t.part === 1)).toHaveLength(PART1_SPEAKING_TASKS.length);
     for (const t of PART1_SPEAKING_TASKS) expect(getSpeakingTask(t.id)).toBe(t);
   });
 

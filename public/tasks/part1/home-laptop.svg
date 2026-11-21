@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A young man studying alone at home with a laptop</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. At home in his room: a young man sits alone at a desk with a laptop and headphones round his neck, next to a desk lamp and a mug. A bookshelf and a window are behind him.</desc>
+  <!-- room -->
+  <rect width="480" height="360" fill="#f0ebe1"/>
+  <rect x="300" y="40" width="130" height="110" rx="4" fill="#cfe6f5" stroke="#d9cfbd" stroke-width="6"/>
+  <path d="M365 40 V150" stroke="#d9cfbd" stroke-width="5"/>
+  <rect x="40" y="60" width="120" height="8" fill="#a8754a"/>
+  <rect x="40" y="120" width="120" height="8" fill="#a8754a"/>
+  <rect x="48" y="36" width="12" height="24" fill="#4f7cac"/>
+  <rect x="62" y="40" width="10" height="20" fill="#e4572e"/>
+  <rect x="74" y="34" width="14" height="26" fill="#3f8f4a"/>
+  <rect x="90" y="42" width="10" height="18" fill="#f2c94c"/>
+  <rect x="50" y="96" width="14" height="24" fill="#6c3f73"/>
+  <rect x="66" y="100" width="12" height="20" fill="#4fa3d9"/>
+  <rect x="80" y="94" width="10" height="26" fill="#e4572e"/>
+  <rect y="294" width="480" height="66" fill="#c8b89e"/>
+  <!-- young man behind the desk -->
+  <path d="M184 262 Q186 192 236 186 Q286 192 288 262 Z" fill="#7a8a99"/>
+  <circle cx="236" cy="154" r="21" fill="#c98b5f"/>
+  <path d="M214 154 Q212 128 236 128 Q260 128 258 154 Q254 140 236 140 Q218 140 214 154 Z" fill="#1f1a17"/>
+  <path d="M212 186 Q236 204 260 186" stroke="#2f2f2f" stroke-width="5" fill="none"/>
+  <rect x="206" y="180" width="10" height="14" rx="4" fill="#2f2f2f"/>
+  <rect x="256" y="180" width="10" height="14" rx="4" fill="#2f2f2f"/>
+  <!-- desk, laptop, lamp, mug -->
+  <rect x="100" y="250" width="290" height="14" rx="4" fill="#b7895c"/>
+  <rect x="116" y="264" width="12" height="96" fill="#9a7048"/>
+  <rect x="362" y="264" width="12" height="96" fill="#9a7048"/>
+  <path d="M196 248 L202 196 H272 L278 248 Z" fill="#9aa1aa"/>
+  <rect x="186" y="246" width="102" height="6" rx="2" fill="#7c838c"/>
+  <path d="M310 250 H340 L334 242 H316 Z" fill="#3b3b3b"/>
+  <path d="M325 242 L318 206 L340 192" stroke="#3b3b3b" stroke-width="4" fill="none"/>
+  <path d="M334 182 L354 196 L340 210 Z" fill="#f2c94c"/>
+  <rect x="140" y="230" width="20" height="20" rx="3" fill="#e4572e"/>
+  <path d="M140 234 Q130 240 140 246" stroke="#e4572e" stroke-width="4" fill="none"/>
+</svg>

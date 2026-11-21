@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A young woman eating a bowl of salad at home</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. At home in a bright kitchen: a young woman sits at a table with a big bowl of fresh salad (green leaves, tomatoes, cucumber) and a glass of water, holding a fork. A plant stands by the window.</desc>
+  <!-- wall, window, plant -->
+  <rect width="480" height="360" fill="#f3efe6"/>
+  <rect x="40" y="40" width="130" height="110" rx="4" fill="#cfe6f5" stroke="#d9cfbd" stroke-width="6"/>
+  <path d="M105 40 V150 M40 95 H170" stroke="#d9cfbd" stroke-width="5"/>
+  <path d="M30 34 H70 Q60 100 72 160 H30 Z" fill="#e8b4a0"/>
+  <path d="M180 34 H140 Q150 100 138 160 H180 Z" fill="#e8b4a0"/>
+  <rect x="380" y="70" width="70" height="8" rx="2" fill="#c9a77d"/>
+  <rect x="388" y="50" width="16" height="20" rx="3" fill="#e4572e"/>
+  <rect x="410" y="54" width="12" height="16" rx="3" fill="#4fa3d9"/>
+  <rect x="428" y="46" width="14" height="24" rx="3" fill="#8cbf3f"/>
+  <g transform="translate(-34 6)">
+  <path d="M410 250 L404 214 H436 L430 250 Z" fill="#c8794f"/>
+  <path d="M420 214 Q396 180 404 156 Q418 186 420 214 Q426 170 446 160 Q440 196 420 214 Z" fill="#3f8f4a"/>
+  </g>
+  <!-- woman behind the table -->
+  <path d="M184 262 Q186 186 240 180 Q294 186 296 262 Z" fill="#4fa3d9"/>
+  <circle cx="240" cy="146" r="22" fill="#e0b08a"/>
+  <path d="M216 150 Q212 120 240 120 Q268 120 264 150 Q262 134 240 132 Q220 134 216 150 Z" fill="#7a4a24"/>
+  <path d="M216 150 Q214 178 222 184 L226 150 Z M264 150 Q266 178 258 184 L254 150 Z" fill="#7a4a24"/>
+  <path d="M200 200 L198 240 L222 252" stroke="#4fa3d9" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M282 202 L292 236 L270 238" stroke="#4fa3d9" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M262 238 L250 226" stroke="#9aa1aa" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="266" cy="239" r="6" fill="#e0b08a"/>
+  <!-- table, salad, water -->
+  <rect x="70" y="256" width="340" height="14" rx="4" fill="#b7895c"/>
+  <rect x="90" y="270" width="12" height="90" fill="#9a7048"/>
+  <rect x="378" y="270" width="12" height="90" fill="#9a7048"/>
+  <g fill="#8cbf3f"><ellipse cx="214" cy="232" rx="14" ry="8"/><ellipse cx="236" cy="226" rx="16" ry="9"/><ellipse cx="260" cy="232" rx="14" ry="8"/></g>
+  <g fill="#3f8f4a"><ellipse cx="226" cy="234" rx="12" ry="7"/><ellipse cx="250" cy="236" rx="12" ry="7"/></g>
+  <circle cx="222" cy="226" r="6" fill="#d93b2b"/>
+  <circle cx="252" cy="224" r="6" fill="#d93b2b"/>
+  <circle cx="240" cy="234" r="5" fill="#cfe8a8" stroke="#6fa33a" stroke-width="2"/>
+  <path d="M196 236 H284 Q280 262 240 262 Q200 262 196 236 Z" fill="#ffffff" stroke="#e2ddd3" stroke-width="2"/>
+  <rect x="320" y="222" width="22" height="34" rx="3" fill="#cfe9f7" stroke="#a9cbe0" stroke-width="2"/>
+  <rect x="322" y="234" width="18" height="20" fill="#9fd0f0"/>
+</svg>

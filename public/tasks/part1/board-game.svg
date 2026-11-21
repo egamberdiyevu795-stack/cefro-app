@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">Friends playing a board game at a table</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. Three friends sit round a table playing a board game with coloured squares, small playing pieces and two dice. The friend in the middle raises a hand to throw the dice.</desc>
+  <!-- room -->
+  <rect width="480" height="360" fill="#eef3ea"/>
+  <path d="M240 0 V40" stroke="#5a5a5a" stroke-width="2"/>
+  <path d="M212 62 Q240 30 268 62 Z" fill="#e4572e"/>
+  <circle cx="240" cy="64" r="6" fill="#fff4c2"/>
+  <rect y="296" width="480" height="64" fill="#b9a587"/>
+  <!-- friend left -->
+  <path d="M60 262 Q62 196 106 190 Q150 196 152 262 Z" fill="#4fa3d9"/>
+  <circle cx="106" cy="160" r="20" fill="#e0b08a"/>
+  <path d="M84 164 Q82 134 106 134 Q130 134 128 164 Q124 146 106 146 Q88 146 84 164 Z" fill="#b5651d"/>
+  <path d="M82 166 Q78 192 88 198 L90 166 Z M130 166 Q134 192 124 198 L122 166 Z" fill="#b5651d"/>
+  <path d="M140 214 L162 240" stroke="#4fa3d9" stroke-width="12" stroke-linecap="round"/>
+  <!-- friend middle, throwing the dice -->
+  <path d="M194 262 Q196 194 240 188 Q284 194 286 262 Z" fill="#e4572e"/>
+  <circle cx="240" cy="156" r="21" fill="#8d5b3e"/>
+  <path d="M220 154 Q218 132 240 132 Q262 132 260 154 Q256 142 240 142 Q224 142 220 154 Z" fill="#1f1a17"/>
+  <path d="M276 206 L296 176 L300 150" stroke="#e4572e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="300" cy="144" r="8" fill="#8d5b3e"/>
+  <path d="M206 214 L214 240" stroke="#e4572e" stroke-width="12" stroke-linecap="round"/>
+  <!-- friend right -->
+  <path d="M330 262 Q332 196 376 190 Q420 196 422 262 Z" fill="#3f8f4a"/>
+  <circle cx="376" cy="160" r="20" fill="#c98b5f"/>
+  <path d="M356 160 Q354 136 376 136 Q398 136 396 160 Q392 146 376 146 Q360 146 356 160 Z" fill="#3b2a1f"/>
+  <path d="M342 214 L320 240" stroke="#3f8f4a" stroke-width="12" stroke-linecap="round"/>
+  <!-- table and board -->
+  <path d="M40 250 L80 226 H400 L440 250 Z" fill="#b7895c"/>
+  <rect x="40" y="250" width="400" height="14" fill="#9a7048"/>
+  <rect x="60" y="264" width="12" height="40" fill="#8a6440"/>
+  <rect x="408" y="264" width="12" height="40" fill="#8a6440"/>
+  <path d="M170 248 L190 228 H290 L310 248 Z" fill="#fff6ea" stroke="#d9cfbd" stroke-width="2"/>
+  <g>
+    <path d="M178 246 L184 240 H204 L200 246 Z" fill="#e4572e"/>
+    <path d="M204 246 L206 240 H226 L226 246 Z" fill="#f2c94c"/>
+    <path d="M230 246 L230 240 H250 L252 246 Z" fill="#4fa3d9"/>
+    <path d="M256 246 L254 240 H274 L280 246 Z" fill="#8cbf3f"/>
+    <path d="M284 246 L278 240 H296 L302 246 Z" fill="#e4572e"/>
+    <path d="M190 236 L194 232 H210 L208 236 Z" fill="#8cbf3f"/>
+    <path d="M214 236 L214 232 H230 L230 236 Z" fill="#e4572e"/>
+    <path d="M236 236 L236 232 H252 L252 236 Z" fill="#f2c94c"/>
+    <path d="M258 236 L256 232 H272 L274 236 Z" fill="#4fa3d9"/>
+    <path d="M278 236 L276 232 H288 L292 236 Z" fill="#8cbf3f"/>
+  </g>
+  <path d="M212 236 L216 224 L220 236 Z" fill="#6c3f73"/>
+  <path d="M262 242 L266 230 L270 242 Z" fill="#2f4f7f"/>
+  <rect x="318" y="232" width="12" height="12" rx="2" fill="#ffffff" stroke="#9aa1aa" stroke-width="1.5"/>
+  <circle cx="324" cy="238" r="1.8" fill="#2f2f2f"/>
+  <rect x="336" y="236" width="12" height="12" rx="2" fill="#ffffff" stroke="#9aa1aa" stroke-width="1.5"/>
+  <circle cx="339" cy="239" r="1.6" fill="#2f2f2f"/>
+  <circle cx="345" cy="245" r="1.6" fill="#2f2f2f"/>
+</svg>

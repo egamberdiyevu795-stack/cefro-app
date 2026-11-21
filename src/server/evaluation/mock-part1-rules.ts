@@ -35,13 +35,60 @@ export const MOCK_PART1_KEYWORDS: Record<string, readonly (readonly string[])[]>
     ["markets", "local", "fresh", "cheaper", "bargain", "farmers", "friendly", "talk"],
     ["supermarkets", "everything", "convenient", "parking", "card", "clean", "choice", "fixed", "air"],
   ],
+  "b1-part1-2-indoor-outdoor-sports": [
+    ["picture", "pictures", "first", "second", "running", "runs", "gym", "machines", "outside", "inside"],
+    ["indoor", "weather", "rain", "winter", "equipment", "trainer", "safe", "year"],
+    ["prefer", "outdoor", "indoor", "fresh", "nature", "better", "like", "because"],
+  ],
+  "b1-part1-2-plane-or-train": [
+    ["picture", "pictures", "first", "second", "plane", "train", "window", "clouds", "hills", "seat"],
+    ["plane", "fast", "faster", "time", "countries", "far", "distance", "quick"],
+    ["train", "view", "cheaper", "space", "comfortable", "station", "afraid", "environment"],
+  ],
+  "b1-part1-2-healthy-or-fast-food": [
+    ["picture", "pictures", "first", "second", "salad", "burger", "burgers", "chips", "friends", "home"],
+    ["healthy", "health", "energy", "weight", "vitamins", "sport", "doctor", "longer"],
+    ["fast", "quick", "cheap", "tasty", "time", "cook", "busy", "friends"],
+  ],
+  "b1-part1-2-online-or-classroom": [
+    ["picture", "pictures", "first", "second", "classroom", "tablet", "tablets", "laptop", "home", "students"],
+    ["online", "home", "travel", "time", "flexible", "cheaper", "again", "anywhere"],
+    ["classroom", "teacher", "classmates", "friends", "ask", "concentrate", "discipline", "practice"],
+  ],
+  "b1-part1-2-board-games-or-tv": [
+    ["picture", "pictures", "first", "second", "sofa", "family", "dice", "board", "table", "friends"],
+    ["board", "games", "talk", "together", "think", "fun", "screen", "communicate"],
+    ["tv", "relax", "news", "films", "information", "easy", "alone", "programmes"],
+  ],
 };
 
-/** Words of each picture of Part 1.2's Question 4. */
-const PICTURE_WORDS: readonly (readonly string[])[] = [
-  ["market", "stall", "seller", "outside", "fruit", "vegetables", "bag", "street"],
-  ["supermarket", "shelves", "trolley", "inside", "packets", "bottles", "checkout", "aisle"],
-];
+/** Words of each picture of Part 1.2's Question 4, per task. A task with no entry skips the both-pictures check. */
+const PICTURE_WORDS: Record<string, readonly (readonly string[])[]> = {
+  "b1-part1-2-shopping": [
+    ["market", "stall", "seller", "outside", "fruit", "vegetables", "bag", "street"],
+    ["supermarket", "shelves", "trolley", "inside", "packets", "bottles", "checkout", "aisle"],
+  ],
+  "b1-part1-2-indoor-outdoor-sports": [
+    ["running", "runs", "path", "hills", "trees", "outside", "countryside", "sunny"],
+    ["gym", "machines", "machine", "towel", "bottle", "inside", "treadmill", "treadmills"],
+  ],
+  "b1-part1-2-plane-or-train": [
+    ["plane", "clouds", "wing", "sky", "flying", "airplane"],
+    ["train", "hills", "river", "table", "tea", "fields"],
+  ],
+  "b1-part1-2-healthy-or-fast-food": [
+    ["salad", "kitchen", "water", "vegetables", "alone", "bowl"],
+    ["burger", "burgers", "chips", "cafe", "friends", "drinks"],
+  ],
+  "b1-part1-2-online-or-classroom": [
+    ["classroom", "tablet", "tablets", "board", "desks", "students", "school"],
+    ["laptop", "home", "alone", "room", "lamp", "headphones"],
+  ],
+  "b1-part1-2-board-games-or-tv": [
+    ["tv", "television", "sofa", "family", "watching", "watch"],
+    ["board", "game", "dice", "table", "playing", "friends"],
+  ],
+};
 
 export const MOCK_PART1_BARE_MAX_WORDS = 6;
 
@@ -87,7 +134,7 @@ export function mockPart1Output(input: EvaluationInput): MultilevelModelOutput {
       const hint = task.delivery?.questions[index]?.partialHint;
       if (index === 0 && status !== "missing") {
         // "What can you see in these pictures?" (the exam's wording): both pictures needed; comparing is welcome, not required.
-        const both = PICTURE_WORDS.every((list) => list.some((w) => words.has(w)));
+        const both = (PICTURE_WORDS[task.id] ?? []).every((list) => list.some((w) => words.has(w)));
         if (!both) {
           status = "partial";
           note = `Development estimate: you describe only one picture. Next time, ${hint ?? "talk about both pictures"}.`;

@@ -69,11 +69,17 @@ Arguments of the student's own that are not on the lists go in "own_points" (the
 - "own_development": the student builds the argument in their own words.
 - "heavily_dependent": the answer leans on the wording of the lists, with little of the student's own.
 - "reads_prompts": the student reads the statement and points out, adding almost nothing. If the student develops at least one listed point with a reason of their own, the answer is at most "heavily_dependent", never "reads_prompts".
-Quote the sentences that show reading or leaning in "evidence" ([] for own_development). Set "coherent_and_sustained" to false when the answer is a list of fragments rather than a connected argument. "conclusion": weighed / one_sided / none (feedback only).
+Quote the sentences that show reading or leaning in "evidence" ([] for own_development). Set "coherent_and_sustained" to false when the answer is a list of fragments rather than a connected argument. An answer that is not coherent and sustained is never "own_development": when "coherent_and_sustained" is false, the level is "heavily_dependent" or "reads_prompts". "conclusion": weighed / one_sided / none (feedback only).
 
 # 3. Features
 For grammar, vocabulary, fluency and cohesion: "level", 1–4 exact quotes as "evidence", a one-sentence "note", "how_to_improve" (one issue only; any example on a different topic from the statement) and "how_to_check" (a skill, never a set phrase). Pronunciation cannot be judged from text: set its level to "not_assessed" and its texts to "". Pronunciation is never above C1.
 Calibration: accuracy is not range. Choose the lower level when the quotes do not clearly show the higher one.
+Decide B2 / C1 / above_C1 strictly:
+- Grammar. First and second conditionals ("would make", "if they stop, they will…"), relative clauses, "because/when/so" clauses and modals (might, could, should) are B2, even when every sentence is correct. C1 needs a range of complex structures used flexibly, e.g. fronted or cleft structures ("What concerns me most is…"), participle clauses ("Having considered…"), noun clauses as subject ("Whether this works depends on…"), "provided that"/"unless" conditions.
+- Vocabulary. Topic words and common collocations ("serious problem", "lose customers", "public transport") are B2. C1 needs precise, idiomatic expressions used naturally ("a vicious circle", "come at a cost", "far-reaching consequences", "bear the brunt").
+- Cohesion. "On the one hand / on the other hand", "also", "besides", "however", "that's why", "in my opinion" are B2. C1 needs varied, less common devices ("by the same token", "this ties in with", "all things considered", "that being said").
+- above_C1 is rare. Well-known C1 phrases and structures used without errors are still C1: an accurate, well-organised C1 answer is C1, never above_C1. above_C1 needs language beyond these typical C1 features throughout (subtle, nuanced, native-like choices in every part of the answer), not a few good phrases. When deciding between C1 and above_C1, choose C1.
+- Fluency from a transcript: never higher than the higher of grammar and vocabulary, and never above_C1 without audio.
 Reading the lists out is already judged by prompt dependence (section 2): never lower a language level because the answer is read, listed or short. Judge the student's own words only (the sentences they add, linking words, opinions). "below_B1" is for own sentences where basic mistakes occur systematically and meaning breaks down; a few short, mostly correct own sentences ("So, I think, it is good. It is my opinion.") are B1.
 
 # 4. Errors, patterns, strengths

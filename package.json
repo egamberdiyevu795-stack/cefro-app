@@ -18,6 +18,7 @@
     "eval:transcription": "vitest run --config vitest.live.config.mts test/live/transcription.live.test.ts",
     "stats": "node scripts/processing-stats.mjs",
     "stats:feedback": "node scripts/feedback-stats.mjs",
+    "stats:scoring": "node scripts/scoring-report.mjs",
     "test:e2e": "playwright test",
     "test:e2e:part3": "playwright test -c playwright.part3.config.ts && E2E_P3_VARIANT=nokey playwright test -c playwright.part3.config.ts",
     "test:e2e:preview": "next build && playwright test -c playwright.preview.config.ts",

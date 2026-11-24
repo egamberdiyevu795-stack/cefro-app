@@ -29,8 +29,8 @@ right** (or shows where it is wrong).
 almost every part attempt and exactly on most**, and the whole-mock level matches on most mocks. Until then the anchors
 (written by us, synthetic) are the only proof, and they do not prove the scoring of real speech.
 
-**How it is measured:** GitHub → Actions → **Scoring report** → Run workflow (`.github/workflows/scoring-report.yml`,
-`npm run stats:scoring` locally). Read-only, counts only. Part 1 says whether AI scoring works in production (scored by a
+**How it is measured:** GitHub → Actions → **Deploy production** → Run workflow, stage **check** (the default, which never
+writes); the report is the last step of the "Check production database" job (`npm run stats:scoring` locally). Read-only, counts only. Part 1 says whether AI scoring works in production (scored by a
 real model / no AI score / failed with the reason); part 2 is the teacher-vs-app agreement, per part and per mock.
 
 **Order:**

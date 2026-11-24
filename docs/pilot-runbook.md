@@ -46,7 +46,7 @@ Settings are read when the app starts.
 | `OPENAI_API_KEY` | a key starting `sk-` | The paid speech-to-text service. A small cost per minute of audio. | platform.openai.com → sign in → **API keys** → **Create new secret key**. Add some billing credit there first. Copy the key once; it is shown only once. |
 | `EVALUATION_PROVIDER` | `gemini` | **Must be set on Vercel even if you have no scoring key**, or the app refuses requests. With no key, the AI side simply says "AI score not ready yet". | Nothing to get. Type `gemini`. |
 | `TEACHER_LIVE` | `true` | Switches on the Teacher view: classes, join codes, the exam laptop, listening to recordings. | Nothing to get. Type `true`. |
-| `FULL_MOCK_LIVE` | `true` | Switches on the full mock exam (all four parts in one go). **Needed by the exam laptop**: without it Start exam laptop is refused with a message. The single parts can stay "Coming soon". | Nothing to get. Type `true`. |
+| `FULL_MOCK_LIVE` | `true` | Switches on the full mock exam (all four parts in one go). Not needed while all four parts are on (the default since 2026-11-24): the mock is open anyway. **Needed by the exam laptop**: without it Start exam laptop is refused with a message. The single parts can stay "Coming soon". | Nothing to get. Type `true`. |
 
 These must already be set from before (check they are there): `AUTH_SECRET` (32+ random characters, signs logins),
 `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (the database; Production only). If one is missing the app tells you in
@@ -60,7 +60,7 @@ Vercel's logs which one.
 | `ANTHROPIC_API_KEY` | a key | Only if you set `EVALUATION_PROVIDER=anthropic` instead of Gemini. | console.anthropic.com → API keys. |
 | `PART_1_1_LIVE` | `true` (default) | Part 1.1 practice at home (questions from the weighted bank). **Live by default since 2026-11-15** (owner: no manual Vercel step); set `false` to close it. | **Live:** the six Part 1 anchors scored exactly, twice, on gemini-3.8-flash. |
 | `PART_3_LIVE` | `true` (default) | Part 3 practice at home. **Live by default since 2026-11-15**; set `false` to close it. | **Live:** first anchor run 7 of 11 exact, all within one band; after the weak-answer fix (argument-evaluator 0.3.0) the 4 low/middle anchors rerun 4 of 4 exact (docs/part3-topic-bank.md). |
-| `PART_1_2_LIVE` | `true` | Opens Part 1.2 for practice at home. Default off ("Coming soon"). | **Not yet:** six picture tasks since 2026-11-21 (enough to open), but the Part 1.2 anchors still have to be rerun after the Question 4 rule change of 2026-11-15 (evaluator 3.8.1). The rerun on 2026-11-21 could not score: Gemini credits were depleted (HTTP 402). |
+| `PART_1_2_LIVE` | `true` | Opens Part 1.2 for practice at home. **Default on since 2026-11-24** (owner decision; set `false` to close it). With all four parts on, the full mock is open too. | **Still to do:** rerun the Part 1.2 anchors after the Question 4 rule change of 2026-11-15 (evaluator 3.8.1). The rerun on 2026-11-21 could not score: Gemini credits were depleted (HTTP 402). |
 | `PART_2_LIVE` | `false` | Closes single Part 2 practice. Default is on. | Normally leave it alone. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Gmail settings | Switches on **Forgot password?** (the reset link is emailed). Without them the link is simply not shown. | Step by step in `docs/password-reset.md` (a new Gmail account with an app password, about 10 minutes). |
 

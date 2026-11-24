@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Owner's scoring report. Read-only (SELECT only); prints counts only: no ids, names, emails, transcripts or times.
 //
-//   npm run stats:scoring                  (or GitHub → Actions → "Scoring report" → Run workflow, for production)
+//   npm run stats:scoring                  (production: GitHub → Actions → "Deploy production" → Run workflow, stage `check`)
 //
 // 1. Is AI scoring working? Attempts of the last SCORING_REPORT_DAYS days (default 30) by part: scored by a real model,
 //    completed without an AI score ("AI score not ready yet"), failed (with stage and code), still running.

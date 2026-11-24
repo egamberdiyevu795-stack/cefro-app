@@ -31,8 +31,8 @@ describe("PART_LIVE['3']", () => {
 /**
  * The owner's switches (docs/pilot-runbook.md): PART_1_1_LIVE, PART_1_2_LIVE, PART_2_LIVE, PART_3_LIVE, FULL_MOCK_LIVE and
  * TEACHER_LIVE, read from the environment so Vercel Production can turn them on without a new commit. Unlike the CEFRO_TEST_*
- * switches they work in a production build on Vercel. Defaults (owner decision 2026-11-15, no manual Vercel step): Parts 1.1,
- * 2 and 3 ON; Part 1.2, the full mock and the Teacher view OFF.
+ * switches they work in a production build on Vercel. Defaults (owner decisions 2026-11-15 and 2026-11-24, no manual Vercel
+ * step): every part ON, so the full mock is open too; the Teacher view OFF.
  */
 const SWITCHES = ["PART_1_1_LIVE", "PART_1_2_LIVE", "PART_2_LIVE", "PART_3_LIVE", "FULL_MOCK_LIVE", "TEACHER_LIVE"] as const;
 const PRODUCTION = { NODE_ENV: "production", VERCEL: "1" } as const;
@@ -45,10 +45,10 @@ const loadAll = async (env: Record<string, string | undefined>) => {
 };
 
 describe("owner switches in Production", () => {
-  it("nothing set: Parts 1.1, 2 and 3 are live; Part 1.2, the full mock and the Teacher view are off", async () => {
+  it("nothing set: every part is live, so the full mock is open; the Teacher view is off", async () => {
     const { parts, mock, teacher } = await loadAll(PRODUCTION);
-    expect(parts).toEqual({ "1.1": true, "1.2": false, "2": true, "3": true });
-    expect(mock).toBe(false);
+    expect(parts).toEqual({ "1.1": true, "1.2": true, "2": true, "3": true });
+    expect(mock).toBe(true);
     expect(teacher).toBe(false);
   });
 
@@ -57,7 +57,7 @@ describe("owner switches in Production", () => {
     ["PART_1_2_LIVE", "1.2"],
     ["PART_3_LIVE", "3"],
   ] as const)("%s=true turns on exactly that part, in a production build on Vercel", async (name, part) => {
-    const { parts } = await loadAll({ ...PRODUCTION, PART_1_1_LIVE: "false", PART_3_LIVE: "false", [name]: "true" });
+    const { parts } = await loadAll({ ...PRODUCTION, PART_1_1_LIVE: "false", PART_1_2_LIVE: "false", PART_3_LIVE: "false", [name]: "true" });
     expect(parts[part]).toBe(true);
     expect(Object.entries(parts).filter(([, on]) => on).map(([id]) => id).sort()).toEqual([part, "2"].sort());
   });
@@ -83,11 +83,11 @@ describe("owner switches in Production", () => {
   });
 
   it("FULL_MOCK_LIVE=true opens the full mock while the single parts stay off; false or unset does not", async () => {
-    const on = await loadAll({ ...PRODUCTION, PART_1_1_LIVE: "false", PART_3_LIVE: "false", FULL_MOCK_LIVE: "true" });
+    const on = await loadAll({ ...PRODUCTION, PART_1_1_LIVE: "false", PART_1_2_LIVE: "false", PART_3_LIVE: "false", FULL_MOCK_LIVE: "true" });
     expect(on.mock).toBe(true);
     expect(on.parts).toEqual({ "1.1": false, "1.2": false, "2": true, "3": false });
-    expect((await loadAll({ ...PRODUCTION, FULL_MOCK_LIVE: "false" })).mock).toBe(false);
-    expect((await loadAll(PRODUCTION)).mock).toBe(false);
+    expect((await loadAll({ ...PRODUCTION, PART_1_2_LIVE: "false", FULL_MOCK_LIVE: "false" })).mock).toBe(false);
+    expect((await loadAll({ ...PRODUCTION, PART_1_2_LIVE: "false" })).mock).toBe(false);
   });
 
   it("all four parts live still open the full mock without its own switch", async () => {
@@ -98,7 +98,7 @@ describe("owner switches in Production", () => {
 
   it("the switches are independent of each other", async () => {
     const { parts, mock, teacher } = await loadAll({ ...PRODUCTION, TEACHER_LIVE: "true", PART_1_1_LIVE: "false" });
-    expect([parts["1.1"], parts["1.2"], parts["3"], mock, teacher]).toEqual([false, false, true, false, true]);
+    expect([parts["1.1"], parts["1.2"], parts["3"], mock, teacher]).toEqual([false, true, true, false, true]);
   });
 
   it("only true / 1 / false / 0 count, in any letter case; a typo or empty value keeps the default", async () => {

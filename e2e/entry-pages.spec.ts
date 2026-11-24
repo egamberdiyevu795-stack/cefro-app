@@ -79,22 +79,40 @@ async function blackControls(page: Page) {
   );
 }
 
-/** Phone first; the laptop checks the same rules on a wide screen, where the column must stay narrow and centred. */
+/**
+ * Phone first; the laptop checks the same rules on a wide screen. Forms (sign in, Create account) stay one narrow
+ * centred column; home uses the laptop's width (a centred two-column page of at most 1024 px).
+ */
 const SIZES = [
   { name: "phone", width: 390, height: 844 },
   { name: "laptop", width: 1440, height: 900 },
 ] as const;
 
-async function audit(page: Page, black: string, size: (typeof SIZES)[number]) {
+async function audit(page: Page, url: string, black: string, size: (typeof SIZES)[number]) {
   await page.setViewportSize({ width: size.width, height: size.height });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  // One narrow column (max 448 px), centred, on every screen size: nothing stretches across a laptop screen.
+  // One centred column: narrow (max 448 px) for the forms and for home on a phone; home on a laptop is wider, never
+  // more than 1024 px, so nothing stretches across the whole screen. The header row (wordmark) spans the laptop page.
   const column = await page.locator("main").evaluate((el) => {
     const box = el.getBoundingClientRect();
     return { width: box.width, centre: box.left + box.width / 2, viewport: window.innerWidth };
   });
-  expect(column.width).toBeLessThanOrEqual(448);
+  const wideHome = url === "/" && size.name === "laptop";
+  if (wideHome) {
+    expect(column.width).toBeGreaterThan(448);
+    expect(column.width).toBeLessThanOrEqual(1024);
+    // Two columns: the steps card sits to the right of "Start practising", not under it.
+    const start = await page.getByRole("link", { name: "Start practising" }).boundingBox();
+    const steps = await page.locator("section[aria-labelledby=how-it-works]").boundingBox();
+    expect(steps!.x).toBeGreaterThan(start!.x + start!.width);
+  } else {
+    expect(column.width).toBeLessThanOrEqual(448);
+  }
   expect(Math.abs(column.centre - column.viewport / 2)).toBeLessThanOrEqual(1);
+  if (size.name === "laptop") {
+    const header = await page.getByRole("banner").boundingBox();
+    expect(header!.width).toBeGreaterThan(column.width);
+  }
   expect(await blackControls(page)).toEqual([black]);
   const { smallest, failures } = await textAudit(page);
   expect(smallest).toBeGreaterThanOrEqual(11);
@@ -108,13 +126,13 @@ for (const size of SIZES) {
   for (const mock of [false, true]) {
     for (const { url, heading, black } of PAGES) {
       const address = mock ? `${url}?mock=1` : url;
-      test(`${address} at ${size.width} px (${size.name}): one black control, no text under 11 px, AA contrast, one centred column, no menu or tabs`, async ({ page }) => {
+      test(`${address} at ${size.width} px (${size.name}): one black control, no text under 11 px, AA contrast, one centred column (wide home on a laptop), no menu or tabs`, async ({ page }) => {
         test.skip(PREVIEW && !mock, "on a Preview with no variables the real pages are refused");
         await page.setViewportSize({ width: size.width, height: size.height });
         await page.goto(address);
         await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
         if (url !== "/") await expect(page.getByRole("button", { name: black })).toBeEnabled(); // the page is ready
-        await audit(page, black, size);
+        await audit(page, url, black, size);
       });
     }
   }

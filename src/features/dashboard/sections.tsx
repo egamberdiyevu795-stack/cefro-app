@@ -48,6 +48,35 @@ export function PractiseNextCard({ next, quiet = false, className }: { next: Pra
 }
 
 /**
+ * Signed out (not mock mode): a quiet card on top of Home, so a student who opens the dashboard link without an account
+ * knows where they stand before they practise. Grey "Create account" (the page's one black button stays its own main
+ * action) and a "Sign in" text link; both come back to the dashboard. Signing up keeps this browser's practice.
+ */
+export function GuestCard({ className }: { className?: string }) {
+  return (
+    <Card aria-labelledby="guest-title" data-testid="guest-card" className={cx("flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
+      <div>
+        <h2 id="guest-title" className="text-title font-medium text-fg">
+          You are not signed in
+        </h2>
+        <p className="mt-1 text-body text-fg-muted">Your practice is kept on this browser only. Create an account to save your results.</p>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-3">
+        <PillButton href="/register?next=%2Fdashboard" variant="quiet">
+          Create account
+        </PillButton>
+        <Link
+          href="/login?next=%2Fdashboard"
+          className={cx("inline-flex min-h-11 items-center px-1 text-body font-medium text-fg underline underline-offset-4", styles.FOCUS_RING)}
+        >
+          Sign in
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
+/**
  * No scored answer yet: the first visit, or (`hasAttempts`) a student whose attempts are all still scoring or failed.
  * "Start your first practice" ("Start practice" with attempts) is the screen's one black action; it goes to the
  * recommended part (Part 2), whose tile only carries a "Recommended" label. `exam` = the exam-date question (flagged).

@@ -2,13 +2,18 @@ import type { QuestionSequenceTask } from "@/domain/speaking/question-sequence";
 import type { SpeakingTask } from "@/domain/speaking/task";
 import { a2Part11DailyLife } from "./a2-part1-1-daily-life";
 import { b1Part12Shopping } from "./b1-part1-2-shopping";
+import { PART12_NEW_TASKS } from "./part1-2-tasks";
 import { PART11_BANK_ENTRY_ID, getPart11BankTask } from "./part1-1-sets";
 
 /**
- * Part 1 tasks on the task list (1.1 then 1.2). Their parts are not live yet (`PART_LIVE`): only mock mode and the dev
+ * Part 1 tasks on the task list (1.1 then the Part 1.2 picture tasks). Their parts are not live yet (`PART_LIVE`): only mock mode and the dev
  * page open them. Part 1.1 is one entry for the question bank (part1-1-sets.ts): opening it picks a weighted set.
  */
-export const PART1_SPEAKING_TASKS: readonly SpeakingTask[] = [getPart11BankTask(PART11_BANK_ENTRY_ID)!, b1Part12Shopping];
+export const PART1_SPEAKING_TASKS: readonly SpeakingTask[] = [
+  getPart11BankTask(PART11_BANK_ENTRY_ID)!,
+  b1Part12Shopping,
+  ...PART12_NEW_TASKS,
+];
 
 /**
  * Tasks no longer offered but still opened by id: stored attempts, the demo student and the tests point at them.

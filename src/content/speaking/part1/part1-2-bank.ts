@@ -1,5 +1,7 @@
 /**
- * Part 1.2 question bank: DATA ONLY, NOT LIVE. Nothing here is a task yet; no page, mock or evaluator reads it.
+ * Part 1.2 question bank: DATA ONLY. No page, mock or evaluator reads this file. Five entries are now real tasks with
+ * our own pictures (part1-2-tasks.ts, 2026-11-21): indoor-outdoor-sports, plane-or-train, healthy-or-fast-food,
+ * online-or-classroom and board-games-or-tv. The rest still need their pictures.
  *
  * Source: a teacher's "Part 1.2 full list" (owner upload, 2026-11-15, /mnt/project-files/uzbmb/teacher-lists/
  * part1.2-list-1.jpg … part1.2-list-5.jpg). Each page shows TWO tasks (two pictures + three questions each); they are

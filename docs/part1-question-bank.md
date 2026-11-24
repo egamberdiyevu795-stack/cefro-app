@@ -94,6 +94,12 @@ in mock mode. Never read by real scoring.
 
 ## Part 1.2: nine separate tasks, data only
 
+**Update 2026-11-21:** five entries are now real tasks with our own pictures (`part1-2-tasks.ts`, pictures in
+`public/tasks/part1/`): indoor-outdoor-sports, plane-or-train, healthy-or-fast-food, online-or-classroom,
+board-games-or-tv. Not made: supermarket-or-open-air-market (same topic as `b1-part1-2-shopping`) and
+car-or-public-transport (too close to the official sample, decision 9). Grow-or-buy-vegetables and festivals-or-museums
+are still data only.
+
 Each page of the list shows two tasks; they are split into nine entries in `part1-2-bank.ts`. **None is a task yet:**
 the list's pictures are stock/AI images from a teacher's channel and are not copied. An entry becomes a task only when
 our own two pictures exist (with the licence fields every Part 1.2 picture needs).

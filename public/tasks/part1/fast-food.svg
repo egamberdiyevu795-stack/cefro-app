@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">Three friends eating burgers and chips together</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. In a fast-food café: three young friends sit side by side at a table with burgers, boxes of chips and big paper cups of drink with straws. One of them holds a burger.</desc>
+  <!-- café wall, lamps -->
+  <rect width="480" height="360" fill="#f6e3c6"/>
+  <rect y="0" width="480" height="18" fill="#e4572e"/>
+  <path d="M120 18 V44 M240 18 V44 M360 18 V44" stroke="#3b3b3b" stroke-width="2"/>
+  <path d="M104 58 Q120 38 136 58 Z M224 58 Q240 38 256 58 Z M344 58 Q360 38 376 58 Z" fill="#3b3b3b"/>
+  <circle cx="120" cy="60" r="5" fill="#fff4c2"/>
+  <circle cx="240" cy="60" r="5" fill="#fff4c2"/>
+  <circle cx="360" cy="60" r="5" fill="#fff4c2"/>
+  <rect y="300" width="480" height="60" fill="#c9a77d"/>
+  <!-- friend left -->
+  <path d="M74 262 Q76 196 120 190 Q164 196 166 262 Z" fill="#6c3f73"/>
+  <circle cx="120" cy="160" r="20" fill="#c98b5f"/>
+  <path d="M100 158 Q100 136 122 136 Q142 138 140 156 Q132 146 120 146 Q108 148 100 158 Z" fill="#1f1a17"/>
+  <!-- friend middle, holding a burger -->
+  <path d="M194 262 Q196 192 240 186 Q284 192 286 262 Z" fill="#3f8f4a"/>
+  <circle cx="240" cy="154" r="21" fill="#e0b08a"/>
+  <path d="M218 158 Q214 128 240 128 Q266 128 262 158 Q258 140 240 140 Q222 140 218 158 Z" fill="#b5651d"/>
+  <path d="M214 160 Q210 186 220 192 L222 160 Z M266 160 Q270 186 260 192 L258 160 Z" fill="#b5651d"/>
+  <path d="M206 206 L214 190" stroke="#3f8f4a" stroke-width="13" stroke-linecap="round"/>
+  <path d="M272 206 L262 192" stroke="#3f8f4a" stroke-width="13" stroke-linecap="round"/>
+  <path d="M218 176 Q240 160 262 176 Z" fill="#e0a95c"/>
+  <rect x="218" y="176" width="44" height="6" fill="#6b3b22"/>
+  <rect x="216" y="181" width="48" height="3" fill="#8cbf3f"/>
+  <path d="M218 184 H262 Q262 192 240 192 Q218 192 218 184 Z" fill="#e0a95c"/>
+  <!-- friend right -->
+  <path d="M314 262 Q316 196 360 190 Q404 196 406 262 Z" fill="#4f7cac"/>
+  <circle cx="360" cy="160" r="20" fill="#8d5b3e"/>
+  <path d="M340 160 Q338 136 360 136 Q382 136 380 160 Q376 146 360 146 Q344 146 340 160 Z" fill="#2a1d16"/>
+  <!-- table and food -->
+  <rect x="30" y="250" width="420" height="14" rx="4" fill="#d93b2b"/>
+  <rect x="60" y="264" width="12" height="40" fill="#8a2a1f"/>
+  <rect x="408" y="264" width="12" height="40" fill="#8a2a1f"/>
+  <g>
+    <path d="M90 236 Q112 218 134 236 Z" fill="#e0a95c"/>
+    <rect x="90" y="236" width="44" height="6" fill="#6b3b22"/>
+    <rect x="88" y="241" width="48" height="3" fill="#8cbf3f"/>
+    <path d="M90 244 H134 Q134 250 112 250 Q90 250 90 244 Z" fill="#e0a95c"/>
+  </g>
+  <g>
+    <path d="M150 232 L154 250 H176 L180 232 Z" fill="#e4572e"/>
+    <path d="M154 232 L152 216 M160 232 L160 212 M166 232 L168 214 M172 232 L176 218" stroke="#f2c94c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g>
+    <path d="M296 220 L300 250 H320 L324 220 Z" fill="#ffffff" stroke="#e2ddd3" stroke-width="2"/>
+    <rect x="296" y="230" width="28" height="8" fill="#4fa3d9"/>
+    <path d="M312 220 L318 202" stroke="#e4572e" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g>
+    <path d="M336 232 L340 250 H362 L366 232 Z" fill="#e4572e"/>
+    <path d="M340 232 L338 216 M346 232 L346 212 M352 232 L354 214 M358 232 L362 218" stroke="#f2c94c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g>
+    <path d="M378 236 Q400 218 422 236 Z" fill="#e0a95c"/>
+    <rect x="378" y="236" width="44" height="6" fill="#6b3b22"/>
+    <rect x="376" y="241" width="48" height="3" fill="#8cbf3f"/>
+    <path d="M378 244 H422 Q422 250 400 250 Q378 250 378 244 Z" fill="#e0a95c"/>
+  </g>
+  <g>
+    <path d="M196 220 L200 250 H220 L224 220 Z" fill="#ffffff" stroke="#e2ddd3" stroke-width="2"/>
+    <rect x="196" y="230" width="28" height="8" fill="#4fa3d9"/>
+    <path d="M212 220 L218 202" stroke="#e4572e" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

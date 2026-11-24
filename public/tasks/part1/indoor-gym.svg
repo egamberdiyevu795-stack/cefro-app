@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="t d">
+  <title id="t">A young woman in a gym next to running machines</title>
+  <desc id="d">Original illustration made for CEFRO. © 2026 CEFRO. All rights reserved. Inside a bright gym: a row of running machines in front of big windows. A young woman in sports clothes with a towel round her neck stands next to one of them, holding a water bottle.</desc>
+  <!-- wall, windows, floor -->
+  <rect width="480" height="360" fill="#eef0f3"/>
+  <rect x="24" y="40" width="300" height="130" rx="4" fill="#c4dcec"/>
+  <path d="M124 40 V170 M224 40 V170" stroke="#eef0f3" stroke-width="8"/>
+  <rect x="24" y="40" width="300" height="130" rx="4" fill="none" stroke="#b4bac4" stroke-width="5"/>
+  <circle cx="380" cy="30" r="10" fill="#fff7d6"/>
+  <circle cx="200" cy="18" r="10" fill="#fff7d6"/>
+  <rect y="262" width="480" height="98" fill="#c9ccd3"/>
+  <path d="M0 262 H480" stroke="#aeb2bb" stroke-width="3"/>
+  <!-- running machines -->
+  <g>
+    <path d="M168 258 L156 176" stroke="#5a606a" stroke-width="7" stroke-linecap="round"/>
+    <rect x="140" y="166" width="40" height="18" rx="4" fill="#3a3f47"/>
+    <rect x="146" y="170" width="20" height="9" rx="2" fill="#7fc4e6"/>
+    <rect x="40" y="248" width="136" height="20" rx="8" fill="#3a3f47"/>
+    <rect x="50" y="246" width="112" height="7" rx="3" fill="#5f656e"/>
+  </g>
+  <g>
+    <path d="M318 258 L306 176" stroke="#5a606a" stroke-width="7" stroke-linecap="round"/>
+    <rect x="290" y="166" width="40" height="18" rx="4" fill="#3a3f47"/>
+    <rect x="296" y="170" width="20" height="9" rx="2" fill="#7fc4e6"/>
+    <rect x="190" y="248" width="136" height="20" rx="8" fill="#3a3f47"/>
+    <rect x="200" y="246" width="112" height="7" rx="3" fill="#5f656e"/>
+  </g>
+  <!-- young woman standing -->
+  <path d="M374 214 L372 272 M394 214 L396 272" stroke="#a86f48" stroke-width="12" stroke-linecap="round"/>
+  <rect x="362" y="268" width="18" height="10" rx="4" fill="#ffffff"/>
+  <rect x="388" y="268" width="18" height="10" rx="4" fill="#ffffff"/>
+  <path d="M362 200 H406 L408 228 H360 Z" fill="#2f4f7f"/>
+  <path d="M362 204 Q362 166 384 162 Q406 166 406 204 Z" fill="#3f8f4a"/>
+  <path d="M366 170 L352 196 L358 214" stroke="#a86f48" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M402 170 L414 194 L412 206" stroke="#a86f48" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <rect x="405" y="198" width="14" height="30" rx="4" fill="#4fa3d9"/>
+  <rect x="408" y="193" width="8" height="6" rx="2" fill="#2f6f9a"/>
+  <path d="M368 166 Q384 182 400 166 L398 196 L392 196 L392 176 Q384 182 376 176 L376 196 L370 196 Z" fill="#ffffff"/>
+  <circle cx="384" cy="140" r="18" fill="#a86f48"/>
+  <path d="M366 140 Q366 118 384 118 Q404 118 402 142 Q396 128 384 128 Q372 128 366 140 Z" fill="#2a1d16"/>
+  <circle cx="404" cy="128" r="8" fill="#2a1d16"/>
+</svg>

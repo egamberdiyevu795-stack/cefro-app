@@ -11,6 +11,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Parts 1.1 and 3 are live by default since 2026-11-15. These suites test them closed (Part 3 opens by its test switch
 // where a suite needs it); set here too so the specs, which read PART_LIVE themselves, agree with the server.
 process.env.PART_1_1_LIVE = "false";
+process.env.PART_1_2_LIVE = "false";
 process.env.PART_3_LIVE = "false";
 const PORT = Number(process.env.E2E_EXAM_PORT ?? 3170);
 const runId = (process.env.E2E_RUN_ID ??= String(Date.now()));
@@ -43,6 +44,7 @@ export default defineConfig({
     env: {
       // Parts 1.1 and 3 are live by default (2026-11-15); this suite tests them closed, as the unit suite does.
       PART_1_1_LIVE: "false",
+      PART_1_2_LIVE: "false",
       PART_3_LIVE: "false",
       CEFRO_TEST_TEACHER_LIVE: "1",
       CEFRO_TEST_FULL_MOCK_LIVE: "1",

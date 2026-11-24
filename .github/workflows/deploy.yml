@@ -2,7 +2,8 @@
 #
 #   ci        lint, typecheck, unit/integration tests (incl. migration tests), build, browser tests, migration safety (no secrets)
 #   preflight secrets present, Vercel project settings safe (production branch, credential scope), this commit is the head of main
-#   check     (manual stage only) READ-ONLY look at the production database: reachable, applied vs pending migrations
+#   check     (manual stage only) READ-ONLY look at the production database: reachable, applied vs pending migrations,
+#             and the scoring report (AI scoring working? app vs teacher agreement; counts only)
 #   migrate   `npm run db:migrate -- --require-remote` against the production Turso database (idempotent, one run at a time)
 #   verify    READ-ONLY: every shipped migration is applied to the database about to be served
 #   deploy    `vercel deploy --prod` of exactly this commit, then a health check of the production domain
@@ -144,6 +145,14 @@ jobs:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         run: npm run db:migrate -- --check --require-remote
+      # SELECT only, counts only (no ids, names, emails, transcripts): is AI scoring working, and does the app agree with the
+      # teachers' ratings (docs/v1-plan.md section 0). Informational: it never changes the result of this read-only stage.
+      - name: Scoring report (npm run stats:scoring)
+        continue-on-error: true
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: npm run stats:scoring
 
   migrate:
     name: Migrate production database

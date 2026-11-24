@@ -244,18 +244,20 @@ async function expectPicture(page: Page, layout: "beside" | "above" | "below") {
   }
 }
 
-test("the task picture loads beside the questions on every screen (desktop): brief, preparation, recording, retry", async ({ page }) => {
+test("the task picture loads beside the questions on every screen after the brief (desktop): preparation, recording, retry", async ({ page }) => {
   const imageResponses: number[] = [];
   page.on("response", (r) => {
     if (r.url().includes("/tasks/advice-from-someone.svg")) imageResponses.push(r.status());
   });
   await page.goto(TASK_URL);
-  await expectPicture(page, "beside");
-  expect(imageResponses).toContain(200);
+  // As in the exam, a first practice's brief hides the questions and the picture until the student starts.
+  await expect(page.getByTestId("questions-hidden")).toBeVisible();
+  await expect(page.getByTestId("task-picture")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expectPicture(page, "beside");
+  expect(imageResponses).toContain(200);
 
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
@@ -270,12 +272,12 @@ test("the task picture loads beside the questions on every screen (desktop): bri
   await expectPicture(page, "beside");
 });
 
-test("on a phone the picture is above the questions on the brief, below them while preparing", async ({ browser }) => {
+test("on a phone the brief hides the questions, and the picture is below them while preparing", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
   await shortPartIntros(context);
   const page = await context.newPage();
   await page.goto(TASK_URL);
-  await expectPicture(page, "above");
+  await expect(page.getByTestId("questions-hidden")).toBeVisible();
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expectPicture(page, "below");

@@ -180,7 +180,7 @@ describe("mock pages on a Preview with no configuration", () => {
     if (lock === "waiting") expect(markup).toContain("Ask your parent or guardian to confirm, then we will unlock recording.");
     expect(markup).not.toContain("Start preparation");
     expect(markup).not.toContain("Check microphone");
-    expect(markup).toContain("Answer all 3 questions"); // the task can still be read
+    expect(markup).toContain("Your 3 questions appear when you start"); // as in the exam: the questions come with the start
     expect(mainOf(markup).match(BLACK)).toHaveLength(1);
     expect(markup).not.toMatch(SMALL);
     expectMockLinksOnly(markup);

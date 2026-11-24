@@ -77,6 +77,27 @@ export function TaskCard({ task, questionsFirst = false }: { task: PublicSpeakin
   );
 }
 
+/**
+ * The brief of a first practice (Parts 2 and 3), in place of the task: as in the exam, the student meets the questions
+ * only when the part starts, so the minute of preparation is the only planning time. A retry shows the task (the student
+ * is fixing one thing in an answer they already gave).
+ */
+export function QuestionsHiddenCard({ title, body }: { title: string; body: string }) {
+  return (
+    <Card aria-labelledby="hidden-title" data-testid="questions-hidden">
+      <div className="flex flex-col items-center px-2 py-6 text-center">
+        <span className="inline-flex size-11 items-center justify-center rounded-full bg-well text-fg">
+          <Icon name="eyeOff" size={20} />
+        </span>
+        <h2 id="hidden-title" className="mt-4 text-title font-medium text-fg">
+          {title}
+        </h2>
+        <p className="mt-1 max-w-sm text-body text-fg-muted">{body}</p>
+      </div>
+    </Card>
+  );
+}
+
 /** "Your goal: …" on every screen of a retry. `withCheck` adds how the student will know it worked (brief only). */
 export function GoalCard({ goal, withCheck = false, className }: { goal: RetryGoal; withCheck?: boolean; className?: string }) {
   return (

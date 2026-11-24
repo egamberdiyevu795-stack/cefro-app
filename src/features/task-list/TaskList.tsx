@@ -118,7 +118,7 @@ export function TaskList({
                 {status === "demo" ? " You can try the demo below; it is not scored." : null}
               </p>
             )}
-            {sample && tasks.length > 0 && (
+            {sample && (tasks.length > 0 || random) && (
               <p className="mt-3 rounded-tile bg-well px-3 py-2 text-label text-fg" data-testid="sample-frequency-note">
                 <span className="font-medium">Sample labels.</span> Made up to preview the idea, not real exam data. Sorted from often to rarely asked.
               </p>

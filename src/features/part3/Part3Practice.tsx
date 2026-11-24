@@ -12,6 +12,7 @@ import {
   MicrophoneCard,
   MicrophoneState,
   PracticeLayout,
+  QuestionsHiddenCard,
   RecordingLockedState,
   UploadFailedCard,
 } from "@/features/speaking-practice/components/screens";
@@ -276,9 +277,20 @@ export function Part3Practice({
       ) : micError ? (
         <MicrophoneState kind={micError} onRetry={retryMicrophone} />
       ) : undefined;
+    // A first practice hides the statement until the part starts, as in the exam; a retry shows it.
+    const isRetry = retryOf !== null || retryAttemptId !== null;
     content = (
       <PracticeLayout
-        task={<StatementCard task={task} chosen={chosen} />}
+        task={
+          isRetry ? (
+            <StatementCard task={task} chosen={chosen} />
+          ) : (
+            <QuestionsHiddenCard
+              title="The statement appears when you start"
+              body="As in the exam: you see the statement with its Pros and Cons, then you have one minute to prepare. Start when you are ready."
+            />
+          )
+        }
         step={<Part3BriefCard task={task} goal={goal} onStart={startPart} ready={ready} microphone={microphone} />}
       />
     );

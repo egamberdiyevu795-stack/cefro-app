@@ -66,7 +66,7 @@ for (const [lock, black, text] of [
     await expect(locked).toContainText(text);
     await expect(page.getByRole("button", { name: "Start preparation" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Check microphone" })).toHaveCount(0);
-    await expect(page.getByText("Answer all 3 questions")).toBeVisible();
+    await expect(page.getByTestId("questions-hidden")).toBeVisible();
     await expect(page.locator(BLACK)).toHaveText(black);
     await audit(page);
     expect(apiCalls).toEqual([]);

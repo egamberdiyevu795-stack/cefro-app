@@ -36,6 +36,7 @@ import {
   RecordingLockedState,
   RetryGoalLoading,
   RetryGoalUnavailable,
+  QuestionsHiddenCard,
   TaskCard,
   UploadFailedCard,
 } from "./screens";
@@ -459,7 +460,16 @@ export function PracticeExperience({
         ) : undefined;
       content = (
         <PracticeLayout
-          task={taskCard(false)}
+          task={
+            phase.kind === "retryBrief" || retryAttemptId ? (
+              taskCard(false)
+            ) : (
+              <QuestionsHiddenCard
+                title={`Your ${task.prompts.length} questions appear when you start`}
+                body="As in the exam: you hear the questions and see the picture, then you have one minute to prepare. Start when you are ready."
+              />
+            )
+          }
           step={
             <BriefCard
               task={task}

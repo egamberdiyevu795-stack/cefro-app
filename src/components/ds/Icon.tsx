@@ -111,6 +111,26 @@ const PATHS = {
     </>
   ),
   cross: <path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />,
+  /** Task list: "Random topic", a topic picked for the student, as in the exam. */
+  shuffle: (
+    <path
+      d="M4 7h3.2c1.6 0 3 .8 3.9 2.1l2.8 4.3c.9 1.3 2.3 2.1 3.9 2.1H20M4 17h3.2c1.2 0 2.3-.5 3.1-1.3M13.7 8.3c.8-.8 1.9-1.3 3.1-1.3H20M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  /** Practice brief: the questions stay hidden until the student starts, as in the exam. Drawn for a grey (well) circle. */
+  eyeOff: (
+    <>
+      <path d="M3.5 12s3-6 8.5-6 8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.6" fill="currentColor" />
+      <path d="M4 4l16 16" stroke="var(--color-well)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M4 4l16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </>
+  ),
   /** Teacher view: Create class, Join a class. */
   plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />,
   /** Practice: "Finish" (stop recording), and a microphone that is blocked or missing. */

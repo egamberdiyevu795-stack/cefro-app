@@ -271,6 +271,31 @@ describe("task list page (/practice)", () => {
     expect(labels).toEqual([...labels].sort((a, b) => ["Often", "Sometimes", "Rarely"].indexOf(a) - ["Often", "Sometimes", "Rarely"].indexOf(b)));
   });
 
+  it("each open part starts with a topic picked for the student, as in the exam, then 'Or choose a topic' with progress", async () => {
+    const part2 = sectionOf(await homePage(), "part-2")!;
+    const random = part2.indexOf('data-testid="random-link"');
+    expect(random).toBeGreaterThan(-1);
+    expect(random).toBeLessThan(part2.indexOf('data-testid="task-link"')); // first, above the list
+    expect(part2).toContain('href="/practice/random/2"');
+    expect(part2).toContain(">Random topic<");
+    expect(part2).toContain("Or choose a topic");
+    expect(part2).toContain("0 of 7 practised");
+    // Exactly one random row per open part; none on a part that is Coming soon.
+    expect(sectionOf(await homePage(), "part-3")).not.toContain("random-link");
+
+    const mock = await homePage({ mock: "1" });
+    // Part 1.1 is random by itself (a new question set each time): its one row, no list to choose from.
+    const part11 = sectionOf(mock, "part-1-1")!;
+    expect(part11).toContain(">Random questions<");
+    expect(part11).toContain('href="/practice/speaking/a2-part1-1-questions?mock=1"');
+    expect(part11).not.toContain('data-testid="task-link"');
+    expect(part11).not.toContain("Or choose a topic");
+    expect(sectionOf(mock, "part-1-2")).toContain('href="/practice/random/1.2?mock=1"');
+    expect(sectionOf(mock, "part-3")).toContain('href="/practice/random/3?mock=1"');
+    // The demo student has practised Part 2: the count says how many of its topics.
+    expect(sectionOf(mock, "part-2")).toMatch(/[1-7] of 7 practised/);
+  });
+
   it("no demo label on the real list; in mock mode (?mock=1) the label, and every task opens its brief in mock mode", async () => {
     expect(await homePage()).not.toContain('data-testid="demo-label"');
     const html = await homePage({ mock: "1" });

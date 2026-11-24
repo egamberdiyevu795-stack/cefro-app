@@ -14,7 +14,8 @@ import { part3PracticeHref, part3RealPracticeHref } from "@/features/part3/links
 import { AppShell } from "@/features/shell/AppShell";
 import { practiceHref } from "@/features/speaking-practice/lib/practice-flow";
 import { byFrequency, sampleFrequency, showSampleFrequency } from "@/features/task-list/sample-frequency";
-import { TaskList, timingText, type TaskListPart, type TaskListRow } from "@/features/task-list/TaskList";
+import { isTopicPart, randomTopicHref } from "@/features/task-list/random-task";
+import { TaskList, timingText, type TaskListPart, type TaskListRandom, type TaskListRow } from "@/features/task-list/TaskList";
 import { listAttemptHistory } from "@/server/attempts/attempt-service";
 import { assertServerConfigured } from "@/server/config/boot-check";
 import { demoAttempts } from "@/server/demo/demo-data";
@@ -82,6 +83,31 @@ export default async function PracticePage(props: PageProps<"/practice">) {
   const nextId = practiseNext(practised, liveTasks)?.taskId ?? null;
   const tag = practised.length > 0 ? "Try next" : "Start here";
   const lastPractised = (taskId: string) => practised.find((a) => a.taskId === taskId)?.createdAt ?? null;
+  const lastPractisedAny = (taskId: string) => attempts.find((a) => a.taskId === taskId)?.createdAt ?? null;
+  // Every topic the student has answered (Part 3 included), for "2 of 7 practised".
+  const practisedIds = new Set(attempts.map((a) => a.taskId));
+  // Part 1.1's attempts carry their set's id; its one row says when the last set was answered.
+  const lastPart11 = attempts.find((a) => a.part === "1.1")?.createdAt ?? null;
+
+  /**
+   * The part's first row (features/task-list/random-task.ts). Part 1.1: its one entry, a new question set each time,
+   * keeping its "Start here" / "Try next" tag. Parts 1.2, 2 and 3: "Random topic".
+   */
+  const randomRow = (part: ExamPartId, rows: TaskListRow[], { live, mock }: { live: boolean; mock: boolean }): TaskListRandom | undefined => {
+    if (part === "1.1") {
+      const entry = rows[0];
+      if (!entry) return undefined;
+      const last = live ? lastPart11 : null;
+      return {
+        href: entry.href,
+        title: "Random questions",
+        detail: last ? `New questions every time · Practised ${formatDate(last)}` : "New questions every time, as in the exam",
+        tag: entry.tag,
+      };
+    }
+    if (!isTopicPart(part) || rows.length < 2) return undefined;
+    return { href: randomTopicHref(part, { mock }), title: "Random topic", detail: "Picked for you, as in the exam. New topics first." };
+  };
 
   const parts: TaskListPart[] = EXAM_PART_IDS.map((part) => {
     const live = PART_LIVE[part];
@@ -91,7 +117,15 @@ export default async function PracticePage(props: PageProps<"/practice">) {
       status === "soon"
         ? []
         : part === "3"
-          ? listArgumentTasks().map((t) => ({ id: t.id, title: t.title, href: live && !mock ? part3RealPracticeHref(t.id) : part3PracticeHref(t.id) }))
+          ? listArgumentTasks().map((t) => {
+              const last = live ? lastPractisedAny(t.id) : null;
+              return {
+                id: t.id,
+                title: t.title,
+                href: live && !mock ? part3RealPracticeHref(t.id) : part3PracticeHref(t.id),
+                detail: last ? `Practised ${formatDate(last)}` : undefined,
+              };
+            })
           : speaking
               .filter((t) => examPartOf(t) === part)
               .map((t) => {
@@ -105,6 +139,7 @@ export default async function PracticePage(props: PageProps<"/practice">) {
                 };
               });
     const shown = sample ? byFrequency(rows).map((r) => ({ ...r, frequency: sampleFrequency(r.id) })) : rows;
+    const random = status === "soon" ? undefined : randomRow(part, shown, { live, mock });
     return {
       part,
       name: PART_NAMES[part],
@@ -113,10 +148,12 @@ export default async function PracticePage(props: PageProps<"/practice">) {
       timing: timed[0] ? timingText(timed[0]) : "",
       status,
       sample,
-      tasks: shown,
+      random,
+      // Part 1.1 has no list: its one row is the random one.
+      tasks: part === "1.1" ? [] : shown,
+      practisedCount: live ? shown.filter((r) => practisedIds.has(r.id)).length : 0,
     };
   });
-
   const live = fullMockLive();
   const inProgress = !mock && live && userId ? await findInProgressMock(userId) : null;
   const mockState: MockCardState = mock

@@ -78,8 +78,9 @@ test("Part 3 mock loop: Pros / Cons table (nothing to tick), record, result with
   await audit(page, 0);
   await page.getByRole("link", { name: "Start: Cars in city centres" }).click();
 
-  // Brief: statement, both lists, 1 min / 2 min, one black "Start".
-  await expect(page.getByText("Cities should ban private cars from their centres.").first()).toBeVisible();
+  // Brief: 1 min / 2 min, one black "Start"; as in the exam, the statement and lists appear only when the part starts.
+  await expect(page.getByTestId("questions-hidden")).toBeVisible();
+  await expect(page.getByText("Cities should ban private cars from their centres.")).toHaveCount(0);
   const start = page.getByRole("button", { name: "Start", exact: true });
   await expect(start).toBeEnabled();
   await audit(page, 1);

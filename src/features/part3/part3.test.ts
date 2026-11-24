@@ -225,6 +225,15 @@ describe("pages", () => {
     const markup = await html(Part3PracticePage(props({ mock: "1", retry: `p3.${CARS}.F1F2A1A2` }, { taskId: CARS })));
     expect(markup).toContain("Your goal:");
     expect(markup).toContain("Speaking · Part 3 · Retry");
+    expect(markup).toContain(listArgumentTasks().find((t) => t.id === CARS)!.statement); // a retry shows the statement it is fixing
+  });
+
+  it("a first practice's brief hides the statement and lists until the part starts, as in the exam", async () => {
+    const markup = await html(Part3PracticePage(props({ mock: "1" }, { taskId: CARS })));
+    expect(markup).toContain('data-testid="questions-hidden"');
+    expect(markup).toContain("The statement appears when you start");
+    expect(markup).not.toContain(listArgumentTasks().find((t) => t.id === CARS)!.statement);
+    for (const point of listArgumentTasks().find((t) => t.id === CARS)!.points) expect(markup).not.toContain(point.text);
   });
 });
 

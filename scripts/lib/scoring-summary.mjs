@@ -40,7 +40,36 @@ export function scoringHealth(rows) {
   const providers = new Map();
   for (const r of rows.filter((x) => x.provider)) providers.set(r.provider, (providers.get(r.provider) ?? 0) + 1);
   if (providers.size > 0) lines.push(`  Scored by: ${[...providers].map(([p, n]) => `${p}=${n}`).join(", ")}`);
+  const formats = recordingFormats(rows);
+  if (formats.length > 0) lines.push("  By recording format (audio/mp4 = iPhone / Safari, audio/webm = Chrome / Android):", ...formats);
   return lines;
+}
+
+/** "audio/webm;codecs=opus" -> "audio/webm"; missing -> "no recording". */
+const formatOf = (mime) => (mime ? String(mime).split(";")[0].trim().toLowerCase() : "no recording");
+const lengthOf = (ms) => (ms === null || ms === undefined ? "?" : ms < 10_000 ? "<10s" : ms < 60_000 ? "10-60s" : ">=60s");
+
+/** One line per recording format: attempts, scored, failed (by code), and how long the failed recordings were. */
+export function recordingFormats(rows) {
+  const out = [];
+  const groups = new Map();
+  for (const r of rows) {
+    const key = formatOf(r.mimeType);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  for (const [format, list] of [...groups].sort((a, b) => b[1].length - a[1].length)) {
+    const scored = list.filter((r) => r.status === "completed").length;
+    const failed = list.filter((r) => r.status === "failed");
+    const codes = new Map();
+    for (const r of failed) {
+      const key = `${r.failureCode ?? "no code"} ${lengthOf(r.durationMs)}`;
+      codes.set(key, (codes.get(key) ?? 0) + 1);
+    }
+    const detail = codes.size ? ` (${[...codes].map(([k, n]) => `${n}x ${k}`).join(", ")})` : "";
+    out.push(`    ${pad(format, 13)} attempts=${pad(list.length, 4)} completed=${pad(scored, 4)} failed=${failed.length}${detail}`);
+  }
+  return out;
 }
 
 /** The teacher's band: the app's band when they pressed Agree. */

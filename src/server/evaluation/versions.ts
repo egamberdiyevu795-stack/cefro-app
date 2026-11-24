@@ -123,7 +123,13 @@ export const EVALUATOR_VERSION = "speaking-evaluator/3.8.1";
  *   weak answers that read the lists scored one band low. Prompt rules: a short simple reason counts as "developed"; one
  *   developed point means at most "heavily_dependent"; reading the lists never lowers a language level (dependence
  *   already judges it). Part 3 is live by default from this version (docs/part3-topic-bank.md).
+ * - argument-evaluator/0.4.0 — Second live anchor run (2026-11-23, gemini-3.8-flash, 0.3.0): 18 of 21 exact; the top
+ *   was over-rated (cars-A4 band 5 for B2 conditionals and "on the one hand" linkers; phones-A5 and tax-A5 band 6 for
+ *   error-free standard C1 phrases), and all three band-0 anchors were regenerated (coherent_and_sustained false with
+ *   own_development, rejected by the gate), taking 178–278 s. Prompt: a B2 / C1 / above_C1 calibration list (as Part 2
+ *   has for B1 / B2), "error-free C1 is still C1", fluency never above_C1 without audio; and the gate's rule stated in
+ *   the prompt: not coherent and sustained is never own_development. Scoring, schema and gate unchanged.
  */
-export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.3.0";
+export const ARGUMENT_EVALUATOR_VERSION = "argument-evaluator/0.4.0";
 
 export { EVALUATION_SCHEMA_VERSION };

@@ -55,11 +55,11 @@ describe("mock evaluators fill the list from the demo answers (the real evaluato
     expect(parseStoredEvaluation(3, one.result)).not.toBeNull();
   });
 
-  it("Part 3: the demo answer's list is clean, and the evaluator version is argument-evaluator/0.3.0", async () => {
+  it("Part 3: the demo answer's list is clean, and the evaluator version is argument-evaluator/0.4.0", async () => {
     const key = "p3.c1-part3-cars-in-city-centres.F1F2A1A2";
     const evaluation = (await part3DemoEvaluation(key))!;
     expect(evaluation.evaluatorVersion).toBe(ARGUMENT_EVALUATOR_VERSION);
-    expect(ARGUMENT_EVALUATOR_VERSION).toBe("argument-evaluator/0.3.0");
+    expect(ARGUMENT_EVALUATOR_VERSION).toBe("argument-evaluator/0.4.0");
     expectCleanList(part3DemoTranscriptFor(part3DemoSpec(key)!), evaluation.result.assessment.sentence_fixes, 2);
     expect(parseStoredEvaluation(4, evaluation.result)).not.toBeNull();
   });

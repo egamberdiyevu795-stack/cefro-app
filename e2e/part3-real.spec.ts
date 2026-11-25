@@ -132,8 +132,9 @@ test.describe("scored (mock evaluator) @scored", () => {
     // History and the dashboard list it like a Part 2 attempt.
     await page.goto("/history");
     await expect(page.getByRole("link", { name: /Cars in city centres/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Part 3", exact: true })).toBeVisible(); // the filter
-    await page.getByRole("link", { name: "Part 3", exact: true }).click();
+    // Only Part 3 attempts, so there is nothing to filter: no chips. The filtered view still has its own address.
+    await expect(page.getByRole("navigation", { name: "Filter by part" })).toHaveCount(0);
+    await page.goto("/history?part=3");
     await expect(page.getByRole("link", { name: /Cars in city centres/ })).toHaveCount(1);
     await audit(page, 0);
     await page.goto("/dashboard");

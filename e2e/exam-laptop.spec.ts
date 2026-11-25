@@ -225,7 +225,7 @@ test.describe("laptop width (1280 px)", () => {
     // Each part cell leads with the level, with its exam band under it, as everywhere else.
     const cells = rows.first().getByRole("list", { name: /part levels/ }).getByRole("listitem");
     await expect(cells).toHaveCount(4);
-    await expect(cells.first()).toHaveText(/^Part 1\.1 (Below B1|A2|B1|B2|C1) Band [0-5]$/);
+    await expect(cells.first()).toHaveText(/^Part 1\.1 (Below B1|A2|B1|B2|C1)\s+Band [0-5]$/);
     await expect(page.getByTestId("common-problems")).toBeVisible();
     await audit(page, 1);
     await expect(page.locator(BLACK)).toHaveText(/Open first unrated/);

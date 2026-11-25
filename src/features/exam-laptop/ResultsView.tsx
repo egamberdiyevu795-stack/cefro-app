@@ -89,7 +89,8 @@ export function ResultsView({
                 {row.bands.map((b) => (
                   <li key={b.part} className="text-label text-fg-muted">
                     {b.label} <span className="font-medium text-fg">{b.text}</span>
-                    {b.band && <span className="ml-1 text-fg-subtle">{b.band}</span>}
+                    {/* Inherits the cell's own colour: a lighter grey at this size fails the contrast floor. */}
+                    {b.band && <span className="ml-1 opacity-75"> {b.band}</span>}
                   </li>
                 ))}
               </ul>

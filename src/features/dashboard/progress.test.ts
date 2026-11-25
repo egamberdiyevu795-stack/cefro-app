@@ -18,6 +18,7 @@ import {
   partTiles,
   practiseNext,
   progress,
+  emptyRadarAxes,
   radarAxes,
   scoredAttempts,
   skillLevels,
@@ -130,10 +131,17 @@ describe("x of 4 skills at B2", () => {
     expect(progress([attempt(0, { result: withPron })], { target: "B2", now: NOW })!.goal.label).toBe("4 of 5 skills at B2");
   });
 
-  it("the radar shows a skill that was never assessed as not assessed", () => {
+  it("the radar leaves out a skill that was never assessed (no empty corner), and keeps it once it is", () => {
     const axes = radarAxes(skillLevels([allAt("B1")]));
-    expect(axes.find((a) => a.label === "Pronunciation")?.value).toBeNull();
+    expect(axes.find((a) => a.label === "Pronunciation")).toBeUndefined();
+    expect(axes).toHaveLength(4);
     expect(axes.find((a) => a.label === "Grammar")?.value).toBe(1);
+    expect(radarAxes(skillLevels([allAt("B1", "B1")])).find((a) => a.label === "Pronunciation")?.value).toBe(1);
+  });
+
+  it("the empty radar shows only the skills that are scored today", () => {
+    expect(emptyRadarAxes().map((a) => a.label)).not.toContain("Pronunciation");
+    expect(emptyRadarAxes().every((a) => a.value === null)).toBe(true);
   });
 });
 

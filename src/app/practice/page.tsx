@@ -165,7 +165,7 @@ export default async function PracticePage(props: PageProps<"/practice">) {
         : { kind: "start", href: "/practice/mock" };
 
   return (
-    <AppShell flags={flags} account={mock ? "mock" : "real"} activeHref="/practice">
+    <AppShell flags={flags} account={mock ? "mock" : "real"} back={false} activeHref="/practice">
       <TaskList parts={parts} top={mock && <DemoLabel variant="mode" className="justify-self-start bg-card" />} mockCard={<MockExamCard state={mockState} />} />
     </AppShell>
   );

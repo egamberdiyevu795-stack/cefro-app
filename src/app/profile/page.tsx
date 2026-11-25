@@ -17,6 +17,7 @@ import { DEMO_CLASS, DEMO_TEACHER } from "@/server/demo/demo-teacher";
 import { teacherLive } from "@/server/teacher/release";
 import { listMemberships, userRole } from "@/server/teacher/teacher-store";
 import { currentLevel } from "@/features/profile/view-model";
+import { levelTarget } from "@/server/dashboard/target";
 import { AppShell } from "@/features/shell/AppShell";
 import { readAccount, type AccountInfo } from "@/server/account/account-store";
 import { listAttemptHistory } from "@/server/attempts/attempt-service";
@@ -32,7 +33,7 @@ export const metadata: Metadata = { title: "Account" };
 /*
  * The Account page, opened directly by the Account tab (Profile and Settings merged, approved by Asadbek on
  * 2026-11-07; `/settings` redirects here). Top to bottom:
- *   (a) name (editable), email (shown), current level (latest scored Part 2 answer, never invented), member since,
+ *   (a) name (editable), email (shown), current level (the same level, target and basis as Home; never invented), member since,
  *       number of practice attempts;
  *   (b) the exam date (the dashboard's editor and rules);
  *   (c) Change password, then Sign out;
@@ -97,11 +98,11 @@ export default async function AccountPage(props: PageProps<"/profile">) {
   const today = todayIn(now);
   const signedIn = account.kind === "registered";
   return (
-    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/profile" demoTeacher={demoTeacher}>
+    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} back={false} activeHref="/profile" demoTeacher={demoTeacher}>
       {mock && <DemoLabel variant="changes" className="mb-4 bg-card" />}
       <h1 className="mb-4 text-title font-medium tracking-[-0.01em] text-fg">Account</h1>
       <div className="mx-auto flex max-w-2xl flex-col gap-4 lg:mx-0">
-        <AccountCard account={account} attempts={attempts.length} level={currentLevel(attempts)} mock={mock} />
+        <AccountCard account={account} attempts={attempts.length} level={currentLevel(attempts, { target: levelTarget(), now })} mock={mock} />
         {consent && <ConsentCard record={consent} />}
         <ExamDate state={accountExamState(examDateState(stored, now))} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant="card" demo={mock} />
         {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} />}

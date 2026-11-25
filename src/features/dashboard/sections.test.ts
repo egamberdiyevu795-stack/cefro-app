@@ -128,7 +128,8 @@ describe("empty Speaking progress (no scored answer yet)", () => {
     expect(markup).toContain("· target B2");
     expect(markup).toContain(PREVIEW_UNLOCK);
     expect(markup).toContain(PREVIEW_PLACEHOLDER);
-    for (const skill of ["Grammar", "Vocabulary", "Fluency", "Pronunciation"]) expect(markup).toContain(skill);
+    for (const skill of ["Grammar", "Vocabulary", "Fluency", "Cohesion"]) expect(markup).toContain(skill);
+    expect(markup).not.toContain("Pronunciation"); // not scored yet, so the empty radar does not promise it
     for (const s of stats) expect(markup).toContain(s.value);
     expect(markup).not.toContain('data-testid="current-level"');
     expect(markup).not.toContain("<polygon points=\"\" ");

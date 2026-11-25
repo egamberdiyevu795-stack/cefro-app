@@ -28,8 +28,11 @@ export function AppShell({
   activeHref?: string;
   /** Mock mode's demo teacher: Home and Account open the demo teacher's pages (`?mock=1&as=teacher`). */
   demoTeacher?: boolean;
-  /** The header's back link, when it is not the dashboard (e.g. a teacher's class). */
-  back?: { href: string; label: string };
+  /**
+   * The header's back link, when it is not the dashboard (e.g. a teacher's class). `false`: no back link, for the main
+   * tabs (the side menu already goes everywhere) and for pages that have their own, more precise back link (a lesson).
+   */
+  back?: { href: string; label: string } | false;
   children: React.ReactNode;
 }) {
   const items = navItemsFor(flags, mock).map((item) => (demoTeacher && item.href.startsWith("/dashboard") ? { ...item, href: asDemoTeacher("/dashboard") } : item));
@@ -47,7 +50,11 @@ export function AppShell({
 
         <div className="min-w-0 flex-1">
           <header className="mb-2 flex h-12 items-center justify-between md:mb-3">
-            <BackLink mock={mock} href={back?.href ?? (demoTeacher ? asDemoTeacher("/dashboard") : undefined)} label={back?.label} />
+            {back === false ? (
+              <span aria-hidden="true" />
+            ) : (
+              <BackLink mock={mock} href={back?.href ?? (demoTeacher ? asDemoTeacher("/dashboard") : undefined)} label={back?.label} />
+            )}
             <Wordmark className="flex md:hidden" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
           </header>
           <main id="main" className="pb-28 md:pb-0">

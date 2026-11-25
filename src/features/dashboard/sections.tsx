@@ -16,7 +16,7 @@ import {
 import type { FeatureFlags } from "@/config/features";
 import { mockLink } from "@/features/demo/demo-mode";
 import { AttemptRow } from "@/features/history/sections";
-import type { HistoryRow } from "@/features/history/view-model";
+import { levelOfBand, type HistoryRow } from "@/features/history/view-model";
 import { FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
 import { emptyRadarAxes, radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress, type ProgressPreview } from "./progress";
 
@@ -234,7 +234,7 @@ export function ProgressPreviewCard({ preview, className }: { preview: ProgressP
   );
 }
 
-/** One exam part tile: its latest band, or "Start" when nothing is scored in it yet; "Coming soon" with no task yet. */
+/** One exam part tile: its latest level and band, or "Start" when nothing is scored in it yet; "Coming soon" with no task yet. */
 export type ExamPartTileView = {
   part: string;
   name: string;
@@ -272,8 +272,9 @@ export function ExamPartsCard({ parts, wide = false, className }: { parts: reado
                 )}
               </div>
               <p className="truncate text-caption text-fg-muted">{p.name}</p>
-              <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{tried ? `Band ${p.band}` : "No band"}</p>
-              <p className="text-label text-fg-muted">{p.recommendation ?? p.bandLabel ?? "Not tried yet"}</p>
+              {/* The level leads (as on Home and History); the exam band is the smaller line under it. */}
+              <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{tried && p.bandLabel ? levelOfBand(p.bandLabel) : "No level"}</p>
+              <p className="text-label text-fg-muted">{p.recommendation ?? (tried ? `Band ${p.band} · ${p.bandLabel}` : "Not tried yet")}</p>
               <div className="mt-auto pt-3">
                 <PillButton href={p.href} variant="light" size="sm" label={`${tried ? "Practise" : "Start"} ${p.part}`}>
                   {tried ? "Practise" : "Start"}

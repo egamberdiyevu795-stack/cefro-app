@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MultilevelResult } from "@/domain/evaluation/multilevel/result";
 import type { HistoryAttempt } from "@/domain/speaking/history";
 import { LIVE_36_FLASH_FIXTURES } from "../../../test/fixtures/live-3.6-flash";
+import { progress } from "@/features/dashboard/progress";
 import { attemptCountText, currentLevel, memberSinceText } from "./view-model";
 
 /** A saved live result through the real evaluator types (A2 run 1 = band 2, A4 = band 4). */
@@ -26,9 +27,11 @@ function attempt(daysAgo: number, over: Partial<HistoryAttempt> = {}): HistoryAt
   };
 }
 
-describe("current level on Profile: the latest scored Part 2 answer, never invented", () => {
+const OPTIONS = { target: "B2" as const, now: new Date(Date.UTC(2026, 10, 6, 12)) };
+
+describe("current level on Account: the same level as Home, never invented", () => {
   it("no attempts: no level", () => {
-    expect(currentLevel([])).toEqual({ kind: "none" });
+    expect(currentLevel([], OPTIONS)).toEqual({ kind: "none" });
   });
 
   it("only unscored attempts (scoring, failed, stalled, too short, old method): no level", () => {
@@ -41,31 +44,14 @@ describe("current level on Profile: the latest scored Part 2 answer, never inven
       attempt(4, { result: tooShort }),
       attempt(5, { result: null }), // completed with the old method: no Multilevel result
     ];
-    expect(currentLevel(attempts)).toEqual({ kind: "none" });
+    expect(currentLevel(attempts, OPTIONS)).toEqual({ kind: "none" });
   });
 
-  it("only other parts scored: no level (Part 2 only)", () => {
-    expect(currentLevel([attempt(1, { part: "1.2" }), attempt(2, { part: "3" }), attempt(3, { part: null })])).toEqual({ kind: "none" });
-  });
-
-  it("the latest scored Part 2 answer's level, read as History reads it; later unscored and other-part answers are skipped", () => {
-    const band4 = attempt(3, { result: result("A4-b2-all-three") });
-    const attempts = [attempt(0, { status: "evaluating", result: null }), attempt(1, { part: "3", result: result("A2-b1-all-three") }), band4, attempt(5)];
-    const level = currentLevel(attempts);
-    const scoring = band4.result!.scoring;
-    expect(level).toEqual({
-      kind: "level",
-      level: scoring.label.replace(/^(Lower|Higher)\s+/, ""),
-      band: `Part 2 · Band ${scoring.band} · ${scoring.label}`,
-      date: "03.11.26",
-      attemptId: band4.id,
-    });
-  });
-
-  it("picks by date, whatever order the list comes in", () => {
-    const newer = attempt(1, { result: result("A4-b2-all-three") });
-    const older = attempt(6, { result: result("A2-b1-all-three") });
-    expect(currentLevel([older, newer])).toMatchObject({ attemptId: newer.id });
+  it("equals Home's Speaking progress: level, target and basis", () => {
+    const attempts = [attempt(0, { status: "evaluating", result: null }), attempt(1, { result: result("A4-b2-all-three") }), attempt(3), attempt(5)];
+    const home = progress(attempts, OPTIONS)!;
+    expect(currentLevel(attempts, OPTIONS)).toEqual({ kind: "level", level: home.levelLabel, target: home.targetLabel, basis: home.basis });
+    expect(home.basis).toBe("Based on your last 3 answers");
   });
 });
 

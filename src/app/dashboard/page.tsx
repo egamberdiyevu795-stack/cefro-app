@@ -5,7 +5,6 @@ import { FEATURE_FLAGS, allFlags, fullMockLive, type FeatureFlags } from "@/conf
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { getArgumentTask } from "@/content/speaking/part3";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
-import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { AccountTab } from "@/features/dashboard/AccountTab";
 import { ExamDate } from "@/features/dashboard/ExamDate";
@@ -40,7 +39,7 @@ import { recentRows } from "@/features/history/view-model";
 import { getAttemptViewForUser, listAttemptHistory } from "@/server/attempts/attempt-service";
 import { DEMO_MOCK_HREF, demoMockHistory } from "@/server/demo/demo-mock";
 import { listMockHistory } from "@/server/sessions/mock-history";
-import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { levelTarget } from "@/server/dashboard/target";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
 import { findInProgressMock } from "@/server/sessions/mock-service";
 import { findCurrentUserId, isSignedIn } from "@/server/identity/current-user";
@@ -53,9 +52,6 @@ import { classWithStudents } from "@/server/teacher/teacher-service";
 import { listOwnClasses, userRole } from "@/server/teacher/teacher-store";
 
 export const metadata: Metadata = { title: "Dashboard" };
-
-/** The recommended first part: Part 2 shows the level fastest (one answer covers all five skills). */
-const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
 
 /*
  * The student's dashboard, from their own attempts (`listAttemptHistory`, the same owner rule as History and the
@@ -124,7 +120,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const tasks: TaskInfo[] = listSpeakingTasks().map(({ id, title, part, level, preparationSeconds, speakingSeconds }) => ({
     id, title, part, level, preparationSeconds, speakingSeconds,
   }));
-  const target = getSpeakingRubric(getSpeakingTask(RECOMMENDED_TASK_ID)!).targetLevel as FeatureLevel;
+  const target = levelTarget();
   const summary = progress(attempts, { target, now });
   const latestScored = scoredAttempts(attempts)[0];
   const transcript = !latestScored

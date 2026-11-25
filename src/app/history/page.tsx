@@ -35,7 +35,7 @@ export default async function HistoryPage(props: PageProps<"/history">) {
     const demoMock = await demoMockHistory(now);
     const view = buildHistoryView([...(await demoAttempts(now)), ...demoMock.attempts], parseHistoryQuery(query), demoMock.mocks);
     return (
-      <AppShell flags={FEATURE_FLAGS} account="mock" activeHref="/history">
+      <AppShell flags={FEATURE_FLAGS} account="mock" back={false} activeHref="/history">
         <DemoLabel variant="data" className="mb-4 bg-card" />
         <HistoryContent view={demoView(view)} mock />
       </AppShell>
@@ -49,7 +49,7 @@ export default async function HistoryPage(props: PageProps<"/history">) {
   const view = buildHistoryView(attempts, parseHistoryQuery(query), mocks);
 
   return (
-    <AppShell flags={FEATURE_FLAGS} account="real" activeHref="/history">
+    <AppShell flags={FEATURE_FLAGS} account="real" back={false} activeHref="/history">
       <HistoryContent view={view} />
     </AppShell>
   );

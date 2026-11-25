@@ -1,5 +1,6 @@
-// How long scoring takes in production: read-only, aggregates only (no ids, no user data, no transcripts), because the
-// workflow log of this public repository is public. Run by .github/workflows/processing-stats.yml.
+// How long scoring takes in production: read-only, aggregates only (no ids, no user data, no transcripts). Run it by hand
+// from your own machine, like set-role.mjs: no workflow other than the deploy pipeline may reach the production database
+// (test/ci/workflows.test.ts).
 // Usage: TURSO_DATABASE_URL=… TURSO_AUTH_TOKEN=… node scripts/live-processing-stats.mjs [days]
 import { createClient } from "@libsql/client";
 

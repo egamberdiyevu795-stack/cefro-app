@@ -90,7 +90,7 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   const studentSeen = watch(student);
   await student.goto("/profile?mock=1");
   await expect(student.getByTestId("my-classes")).toBeVisible();
-  await audit(student, 1);
+  await audit(student, 0); // Account is settings: no black button
   await student.getByRole("link", { name: "Join a class" }).click();
   await expect(student).toHaveURL(/\/profile\/classes\/join\?mock=1$/);
   await audit(student, 1);

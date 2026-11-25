@@ -146,7 +146,7 @@ test.describe("at laptop width", () => {
   test("History shows the mock row and the pills without horizontal scroll", async ({ page }) => {
     await page.goto("/history?mock=1");
     await expect(page.getByTestId("history-mock")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Mock exams" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Mock exams/ })).toBeVisible();
     await audit(page, 0);
   });
 });

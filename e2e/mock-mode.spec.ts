@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openTopics } from "./practice-page";
 import { shortPartIntros } from "./short-intro";
 
 // The Part 2 / Part 3 spoken introductions are shortened (e2e/short-intro.ts).
@@ -84,6 +85,7 @@ test("mock mode: task list → brief → practice → result → retry → dashb
   await auditPhone(page);
 
   // Brief of another task than the demo result's, then the practice and the mock result.
+  await openTopics(page, "2");
   await page.getByRole("link", { name: /A happy day/ }).click();
   await expect(page).toHaveURL(/\/practice\/speaking\/b2-part2-happy-day\?mock=1$/);
   await expect(demo).toHaveText(DEMO_MODE);

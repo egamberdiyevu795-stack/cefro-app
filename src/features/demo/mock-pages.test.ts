@@ -239,7 +239,7 @@ describe("links that used to open the task list at / now open /practice, keeping
     ["demo result (Retry with this goal)", () => ResultPage(props({ mock: "1", demo: "demo-5" }))],
     ["saved-runs result", () => ResultPage(props({ mock: "1" }))],
     ["lesson", () => LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))],
-    ["Account page", () => ProfilePage(props({ mock: "1" }))],
+    ["Account page (Go to Part 2)", () => ProfilePage(props({ mock: "1" }))],
   ] as const)("%s: no link to /, the task list is /practice with ?mock=1", async (_name, page) => {
     const markup = await html(page());
     const links = internalLinks(markup).map((href) => new URL(href, "http://x"));
@@ -250,7 +250,7 @@ describe("links that used to open the task list at / now open /practice, keeping
     expectMockLinksOnly(markup);
   });
 
-  it("the Account page holds no practice button: the level is information, and Home is a quiet link", async () => {
+  it("the Account page holds no practice button: Account is settings, so the level is information only", async () => {
     const markup = await html(ProfilePage(props({ mock: "1" })));
     expect(markup).not.toContain("Practise Part 2");
     expect(markup).not.toContain("Go to Part 2");
@@ -268,12 +268,11 @@ describe("Account page (/profile) in mock mode", () => {
     expect(markup).toMatch(/data-testid="profile-attempts"[^>]*>6 practice attempts</);
     // The demo student's latest scored Part 2 answer is the "A tradition" retry: a real level, not "No level yet".
     expect(markup).toMatch(/data-testid="profile-level"[^>]*>(Below B1|B1|B2|Above B2)</);
-    expect(markup).toContain('href="/practice?mock=1#part-2"');
     const order = ['data-testid="profile-name"', 'data-testid="profile-email"', 'data-testid="profile-level"', 'data-testid="profile-member-since"',
       'data-testid="profile-attempts"', 'data-testid="exam-countdown"', ">Change password<", ">Sign out<", ">Delete my account<"].map((needle) => mainOf(markup).indexOf(needle));
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(mainOf(markup).match(BLACK)).toHaveLength(1);
+    expect(mainOf(markup).match(BLACK)).toBeNull(); // Account is settings: no black button at all
     expect(markup).not.toMatch(SMALL);
     expect(markup).not.toMatch(/Coming soon|Target level|Change email|Language|Notifications|Test your microphone/i);
     expectMockLinksOnly(markup);

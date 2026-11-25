@@ -47,7 +47,8 @@ export function PartFilter({ options }: { options: readonly FilterOption[] }) {
             >
               {o.active && <Icon name="check" size={14} />}
               {o.label}
-              <span className={cx("tabular-nums", o.active ? "text-fg-muted" : "text-fg-subtle")}>{o.count}</span>
+              {/* Inherits the chip's own colour: a lighter grey at this size fails the contrast floor. */}
+              <span className="tabular-nums opacity-70">{o.count}</span>
             </Link>
           </li>
         ))}

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openTopics } from "./practice-page";
 import { shortPartIntros } from "./short-intro";
 
 // The Part 2 / Part 3 spoken introductions are shortened (e2e/short-intro.ts).
@@ -45,6 +46,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   page.on("pageerror", (error) => errors.push(String(error)));
 
   await page.goto("/practice");
+  await openTopics(page, "2");
   await page.getByRole("link", { name: /Advice from someone/ }).click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
   await expect(page.getByTestId("demo-label")).toHaveCount(0); // the real brief: no demo label

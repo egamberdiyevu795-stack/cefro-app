@@ -163,7 +163,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
 
   return (
     <div className="min-h-dvh bg-page font-ui text-fg md:p-6">
-      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:shadow-card">
+      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 md:min-h-[calc(100dvh-3rem)] md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:shadow-card">
         <aside className="md:flex md:w-12 md:shrink-0 md:flex-col md:items-center md:gap-14">
           <Wordmark className="hidden md:flex md:h-12" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
           <Sidebar

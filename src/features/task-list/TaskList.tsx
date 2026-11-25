@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardHeader, Icon, cx, styles } from "@/components/ds";
 import { examPartAnchor, examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
+import { TopicFold } from "./TopicFold";
 
 /** A row's small grey tag: one row at most, from the student's own history (never a claim about the exam). */
 export type TaskTag = "Start here" | "Try next";
@@ -73,8 +74,10 @@ export function timingText(task: Timed): string {
 
 /**
  * The task list (`/practice`, the Practice tab) on the design system: a page heading, then one card per exam part, in
- * exam order (1.1, 1.2, 2, 3; `id="part-2"`: the dashboard's part tile and the Account page's "Go to Part 2" open it).
- * The part's timing is said once, under its title, not on every row. Each row is a link to the task's brief. The "Full
+ * exam order (1.1, 1.2, 2, 3; `id="part-2"`: the dashboard's part tile opens it, and its topic list with it).
+ * The part's timing is said once, under its title, not on every row. "Random topic" is the way in, as in the exam; the
+ * topic list is folded under "Or choose a topic", so every card is the same height whatever its list holds. Each row is
+ * a link to the task's brief. The "Full
  * mock exam" card above the parts holds the page's one black button (when the mock is open or a demo; "Coming soon" has none):
  * choosing a single task is the page itself, as on the Lessons list; the brief's "Start preparation" is the next black button.
  */
@@ -125,17 +128,11 @@ export function TaskList({
             )}
             {random && <RandomRow random={random} />}
             {tasks.length > 0 && (
-              <>
-                {random && (
-                  <p className="mt-5 flex items-baseline justify-between gap-3 text-label" data-testid="choose-topic">
-                    <span className="font-medium text-fg">Or choose a topic</span>
-                    {status === "open" && (
-                      <span className="text-fg-muted">
-                        {`${practisedCount} of ${tasks.length} practised`}
-                      </span>
-                    )}
-                  </p>
-                )}
+              <MaybeFold
+                anchor={anchor}
+                fold={Boolean(random)}
+                count={status === "open" ? `${practisedCount} of ${tasks.length} practised` : undefined}
+              >
                 <ul className={cx("divide-y divide-line", random ? "mt-1" : "mt-2")}>
                   {tasks.map((task) => (
                     <li key={task.id}>
@@ -155,12 +152,27 @@ export function TaskList({
                     </li>
                   ))}
                 </ul>
-              </>
+              </MaybeFold>
             )}
           </Card>
         );
       })}
     </div>
+  );
+}
+
+/**
+ * The topic list, folded behind "Or choose a topic" where the part has a Random topic row above it (the usual case), so
+ * every part card is the same height whatever its list holds. Part 1.1, whose list IS the part (no random row), keeps
+ * its rows open: there is nothing to fold them under.
+ */
+function MaybeFold({ anchor, fold, count, children }: { anchor: string; fold: boolean; count?: string; children: React.ReactNode }) {
+  return fold ? (
+    <TopicFold anchor={anchor} summary="Or choose a topic" count={count}>
+      {children}
+    </TopicFold>
+  ) : (
+    <>{children}</>
   );
 }
 

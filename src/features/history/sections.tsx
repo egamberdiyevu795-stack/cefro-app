@@ -17,7 +17,7 @@ export function HistoryContent({ view, mock = false }: { view: HistoryView; mock
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:col-span-2">
         <h1 className="text-title font-medium tracking-[-0.01em] text-fg">History</h1>
-        <PartFilter options={view.filters} />
+        {view.filters.length > 0 && <PartFilter options={view.filters} />}
       </div>
       {view.chart && <BandChartCard chart={view.chart} className="lg:col-start-2 lg:row-start-2" />}
       <AttemptsCard view={view} className={cx("lg:col-start-1 lg:row-start-2", !view.chart && "lg:col-span-2")} />
@@ -25,7 +25,10 @@ export function HistoryContent({ view, mock = false }: { view: HistoryView; mock
   );
 }
 
-/** "All" and each part the student has tried. Links, so each filtered view has its own address. */
+/**
+ * "All" and each part the student has tried, each with its own count. Links, so each filtered view has its own address.
+ * Not rendered at all when there is nothing to filter (the view-model returns no options then).
+ */
 export function PartFilter({ options }: { options: readonly FilterOption[] }) {
   return (
     <nav aria-label="Filter by part">
@@ -44,6 +47,7 @@ export function PartFilter({ options }: { options: readonly FilterOption[] }) {
             >
               {o.active && <Icon name="check" size={14} />}
               {o.label}
+              <span className={cx("tabular-nums", o.active ? "text-fg-muted" : "text-fg-subtle")}>{o.count}</span>
             </Link>
           </li>
         ))}

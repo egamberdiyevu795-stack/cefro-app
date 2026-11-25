@@ -102,7 +102,13 @@ export default async function AccountPage(props: PageProps<"/profile">) {
       {mock && <DemoLabel variant="changes" className="mb-4 bg-card" />}
       <h1 className="mb-4 text-title font-medium tracking-[-0.01em] text-fg">Account</h1>
       <div className="mx-auto flex max-w-2xl flex-col gap-4 lg:mx-0">
-        <AccountCard account={account} attempts={attempts.length} level={currentLevel(attempts, { target: levelTarget(), now })} mock={mock} />
+        <AccountCard
+          account={account}
+          attempts={attempts.length}
+          level={currentLevel(attempts, { target: levelTarget(), now })}
+          mock={mock}
+          showLevel={classes?.role !== "teacher"}
+        />
         {consent && <ConsentCard record={consent} />}
         <ExamDate state={accountExamState(examDateState(stored, now))} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant="card" demo={mock} />
         {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} />}

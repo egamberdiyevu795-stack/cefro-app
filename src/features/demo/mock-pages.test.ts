@@ -239,7 +239,7 @@ describe("links that used to open the task list at / now open /practice, keeping
     ["demo result (Retry with this goal)", () => ResultPage(props({ mock: "1", demo: "demo-5" }))],
     ["saved-runs result", () => ResultPage(props({ mock: "1" }))],
     ["lesson", () => LessonPage(props({ mock: "1", demo: "demo-5" }, { lessonId: "l-t1" }))],
-    ["Account page (Go to Part 2)", () => ProfilePage(props({ mock: "1" }))],
+    ["Account page", () => ProfilePage(props({ mock: "1" }))],
   ] as const)("%s: no link to /, the task list is /practice with ?mock=1", async (_name, page) => {
     const markup = await html(page());
     const links = internalLinks(markup).map((href) => new URL(href, "http://x"));
@@ -250,8 +250,10 @@ describe("links that used to open the task list at / now open /practice, keeping
     expectMockLinksOnly(markup);
   });
 
-  it("the Account page's Go to Part 2 opens the Part 2 section of /practice", async () => {
-    expect(await html(ProfilePage(props({ mock: "1" })))).toContain('href="/practice?mock=1#part-2"');
+  it("the Account page holds no practice button: the level is information, and Home is a quiet link", async () => {
+    const markup = await html(ProfilePage(props({ mock: "1" })));
+    expect(markup).not.toContain("Practise Part 2");
+    expect(markup).not.toContain("Go to Part 2");
   });
 });
 

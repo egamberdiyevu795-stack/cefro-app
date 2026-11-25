@@ -49,6 +49,8 @@ export interface HistoryRow {
 export interface FilterOption {
   id: HistoryFilter;
   label: string;
+  /** How many rows this chip shows ("All 7", "Part 2 · 5"), so a chip reads as a filter and not as a label. */
+  count: number;
   href: string;
   active: boolean;
 }
@@ -114,11 +116,21 @@ export function buildHistoryView(
   // A part the student has not tried, or "Mock exams" with no mock (an old link, a typed URL), shows everything instead of an empty list.
   const wanted = options.filter;
   const filter: HistoryFilter = wanted === "all" ? "all" : wanted === "mocks" ? (mocks.length > 0 ? "mocks" : "all") : tried.has(wanted) ? wanted : "all";
-  const filters: FilterOption[] = [
-    { id: "all", label: "All", href: historyHref("all"), active: filter === "all" },
-    ...(mocks.length > 0 ? [{ id: "mocks" as const, label: "Mock exams", href: historyHref("mocks"), active: filter === "mocks" }] : []),
-    ...EXAM_PART_IDS.filter((p) => tried.has(p)).map((p) => ({ id: p, label: examPartLabel(p), href: historyHref(p), active: filter === p })),
+  const looseCount = attempts.filter((a) => a.sessionId == null || !mocks.some((m) => m.id === a.sessionId)).length;
+  const everything: FilterOption[] = [
+    { id: "all", label: "All", count: looseCount + mocks.length, href: historyHref("all"), active: filter === "all" },
+    ...(mocks.length > 0 ? [{ id: "mocks" as const, label: "Mock exams", count: mocks.length, href: historyHref("mocks"), active: filter === "mocks" }] : []),
+    ...EXAM_PART_IDS.filter((p) => tried.has(p)).map((p) => ({
+      id: p,
+      label: examPartLabel(p),
+      count: attempts.filter((a) => a.part === p).length,
+      href: historyHref(p),
+      active: filter === p,
+    })),
   ];
+  // Nothing to filter (everything is of one kind): no chips at all. A lone "All | Part 2" pair reads as a label saying
+  // the page only holds Part 2, not as a choice.
+  const filters: FilterOption[] = everything.length > 2 ? everything : [];
 
   // A mock's four parts are one row, so under "All" they are not listed again as loose attempts. A part's own filter lists
   // every attempt of that part, mock parts included (they are the student's progress in that part).

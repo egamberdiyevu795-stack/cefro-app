@@ -244,13 +244,15 @@ test.describe("real account", () => {
     const email = uniqueEmail("account");
     await register(page, email);
 
-    // No answer yet: "No level yet" with a link to Part 2; no exam date: "Not set · Add exam date".
+    // No answer yet: "No level yet" with a quiet link to Home; no exam date: "Not set · Add exam date".
     await page.goto("/dashboard");
     await page.getByTestId("account-status").getByRole("link", { name: "Account" }).click();
     await expect(page).toHaveURL(/\/profile$/);
     await expect(page.getByTestId("profile-email")).toHaveText(email);
     await expect(page.getByTestId("profile-level")).toHaveText("No level yet");
-    await expect(page.getByRole("link", { name: "Go to Part 2" })).toHaveAttribute("href", "/practice#part-2");
+    // Account is settings: the level is information, with no practice button (Home holds the black one).
+    await expect(page.getByRole("link", { name: "Find your level on Home" })).toHaveAttribute("href", "/dashboard");
+    await expect(page.getByRole("main").locator("a.bg-primary, button.bg-primary")).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Your exam date" }).getByText("Not set")).toBeVisible();
     await expect(page.getByTestId("profile-name")).toHaveText("Not set"); // no name typed at sign-up: none
     await expect(page.getByTestId("profile-attempts")).toHaveText("No practice attempts yet");

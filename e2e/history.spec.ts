@@ -57,12 +57,10 @@ test("History: empty state, then the student's attempts newest first, retries, t
   await expect(page.getByRole("heading", { name: "Band over time" })).toHaveCount(0);
   await expect(page.getByRole("main").locator(BLACK)).toHaveCount(0);
 
-  // The filter offers only the parts tried (Part 2 here).
-  const filter = page.getByRole("navigation", { name: "Filter by part" });
-  await expect(filter.getByRole("link")).toHaveText(["All", "Part 2"]);
-  await filter.getByRole("link", { name: "Part 2" }).click();
-  await expect(page).toHaveURL(/\/history\?part=2$/);
-  await expect(filter.getByRole("link", { name: "Part 2" })).toHaveAttribute("aria-current", "true");
+  // Only Part 2 tried, so there is nothing to filter: no chips at all (a lone "All | Part 2" pair reads as a label).
+  await expect(page.getByRole("navigation", { name: "Filter by part" })).toHaveCount(0);
+  // The filtered view still has its own address.
+  await page.goto("/history?part=2");
 
   // A row opens its result.
   await historyRows(page).nth(1).getByRole("link").click();

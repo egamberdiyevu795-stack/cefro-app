@@ -143,7 +143,7 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   // The student leaves (confirm card, both buttons grey).
   await student.getByTestId("leave-class").click();
   await expect(student.getByText("Your teacher loses access to everything.")).toBeVisible();
-  await audit(student, 1);
+  await audit(student, 0); // Account is settings: no black button
   await student.getByRole("button", { name: "Leave class" }).click();
   await expect(student.getByTestId("leave-class-done")).toBeVisible();
 

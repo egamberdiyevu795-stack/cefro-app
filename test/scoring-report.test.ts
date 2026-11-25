@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agreementSummary, mockAgreementSummary, scoringHealth, teacherBandOf } from "../scripts/lib/scoring-summary.mjs";
+import { agreementSummary, mockAgreementSummary, recordingFormats, scoringHealth, teacherBandOf } from "../scripts/lib/scoring-summary.mjs";
 
 /** The owner's scoring report (npm run stats:scoring, workflow "Scoring report"). */
 describe("scoring health", () => {
@@ -17,7 +17,19 @@ describe("scoring health", () => {
     expect(lines[0]).toMatch(/All parts\s+attempts=6\s+scored\(real\)=1\s+no-AI-score=1\s+failed=2\s+running=1\s+mock=1/);
     expect(lines.slice(1, 4).map((l) => l.trim().split(/\s{2,}/)[0])).toEqual(["Part 1", "Part 2", "Part 3"]);
     expect(lines).toContain("    2    evaluation: provider_quota");
-    expect(lines.at(-1)).toBe("  Scored by: gemini=1, mock=1");
+    expect(lines).toContain("  Scored by: gemini=1, mock=1");
+  });
+
+  it("groups by recording format, so a failure that only hits one browser stands out", () => {
+    const lines: string[] = recordingFormats([
+      { status: "completed", mimeType: "audio/webm;codecs=opus", durationMs: 120_000 },
+      { status: "failed", failureCode: "audio_unsupported", mimeType: "audio/mp4", durationMs: 118_000 },
+      { status: "failed", failureCode: "audio_unsupported", mimeType: "audio/mp4", durationMs: 4_000 },
+      { status: "failed", failureCode: "upload_failed", mimeType: null, durationMs: null },
+    ]);
+    expect(lines[0]).toMatch(/audio\/mp4\s+attempts=2\s+completed=0\s+failed=2 \(1x audio_unsupported >=60s, 1x audio_unsupported <10s\)/);
+    expect(lines).toContainEqual(expect.stringMatching(/audio\/webm\s+attempts=1\s+completed=1\s+failed=0$/));
+    expect(lines).toContainEqual(expect.stringMatching(/no recording\s+attempts=1\s+completed=0\s+failed=1 \(1x upload_failed \?\)/));
   });
 
   it("prints a zero line on an empty database", () => {

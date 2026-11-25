@@ -28,8 +28,10 @@ const client = url ? createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN
 try {
   const attempts = await client.execute({
     sql: `SELECT t.part AS part, a.status AS status, a.failure_stage AS failureStage, a.failure_code AS failureCode,
-                 (SELECT e.provider FROM evaluations e WHERE e.attempt_id = a.id ORDER BY e.created_at DESC LIMIT 1) AS provider
+                 (SELECT e.provider FROM evaluations e WHERE e.attempt_id = a.id ORDER BY e.created_at DESC LIMIT 1) AS provider,
+                 rec.mime_type AS mimeType, rec.duration_ms AS durationMs
             FROM speaking_attempts a
+            LEFT JOIN recordings rec ON rec.attempt_id = a.id
             LEFT JOIN speaking_tasks t ON t.id = a.task_id AND t.version = a.task_version
            WHERE a.created_at >= ?`,
     args: [since],

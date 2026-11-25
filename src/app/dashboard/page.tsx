@@ -29,6 +29,7 @@ import {
   GuestCard,
   PractiseNextCard,
   ProgressCard,
+  BiggestFixPreviewCard,
   ProgressPreviewCard,
   RECENT_ATTEMPT_COUNT,
   RecentAttemptsCard,
@@ -62,14 +63,13 @@ export const metadata: Metadata = { title: "Dashboard" };
  *   row 2: [ Speaking progress + radar ] [ Exam parts      ]
  *   row 3: [ Recent attempts           ] [ Biggest fix     ]
  * Returning, phone: practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
- * Attempts, none scored yet (still scoring, failed, too short): [ Find your level ("Start practice"), exam date* ],
- *   [ Recent attempts ], [ Speaking progress, empty ], [ Exam parts ]. No level, skills or biggest fix until an answer
- *   is scored.
- * First visit (no attempts): [ Find your level, with "When is your exam?"* ], [ Speaking progress, empty: "—", the
- *   radar with only its skill names ], then [ Exam parts, four in a row ]. The empty card shows a new student the
- *   skills map exists before they practise; it has no black button and no number that reads as a result.
+ * First visit (no attempts), and attempts none scored yet: the returning layout's cards in the same places, each showing
+ *   what will appear in it: [ Find your level | When is your exam?* ], [ Speaking progress, empty | Exam parts ],
+ *   [ Recent attempts (empty, or the unscored ones) | Biggest fix, empty ]. Nothing moves when the first result
+ *   arrives. No black button but "Start your first practice" / "Start practice", no number that reads as a result.
  * The Account tab (a link to the Account page) is always in the nav, whatever the flags.
- * Signed out (no account, not mock mode): a quiet "You are not signed in" card on top (GuestCard), whatever the view.
+ * Signed out (no account, not mock mode): a quiet "You are not signed in" card (GuestCard), whatever the view: first on
+ *   phones, under the cards on desktop (the cards have fixed rows).
  *
  * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
  *   small "Add exam date".
@@ -217,6 +217,26 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 <ExamPartsCard parts={tiles} className="order-7 lg:order-none lg:col-start-2 lg:row-start-2" />
                 <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
                 <BiggestFixCard fix={fix} className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
+              </>
+            ) : !isTeacher ? (
+              // No scored answer yet: the same cards in the same places as a returning student's Home, each showing what
+              // will appear in it, so nothing moves when the first result arrives (phones: the same order too).
+              <>
+                <FindYourLevelCard
+                  exam={countdown ? null : examSlot("inline")}
+                  hasAttempts={view !== "first_visit"}
+                  mock={mock}
+                  quiet={quietNext}
+                  className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")}
+                />
+                {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
+                <ProgressPreviewCard preview={progressPreview(attempts, { target, now })} className="order-3 lg:order-none lg:col-start-1 lg:row-start-2" />
+                <ExamPartsCard
+                  parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
+                  className="order-7 lg:order-none lg:col-start-2 lg:row-start-2"
+                />
+                <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
+                <BiggestFixPreviewCard className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
             ) : (
               <>

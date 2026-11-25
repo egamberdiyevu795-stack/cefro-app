@@ -342,6 +342,23 @@ export function RecentAttemptsCard({
 }
 
 /** The latest scored answer's biggest fix, as on its result page, and how often the same problem still shows. */
+/**
+ * No scored answer yet: the Biggest fix card in its place, with what will appear in it, so a new student's Home has the
+ * same cards in the same places as a returning student's. No black button and nothing that reads as a result.
+ */
+export function BiggestFixPreviewCard({ className }: { className?: string }) {
+  return (
+    <Card aria-labelledby="fix-title" data-testid="fix-preview" className={cx("flex flex-col", className)}>
+      <CardHeader id="fix-title" title="Biggest fix" />
+      <p className="text-caption text-fg-muted">You said</p>
+      <blockquote className="mt-1 border-l-2 border-line pl-3 text-body text-fg-muted">Your own words will appear here.</blockquote>
+      <p className="mt-4 text-body text-fg-muted">
+        After your first answer, this shows the one thing to fix first, with a better way to say it.
+      </p>
+    </Card>
+  );
+}
+
 export function BiggestFixCard({ fix, className }: { fix: DashboardFix; className?: string }) {
   const { fix: view, stillIn } = fix;
   return (

@@ -104,7 +104,9 @@ test("new student: the first visit, with the exam date question; saving a date s
   await expect(preview.getByText("Answer 1 task to unlock your skills map")).toBeVisible();
   await expect(preview.getByRole("img", { name: /empty until your first scored answer/ }).first()).toBeAttached();
   await expect(page.getByTestId("current-level")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Recent attempts" })).toHaveCount(0);
+  // The returning layout's other cards, in their places, saying what will appear in them.
+  await expect(page.getByRole("region", { name: "Recent attempts" })).toContainText("No attempts yet");
+  await expect(page.getByTestId("fix-preview")).toContainText("After your first answer");
   await auditPhone(page);
 
   // The Part 2 tile opens the Part 2 task list with all its tasks.
@@ -257,7 +259,8 @@ test("attempts that are not scored: no first-visit screen; Recent attempts and '
   await expect(recent.getByRole("link", { name: /Advice from someone/ })).toHaveCount(1);
   await expect(page.getByTestId("progress-preview")).toBeVisible(); // the empty card, not the real one
   await expect(page.getByTestId("current-level")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Biggest fix" })).toHaveCount(0);
+  await expect(page.getByTestId("fix-preview")).toBeVisible(); // the empty Biggest fix, not a real one
+  await expect(page.getByTestId("still-in")).toHaveCount(0);
   await expectComingSoonTiles(page);
   await auditPhone(page);
 });

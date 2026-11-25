@@ -6,7 +6,7 @@ import type { ExamDateState } from "@/domain/exam-date";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
 
 const { ExamDate } = await import("./ExamDate");
-const { ExamPartsCard, FindYourLevelCard, PractiseNextCard, ProgressPreviewCard, PREVIEW_PLACEHOLDER, PREVIEW_UNLOCK } = await import("./sections");
+const { BiggestFixPreviewCard, ExamPartsCard, FindYourLevelCard, PractiseNextCard, ProgressPreviewCard, PREVIEW_PLACEHOLDER, PREVIEW_UNLOCK } = await import("./sections");
 
 const BLACK = /class="[^"]*\bbg-primary text-on-primary\b/g;
 const blacks = (markup: string) => (markup.match(BLACK) ?? []).length;
@@ -138,6 +138,17 @@ describe("empty Speaking progress (no scored answer yet)", () => {
   });
 
   it("has no black button (the page's one black button stays 'Start your first practice') and no text under 11 px", () => {
+    expect(blacks(markup)).toBe(0);
+    expect(markup).not.toMatch(TOO_SMALL);
+  });
+});
+
+describe("empty Biggest fix (no scored answer yet)", () => {
+  const markup = html(createElement(BiggestFixPreviewCard, {}));
+  it("says what will appear, with no quote from an answer, no black button and no text under 11 px", () => {
+    expect(markup).toContain("Biggest fix");
+    expect(markup).toContain("After your first answer");
+    expect(markup).not.toContain("Start retry");
     expect(blacks(markup)).toBe(0);
     expect(markup).not.toMatch(TOO_SMALL);
   });

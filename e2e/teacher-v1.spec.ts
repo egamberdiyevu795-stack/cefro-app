@@ -203,7 +203,7 @@ test("an old membership gets one 'Share recordings too?' card with two grey butt
   const card = page.getByTestId("share-more");
   await expect(card).toContainText("Share recordings too?");
   await expect(card).toContainText("Nothing from before that is shared.");
-  await audit(page, 1); // the Account page keeps its own black button
+  await audit(page, 0); // Account is settings: no black button at all
   await card.getByRole("button", { name: "Not now" }).click();
   await expect(page.getByTestId("share-more-done")).toContainText("Nothing changed");
   await expect(card).toHaveCount(0);

@@ -36,12 +36,15 @@ function watchApi(page: Page) {
   return calls;
 }
 
-/** At 390 px: one black control, the grey current tab, no horizontal scroll, no text under 11 px, text contrast AA. */
-async function auditPhone(page: Page, current: "Account" | "Practice") {
+/**
+ * At 390 px: the expected number of black controls, the grey current tab, no horizontal scroll, no text under 11 px,
+ * text contrast AA. Account is settings, so it has none; Practice has the mock-exam card's one.
+ */
+async function auditPhone(page: Page, current: "Account" | "Practice", blacks = current === "Account" ? 0 : 1) {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("main").first()).toBeVisible();
   const black = await page.locator(BLACK).evaluateAll((els) => els.filter((el) => (el as HTMLElement).offsetParent !== null).length);
-  expect(black).toBe(1);
+  expect(black).toBe(blacks);
   const tab = page.getByRole("navigation", { name: "Main" }).locator('[aria-current="page"]');
   await expect(tab).toHaveCount(1);
   await expect(tab).toHaveAttribute("aria-label", current);

@@ -95,10 +95,10 @@ describe("history list", () => {
     const part2 = attempt({ day: 0 });
     const part11 = attempt({ day: 1, part: "1.1", title: "Daily life", result: null });
     const v = view([part2, part11]);
-    expect(v.filters.map((f) => [f.label, f.href, f.active])).toEqual([
-      ["All", "/history", true],
-      ["Part 1.1", "/history?part=1.1", false],
-      ["Part 2", "/history?part=2", false],
+    expect(v.filters.map((f) => [f.label, f.count, f.href, f.active])).toEqual([
+      ["All", 2, "/history", true],
+      ["Part 1.1", 1, "/history?part=1.1", false],
+      ["Part 2", 1, "/history?part=2", false],
     ]);
     const filtered = view([part2, part11], { part: "2" });
     expect(filtered.rows.map((r) => r.id)).toEqual([part2.id]);
@@ -266,7 +266,14 @@ describe("mock exams in History", () => {
     const v = withMocks(finished("m1"), [mock("m1")]);
     expect(v.filters.map((f) => f.label)).toEqual(["All", "Mock exams", "Part 1.1", "Part 1.2", "Part 2", "Part 3"]);
     expect(v.filters[1].href).toBe("/history?part=mock");
-    expect(withMocks([attempt({ day: 1 })], []).filters.map((f) => f.label)).toEqual(["All", "Part 2"]);
+    expect(v.filters.map((f) => f.count)).toEqual([1, 1, 1, 1, 1, 1]);
+    // Nothing to filter (one kind only): no chips at all, so a lone "All | Part 2" pair never reads as a label.
+    expect(withMocks([attempt({ day: 1 })], []).filters).toEqual([]);
+    expect(withMocks([attempt({ day: 1 }), attempt({ day: 2, part: "1.1", title: "Daily life", result: null })], []).filters.map((f) => f.label)).toEqual([
+      "All",
+      "Part 1.1",
+      "Part 2",
+    ]);
   });
 
   it("'Mock exams' lists the mocks only; a part lists every attempt of it, the mock's part included and marked", () => {

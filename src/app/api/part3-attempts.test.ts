@@ -272,7 +272,7 @@ describe("History, dashboard and the task list show Part 3 attempts like Part 2"
     const all = await view();
     expect(all.rows).toHaveLength(1);
     expect(all.rows[0]).toMatchObject({ id: body.attempt.id, partLabel: "Part 3", href: `/result/${body.attempt.id}`, outcome: { kind: "scored" } });
-    expect(all.filters.map((f) => f.label)).toEqual(["All", "Part 3"]);
+    expect(all.filters).toEqual([]); // one kind only: nothing to filter, so no chips
     expect((await view({ part: "3" })).rows).toHaveLength(1);
     as(browsers.bob);
     expect((await view()).total).toBe(0);

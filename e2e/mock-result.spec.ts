@@ -104,7 +104,8 @@ test("History: a mock is one row opening the mock result; the pills include Mock
   await expect(mockRow).toHaveCount(1);
   await expect(mockRow).toContainText(/^Mock exam · (B1|B2|C1|Below B1) · \d\d\.\d\d\.\d\d/);
   const pills = page.getByRole("navigation", { name: "Filter by part" }).getByRole("link");
-  await expect(pills).toHaveText(["All", "Mock exams", "Part 1.1", "Part 1.2", "Part 2", "Part 3"]);
+  // Every chip carries its count, so the row reads as a filter and not as a label.
+  await expect(pills).toHaveText([/^All ?\d+$/, /^Mock exams ?\d+$/, /^Part 1\.1 ?\d+$/, /^Part 1\.2 ?\d+$/, /^Part 2 ?\d+$/, /^Part 3 ?\d+$/]);
   await audit(page, 0);
   await noForbiddenWords(page);
 
@@ -145,7 +146,7 @@ test.describe("at laptop width", () => {
   test("History shows the mock row and the pills without horizontal scroll", async ({ page }) => {
     await page.goto("/history?mock=1");
     await expect(page.getByTestId("history-mock")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Mock exams" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Mock exams/ })).toBeVisible();
     await audit(page, 0);
   });
 });

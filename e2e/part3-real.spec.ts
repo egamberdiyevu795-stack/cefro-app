@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openTopics } from "./practice-page";
 import { shortPartIntros } from "./short-intro";
 
 /*
@@ -90,6 +91,7 @@ test.describe("scored (mock evaluator) @scored", () => {
     // Part 3 is open on the task list; its topics are real links (no mock).
     await page.goto("/practice");
     await expect(page.locator("#part-3").getByTestId("part-status")).toHaveCount(0);
+    await openTopics(page, "3");
     const topic = page.locator("#part-3").getByRole("link", { name: new RegExp(CARS_TITLE) });
     expect(await topic.getAttribute("href")).toBe("/practice/part3/c1-part3-cars-in-city-centres");
     await topic.click();
@@ -130,8 +132,9 @@ test.describe("scored (mock evaluator) @scored", () => {
     // History and the dashboard list it like a Part 2 attempt.
     await page.goto("/history");
     await expect(page.getByRole("link", { name: /Cars in city centres/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Part 3", exact: true })).toBeVisible(); // the filter
-    await page.getByRole("link", { name: "Part 3", exact: true }).click();
+    // Only Part 3 attempts, so there is nothing to filter: no chips. The filtered view still has its own address.
+    await expect(page.getByRole("navigation", { name: "Filter by part" })).toHaveCount(0);
+    await page.goto("/history?part=3");
     await expect(page.getByRole("link", { name: /Cars in city centres/ })).toHaveCount(1);
     await audit(page, 0);
     await page.goto("/dashboard");

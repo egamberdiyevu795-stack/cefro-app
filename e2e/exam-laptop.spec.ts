@@ -317,7 +317,7 @@ test.describe("the student's side: Share screen and Account", () => {
     await expect(control).toContainText("not set yet");
     await page.getByTestId("class-pin-open").click();
     await page.getByLabel("New 4-digit PIN").fill("4321");
-    await audit(page, 1); // the Account page's own black button
+    await audit(page, 0); // Account is settings: no black button, and Save PIN is grey
     await page.getByRole("button", { name: "Save PIN" }).click();
     await expect(control).toContainText("Class PIN: set");
     await expect(control.getByRole("status")).toContainText("PIN saved.");

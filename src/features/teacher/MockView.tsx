@@ -6,19 +6,26 @@ import { levelOfBand } from "@/features/history/view-model";
 import { TeacherPlayer } from "@/features/result/TeacherPlayer";
 import { TranscriptWithFixes } from "@/features/result/TranscriptWithFixes";
 import { MockLevelView, YourView } from "./actions";
+import { ReviewProgress, ReviewProvider } from "./ReviewProgress";
 import { partStatusText, teacherMockHeader, type TeacherMockPartView, type TeacherMockView } from "./mock-view";
 import { appVerdictText } from "./view-model";
 
 /**
- * T6 Student's mock (docs/v1-plan.md section 5): at the top the estimated level, the date and Finished / Not finished; four
- * part cards, each with the player, the transcript (tap a sentence for its better version), CEFRO's band and, in grey,
- * Agree / Choose level for that part; at the bottom the optional level for the whole mock. NO black button on this page.
+ * T6 Student's mock (docs/v1-plan.md section 5): the estimated level, the date and Finished / Not finished, how many
+ * parts are rated ("2 of 4 parts rated", live) and the optional level for the whole mock, beside (desktop) or above
+ * (phones) four part cards, each with the player, the transcript (tap a sentence for its better version), CEFRO's band
+ * and, in grey, Agree / Choose level for that part. NO black button on this page.
  * Built from the teacher's own data only (`TeacherMockView`): no email, no account name.
  */
 export function TeacherMock({ mock, ratingUrl, mockRatingUrl, demo }: { mock: TeacherMockView; ratingUrl: (attemptId: string) => string; mockRatingUrl: string; demo: boolean }) {
   const header = teacherMockHeader(mock);
+  const rateable = mock.parts.filter((p) => p.state === "scored" && p.band && p.attemptId);
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:mx-0" data-testid="teacher-mock" data-status={mock.status}>
+    <ReviewProvider initiallyRated={rateable.filter((p) => p.rating).map((p) => partViewId(p.part))}>
+    {/* Desktop: the parts on the left, the summary (level, review progress, level for the whole mock) beside them;
+        phones: one column, summary first. */}
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start" data-testid="teacher-mock" data-status={mock.status}>
+      <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
       <Card aria-labelledby="mock-title" data-testid="teacher-mock-header">
         <p className="text-caption text-fg-muted">{mock.studentName}</p>
         <h1 id="mock-title" className="mt-1 text-title font-medium tracking-[-0.01em] text-fg">
@@ -57,13 +64,25 @@ export function TeacherMock({ mock, ratingUrl, mockRatingUrl, demo }: { mock: Te
             {header.ratingText}
           </p>
         )}
+        <div className="mt-4 border-t border-line pt-4">
+          <ReviewProgress total={rateable.length} />
+        </div>
       </Card>
-      {mock.parts.map((part) => (
-        <PartCard key={part.part} part={part} who={mock.studentName} ratingUrl={part.attemptId ? ratingUrl(part.attemptId) : null} demo={demo} />
-      ))}
       <MockLevelView estimate={header.estimate} initial={mock.rating} url={mockRatingUrl} demo={demo} />
+      </div>
+      <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+        {mock.parts.map((part) => (
+          <PartCard key={part.part} part={part} who={mock.studentName} ratingUrl={part.attemptId ? ratingUrl(part.attemptId) : null} demo={demo} />
+        ))}
+      </div>
     </div>
+    </ReviewProvider>
   );
+}
+
+/** The id of a part's "Your view" (also how the review progress knows which parts are rated). */
+function partViewId(part: string): string {
+  return `part-${part.replace(".", "-")}-view`;
 }
 
 function PartCard({ part, who, ratingUrl, demo }: { part: TeacherMockPartView; who: string; ratingUrl: string | null; demo: boolean }) {
@@ -111,7 +130,7 @@ function PartCard({ part, who, ratingUrl, demo }: { part: TeacherMockPartView; w
             <div className="mt-5">
               <YourView
                 compact
-                idPrefix={`${id}-view`}
+                idPrefix={partViewId(part.part)}
                 verdict={appVerdictText(part.part, part.band.band, part.band.label)}
                 bands={part.bands}
                 initial={part.rating}

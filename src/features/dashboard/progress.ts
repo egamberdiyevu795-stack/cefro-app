@@ -141,6 +141,21 @@ const RADAR_ORDER: readonly Feature[] = ["grammar", "vocabulary", "fluency", "co
 const SHORT_LABELS: Record<Feature, string> = { grammar: "Gram", vocabulary: "Vocab", fluency: "Flu", cohesion: "Coh", pronunciation: "Pron" };
 export const RADAR_RINGS = FEATURE_LEVELS.map((level) => LEVEL_LABELS[level]);
 
+/** Every skill of the radar, none assessed: the empty chart a new student sees before their first scored answer. */
+export function emptyRadarAxes(): RadarAxis[] {
+  return RADAR_ORDER.map((feature) => ({ label: FEATURE_LABELS[feature], short: SHORT_LABELS[feature], value: null }));
+}
+
+/** What the empty Speaking progress card shows: the target, and the real practice numbers (zero on a first visit). */
+export interface ProgressPreview {
+  targetLabel: string;
+  stats: Array<{ label: string; value: string }>;
+}
+
+export function progressPreview(attempts: readonly HistoryAttempt[], options: { target: FeatureLevel; now: Date }): ProgressPreview {
+  return { targetLabel: LEVEL_LABELS[options.target], stats: practiceStats(attempts, options.now) };
+}
+
 export function radarAxes(skills: SkillLevels): RadarAxis[] {
   return RADAR_ORDER.map((feature) => ({
     label: FEATURE_LABELS[feature],

@@ -4,6 +4,7 @@ import {
   CardHeader,
   DeltaLabel,
   GoalBar,
+  Icon,
   PillButton,
   ProgressBar,
   RadarChart,
@@ -17,7 +18,7 @@ import { mockLink } from "@/features/demo/demo-mode";
 import { AttemptRow } from "@/features/history/sections";
 import type { HistoryRow } from "@/features/history/view-model";
 import { FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
-import { radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress } from "./progress";
+import { emptyRadarAxes, radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress, type ProgressPreview } from "./progress";
 
 /*
  * Dashboard cards. Each takes a `className` for its place in the page grid (order on phones, cell on desktop).
@@ -175,6 +176,59 @@ export function ProgressCard({
           <RadarChart axes={radarAxes(progress.skills)} rings={RADAR_RINGS} label="Your level in each skill" />
         </div>
         <p className="mt-2 text-center text-caption text-fg-muted lg:hidden">{progress.basis}</p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * No scored answer yet: the same Speaking progress card, empty, so a new student sees what they will get before they
+ * practise (otherwise the radar only appears after the first scored answer). No number that could be read as a
+ * result: "—" for the level, the practice numbers at their real values (zero on a first visit), a grey pill (the page's
+ * one black button stays "Start your first practice") and a radar with only its skill names. One card on every screen.
+ */
+export const PREVIEW_PLACEHOLDER = "No data yet";
+export const PREVIEW_UNLOCK = "Answer 1 task to unlock your skills map";
+
+export function ProgressPreviewCard({ preview, className }: { preview: ProgressPreview; className?: string }) {
+  return (
+    <section
+      aria-labelledby="progress-preview-title"
+      data-testid="progress-preview"
+      className={cx(
+        "grid grid-cols-1 gap-6 rounded-card bg-card p-5 shadow-card lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)] lg:gap-x-8 lg:gap-y-0 lg:p-6",
+        className,
+      )}
+    >
+      <CardHeader id="progress-preview-title" title="Speaking progress" className="lg:col-span-2" />
+
+      <div>
+        <p className="text-caption text-fg-muted">Current level</p>
+        <p className="mt-1 flex items-baseline gap-2">
+          <span className="text-stat font-light tracking-[-0.03em] text-fg-muted" aria-hidden="true">
+            —
+          </span>
+          <span className="sr-only">No level yet</span>
+          <span className="text-lead font-medium">· target {preview.targetLabel}</span>
+        </p>
+        <p className="mt-1 text-caption text-fg-muted">Appears after your first scored answer</p>
+        <dl className="mt-6">
+          {preview.stats.map((s) => (
+            <StatRow key={s.label} label={s.label} value={s.value} />
+          ))}
+        </dl>
+        <div className="mt-6 flex h-9 items-center gap-2.5 rounded-full bg-well pl-1.5 pr-4">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-card text-fg-muted">
+            <Icon name="mic" size={14} />
+          </span>
+          <span className="text-label text-fg">{PREVIEW_UNLOCK}</span>
+        </div>
+      </div>
+
+      <div className="lg:self-center">
+        <div className="mx-auto max-w-[24rem] lg:max-w-none">
+          <RadarChart axes={emptyRadarAxes()} rings={RADAR_RINGS} label="Your level in each skill, empty until your first scored answer" placeholder={PREVIEW_PLACEHOLDER} />
+        </div>
       </div>
     </section>
   );

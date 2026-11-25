@@ -18,25 +18,43 @@ const NOT_ASSESSED_TEXT = "Not assessed";
  * (a container query). Wide (≥ 23rem): full skill names and ring names. Narrow: short names, no ring names, and the
  * levels listed under the chart. The list is always present for screen readers.
  */
-export function RadarChart({ axes, rings, label }: { axes: readonly RadarAxis[]; rings: readonly string[]; label: string }) {
+export function RadarChart({
+  axes,
+  rings,
+  label,
+  placeholder,
+}: {
+  axes: readonly RadarAxis[];
+  rings: readonly string[];
+  label: string;
+  /**
+   * Empty chart (nothing assessed yet): this short text in the middle instead of a shape, and no "Not assessed" notes
+   * or level list, so the chart only shows what the student will get.
+   */
+  placeholder?: string;
+}) {
   return (
     <figure className="@container m-0">
       <div className="hidden @min-[23rem]:block">
-        <RadarSvg variant="full" axes={axes} rings={rings} label={label} />
+        <RadarSvg variant="full" axes={axes} rings={rings} label={label} placeholder={placeholder} />
       </div>
       <div className="@min-[23rem]:hidden">
-        <RadarSvg variant="compact" axes={axes} rings={rings} label={label} />
+        <RadarSvg variant="compact" axes={axes} rings={rings} label={label} placeholder={placeholder} />
       </div>
-      <figcaption className="@min-[23rem]:sr-only">
-        <ul className="mt-4 border-t border-line pt-3">
-          {axes.map((a) => (
-            <li key={a.label} className="flex items-center justify-between gap-4 py-1 text-label">
-              <span className="text-fg-muted">{a.label}</span>
-              <span className="font-semibold text-fg">{a.value === null ? NOT_ASSESSED_TEXT : rings[a.value]}</span>
-            </li>
-          ))}
-        </ul>
-      </figcaption>
+      {placeholder ? (
+        <figcaption className="sr-only">{placeholder}</figcaption>
+      ) : (
+        <figcaption className="@min-[23rem]:sr-only">
+          <ul className="mt-4 border-t border-line pt-3">
+            {axes.map((a) => (
+              <li key={a.label} className="flex items-center justify-between gap-4 py-1 text-label">
+                <span className="text-fg-muted">{a.label}</span>
+                <span className="font-semibold text-fg">{a.value === null ? NOT_ASSESSED_TEXT : rings[a.value]}</span>
+              </li>
+            ))}
+          </ul>
+        </figcaption>
+      )}
     </figure>
   );
 }
@@ -53,11 +71,13 @@ function RadarSvg({
   axes,
   rings,
   label,
+  placeholder,
 }: {
   variant: keyof typeof VARIANTS;
   axes: readonly RadarAxis[];
   rings: readonly string[];
   label: string;
+  placeholder?: string;
 }) {
   const gradientId = useId();
   const { W, H, R, axisFont, ringFont, gap } = VARIANTS[variant];
@@ -122,12 +142,28 @@ function RadarSvg({
       ))}
       {/* Not assessed: a hollow dashed point at the end of the axis, outside the data. */}
       {axes.map((a, i) => {
-        if (a.value !== null) return null;
+        if (a.value !== null || placeholder) return null;
         const [x, y] = point(i, R);
         return <circle key={a.label} cx={x} cy={y} r="5" fill="var(--color-card)" stroke="var(--color-fg-muted)" strokeDasharray="2 2" />;
       })}
 
-      {ringFont > 0 &&
+      {placeholder && (
+        <text
+          x={cx}
+          y={cy + axisFont / 3}
+          textAnchor="middle"
+          fontSize={axisFont}
+          fill="var(--color-fg-muted)"
+          stroke="var(--color-card)"
+          strokeWidth="4"
+          paintOrder="stroke"
+          data-testid="radar-placeholder"
+        >
+          {placeholder}
+        </text>
+      )}
+
+      {ringFont > 0 && !placeholder &&
         rings.map((name, r) => (
           <text
             key={name}
@@ -147,7 +183,7 @@ function RadarSvg({
         const [x, y] = point(i, R + gap);
         const anchor = Math.abs(x - cx) < 4 ? "middle" : x > cx ? "start" : "end";
         const top = y < cy - R / 2;
-        const showNote = a.value === null && variant === "full";
+        const showNote = a.value === null && variant === "full" && !placeholder;
         // Labels near the top sit on their point; lower ones are nudged down so they clear the axis end.
         const baseY = top ? y : y + axisFont / 3;
         return (

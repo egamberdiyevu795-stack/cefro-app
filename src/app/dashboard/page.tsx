@@ -19,6 +19,7 @@ import {
   partTiles,
   practiseNext,
   progress,
+  progressPreview,
   scoredAttempts,
   type TaskInfo,
 } from "@/features/dashboard/progress";
@@ -29,6 +30,7 @@ import {
   GuestCard,
   PractiseNextCard,
   ProgressCard,
+  ProgressPreviewCard,
   RECENT_ATTEMPT_COUNT,
   RecentAttemptsCard,
   Wordmark,
@@ -65,8 +67,11 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *   row 3: [ Recent attempts           ] [ Biggest fix     ]
  * Returning, phone: practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
  * Attempts, none scored yet (still scoring, failed, too short): [ Find your level ("Start practice"), exam date* ],
- *   [ Recent attempts ], [ Exam parts ]. No level, skills or biggest fix until an answer is scored.
- * First visit (no attempts): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
+ *   [ Recent attempts ], [ Speaking progress, empty ], [ Exam parts ]. No level, skills or biggest fix until an answer
+ *   is scored.
+ * First visit (no attempts): [ Find your level, with "When is your exam?"* ], [ Speaking progress, empty: "—", the
+ *   radar with only its skill names ], then [ Exam parts, four in a row ]. The empty card shows a new student the
+ *   skills map exists before they practise; it has no black button and no number that reads as a result.
  * The Account tab (a link to the Account page) is always in the nav, whatever the flags.
  * Signed out (no account, not mock mode): a quiet "You are not signed in" card on top (GuestCard), whatever the view.
  *
@@ -221,6 +226,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               <>
                 {!isTeacher && <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={quietNext} className="lg:col-span-2" />}
                 {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
+                {!isTeacher && <ProgressPreviewCard preview={progressPreview(attempts, { target, now })} className="lg:col-span-2" />}
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
                   wide

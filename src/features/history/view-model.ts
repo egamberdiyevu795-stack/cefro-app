@@ -251,7 +251,7 @@ function outcomeOf(a: HistoryAttempt): RowOutcome {
 }
 
 /** The band of a scored attempt. "Too short to rate" is band 0 but not a rating, so it is not scored (as on the result page). */
-function scoredBand(a: HistoryAttempt) {
+export function scoredBand(a: HistoryAttempt) {
   if (a.status !== "completed" || !a.result) return null;
   return a.result.scoring.zero_reason === "too_short" ? null : a.result.scoring;
 }

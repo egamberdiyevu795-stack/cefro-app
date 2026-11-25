@@ -232,11 +232,11 @@ export function StudentView({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start">
       <Card aria-labelledby="student-title" className="lg:col-span-2">
-        <p className="text-caption text-fg-muted">Student</p>
+        <p className="text-caption text-fg-muted">Student in this class</p>
         <h1 id="student-title" className="mt-1 text-title font-medium tracking-[-0.01em] text-fg">
           {detail.name}
         </h1>
-        <p className="mt-3 text-caption text-fg-muted">Current level</p>
+        <p className="mt-3 text-caption text-fg-muted">Their current level</p>
         <p className="text-stat font-light tracking-[-0.02em] text-fg" data-testid="student-level">
           {detail.level}
         </p>
@@ -287,9 +287,9 @@ export function StudentView({
         ) : (
           <p className="text-body text-fg-muted">No single attempts yet. Only answers made after joining are shared.</p>
         )}
-      </Card>
-      <div className="lg:col-start-1">
-        <ConfirmAction
+        {/* Under their attempts, inside the card, not a loose red link below the page. */}
+        <div className="mt-4 border-t border-line pt-3">
+          <ConfirmAction
           testId="remove-student"
           label="Remove from class"
           title={`Remove ${detail.name}?`}
@@ -304,8 +304,9 @@ export function StudentView({
           then={afterRemove}
           demo={demo}
           demoDone={`Demo mode: ${detail.name} would now be removed. Nothing was changed.`}
-        />
-      </div>
+          />
+        </div>
+      </Card>
     </div>
   );
 }

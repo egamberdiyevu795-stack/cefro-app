@@ -219,8 +219,12 @@ export function studentDetail(student: SharedStudent): StudentDetail {
   return {
     name: student.shownName,
     level: levelText(skills ? overallLevel(skills) : null),
+    // Only the skills that were assessed: a permanent "Pronunciation · Not assessed" row (the audio step is off) tells
+    // the teacher nothing and reads as a gap in the student. The student's own radar leaves it out the same way.
     skills: skills
-      ? (Object.keys(FEATURE_LABELS) as (keyof typeof FEATURE_LABELS)[]).map((f) => ({ name: FEATURE_LABELS[f], level: skills[f] ? LEVEL_LABELS[skills[f]!] : "Not assessed" }))
+      ? (Object.keys(FEATURE_LABELS) as (keyof typeof FEATURE_LABELS)[])
+          .filter((f) => skills[f])
+          .map((f) => ({ name: FEATURE_LABELS[f], level: LEVEL_LABELS[skills[f]!] }))
       : [],
     mockRows: student.mocks.map((m) => mockRow(m, student.attempts.filter((a) => a.sessionId === m.id))),
     rows: toHistoryRows(loose, student.attempts),

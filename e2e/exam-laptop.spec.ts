@@ -210,7 +210,7 @@ test.describe("laptop width (1280 px)", () => {
     await expect(page.getByTestId("class-mock-results")).toBeVisible();
   });
 
-  test("T8: one row per student, sorted by level, bands, Listen opens T6, the one black button is Open first unrated", async ({ page }) => {
+  test("T8: one row per student, sorted by level, part levels, Listen opens T6, the one black button is Open first unrated", async ({ page }) => {
     const calls = watchApi(page);
     await page.goto(`${CLASS}/exam/demo-class-mock?mock=1&as=teacher`);
     await expect(page.getByRole("heading", { name: /^Mock 3 · \d\d\.\d\d\.\d\d$/ })).toBeVisible();
@@ -222,7 +222,10 @@ test.describe("laptop width (1280 px)", () => {
     expect(levels.slice(2)).toEqual(["Not started", "Not started", "Not started", "Not started"]);
     for (const level of levels.slice(0, 2)) expect(level).toMatch(/^(Below B1|B1|B2|C1|Estimate not ready yet)$/);
     await expect(rows.filter({ hasText: "Bekzod" })).toContainText("Not started"); // his mock was at home: not part of this class mock
-    await expect(rows.first().getByRole("list", { name: /part bands/ }).getByRole("listitem")).toHaveCount(4);
+    // Each part cell leads with the level, with its exam band under it, as everywhere else.
+    const cells = rows.first().getByRole("list", { name: /part levels/ }).getByRole("listitem");
+    await expect(cells).toHaveCount(4);
+    await expect(cells.first()).toHaveText(/^Part 1\.1 (Below B1|A2|B1|B2|C1) Band [0-5]$/);
     await expect(page.getByTestId("common-problems")).toBeVisible();
     await audit(page, 1);
     await expect(page.locator(BLACK)).toHaveText(/Open first unrated/);

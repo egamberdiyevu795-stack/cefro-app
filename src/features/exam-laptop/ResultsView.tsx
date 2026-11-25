@@ -85,10 +85,11 @@ export function ResultsView({
               {row.state === "not_started" ? (
                 <span className="flex-1" />
               ) : (
-              <ul className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1" aria-label={`${row.name}: part bands`}>
+              <ul className="flex min-w-0 flex-1 flex-wrap gap-x-5 gap-y-1" aria-label={`${row.name}: part levels`}>
                 {row.bands.map((b) => (
                   <li key={b.part} className="text-label text-fg-muted">
-                    {b.label} <span className="text-fg">{b.text}</span>
+                    {b.label} <span className="font-medium text-fg">{b.text}</span>
+                    {b.band && <span className="ml-1 text-fg-subtle">{b.band}</span>}
                   </li>
                 ))}
               </ul>

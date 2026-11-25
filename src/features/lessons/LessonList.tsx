@@ -9,7 +9,7 @@ import type { Lesson } from "@/content/lessons";
  */
 export function LessonList({ lessons, href }: { lessons: readonly Lesson[]; href: (lesson: Lesson) => string }) {
   return (
-    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="lesson-list">
+    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4 lg:mx-0" data-testid="lesson-list">
       <h1 className="text-title font-medium tracking-[-0.01em] text-fg">Lessons</h1>
       <Card aria-label="Lessons">
         <ul className="-my-1 divide-y divide-line">

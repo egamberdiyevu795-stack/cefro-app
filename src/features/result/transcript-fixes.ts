@@ -29,6 +29,8 @@ export interface TranscriptPiece {
   fixId: number | null;
   /** Part 3 only: words read from the lists (dotted underline). */
   copied: boolean;
+  /** A strong point the evaluator quoted (green), when it is not also a mistake. */
+  good?: boolean;
 }
 
 /** One or more sentences. A unit with `fixIds` is one tap target; the others are plain text. */
@@ -40,6 +42,8 @@ export interface TranscriptUnit {
 export interface TranscriptFixesView {
   /** Sentences with at least one mistake. */
   count: number;
+  /** Strong points found in the transcript (green). */
+  goodCount?: number;
   items: FixItem[];
   units: TranscriptUnit[];
 }
@@ -63,8 +67,14 @@ export function buildTranscriptFixes(
   fixes: readonly SentenceFix[] | undefined,
   /** Character ranges to mark as copied from the lists (Part 3). */
   copied: readonly Range[] = [],
+  /** The evaluator's strength quotes ("what you did well"), shown in green where they are found. */
+  strengths: readonly string[] = [],
 ): TranscriptFixesView | null {
   if (!fixes) return null;
+  const good = strengths.flatMap((quote) => {
+    const range = locateQuote(quote, transcript);
+    return range ? [{ start: range.start, end: range.end }] : [];
+  });
 
   const located = fixes.flatMap((fix, id) => {
     const range = locateQuote(fix.you_said, transcript);
@@ -95,7 +105,7 @@ export function buildTranscriptFixes(
     const marks = located.filter((l) => l.start >= unit.start && l.start < unit.end);
     const cuts = new Set<number>([unit.start, unit.end]);
     for (const m of marks) [m.start, Math.min(m.end, unit.end)].forEach((c) => cuts.add(c));
-    for (const c of copied) [c.start, c.end].forEach((p) => p > unit.start && p < unit.end && cuts.add(p));
+    for (const c of [...copied, ...good]) [c.start, c.end].forEach((p) => p > unit.start && p < unit.end && cuts.add(p));
     const points = [...cuts].sort((a, b) => a - b);
     const pieces: TranscriptPiece[] = [];
     for (let i = 0; i + 1 < points.length; i++) {
@@ -105,12 +115,14 @@ export function buildTranscriptFixes(
         text: transcript.slice(start, end),
         fixId: mark ? mark.id : null,
         copied: copied.some((c) => start >= c.start && end <= c.end),
+        // Only set when true, so a transcript without strengths builds exactly the pieces it did before.
+        ...(!mark && good.some((g) => start >= g.start && end <= g.end) ? { good: true } : {}),
       });
     }
     return { pieces, fixIds: unit.ids.sort((a, b) => a - b) };
   });
 
-  return { count: built.filter((u) => u.fixIds.length > 0).length, items, units: built };
+  return { count: built.filter((u) => u.fixIds.length > 0).length, ...(good.length > 0 ? { goodCount: good.length } : {}), items, units: built };
 }
 
 /** "6 sentences to improve" / "1 sentence to improve" / "No sentences marked". */

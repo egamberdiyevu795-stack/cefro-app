@@ -66,7 +66,7 @@ export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">
       assertServerConfigured();
     }
     return (
-      <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/lessons">
+      <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} back={false} activeHref="/lessons">
         <LessonView lesson={lesson} from={null} listHref={mockLink("/lessons", mock)} practiseHref={mockLink(PART2_HREF, mock)} demo={mock} />
       </AppShell>
     );
@@ -79,7 +79,7 @@ export default async function LessonPage(props: PageProps<"/lessons/[lessonId]">
 
   return (
     // The Lessons tab is the current section.
-    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/lessons">
+    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} back={false} activeHref="/lessons">
       <LessonView
         lesson={lesson}
         from={{

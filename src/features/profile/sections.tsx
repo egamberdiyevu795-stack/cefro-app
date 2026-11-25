@@ -54,7 +54,7 @@ export function AccountCard({ account, attempts, level, mock }: { account: Accou
 }
 
 /**
- * The current level, from the latest scored Part 2 answer only (`currentLevel`). None: "No level yet" and a link to
+ * The current level: the same level, target and basis as Home (`currentLevel`). None: "No level yet" and a link to
  * Part 2. The black "Practise Part 2" / "Go to Part 2" is the page's one black control.
  */
 function LevelBlock({ level, mock }: { level: ProfileLevel; mock: boolean }) {
@@ -63,11 +63,13 @@ function LevelBlock({ level, mock }: { level: ProfileLevel; mock: boolean }) {
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p className="text-caption text-fg-muted">Current level</p>
-        <p className="text-stat font-light tracking-[-0.02em] text-fg" data-testid="profile-level">
-          {level.level}
+        <p className="flex items-baseline gap-2">
+          <span className="text-stat font-light tracking-[-0.02em] text-fg" data-testid="profile-level">
+            {level.level}
+          </span>
+          <span className="text-lead font-medium text-fg">· target {level.target}</span>
         </p>
-        <p className="mt-2 text-label text-fg">{level.band}</p>
-        <p className="mt-0.5 text-caption text-fg-muted">From your latest scored Part 2 answer, {level.date}</p>
+        <p className="mt-1 text-caption text-fg-muted">{level.basis}</p>
       </div>
       <PillButton href={href}>Practise Part 2</PillButton>
     </div>

@@ -28,14 +28,17 @@ export function AppShell({
   activeHref?: string;
   /** Mock mode's demo teacher: Home and Account open the demo teacher's pages (`?mock=1&as=teacher`). */
   demoTeacher?: boolean;
-  /** The header's back link, when it is not the dashboard (e.g. a teacher's class). */
-  back?: { href: string; label: string };
+  /**
+   * The header's back link, when it is not the dashboard (e.g. a teacher's class). `false`: no back link, for the main
+   * tabs (the side menu already goes everywhere) and for pages that have their own, more precise back link (a lesson).
+   */
+  back?: { href: string; label: string } | false;
   children: React.ReactNode;
 }) {
   const items = navItemsFor(flags, mock).map((item) => (demoTeacher && item.href.startsWith("/dashboard") ? { ...item, href: asDemoTeacher("/dashboard") } : item));
   return (
     <div className="min-h-dvh bg-page font-ui text-fg md:p-6">
-      <div className="mx-auto flex max-w-[1280px] px-4 pt-2 md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:pt-6 md:shadow-card">
+      <div className="mx-auto flex max-w-[1280px] px-4 pt-2 md:min-h-[calc(100dvh-3rem)] md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:pt-6 md:shadow-card">
         <aside className="md:flex md:w-12 md:shrink-0 md:flex-col md:items-center md:gap-14">
           <Wordmark className="hidden md:flex md:h-12" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
           <Sidebar
@@ -47,7 +50,11 @@ export function AppShell({
 
         <div className="min-w-0 flex-1">
           <header className="mb-2 flex h-12 items-center justify-between md:mb-3">
-            <BackLink mock={mock} href={back?.href ?? (demoTeacher ? asDemoTeacher("/dashboard") : undefined)} label={back?.label} />
+            {back === false ? (
+              <span aria-hidden="true" />
+            ) : (
+              <BackLink mock={mock} href={back?.href ?? (demoTeacher ? asDemoTeacher("/dashboard") : undefined)} label={back?.label} />
+            )}
             <Wordmark className="flex md:hidden" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
           </header>
           <main id="main" className="pb-28 md:pb-0">

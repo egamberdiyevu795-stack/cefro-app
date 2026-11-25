@@ -50,6 +50,10 @@
   /* Amber underline under a mistake in the transcript (never red). Only ever a line: 4.89:1 on card, 4.26:1 on well (3:1 needed). */
   --color-mark: #b45309;
 
+  /* Soft green behind a strong point in the transcript ("what you did well"). A fill, not a line, so it differs from the
+     amber underline by shape too, not only by colour; the text on it stays --color-fg. */
+  --color-good: #d7f5df;
+
   /* Positive change label */
   --color-lime: #c8f26c;
   --color-on-lime: #263409;

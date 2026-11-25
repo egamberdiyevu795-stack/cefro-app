@@ -90,7 +90,7 @@ export function TaskList({
   mockCard?: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="task-list">
+    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4 lg:mx-0" data-testid="task-list">
       {top}
       <div className="px-1">
         <h1 className="text-title font-medium tracking-[-0.01em] text-fg">Practice</h1>

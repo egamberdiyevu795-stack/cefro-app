@@ -4,6 +4,7 @@ import {
   CardHeader,
   DeltaLabel,
   GoalBar,
+  Icon,
   PillButton,
   ProgressBar,
   RadarChart,
@@ -15,9 +16,9 @@ import {
 import type { FeatureFlags } from "@/config/features";
 import { mockLink } from "@/features/demo/demo-mode";
 import { AttemptRow } from "@/features/history/sections";
-import type { HistoryRow } from "@/features/history/view-model";
+import { levelOfBand, type HistoryRow } from "@/features/history/view-model";
 import { FIRST_VISIT, NOT_SCORED_YET } from "./mock-data";
-import { radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress } from "./progress";
+import { emptyRadarAxes, radarAxes, RADAR_RINGS, type DashboardFix, type PractiseNext, type Progress, type ProgressPreview } from "./progress";
 
 /*
  * Dashboard cards. Each takes a `className` for its place in the page grid (order on phones, cell on desktop).
@@ -180,7 +181,60 @@ export function ProgressCard({
   );
 }
 
-/** One exam part tile: its latest band, or "Start" when nothing is scored in it yet; "Coming soon" with no task yet. */
+/**
+ * No scored answer yet: the same Speaking progress card, empty, so a new student sees what they will get before they
+ * practise (otherwise the radar only appears after the first scored answer). No number that could be read as a
+ * result: "—" for the level, the practice numbers at their real values (zero on a first visit), a grey pill (the page's
+ * one black button stays "Start your first practice") and a radar with only its skill names. One card on every screen.
+ */
+export const PREVIEW_PLACEHOLDER = "No data yet";
+export const PREVIEW_UNLOCK = "Answer 1 task to unlock your skills map";
+
+export function ProgressPreviewCard({ preview, className }: { preview: ProgressPreview; className?: string }) {
+  return (
+    <section
+      aria-labelledby="progress-preview-title"
+      data-testid="progress-preview"
+      className={cx(
+        "grid grid-cols-1 gap-6 rounded-card bg-card p-5 shadow-card lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)] lg:gap-x-8 lg:gap-y-0 lg:p-6",
+        className,
+      )}
+    >
+      <CardHeader id="progress-preview-title" title="Speaking progress" className="lg:col-span-2" />
+
+      <div>
+        <p className="text-caption text-fg-muted">Current level</p>
+        <p className="mt-1 flex items-baseline gap-2">
+          <span className="text-stat font-light tracking-[-0.03em] text-fg-muted" aria-hidden="true">
+            —
+          </span>
+          <span className="sr-only">No level yet</span>
+          <span className="text-lead font-medium">· target {preview.targetLabel}</span>
+        </p>
+        <p className="mt-1 text-caption text-fg-muted">Appears after your first scored answer</p>
+        <dl className="mt-6">
+          {preview.stats.map((s) => (
+            <StatRow key={s.label} label={s.label} value={s.value} />
+          ))}
+        </dl>
+        <div className="mt-6 flex h-9 items-center gap-2.5 rounded-full bg-well pl-1.5 pr-4">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-card text-fg-muted">
+            <Icon name="mic" size={14} />
+          </span>
+          <span className="text-label text-fg">{PREVIEW_UNLOCK}</span>
+        </div>
+      </div>
+
+      <div className="lg:self-center">
+        <div className="mx-auto max-w-[24rem] lg:max-w-none">
+          <RadarChart axes={emptyRadarAxes()} rings={RADAR_RINGS} label="Your level in each skill, empty until your first scored answer" placeholder={PREVIEW_PLACEHOLDER} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** One exam part tile: its latest level and band, or "Start" when nothing is scored in it yet; "Coming soon" with no task yet. */
 export type ExamPartTileView = {
   part: string;
   name: string;
@@ -218,8 +272,9 @@ export function ExamPartsCard({ parts, wide = false, className }: { parts: reado
                 )}
               </div>
               <p className="truncate text-caption text-fg-muted">{p.name}</p>
-              <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{tried ? `Band ${p.band}` : "No band"}</p>
-              <p className="text-label text-fg-muted">{p.recommendation ?? p.bandLabel ?? "Not tried yet"}</p>
+              {/* The level leads (as on Home and History); the exam band is the smaller line under it. */}
+              <p className="mt-3 text-title font-medium tracking-[-0.01em] text-fg">{tried && p.bandLabel ? levelOfBand(p.bandLabel) : "No level"}</p>
+              <p className="text-label text-fg-muted">{p.recommendation ?? (tried ? `Band ${p.band} · ${p.bandLabel}` : "Not tried yet")}</p>
               <div className="mt-auto pt-3">
                 <PillButton href={p.href} variant="light" size="sm" label={`${tried ? "Practise" : "Start"} ${p.part}`}>
                   {tried ? "Practise" : "Start"}
@@ -270,7 +325,9 @@ export function RecentAttemptsCard({
       ) : rows.length === 0 ? (
         <p className="text-body text-fg-muted">No attempts yet. Your answers will be listed here.</p>
       ) : (
-        <ul className="-my-1 flex flex-1 flex-col justify-around">
+        // Spread over the card's height only when there are enough rows; one or two stay at the top, not floating
+        // in the middle of a card stretched to its neighbour's height.
+        <ul className={cx("-my-1 flex flex-1 flex-col", rows.length >= 3 ? "justify-around" : "justify-start")}>
           {rows.slice(0, RECENT_ATTEMPT_COUNT).map((row, i) => (
             <AttemptRow
               key={row.id}
@@ -285,6 +342,23 @@ export function RecentAttemptsCard({
 }
 
 /** The latest scored answer's biggest fix, as on its result page, and how often the same problem still shows. */
+/**
+ * No scored answer yet: the Biggest fix card in its place, with what will appear in it, so a new student's Home has the
+ * same cards in the same places as a returning student's. No black button and nothing that reads as a result.
+ */
+export function BiggestFixPreviewCard({ className }: { className?: string }) {
+  return (
+    <Card aria-labelledby="fix-title" data-testid="fix-preview" className={cx("flex flex-col", className)}>
+      <CardHeader id="fix-title" title="Biggest fix" />
+      <p className="text-caption text-fg-muted">You said</p>
+      <blockquote className="mt-1 border-l-2 border-line pl-3 text-body text-fg-muted">Your own words will appear here.</blockquote>
+      <p className="mt-4 text-body text-fg-muted">
+        After your first answer, this shows the one thing to fix first, with a better way to say it.
+      </p>
+    </Card>
+  );
+}
+
 export function BiggestFixCard({ fix, className }: { fix: DashboardFix; className?: string }) {
   const { fix: view, stillIn } = fix;
   return (

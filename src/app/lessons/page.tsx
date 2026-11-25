@@ -24,7 +24,7 @@ export default async function LessonsPage(props: PageProps<"/lessons">) {
     assertServerConfigured();
   }
   return (
-    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} activeHref="/lessons">
+    <AppShell flags={FEATURE_FLAGS} account={mock ? "mock" : "real"} back={false} activeHref="/lessons">
       <LessonList lessons={shownLessons()} href={(lesson) => mockLink(`/lessons/${encodeURIComponent(lesson.slug)}`, mock)} />
     </AppShell>
   );

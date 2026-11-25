@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Card, CardHeader, PillButton, cx, styles } from "@/components/ds";
 import type { CommonProblem } from "@/features/teacher/view-model";
 import { teacherHref, teacherLinks } from "@/features/teacher/links";
@@ -37,7 +36,6 @@ export function ResultsView({
   const link = (href: string) => teacherHref(href, { mock, demoTeacher: mock });
   const mockHref = (mockId: string) => link(teacherLinks.mock(classId, mockId));
   const lessonHref = (slug: string) => link(teacherLinks.lesson(classId, slug));
-  const backToClassHref = link(teacherLinks.cls(classId));
   const [direction, setDirection] = useState<SortDirection>("high");
   const sorted = sortByLevel(rows, direction);
   const first = firstUnrated(sorted);
@@ -83,6 +81,10 @@ export function ResultsView({
                   {row.levelText}
                 </span>
               </span>
+              {/* Not started: just "Not started", not four "Part 1.1 —" cells. */}
+              {row.state === "not_started" ? (
+                <span className="flex-1" />
+              ) : (
               <ul className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1" aria-label={`${row.name}: part bands`}>
                 {row.bands.map((b) => (
                   <li key={b.part} className="text-label text-fg-muted">
@@ -90,6 +92,7 @@ export function ResultsView({
                   </li>
                 ))}
               </ul>
+              )}
               {row.mockId ? (
                 <PillButton href={mockHref(row.mockId)} variant="quiet" size="sm" icon="play" label={`Listen: ${row.name}`}>
                   Listen
@@ -103,9 +106,6 @@ export function ResultsView({
       </Card>
       <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-2">
         <CommonProblemsCard problems={problems} lessonHref={lessonHref} />
-        <Link href={backToClassHref} className={cx(styles.SMALL_ACTION, "min-h-9 self-start")}>
-          Back to the class
-        </Link>
       </div>
     </div>
   );

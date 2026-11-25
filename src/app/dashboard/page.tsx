@@ -238,18 +238,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
                 <BiggestFixPreviewCard className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
-            ) : (
-              <>
-                {!isTeacher && <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={quietNext} className="lg:col-span-2" />}
-                {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
-                {!isTeacher && <ProgressPreviewCard preview={progressPreview(attempts, { target, now })} className="lg:col-span-2" />}
-                <ExamPartsCard
-                  parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
-                  wide
-                  className="lg:col-span-2"
-                />
-              </>
-            )}
+            ) : null /* A teacher's Home is their classes: no student "Exam parts" card ("Recommended", "shows your level fastest"). */}
           </main>
         </div>
       </div>

@@ -85,24 +85,25 @@ export function ClassOverview({
         <CommonProblemsCard problems={problems} lessonHref={href.lesson} />
         <ClassMocksCard mocks={classMocks} resultsHref={href.examResults} />
         <StudentsCard students={students} studentHref={href.student} />
-      </div>
-      <div className="lg:col-start-2 lg:row-start-3">
-        <ConfirmAction
-          testId="close-class"
-          label="Close class"
-          title={`Close ${name}?`}
-          text={
-            <>
-              <p>Every student leaves the class and you lose access to their attempts. The code stops working.</p>
-              <p className="mt-1">Your levels are kept only as anonymous number pairs.</p>
-            </>
-          }
-          confirmLabel="Close class"
-          request={{ url: `/api/teacher/classes/${encodeURIComponent(classId)}/close`, method: "POST" }}
-          then={href.afterClose}
-          demo={demo}
-          demoDone="Demo mode: the class would now be closed. Nothing was changed."
-        />
+        {/* Under the student list, away from the everyday controls, so it is never next to Copy join code. */}
+        <div className="px-1 pt-2">
+          <ConfirmAction
+            testId="close-class"
+            label="Close class"
+            title={`Close ${name}?`}
+            text={
+              <>
+                <p>Every student leaves the class and you lose access to their attempts. The code stops working.</p>
+                <p className="mt-1">Your levels are kept only as anonymous number pairs.</p>
+              </>
+            }
+            confirmLabel="Close class"
+            request={{ url: `/api/teacher/classes/${encodeURIComponent(classId)}/close`, method: "POST" }}
+            then={href.afterClose}
+            demo={demo}
+            demoDone="Demo mode: the class would now be closed. Nothing was changed."
+          />
+        </div>
       </div>
     </div>
   );
@@ -174,10 +175,13 @@ function StudentsCard({ students, studentHref }: { students: readonly StudentRow
                     <span className="text-fg-muted">Biggest fix: </span>
                     {s.biggestFix}
                   </span>
-                  <span className="mt-0.5 block text-label text-fg">
-                    <span className="text-fg-muted">Retry goal: </span>
-                    {s.retryGoal}
-                  </span>
+                  {/* Only when there is one: a row of "Retry goal: —" for every student who never retried is noise. */}
+                  {s.retryGoal !== "—" && (
+                    <span className="mt-0.5 block text-label text-fg">
+                      <span className="text-fg-muted">Retry goal: </span>
+                      {s.retryGoal}
+                    </span>
+                  )}
                 </span>
               </Link>
             </li>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Card, PillAction, cx, styles } from "@/components/ds";
+import { Card, CardHeader, PillAction, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { DEFAULT_ROOM_LABEL, ROOM_LABEL_MAX_LENGTH, normaliseRoomLabel, type PaperMode } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
@@ -70,7 +70,9 @@ export function StartExam({ classId, className, open, suggestion, demo, demoClas
   };
 
   return (
-    <Card aria-labelledby="start-exam-title" className="mx-auto w-full max-w-2xl lg:mx-0" data-testid="start-exam">
+    // The form on the left and how the exam laptop runs beside it, as on the class page, so the right half is not empty.
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start">
+    <Card aria-labelledby="start-exam-title" data-testid="start-exam">
       <p className="text-caption text-fg-muted">{className}</p>
       <h1 id="start-exam-title" className="mt-1 text-title font-medium tracking-[-0.01em] text-fg">
         {open ? `Join ${open.title}` : "Start exam laptop"}
@@ -78,7 +80,7 @@ export function StartExam({ classId, className, open, suggestion, demo, demoClas
       <p className="mt-2 text-body text-fg">
         {open
           ? "Another laptop already started this class mock. This laptop joins it: students in progress on the other laptop can't be picked here."
-          : "One student at a time takes the full mock on this laptop. Each student taps their name and types their class PIN, so their mock is saved to their own account. This laptop is signed out of your account while it runs the exam: to end it you type your email and password."}
+          : "One student at a time takes the full mock on this laptop."}
       </p>
       <form method="post" onSubmit={(e) => void start(e)} noValidate className="mt-5">
         {!open && (
@@ -144,5 +146,15 @@ export function StartExam({ classId, className, open, suggestion, demo, demoClas
         </div>
       </form>
     </Card>
+    <Card aria-labelledby="how-title">
+      <CardHeader id="how-title" title="How it runs" />
+      <ol className="flex list-decimal flex-col gap-2 pl-4 text-body text-fg-muted marker:text-fg-subtle">
+        <li>This laptop signs out of your account and shows the class list.</li>
+        <li>Each student taps their name and types their class PIN, so their mock is saved to their own account.</li>
+        <li>They take all four parts; the next student starts when they finish.</li>
+        <li>To end the exam you type your email and password on this laptop.</li>
+      </ol>
+    </Card>
+    </div>
   );
 }

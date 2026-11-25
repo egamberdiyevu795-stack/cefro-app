@@ -3,7 +3,7 @@ import { EXAM_PART_IDS, examPartLabel } from "@/domain/speaking/exam-part";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import type { EstimatedLevel } from "@/domain/speaking/mock-level";
 import { estimateMockSpeaking } from "@/domain/speaking/mock-score";
-import { mockBands } from "@/features/history/view-model";
+import { levelOfBand, mockBands, scoredBand } from "@/features/history/view-model";
 import { commonProblems, type CommonProblem, type SharedStudent } from "@/features/teacher/view-model";
 
 /*
@@ -24,7 +24,8 @@ export interface ResultRow {
   /** "B2", "Estimate not ready yet", "In progress", "Not finished" or "Not started". Never a score, never Passed / Failed. */
   levelText: string;
   /** One entry per part: "Band 3" or "—" (not done, not scored). */
-  bands: { part: ExamPartId; label: string; text: string }[];
+  /** One cell per part: `text` is the level ("B2"), `band` the exam band under it ("Band 4"), null when not done. */
+  bands: { part: ExamPartId; label: string; text: string; band: string | null }[];
   /** At least one scored part, and the teacher rated neither the whole mock nor every scored part. */
   unrated: boolean;
 }
@@ -39,7 +40,7 @@ export function classMockOf(student: Pick<SharedStudent, "mocks">, classMockId: 
 
 export function resultRow(student: SharedStudent, classMockId: string, rated: { mock: boolean; ratedParts: number }): ResultRow {
   const mock = classMockOf(student, classMockId);
-  if (!mock) return { memberId: student.memberId, name: student.shownName, state: "not_started", mockId: null, level: null, levelText: "Not started", bands: bandCells({}), unrated: false };
+  if (!mock) return { memberId: student.memberId, name: student.shownName, state: "not_started", mockId: null, level: null, levelText: "Not started", bands: bandCells([]), unrated: false };
   const parts = student.attempts.filter((a: HistoryAttempt) => a.sessionId === mock.id);
   const bands = mockBands(parts);
   const scored = EXAM_PART_IDS.filter((p) => bands[p] != null).length;
@@ -53,13 +54,22 @@ export function resultRow(student: SharedStudent, classMockId: string, rated: { 
     mockId: mock.id,
     level,
     levelText,
-    bands: bandCells(bands),
+    bands: bandCells(parts),
     unrated: scored > 0 && !rated.mock && rated.ratedParts < scored,
   };
 }
 
-function bandCells(bands: Partial<Record<ExamPartId, number | null>>): ResultRow["bands"] {
-  return EXAM_PART_IDS.map((part) => ({ part, label: examPartLabel(part), text: bands[part] == null ? "—" : `Band ${bands[part]}` }));
+/** The level leads and the band follows it in small type, as on every other page ("B2 / Band 4", never "Band 4" alone). */
+function bandCells(parts: readonly HistoryAttempt[]): ResultRow["bands"] {
+  return EXAM_PART_IDS.map((part) => {
+    const scored = parts.filter((a) => a.part === part).map((a) => scoredBand(a)).find(Boolean);
+    return {
+      part,
+      label: examPartLabel(part),
+      text: scored ? levelOfBand(scored.label) : "—",
+      band: scored ? `Band ${scored.band}` : null,
+    };
+  });
 }
 
 export type SortDirection = "high" | "low";

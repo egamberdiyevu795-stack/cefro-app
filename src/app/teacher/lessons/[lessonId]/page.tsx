@@ -28,7 +28,7 @@ export default async function TeacherLessonPage(props: PageProps<"/teacher/lesso
   if (!lesson || !classId) notFound();
   if (page.mock ? classId !== DEMO_CLASS.id : !(await orNotFound(ownOpenClass(page.teacherId, classId)))) notFound();
   return (
-    <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/lessons" demoTeacher={page.mock} back={{ href: page.href(teacherLinks.home), label: "Home" }}>
+    <AppShell flags={FEATURE_FLAGS} account={page.mock ? "mock" : "real"} activeHref="/lessons" demoTeacher={page.mock} back={false}>
       <TeacherLessonView lesson={lesson} backHref={page.href(teacherLinks.cls(classId))} demo={page.mock} />
     </AppShell>
   );

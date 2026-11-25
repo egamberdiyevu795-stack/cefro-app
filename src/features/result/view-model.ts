@@ -278,7 +278,7 @@ export function buildResultView(
     skills: FEATURES.filter((feature) => result.assessment.features[feature]).map((feature) => skillRow(result, feature, prev)),
     pronunciationNote: result.audio.status === "not_assessed" ? AUDIO_REASON[result.audio.reason ?? "disabled"] : null,
     transcript: ctx.transcript,
-    transcriptFixes: buildTranscriptFixes(ctx.transcript, result.assessment.sentence_fixes),
+    transcriptFixes: buildTranscriptFixes(ctx.transcript, result.assessment.sentence_fixes, [], result.assessment.strengths.map((s) => s.quote)),
     durationMs: ctx.durationMs,
     retry: prev ? compareWithPrevious(prev, result) : null,
     developmentEvaluator: ctx.isDevelopmentProvider ?? false,

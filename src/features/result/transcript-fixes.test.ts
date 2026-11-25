@@ -80,3 +80,18 @@ describe("fixCountText", () => {
     expect(fixCountText(0)).toBe("No sentences marked in this answer");
   });
 });
+
+describe("strong points in green", () => {
+  it("marks the evaluator's strength quotes, not where they overlap a mistake, and counts them", () => {
+    const view = buildTranscriptFixes(T, fixes, [], ["It was a hard year", "We was tired", "not in the answer"])!;
+    const good = view.units.flatMap((u) => u.pieces).filter((p) => p.good);
+    expect(good.map((p) => p.text)).toEqual(["It was a hard year"]);
+    expect(view.goodCount).toBe(2); // found in the transcript; the one on a mistake stays amber
+    expect(view.units.map((u) => u.pieces.map((p) => p.text).join("")).join("")).toBe(T);
+  });
+
+  it("no strengths: the view is exactly as before", () => {
+    expect(buildTranscriptFixes(T, fixes, [], [])).toEqual(buildTranscriptFixes(T, fixes));
+    expect(buildTranscriptFixes(T, fixes)!.goodCount).toBeUndefined();
+  });
+});

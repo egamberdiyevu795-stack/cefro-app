@@ -243,7 +243,7 @@ async function partOfMock(teacherId: string, classId: string, part: ExamPartId, 
     band: source.band,
     bands,
     transcript: text,
-    fixes: text && result ? (argument && isMultilevelQ8(result) ? part3TranscriptFixes(result, toPublicArgumentTask(argument), text, bands) : buildTranscriptFixes(text, result.assessment.sentence_fixes)) : null,
+    fixes: text && result ? (argument && isMultilevelQ8(result) ? part3TranscriptFixes(result, toPublicArgumentTask(argument), text, bands) : buildTranscriptFixes(text, result.assessment.sentence_fixes, [], result.assessment.strengths.map((s) => s.quote))) : null,
     listen: await listenFor(teacherId, classId, attemptId, recording),
     rating: rating ? (rating.agrees ? { agrees: true } : { agrees: false, band: rating.teacherBand ?? 0 }) : null,
   };

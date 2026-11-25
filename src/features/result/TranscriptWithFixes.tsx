@@ -7,7 +7,8 @@ import { useHydrated } from "@/components/ds/useHydrated";
 import { fixCountText, type FixItem, type TranscriptFixesView, type TranscriptPiece } from "./transcript-fixes";
 
 /**
- * The transcript with the student's mistakes underlined in amber (never red), docs/v1-plan.md §3.3.
+ * The transcript with the student's mistakes underlined in amber (never red), docs/v1-plan.md §3.3, and the evaluator's
+ * strong points ("what you did well") on a soft green fill: a fill, not a line, so it differs from a mistake by shape.
  *
  * A sentence with a mistake is one button: tap it and You said / Better / Why open under it (one open at a time; tap
  * again to close). The count sits above ("6 sentences to improve"). Nothing here is a black button. The sentence
@@ -23,6 +24,14 @@ function Piece({ piece }: { piece: TranscriptPiece }) {
       <span data-testid="fix-mark" className={MARK}>
         {piece.text}
       </span>
+    );
+  }
+  if (piece.good) {
+    return (
+      <mark data-testid="good-mark" className="rounded-sm bg-good px-0.5 text-fg">
+        <span className="sr-only">(strong point) </span>
+        {piece.text}
+      </mark>
     );
   }
   if (piece.copied) {
@@ -83,6 +92,12 @@ export function TranscriptWithFixes({ view }: { view: TranscriptFixesView }) {
         </p>
       </div>
       {view.count > 0 && <p className="mt-1 text-label text-fg-muted">Tap an underlined sentence to see a better version.</p>}
+      {(view.goodCount ?? 0) > 0 && (
+        <p className="mt-1 flex items-center gap-2 text-label text-fg-muted">
+          <span aria-hidden="true" className="inline-block h-3 w-5 rounded-sm bg-good" />
+          Green: what you did well. Keep doing it.
+        </p>
+      )}
       <div className="mt-2 text-body text-fg" data-testid="transcript">
         {groups.map((group, g) =>
           group.panelFor !== null ? (

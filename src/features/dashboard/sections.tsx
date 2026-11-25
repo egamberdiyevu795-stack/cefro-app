@@ -325,7 +325,9 @@ export function RecentAttemptsCard({
       ) : rows.length === 0 ? (
         <p className="text-body text-fg-muted">No attempts yet. Your answers will be listed here.</p>
       ) : (
-        <ul className="-my-1 flex flex-1 flex-col justify-around">
+        // Spread over the card's height only when there are enough rows; one or two stay at the top, not floating
+        // in the middle of a card stretched to its neighbour's height.
+        <ul className={cx("-my-1 flex flex-1 flex-col", rows.length >= 3 ? "justify-around" : "justify-start")}>
           {rows.slice(0, RECENT_ATTEMPT_COUNT).map((row, i) => (
             <AttemptRow
               key={row.id}

@@ -300,7 +300,7 @@ export async function demoTeacherMock(
         text && result && "assessment" in result
           ? part === "3" && result.kind === "multilevel_q8"
             ? part3TranscriptFixes(result, toPublicArgumentTask(getArgumentTask(view.taskId)!), text, bands)
-            : buildTranscriptFixes(text, result.assessment.sentence_fixes)
+            : buildTranscriptFixes(text, result.assessment.sentence_fixes, [], result.assessment.strengths.map((s) => s.quote))
           : null,
       listen: { state: "playable", src: DEMO_RECORDING.src, durationMs: DEMO_RECORDING.durationMs },
       rating: null,

@@ -287,7 +287,7 @@ describe("Account page (/profile) in mock mode", () => {
       expect(markup).toContain("Recordings are deleted 30 days after scoring.");
       expect(markup.indexOf('data-testid="consent-status"')).toBeGreaterThan(markup.indexOf('data-testid="profile-attempts"'));
       expect(markup.indexOf('data-testid="consent-status"')).toBeLessThan(markup.indexOf('data-testid="exam-countdown"'));
-      expect(markup.match(BLACK)).toHaveLength(1);
+      expect(markup.match(BLACK)).toBeNull(); // Account is settings: no black button at all
       expect(markup).not.toMatch(SMALL);
     }
   });

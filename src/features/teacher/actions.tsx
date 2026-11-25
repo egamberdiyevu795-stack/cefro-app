@@ -9,6 +9,7 @@ import type { BandLabel } from "@/features/result/view-model";
 import { PIN_PROBLEM, isPin } from "@/domain/teacher/exam-laptop";
 import { MOCK_LEVELS, UPGRADE_TEXT, joinLinkPath } from "@/domain/teacher/rules";
 import type { TeacherMockRating } from "./mock-view";
+import { useMarkRated } from "./ReviewProgress";
 import { teacherHref, teacherLinks } from "./links";
 import { bandOptionLabel, ratingText, type TeacherRating } from "./view-model";
 
@@ -236,6 +237,7 @@ export function YourView({
   const [choosing, setChoosing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const markRated = useMarkRated();
 
   const save = async (next: TeacherRating) => {
     setBusy(true);
@@ -243,11 +245,13 @@ export function YourView({
     if (demo) {
       setRating(next);
       setChoosing(false);
+      if (idPrefix) markRated(idPrefix);
     } else {
       const result = await send(url, "PUT", next);
       if (result.ok) {
         setRating((result.data as { rating: TeacherRating }).rating);
         setChoosing(false);
+        if (idPrefix) markRated(idPrefix);
       } else setMessage(result.message);
     }
     setBusy(false);

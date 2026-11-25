@@ -70,8 +70,14 @@ test("T6: estimated level, date and status; four part cards; grey Agree / Choose
   }
   expect(new Set(boxes.map((b) => b.bg)).size).toBe(1);
 
+  const progress = page.getByTestId("review-progress");
+  const before = await progress.textContent();
   await part2.getByRole("button", { name: "Agree" }).click();
   await expect(part2.getByTestId("your-rating")).toHaveText("You: Agree");
+  // The summary counts the rating at once, without a reload (unless Part 2 was already rated in the demo).
+  await expect(progress).toHaveText(/^(\d of \d parts rated|All \d parts rated)$/);
+  const was = before?.match(/^(\d) of (\d) parts rated$/);
+  if (was && was[1] === "0") await expect(progress).toHaveText(`1 of ${was[2]} parts rated`);
   await part2.getByRole("button", { name: "Change" }).click();
   await part2.getByRole("button", { name: /^Band 4 · Higher B2$/ }).click();
   await expect(part2.getByTestId("your-rating")).toHaveText("You: Higher B2 (Band 4)");

@@ -85,24 +85,25 @@ export function ClassOverview({
         <CommonProblemsCard problems={problems} lessonHref={href.lesson} />
         <ClassMocksCard mocks={classMocks} resultsHref={href.examResults} />
         <StudentsCard students={students} studentHref={href.student} />
-      </div>
-      <div className="lg:col-start-2 lg:row-start-3">
-        <ConfirmAction
-          testId="close-class"
-          label="Close class"
-          title={`Close ${name}?`}
-          text={
-            <>
-              <p>Every student leaves the class and you lose access to their attempts. The code stops working.</p>
-              <p className="mt-1">Your levels are kept only as anonymous number pairs.</p>
-            </>
-          }
-          confirmLabel="Close class"
-          request={{ url: `/api/teacher/classes/${encodeURIComponent(classId)}/close`, method: "POST" }}
-          then={href.afterClose}
-          demo={demo}
-          demoDone="Demo mode: the class would now be closed. Nothing was changed."
-        />
+        {/* Under the student list, away from the everyday controls, so it is never next to Copy join code. */}
+        <div className="px-1 pt-2">
+          <ConfirmAction
+            testId="close-class"
+            label="Close class"
+            title={`Close ${name}?`}
+            text={
+              <>
+                <p>Every student leaves the class and you lose access to their attempts. The code stops working.</p>
+                <p className="mt-1">Your levels are kept only as anonymous number pairs.</p>
+              </>
+            }
+            confirmLabel="Close class"
+            request={{ url: `/api/teacher/classes/${encodeURIComponent(classId)}/close`, method: "POST" }}
+            then={href.afterClose}
+            demo={demo}
+            demoDone="Demo mode: the class would now be closed. Nothing was changed."
+          />
+        </div>
       </div>
     </div>
   );
@@ -135,6 +136,9 @@ export function CommonProblemsCard({ problems, lessonHref }: { problems: readonl
   );
 }
 
+/** The student list's columns on wide screens: student, level, last mock, biggest fix. */
+const STUDENT_COLUMNS = "md:grid-cols-[minmax(0,1.6fr)_3.5rem_minmax(0,1fr)_minmax(0,1.3fr)]";
+
 function StudentsCard({ students, studentHref }: { students: readonly StudentRow[]; studentHref: (memberId: string) => string }) {
   return (
     <Card aria-labelledby="students-title" data-testid="students">
@@ -142,47 +146,60 @@ function StudentsCard({ students, studentHref }: { students: readonly StudentRow
       {students.length === 0 ? (
         <p className="text-body text-fg-muted">No students yet. They appear here once they share with this class.</p>
       ) : (
-        <ul className="-my-1 divide-y divide-line">
-          {students.map((s, i) => (
-            <li key={s.memberId}>
-              <Link
-                href={studentHref(s.memberId)}
-                className={cx("-mx-2 flex items-start gap-3 rounded-tile px-2 py-3 transition-colors hover:bg-well", styles.FOCUS_RING)}
-                data-testid="student-row"
-              >
-                <Thumb tone={(((i % 4) + 1) as 1 | 2 | 3 | 4)} size={30}>
-                  <Icon name="user" size={14} />
-                </Thumb>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-3">
-                    <span className="text-body font-semibold text-fg">{s.name}</span>
-                    <span className="shrink-0 text-body font-medium text-fg">{s.level}</span>
-                  </span>
-                  <span className="mt-0.5 block text-label text-fg-muted">
-                    {s.attempts} {s.attempts === 1 ? "attempt" : "attempts"} · Last practice {s.lastPractice}
-                  </span>
-                  <span className="mt-0.5 block text-label text-fg" data-testid="last-mock">
-                    <span className="text-fg-muted">Last mock: </span>
-                    {s.lastMock}
-                  </span>
-                  {s.scopeNote && (
-                    <span className="mt-0.5 block text-label text-fg-muted" data-testid="scope-note">
-                      {s.scopeNote}
+        <>
+          {/* Wide screens: one line per student under column titles, so a class of 10+ scans at a glance. Phones: the
+              same cells stacked, each with its own label. */}
+          <div aria-hidden="true" className={cx("hidden px-2 pb-2 text-caption text-fg-muted md:grid", STUDENT_COLUMNS)}>
+            <span>Student</span>
+            <span>Level</span>
+            <span>Last mock</span>
+            <span>Biggest fix</span>
+          </div>
+          <ul className="-my-1 divide-y divide-line">
+            {students.map((s, i) => (
+              <li key={s.memberId}>
+                <Link
+                  href={studentHref(s.memberId)}
+                  className={cx("-mx-2 flex items-start gap-3 rounded-tile px-2 py-3 transition-colors hover:bg-well md:mx-0 md:block", styles.FOCUS_RING)}
+                  data-testid="student-row"
+                >
+                  <span className={cx("min-w-0 flex-1 md:grid md:items-center md:gap-x-4", STUDENT_COLUMNS)}>
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Thumb tone={(((i % 4) + 1) as 1 | 2 | 3 | 4)} size={30}>
+                        <Icon name="user" size={14} />
+                      </Thumb>
+                      <span className="min-w-0">
+                        <span className="flex items-baseline justify-between gap-3">
+                          <span className="truncate text-body font-semibold text-fg">{s.name}</span>
+                          <span className="shrink-0 text-body font-medium text-fg md:hidden">{s.level}</span>
+                        </span>
+                        <span className="block text-label text-fg-muted">
+                          {s.attempts} {s.attempts === 1 ? "attempt" : "attempts"} · Last practice {s.lastPractice}
+                        </span>
+                        {s.scopeNote && (
+                          <span className="block text-label text-fg-muted" data-testid="scope-note">
+                            {s.scopeNote}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                  )}
-                  <span className="mt-0.5 block text-label text-fg">
-                    <span className="text-fg-muted">Biggest fix: </span>
-                    {s.biggestFix}
+                    <span className="hidden text-body font-medium text-fg md:block">{s.level}</span>
+                    <span className="mt-0.5 block text-label text-fg md:mt-0" data-testid="last-mock">
+                      <span className="text-fg-muted md:sr-only">Last mock: </span>
+                      {s.lastMock}
+                    </span>
+                    <span className="mt-0.5 block text-label text-fg md:mt-0">
+                      <span className="text-fg-muted md:sr-only">Biggest fix: </span>
+                      {s.biggestFix}
+                      {/* Only when there is one: a row of "Retry goal: —" for every student who never retried is noise. */}
+                      {s.retryGoal !== "—" && <span className="block text-fg-muted">Retry goal: {s.retryGoal}</span>}
+                    </span>
                   </span>
-                  <span className="mt-0.5 block text-label text-fg">
-                    <span className="text-fg-muted">Retry goal: </span>
-                    {s.retryGoal}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Card>
   );

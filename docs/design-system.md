@@ -29,7 +29,7 @@ the moved files are byte-for-byte identical (git shows them as 100% renames).
 | moved | `src/app/register/page.tsx` → `src/app/(site)/register/page.tsx` |
 | moved | `src/app/practice/speaking/[taskId]/page.tsx` → `src/app/(site)/practice/speaking/[taskId]/page.tsx` (moved back out of `(site)` by the practice flow, see below) |
 | added | `src/app/(site)/layout.tsx` (the skip link, header and `<main>` that used to be in the root layout) |
-| edited | `src/app/layout.tsx` (now only `<html>`, `<body>` and fonts; adds Inter) |
+| edited | `src/app/layout.tsx` (now only `<html>`, `<body>` and the Inter preload) |
 | edited | `src/app/globals.css` (imports `design-system.css`; its own tokens unchanged) |
 
 API routes (`src/app/api/**`) did not move.
@@ -345,7 +345,9 @@ are `fg-muted` with a `card` halo, so they read against the card, not the blue f
 
 ## Type
 
-One family: Inter (`font-ui`, loaded with `next/font/google` in `src/app/layout.tsx`, weights 300–600).
+One family: Inter (`font-ui`, weights 300–600), served from this app: the `.woff2` files live in `public/fonts` with
+their SIL OFL licence, and `@font-face` sits in `src/app/globals.css`. Nothing is fetched from Google at build time, so
+a blip at Google can't fail a production build. Monospace (the timer digits, dev pages) is the platform's own.
 
 | Token | Size / line | Utility | Used for |
 | --- | --- | --- | --- |

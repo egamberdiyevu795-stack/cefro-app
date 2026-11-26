@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "@/components/SiteFooter";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-// The design-system font (see docs/design-system.md). Pages built on the design system use `font-ui`.
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], weight: ["300", "400", "500", "600"] });
+/*
+ * Fonts are served from this app, never fetched at build time: Inter from public/fonts (@font-face in globals.css,
+ * see docs/design-system.md), monospace from the platform. A blip in Google's font fetch failed the production build
+ * twice, and a build must not depend on a third party being up.
+ */
 
 export const metadata: Metadata = {
   title: { default: "CEFRO — CEFR speaking practice", template: "%s · CEFRO" },
@@ -15,7 +15,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} h-full antialiased`}>
+    <html lang="en" className="h-full antialiased">
+      <head>
+        {/* The weight the first screen is mostly set in: fetched with the page, not after the stylesheet parses. */}
+        <link rel="preload" href="/fonts/inter-latin-400.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      </head>
       <body className="flex min-h-full flex-col font-sans">
         {children}
         <SiteFooter />

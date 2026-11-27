@@ -251,3 +251,12 @@ export function joinLinkPath(code: string): string {
 export const PLAYBACK_SPEEDS = [1, 1.25, 1.5] as const;
 export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
 export const speedLabel = (speed: PlaybackSpeed) => `${speed}x`;
+
+/**
+ * The teacher terms a person agrees to when they take the teacher role, at sign-up or on the Account page. One short
+ * promise, stored with the account (`teacher_terms_version`, `teacher_terms_at`) so the owner can see what each
+ * teacher agreed to, and when. Raise the version when the wording changes.
+ */
+export const TEACHER_TERMS_VERSION = "teacher-terms-v1";
+export const TEACHER_TERMS_TEXT =
+  "I'll use my students' work for teaching only, and won't copy or share it outside my class.";

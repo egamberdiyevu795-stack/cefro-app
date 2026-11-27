@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Notice, PillAction, TextField, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/domain/account";
+import { TEACHER_TERMS_TEXT } from "@/domain/teacher/rules";
 import { SIGN_IN } from "@/features/entry/content";
 
 /**
@@ -25,6 +26,11 @@ import { SIGN_IN } from "@/features/entry/content";
  * email) and the student sets it later on the Account page. The server's name rules (1–50 characters after trimming,
  * not an email address) still apply to any name a sign-up request sends.
  *
+ * Registration also asks who the account is for. "A teacher" is chosen here, not approved by the owner: the role on
+ * its own opens no student's work (a teacher sees an answer only after that student joins their class with its code
+ * and shares it), so the terms line under it is all it takes. The account is created first and its role set straight
+ * after, so a failure there still leaves a working account that the Account page can switch.
+ *
  * Mock mode (`mock`, the pages' `?mock=1`): the same form, but nothing is ever sent; submitting says so.
  *
  * `forgotHref` (sign in only): the "Forgot password?" link under the password, given only when this server can send the
@@ -34,8 +40,13 @@ export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "logi
   const [error, setError] = useState<string | null>(null);
   const [demoSent, setDemoSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Sign-up only: who the account is for. A teacher's account is the same account with classes; the role opens no
+  // student's work by itself, so nobody has to approve it.
+  const [role, setRole] = useState<"student" | "teacher">("student");
+  const [terms, setTerms] = useState(false);
   const isRegister = mode === "register";
   const ready = useHydrated();
+  const needsTerms = isRegister && role === "teacher" && !terms;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +73,20 @@ export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "logi
         else setError(friendlyMessage(response.status, body?.error?.message ?? body?.message, isRegister));
         return;
       }
+      // The account exists and is signed in; now its role. A failure here leaves a working student account, and the
+      // Account page can still switch it, so it never costs the person their sign-up.
+      if (isRegister && role === "teacher") {
+        const roleResponse = await fetch("/api/account/role", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ role: "teacher", acceptedTerms: true }),
+        });
+        if (!roleResponse.ok) {
+          setError("Your account was created, but we couldn't set it up as a teacher. Open Account to switch it.");
+          return;
+        }
+      }
       window.location.href = next; // full reload: every part of the page now reflects the signed-in account
     } catch {
       setError("We couldn't reach CEFRO. Check your internet connection and try again.");
@@ -84,6 +109,26 @@ export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "logi
         maxLength={PASSWORD_MAX_LENGTH}
         hint={isRegister ? "At least 8 characters." : undefined}
       />
+      {isRegister && (
+        <fieldset className="space-y-2">
+          <legend className="text-caption font-semibold text-fg">I will use CEFRO as…</legend>
+          <RoleChoice value="student" current={role} onPick={setRole} ready={ready} title="A student" line="Practise, get my level and see what to fix first." />
+          <RoleChoice value="teacher" current={role} onPick={setRole} ready={ready} title="A teacher" line="Create a class and follow my students' speaking." />
+          {role === "teacher" && (
+            <label className="flex cursor-pointer items-start gap-3 pt-1 text-body text-fg-muted">
+              <input
+                type="checkbox"
+                name="terms"
+                checked={terms}
+                onChange={(event) => setTerms(event.currentTarget.checked)}
+                disabled={!ready}
+                className="mt-0.5 size-4 shrink-0 accent-accent"
+              />
+              <span>{TEACHER_TERMS_TEXT}</span>
+            </label>
+          )}
+        </fieldset>
+      )}
       {!isRegister && forgotHref && (
         <p className="-mt-2 flex justify-end">
           <Link href={forgotHref} className={cx("inline-flex min-h-11 items-center px-1 text-body text-fg-muted underline underline-offset-4", styles.FOCUS_RING)}>
@@ -93,10 +138,46 @@ export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "logi
       )}
       {error && <Notice tone="alert">{error}</Notice>}
       {demoSent && <Notice>Demo mode: nothing was sent and no account was used.</Notice>}
-      <PillAction type="submit" size="lg" disabled={busy || !ready} className="w-full">
+      <PillAction type="submit" size="lg" disabled={busy || !ready || needsTerms} className="w-full">
         {busy ? "One moment…" : isRegister ? "Create account" : "Sign in"}
       </PillAction>
     </form>
+  );
+}
+
+/** One role, as a tappable card: the same shape as the exam laptop's "Which paper?" choice. */
+function RoleChoice({
+  value,
+  current,
+  onPick,
+  ready,
+  title,
+  line,
+}: {
+  value: "student" | "teacher";
+  current: "student" | "teacher";
+  onPick: (role: "student" | "teacher") => void;
+  ready: boolean;
+  title: string;
+  line: string;
+}) {
+  const picked = current === value;
+  return (
+    <label className={cx("flex cursor-pointer items-start gap-3 rounded-tile border p-3", picked ? "border-fg bg-well" : "border-line bg-card")}>
+      <input
+        type="radio"
+        name="role"
+        value={value}
+        checked={picked}
+        onChange={() => onPick(value)}
+        disabled={!ready}
+        className="mt-1 size-4 shrink-0 accent-accent"
+      />
+      <span>
+        <span className="block text-body font-semibold text-fg">{title}</span>
+        <span className="block text-label text-fg-muted">{line}</span>
+      </span>
+    </label>
   );
 }
 

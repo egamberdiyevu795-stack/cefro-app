@@ -3,6 +3,7 @@ import { Card, CardHeader, Icon, PillButton, StatRow, Thumb, cx, styles } from "
 import { NO_LONGER_IN_CLASS } from "@/domain/teacher/rules";
 import { AttemptRow } from "@/features/history/sections";
 import { formatDate } from "@/features/history/view-model";
+import { RoleSwitch } from "@/features/profile/RoleSwitch";
 import { ClassPinControl, ConfirmAction, JoinCodeCard, ShareMoreCard } from "./actions";
 import { ClassMocksCard, type ClassMockSummary } from "@/features/exam-laptop/ClassMocksCard";
 import { countText, studentCountText, type ClassSummary, type CommonProblem, type StudentDetail, type StudentRow } from "./view-model";
@@ -387,7 +388,7 @@ export function MyClassesCard({ memberships, joinHref, accountHref, demo }: { me
 }
 
 /** A teacher's quiet link to Your classes on the Account page. */
-export function TeacherLinkCard({ href }: { href: string }) {
+export function TeacherLinkCard({ href, mock }: { href: string; mock: boolean }) {
   return (
     <Card aria-labelledby="teacher-title">
       <CardHeader id="teacher-title" title="Teaching" />
@@ -395,6 +396,19 @@ export function TeacherLinkCard({ href }: { href: string }) {
         <Icon name="layers" size={14} />
         Your classes
       </Link>
+      <div className="mt-4 border-t border-line pt-3">
+        <RoleSwitch role="teacher" mock={mock} />
+      </div>
+    </Card>
+  );
+}
+
+/** The student's way in: this account can become a teacher account, with no approval. */
+export function BecomeTeacherCard({ mock }: { mock: boolean }) {
+  return (
+    <Card aria-labelledby="become-teacher-title" data-testid="become-teacher-card">
+      <CardHeader id="become-teacher-title" title="Teaching" />
+      <RoleSwitch role="student" mock={mock} />
     </Card>
   );
 }

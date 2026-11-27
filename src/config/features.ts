@@ -80,12 +80,12 @@ function fullMockLiveForTests(): boolean {
 }
 
 /**
- * Release switch for the Teacher view (docs/teacher-plan.md). Off by default; the owner turns it on with `TEACHER_LIVE=true`
- * in Vercel once parent consent for under-18s is recorded (plan section 7). Off: every real teacher page and API, and the
- * student's Join / Share / Leave, answer 404. Mock mode (`?mock=1`, the demo teacher and class DEMO42) works either way.
- * Not a preview flag: `?flags=off` leaves it alone.
+ * Release switch for the Teacher view (docs/teacher-plan.md). ON: teachers sign themselves up and their students join
+ * with a class code, with nothing for the owner to approve. The owner can still turn it off with `TEACHER_LIVE=false`
+ * in Vercel, and then every real teacher page and API, and the student's Join / Share / Leave, answer 404. Mock mode
+ * (`?mock=1`, the demo teacher and class DEMO42) works either way. Not a preview flag: `?flags=off` leaves it alone.
  */
-export const TEACHER_LIVE = envSwitch(process.env.TEACHER_LIVE, false) || teacherLiveForTests();
+export const TEACHER_LIVE = envSwitch(process.env.TEACHER_LIVE, true) || teacherLiveForTests();
 
 /**
  * The test-only Teacher switch: a test server (`next dev` on a developer machine or CI, started by

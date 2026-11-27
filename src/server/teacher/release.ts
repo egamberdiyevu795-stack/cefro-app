@@ -3,7 +3,7 @@ import { TEACHER_LIVE } from "@/config/features";
 
 let override: boolean | undefined;
 
-/** Is the real Teacher view on? Off (`TEACHER_LIVE`) until parent consent exists; tests turn it on to check the server side. */
+/** Is the real Teacher view on? On by default (`TEACHER_LIVE`); tests turn it off to check that it closes properly. */
 export function teacherLive(): boolean {
   return override ?? TEACHER_LIVE;
 }

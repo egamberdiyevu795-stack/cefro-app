@@ -121,8 +121,9 @@ export function AttemptRow({ row, tone, menu }: { row: HistoryRow; tone: 1 | 2 |
 }
 
 /**
- * A full mock exam: one row, "Mock exam · B2 · 11.11.26", that opens the mock result. The line under it names what the mock
- * is ("Speaking only · 4 parts") or, for one that was not finished, the parts it has ("Finished: Part 1.1, Part 2").
+ * A full mock exam: one row in the same columns as an attempt: "Mock exam" and what it is ("Speaking only · 4 parts · At
+ * home", or for one that was not finished the parts it has), the estimate or its status in the result column, the date at
+ * the right. Its own icon (the four parts stacked) tells it from a single practice. Opens the mock result.
  */
 function MockHistoryRow({ row, mock, tone, menu }: { row: HistoryRow; mock: NonNullable<HistoryRow["mock"]>; tone: 1 | 2 | 3 | 4; menu?: React.ReactNode }) {
   return (
@@ -132,17 +133,37 @@ function MockHistoryRow({ row, mock, tone, menu }: { row: HistoryRow; mock: NonN
         className={cx("-mx-2 flex min-w-0 flex-1 items-center gap-3 rounded-tile px-2 py-2.5 transition-colors hover:bg-well", styles.FOCUS_RING)}
       >
         <Thumb tone={tone} size={30}>
-          <Icon name="mic" size={14} />
+          <Icon name="layers" size={14} />
         </Thumb>
-        <span className="min-w-0 flex-1">
-          <span className="block text-body font-semibold text-fg">{row.title}</span>
-          <span className="block text-caption text-fg-muted">{mock.caption}</span>
+        <span className={cx("grid min-w-0 flex-1 items-center gap-x-4 gap-y-1", ROW_COLUMNS)}>
+          <span className="min-w-0">
+            <span className="block text-body font-semibold text-fg sm:truncate">Mock exam</span>
+            <span className="block text-caption text-fg-muted">
+              {mock.caption}
+              <span className="sm:hidden"> · {row.date}</span>
+            </span>
+          </span>
+          <MockOutcome mock={mock} />
+          <span className="hidden text-label text-fg-muted sm:block sm:text-right">{row.date}</span>
         </span>
         <Icon name="chevronDown" size={16} className="-rotate-90 shrink-0 text-fg-subtle" />
       </Link>
       {menu}
     </li>
   );
+}
+
+/** The mock's level in bold, or what stands in its place: "Scoring…" with its label, otherwise quiet text. */
+function MockOutcome({ mock }: { mock: NonNullable<HistoryRow["mock"]> }) {
+  if (mock.level) {
+    return (
+      <span className="justify-self-end text-right sm:justify-self-start sm:text-left" data-testid="history-mock-level">
+        <span className="block text-body font-semibold text-fg">{mock.level}</span>
+      </span>
+    );
+  }
+  if (mock.pending === "Scoring…") return <ScoringLabel className="justify-self-end sm:justify-self-start" />;
+  return <span className="justify-self-end text-right text-label text-fg-muted sm:justify-self-start sm:text-left">{mock.pending}</span>;
 }
 
 /** "Retry", then "Goal met" (check) or "Not yet" (half circle) once the retry is scored. Never colour alone. */

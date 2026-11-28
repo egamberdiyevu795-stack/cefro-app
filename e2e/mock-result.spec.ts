@@ -105,7 +105,9 @@ test("History: a mock is one row opening the mock result; the pills include Mock
   await page.goto("/history?mock=1");
   const mockRow = page.getByTestId("history-mock");
   await expect(mockRow).toHaveCount(1);
-  await expect(mockRow).toContainText(/^Mock exam · (B1|B2|C1|Below B1) · \d\d\.\d\d\.\d\d/);
+  await expect(mockRow).toContainText("Mock exam");
+  await expect(mockRow.getByTestId("history-mock-level")).toHaveText(/^(B1|B2|C1|Below B1)$/); // the result column, as on an attempt
+  await expect(mockRow).toContainText(/\d\d\.\d\d\.\d\d/); // the date
   const pills = page.getByRole("navigation", { name: "Filter by part" }).getByRole("link");
   // Every chip carries its count, so the row reads as a filter and not as a label.
   await expect(pills).toHaveText([/^All ?\d+$/, /^Mock exams ?\d+$/, /^Part 1\.1 ?\d+$/, /^Part 1\.2 ?\d+$/, /^Part 2 ?\d+$/, /^Part 3 ?\d+$/]);

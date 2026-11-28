@@ -289,6 +289,15 @@ describe("mock exams in History", () => {
     expect(withMocks([loose], [], { part: "mock" }).filter).toBe("all");
   });
 
+  it("fills the result column: the level when there is one, else what stands in its place (exactly one of the two)", () => {
+    expect(withMocks(finished("m1"), [mock("m1")]).rows[0].mock).toMatchObject({ level: "B2", pending: null });
+    expect(withMocks([part("m1", "1.1", 3), part("m1", "2", 3)], [mock("m1", { status: "not_finished" })]).rows[0].mock).toMatchObject({ level: null, pending: "Not finished" });
+    expect(withMocks([], [mock("m3", { status: "in_progress" })]).rows[0].mock).toMatchObject({ level: null, pending: "In progress" });
+    const scoringPart = part("m1", "3", 4, { status: "evaluating", result: null });
+    expect(withMocks([part("m1", "1.2", 3), part("m1", "2", 3), scoringPart], [mock("m1")]).rows[0].mock).toMatchObject({ level: null, pending: "Scoring…" });
+    expect(withMocks([part("m1", "1.2", 3), part("m1", "2", 3), part("m1", "3", null)], [mock("m1")]).rows[0].mock).toMatchObject({ level: null, pending: "Estimate not ready yet" });
+  });
+
   it("a mock that was not finished says 'Not finished' and lists the parts it has", () => {
     const v = withMocks([part("m1", "1.1", 3), part("m1", "2", 3)], [mock("m1", { status: "not_finished" })]);
     expect(v.rows[0].title).toBe("Mock exam · Not finished · 11.11.26");

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { NavProgress } from "@/components/NavProgress";
 import { SiteFooter } from "@/components/SiteFooter";
 
 /*
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="preload" href="/fonts/inter-latin-400.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className="flex min-h-full flex-col font-sans">
+        <NavProgress />
         {children}
         <SiteFooter />
       </body>

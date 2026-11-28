@@ -102,18 +102,28 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   // Mock mode reads nothing: no cookie, no database.
   const userId = mock ? null : await findCurrentUserId();
   // Signed out (an anonymous browser, or nobody yet): the guest card on top. Mock mode is the demo account.
-  const guest = !mock && !(await isSignedIn());
-  const isTeacher = demoTeacher || (userId !== null && teacherLive() && (await userRole(userId)) === "teacher");
+  // The reads below do not depend on each other, only on who is asking: start them together, not one after another
+  // (each is a round trip to the database, and they used to add up before the page could show anything).
+  const [signedIn, role, inProgress, realAttempts, realExamDate, realMocks] = await Promise.all([
+    mock ? true : isSignedIn(),
+    userId && teacherLive() ? userRole(userId) : null,
+    userId && fullMockLive() ? findInProgressMock(userId) : null,
+    userId ? listAttemptHistory(userId) : null,
+    userId ? readExamDate(userId) : null,
+    userId ? listMockHistory(userId) : null,
+  ]);
+  const guest = !signedIn;
+  const isTeacher = demoTeacher || role === "teacher";
   const classes: ClassSummary[] | null = !isTeacher
     ? null
     : demoTeacher
       ? [classSummary(DEMO_CLASS, await demoClassStudents(now))]
       : await Promise.all((await listOwnClasses(userId!)).map(async (c) => classSummary(c, (await classWithStudents(userId!, c.id)).students)));
-  const mockInProgress = !mock && userId && fullMockLive() ? await findInProgressMock(userId) : null;
+  const mockInProgress = inProgress ?? null;
   const quietNext = isTeacher || mockInProgress !== null;
   const teacherHref = (path: string) => (demoTeacher ? asDemoTeacher(path) : path);
-  const attempts: HistoryAttempt[] = demoTeacher ? [] : mock ? await demoAttempts(now) : userId ? await listAttemptHistory(userId) : [];
-  const stored = demoTeacher ? { examDate: null, examDateSkippedAt: null } : mock ? demoExamDate(now) : userId ? await readExamDate(userId) : { examDate: null, examDateSkippedAt: null };
+  const attempts: HistoryAttempt[] = demoTeacher ? [] : mock ? await demoAttempts(now) : (realAttempts ?? []);
+  const stored = demoTeacher ? { examDate: null, examDateSkippedAt: null } : mock ? demoExamDate(now) : (realExamDate ?? { examDate: null, examDateSkippedAt: null });
   // Links built from the attempts: in mock mode they open the demo's own pages, with ?mock=1.
   const link = mock ? demoHref : (href: string) => href;
 
@@ -143,7 +153,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const view = dashboardView(attempts);
   // Recent attempts: a mock is one row opening the mock result, like History (its parts still count in the numbers above).
   const demoMock = mock && !demoTeacher ? await demoMockHistory(now) : null;
-  const mocks: HistoryMock[] = demoTeacher ? [] : demoMock ? demoMock.mocks : userId ? await listMockHistory(userId) : [];
+  const mocks: HistoryMock[] = demoTeacher ? [] : demoMock ? demoMock.mocks : (realMocks ?? []);
   const recent = recentRows(demoMock ? [...attempts, ...demoMock.attempts] : attempts, mocks, RECENT_ATTEMPT_COUNT).map((row) => ({
     ...row,
     href: row.mock ? (mock ? DEMO_MOCK_HREF : row.href) : link(row.href),

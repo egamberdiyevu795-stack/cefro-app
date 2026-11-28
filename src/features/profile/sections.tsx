@@ -1,4 +1,5 @@
-import { Card, CardHeader, PillButton } from "@/components/ds";
+import Link from "next/link";
+import { Card, CardHeader, PillButton, cx, styles } from "@/components/ds";
 import { mockLink } from "@/features/demo/demo-mode";
 import { ChangePassword } from "@/features/settings/ChangePassword";
 import { DeleteAccount } from "@/features/settings/DeleteAccount";
@@ -6,13 +7,26 @@ import { SignOut } from "@/features/settings/SignOut";
 import { consentLines, type ConsentRecord } from "@/domain/consent";
 import type { AccountInfo } from "@/server/account/account-store";
 import { ProfileName } from "./ProfileName";
-import { PART2_HREF, attemptCountText, memberSinceText, type ProfileLevel } from "./view-model";
+import { attemptCountText, memberSinceText, type ProfileLevel } from "./view-model";
 
 /**
  * (a) Name (editable), email (shown only), current level, member since and the number of practice attempts. A visitor
  * without an account: "Practising without an account" instead of name and email.
  */
-export function AccountCard({ account, attempts, level, mock }: { account: AccountInfo; attempts: number; level: ProfileLevel; mock: boolean }) {
+export function AccountCard({
+  account,
+  attempts,
+  level,
+  mock,
+  showLevel = true,
+}: {
+  account: AccountInfo;
+  attempts: number;
+  level: ProfileLevel;
+  mock: boolean;
+  /** False for a teacher: their Account is their account, not a student's level and practice count. */
+  showLevel?: boolean;
+}) {
   return (
     <Card aria-labelledby="account-you">
       <CardHeader title="Your account" id="account-you" />
@@ -33,9 +47,11 @@ export function AccountCard({ account, attempts, level, mock }: { account: Accou
             <p className="mt-0.5 text-body text-fg-muted">Your answers are kept in this browser. Create an account to keep them on any device.</p>
           </div>
         )}
-        <div className="border-t border-line pt-4">
-          <LevelBlock level={level} mock={mock} />
-        </div>
+        {showLevel && (
+          <div className="border-t border-line pt-4">
+            <LevelBlock level={level} mock={mock} />
+          </div>
+        )}
         <dl className="flex flex-col gap-1 border-t border-line pt-4 text-label text-fg-muted">
           {account.kind === "registered" && (
             <div>
@@ -43,10 +59,12 @@ export function AccountCard({ account, attempts, level, mock }: { account: Accou
               <dd data-testid="profile-member-since">{memberSinceText(account.memberSince)}</dd>
             </div>
           )}
-          <div>
-            <dt className="sr-only">Practice attempts</dt>
-            <dd data-testid="profile-attempts">{attemptCountText(attempts)}</dd>
-          </div>
+          {showLevel && (
+            <div>
+              <dt className="sr-only">Practice attempts</dt>
+              <dd data-testid="profile-attempts">{attemptCountText(attempts)}</dd>
+            </div>
+          )}
         </dl>
       </div>
     </Card>
@@ -54,35 +72,34 @@ export function AccountCard({ account, attempts, level, mock }: { account: Accou
 }
 
 /**
- * The current level, from the latest scored Part 2 answer only (`currentLevel`). None: "No level yet" and a link to
- * Part 2. The black "Practise Part 2" / "Go to Part 2" is the page's one black control.
+ * The current level: the same level, target and basis as Home (`currentLevel`). Information, not a call to action:
+ * Account is where the student changes their name, password or exam date, so it holds no practice button (the black
+ * one belongs on Home). With no level yet, a quiet text link to Home, never a button.
  */
 function LevelBlock({ level, mock }: { level: ProfileLevel; mock: boolean }) {
-  const href = mockLink(PART2_HREF, mock);
   return level.kind === "level" ? (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p className="text-caption text-fg-muted">Current level</p>
-        <p className="text-stat font-light tracking-[-0.02em] text-fg" data-testid="profile-level">
+    <div>
+      <p className="text-caption text-fg-muted">Current level</p>
+      <p className="flex items-baseline gap-2">
+        <span className="text-stat font-light tracking-[-0.02em] text-fg" data-testid="profile-level">
           {level.level}
-        </p>
-        <p className="mt-2 text-label text-fg">{level.band}</p>
-        <p className="mt-0.5 text-caption text-fg-muted">From your latest scored Part 2 answer, {level.date}</p>
-      </div>
-      <PillButton href={href}>Practise Part 2</PillButton>
+        </span>
+        <span className="text-lead font-medium text-fg">· target {level.target}</span>
+      </p>
+      <p className="mt-1 text-caption text-fg-muted">{level.basis}</p>
     </div>
   ) : (
-    <div className="flex flex-col gap-3">
-      <div>
-        <p className="text-caption text-fg-muted">Current level</p>
-        <p className="mt-0.5 text-title font-medium tracking-[-0.01em] text-fg" data-testid="profile-level">
-          No level yet
-        </p>
-        <p className="mt-0.5 text-body text-fg-muted">Answer a Part 2 task. Your level appears here once it is scored.</p>
-      </div>
-      <div>
-        <PillButton href={href}>Go to Part 2</PillButton>
-      </div>
+    <div>
+      <p className="text-caption text-fg-muted">Current level</p>
+      <p className="mt-0.5 text-title font-medium tracking-[-0.01em] text-fg" data-testid="profile-level">
+        No level yet
+      </p>
+      <p className="mt-0.5 text-body text-fg-muted">
+        Answer a Part 2 task and your level appears here.{" "}
+        <Link href={mockLink("/dashboard", mock)} className={cx("font-medium text-fg underline underline-offset-2", styles.FOCUS_RING)}>
+          Find your level on Home
+        </Link>
+      </p>
     </div>
   );
 }

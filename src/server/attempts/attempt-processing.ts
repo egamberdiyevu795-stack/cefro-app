@@ -82,6 +82,10 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
   const deadlineAt = runStartedAt + (options.budgetMs ?? getEnv().PROCESSING_BUDGET_MS);
   let stageStartedAt = runStartedAt;
   let transcriptionMs: number | null = null;
+  // Where the time goes (read with GET /api/speaking/timings): waiting to start, reading the audio and the speech check,
+  // the transcription call, then the evaluation call(s).
+  const queuedMs = Math.max(0, runStartedAt - Date.parse(attempt.createdAt));
+  let prepMs: number | null = null;
 
   try {
     const task = getAnySpeakingTask(attempt.taskId);
@@ -128,6 +132,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
         }
       }
       stageStartedAt = Date.now();
+      prepMs = stageStartedAt - runStartedAt;
       const output = await withDeadline(
         provider.transcribe({ audio, mimeType: recording.mimeType, language: "en" }),
         deadlineAt,
@@ -222,6 +227,14 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
     }
 
     const processingDurationMs = Date.now() - runStartedAt;
+    const timings = {
+      queuedMs,
+      prepMs,
+      transcriptionMs,
+      evaluationMs: evaluation.latencyMs,
+      processingMs: processingDurationMs,
+      endToEndMs: Math.max(0, Date.now() - Date.parse(attempt.createdAt)),
+    };
     const qualityWarnings = evaluation.quality.violations.map((v) => v.code);
     await repo.saveEvaluationAndComplete({
       attemptId,
@@ -232,7 +245,7 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       promptHash: evaluation.promptHash,
       provider: evaluation.provider,
       model: evaluation.model,
-      modelConfig: { requestedModel, ...evaluation.modelConfig },
+      modelConfig: { requestedModel, ...evaluation.modelConfig, timings },
       modelCalls: evaluation.modelCalls,
       qualityReport: {
         warnings: evaluation.quality.violations,
@@ -251,6 +264,8 @@ export async function runClaimedAttempt(attemptId: string, options: { budgetMs?:
       transcriptionMs,
       evaluationMs: evaluation.latencyMs,
       processingDurationMs,
+      queuedMs,
+      prepMs,
       modelCalls: evaluation.modelCalls,
       inputTokens: evaluation.inputTokens,
       outputTokens: evaluation.outputTokens,

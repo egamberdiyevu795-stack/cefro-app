@@ -271,7 +271,7 @@ describe("the demo teacher", () => {
     const markup = await html(ProfilePage(props(T)));
     expect(markup).toContain('data-testid="your-classes-link"');
     expect(markup).not.toContain('data-testid="my-classes"');
-    expectScreen(markup, 1);
+    expectScreen(markup, 0); // Account is settings: no black button
     expectMockLinksOnly(markup);
   });
 });
@@ -311,14 +311,14 @@ describe("the demo student: Join, Share, My classes", () => {
     expectMockLinksOnly(markup, false);
   });
 
-  it("Account page: an old membership gets one 'Share recordings too?' card with two grey buttons; the Account page's one black button stays", async () => {
+  it("Account page: an old membership gets one 'Share recordings too?' card with two grey buttons, and no black button", async () => {
     const markup = await html(ProfilePage(props({ mock: "1", joined: "DEMO42", legacy: "1" })));
     expect(markup).toContain('data-testid="share-more"');
     expect(markup).toContain("Share recordings too?");
     expect(markup).toContain("Nothing from before that is shared.");
     expect(markup).toMatch(/<button[^>]*bg-well[^>]*>Share recordings too</);
     expect(markup).toMatch(/<button[^>]*bg-well[^>]*>Not now</);
-    expectScreen(markup, 1);
+    expectScreen(markup, 0); // Account is settings: no black button
     // Not for a membership on the current wording.
     expect(await html(ProfilePage(props({ mock: "1", joined: "DEMO42" })))).not.toContain('data-testid="share-more"');
   });
@@ -333,7 +333,7 @@ describe("the demo student: Join, Share, My classes", () => {
     expect(after).toMatch(/Sharing since \d\d\.\d\d\.\d\d/);
     expect(after).toContain("Leave class");
     for (const markup of [before, after]) {
-      expectScreen(markup, 1);
+      expectScreen(markup, 0); // Account is settings: no black button
       expectMockLinksOnly(markup, false);
     }
   });

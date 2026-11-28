@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openTopics } from "./practice-page";
 import { shortPartIntros } from "./short-intro";
 
 // The Part 2 / Part 3 spoken introductions are shortened (e2e/short-intro.ts).
@@ -45,6 +46,7 @@ test("full loop on real attempts: record, upload, evaluate (mock providers), new
   page.on("pageerror", (error) => errors.push(String(error)));
 
   await page.goto("/practice");
+  await openTopics(page, "2");
   await page.getByRole("link", { name: /Advice from someone/ }).click();
   await expect(page.getByRole("heading", { name: "Advice from someone" })).toBeVisible();
   await expect(page.getByTestId("demo-label")).toHaveCount(0); // the real brief: no demo label
@@ -244,18 +246,20 @@ async function expectPicture(page: Page, layout: "beside" | "above" | "below") {
   }
 }
 
-test("the task picture loads beside the questions on every screen (desktop): brief, preparation, recording, retry", async ({ page }) => {
+test("the task picture loads beside the questions on every screen after the brief (desktop): preparation, recording, retry", async ({ page }) => {
   const imageResponses: number[] = [];
   page.on("response", (r) => {
     if (r.url().includes("/tasks/advice-from-someone.svg")) imageResponses.push(r.status());
   });
   await page.goto(TASK_URL);
-  await expectPicture(page, "beside");
-  expect(imageResponses).toContain(200);
+  // As in the exam, a first practice's brief hides the questions and the picture until the student starts.
+  await expect(page.getByTestId("questions-hidden")).toBeVisible();
+  await expect(page.getByTestId("task-picture")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expectPicture(page, "beside");
+  expect(imageResponses).toContain(200);
 
   await page.getByRole("button", { name: "Start speaking now" }).click();
   await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
@@ -270,12 +274,12 @@ test("the task picture loads beside the questions on every screen (desktop): bri
   await expectPicture(page, "beside");
 });
 
-test("on a phone the picture is above the questions on the brief, below them while preparing", async ({ browser }) => {
+test("on a phone the brief hides the questions, and the picture is below them while preparing", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["microphone"] });
   await shortPartIntros(context);
   const page = await context.newPage();
   await page.goto(TASK_URL);
-  await expectPicture(page, "above");
+  await expect(page.getByTestId("questions-hidden")).toBeVisible();
   await page.getByRole("button", { name: "Start preparation" }).click();
   await expect(page.getByText("to prepare", { exact: true })).toBeVisible();
   await expectPicture(page, "below");

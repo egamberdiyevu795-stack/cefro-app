@@ -5,7 +5,6 @@ import { FEATURE_FLAGS, allFlags, fullMockLive, type FeatureFlags } from "@/conf
 import { getSpeakingTask, listSpeakingTasks } from "@/content/speaking";
 import { getArgumentTask } from "@/content/speaking/part3";
 import { addDays, examDateState, MAX_DAYS_AHEAD, todayIn } from "@/domain/exam-date";
-import type { FeatureLevel } from "@/domain/evaluation/multilevel/levels";
 import type { HistoryAttempt, HistoryMock } from "@/domain/speaking/history";
 import { AccountTab } from "@/features/dashboard/AccountTab";
 import { ExamDate } from "@/features/dashboard/ExamDate";
@@ -19,6 +18,7 @@ import {
   partTiles,
   practiseNext,
   progress,
+  progressPreview,
   scoredAttempts,
   type TaskInfo,
 } from "@/features/dashboard/progress";
@@ -29,6 +29,8 @@ import {
   GuestCard,
   PractiseNextCard,
   ProgressCard,
+  BiggestFixPreviewCard,
+  ProgressPreviewCard,
   RECENT_ATTEMPT_COUNT,
   RecentAttemptsCard,
   Wordmark,
@@ -38,7 +40,7 @@ import { recentRows } from "@/features/history/view-model";
 import { getAttemptViewForUser, listAttemptHistory } from "@/server/attempts/attempt-service";
 import { DEMO_MOCK_HREF, demoMockHistory } from "@/server/demo/demo-mock";
 import { listMockHistory } from "@/server/sessions/mock-history";
-import { getSpeakingRubric } from "@/server/evaluation/rubrics";
+import { levelTarget } from "@/server/dashboard/target";
 import { readExamDate } from "@/server/exam-date/exam-date-store";
 import { findInProgressMock } from "@/server/sessions/mock-service";
 import { findCurrentUserId, isSignedIn } from "@/server/identity/current-user";
@@ -52,9 +54,6 @@ import { listOwnClasses, userRole } from "@/server/teacher/teacher-store";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-/** The recommended first part: Part 2 shows the level fastest (one answer covers all five skills). */
-const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
-
 /*
  * The student's dashboard, from their own attempts (`listAttemptHistory`, the same owner rule as History and the
  * result page) and their exam date. Every number is computed by the pure functions in features/dashboard/progress.ts.
@@ -64,11 +63,13 @@ const RECOMMENDED_TASK_ID = "b2-part2-advice-from-someone";
  *   row 2: [ Speaking progress + radar ] [ Exam parts      ]
  *   row 3: [ Recent attempts           ] [ Biggest fix     ]
  * Returning, phone: practise next, exam date*, progress, biggest fix, radar, recent attempts, exam parts.
- * Attempts, none scored yet (still scoring, failed, too short): [ Find your level ("Start practice"), exam date* ],
- *   [ Recent attempts ], [ Exam parts ]. No level, skills or biggest fix until an answer is scored.
- * First visit (no attempts): [ Find your level, with "When is your exam?"* ] then [ Exam parts, four in a row ].
+ * First visit (no attempts), and attempts none scored yet: the returning layout's cards in the same places, each showing
+ *   what will appear in it: [ Find your level | When is your exam?* ], [ Speaking progress, empty | Exam parts ],
+ *   [ Recent attempts (empty, or the unscored ones) | Biggest fix, empty ]. Nothing moves when the first result
+ *   arrives. No black button but "Start your first practice" / "Start practice", no number that reads as a result.
  * The Account tab (a link to the Account page) is always in the nav, whatever the flags.
- * Signed out (no account, not mock mode): a quiet "You are not signed in" card on top (GuestCard), whatever the view.
+ * Signed out (no account, not mock mode): a quiet "You are not signed in" card (GuestCard), whatever the view: first on
+ *   phones, under the cards on desktop (the cards have fixed rows).
  *
  * * flag `examCountdown`; with it off, Practise next takes the full row. After Skip (or Remove date) the slot shows a
  *   small "Add exam date".
@@ -119,7 +120,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const tasks: TaskInfo[] = listSpeakingTasks().map(({ id, title, part, level, preparationSeconds, speakingSeconds }) => ({
     id, title, part, level, preparationSeconds, speakingSeconds,
   }));
-  const target = getSpeakingRubric(getSpeakingTask(RECOMMENDED_TASK_ID)!).targetLevel as FeatureLevel;
+  const target = levelTarget();
   const summary = progress(attempts, { target, now });
   const latestScored = scoredAttempts(attempts)[0];
   const transcript = !latestScored
@@ -158,7 +159,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
 
   return (
     <div className="min-h-dvh bg-page font-ui text-fg md:p-6">
-      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:shadow-card">
+      <div className="mx-auto flex max-w-[1280px] px-4 pt-4 md:min-h-[calc(100dvh-3rem)] md:gap-6 md:rounded-shell md:bg-shell md:p-6 md:shadow-card">
         <aside className="md:flex md:w-12 md:shrink-0 md:flex-col md:items-center md:gap-14">
           <Wordmark className="hidden md:flex md:h-12" mock={mock} href={demoTeacher ? asDemoTeacher("/dashboard") : undefined} />
           <Sidebar
@@ -217,17 +218,27 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
                 <BiggestFixCard fix={fix} className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
-            ) : (
+            ) : !isTeacher ? (
+              // No scored answer yet: the same cards in the same places as a returning student's Home, each showing what
+              // will appear in it, so nothing moves when the first result arrives (phones: the same order too).
               <>
-                {!isTeacher && <FindYourLevelCard exam={examSlot("inline")} hasAttempts={view !== "first_visit"} mock={mock} quiet={quietNext} className="lg:col-span-2" />}
-                {view !== "first_visit" && <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="lg:col-span-2" />}
+                <FindYourLevelCard
+                  exam={countdown ? null : examSlot("inline")}
+                  hasAttempts={view !== "first_visit"}
+                  mock={mock}
+                  quiet={quietNext}
+                  className={cx("order-1 lg:order-none lg:col-start-1 lg:row-start-1", !countdown && "lg:col-span-2")}
+                />
+                {countdown && examSlot("card", "order-2 lg:order-none lg:col-start-2 lg:row-start-1")}
+                <ProgressPreviewCard preview={progressPreview(attempts, { target, now })} className="order-3 lg:order-none lg:col-start-1 lg:row-start-2" />
                 <ExamPartsCard
                   parts={tiles.map((t) => (t.part === "Part 2" ? { ...t, recommendation: "Start with Part 2 · shows your level fastest" } : t))}
-                  wide
-                  className="lg:col-span-2"
+                  className="order-7 lg:order-none lg:col-start-2 lg:row-start-2"
                 />
+                <RecentAttemptsCard flags={flags} rows={recent} mock={mock} className="order-6 lg:order-none lg:col-start-1 lg:row-start-3" />
+                <BiggestFixPreviewCard className="order-4 lg:order-none lg:col-start-2 lg:row-start-3" />
               </>
-            )}
+            ) : null /* A teacher's Home is their classes: no student "Exam parts" card ("Recommended", "shows your level fastest"). */}
           </main>
         </div>
       </div>

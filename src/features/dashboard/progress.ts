@@ -141,12 +141,36 @@ const RADAR_ORDER: readonly Feature[] = ["grammar", "vocabulary", "fluency", "co
 const SHORT_LABELS: Record<Feature, string> = { grammar: "Gram", vocabulary: "Vocab", fluency: "Flu", cohesion: "Coh", pronunciation: "Pron" };
 export const RADAR_RINGS = FEATURE_LEVELS.map((level) => LEVEL_LABELS[level]);
 
+/** Skills the app does not score yet (the audio step is off), so a new student's radar doesn't promise them. */
+const NOT_SCORED_YET: readonly Feature[] = ["pronunciation"];
+
+/** The radar's skills, none assessed: the empty chart a new student sees before their first scored answer. */
+export function emptyRadarAxes(): RadarAxis[] {
+  return RADAR_ORDER.filter((f) => !NOT_SCORED_YET.includes(f)).map((feature) => ({ label: FEATURE_LABELS[feature], short: SHORT_LABELS[feature], value: null }));
+}
+
+/** What the empty Speaking progress card shows: the target, and the real practice numbers (zero on a first visit). */
+export interface ProgressPreview {
+  targetLabel: string;
+  stats: Array<{ label: string; value: string }>;
+}
+
+export function progressPreview(attempts: readonly HistoryAttempt[], options: { target: FeatureLevel; now: Date }): ProgressPreview {
+  return { targetLabel: LEVEL_LABELS[options.target], stats: practiceStats(attempts, options.now) };
+}
+
+/**
+ * The radar's axes. A skill that was not assessed (pronunciation, while the audio step is off) is left out, so the
+ * chart has no permanently empty corner; it stays when fewer than 3 skills would be left (the chart needs 3 axes).
+ */
 export function radarAxes(skills: SkillLevels): RadarAxis[] {
-  return RADAR_ORDER.map((feature) => ({
+  const axes = RADAR_ORDER.map((feature) => ({
     label: FEATURE_LABELS[feature],
     short: SHORT_LABELS[feature],
     value: skills[feature] === null ? null : levelValue(skills[feature]!),
   }));
+  const assessed = axes.filter((a) => a.value !== null);
+  return assessed.length >= 3 ? assessed : axes;
 }
 
 /* ── Biggest fix ─────────────────────────────────────────────────────────────────────────────────────────────── */

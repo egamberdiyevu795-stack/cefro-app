@@ -244,7 +244,7 @@ export function buildPart3View(
     fix: fixView(result, task, copiedSentences),
     skills,
     transcript: pieces,
-    transcriptFixes: buildTranscriptFixes(context.transcript, a.sentence_fixes, copiedRanges(pieces)),
+    transcriptFixes: buildTranscriptFixes(context.transcript, a.sentence_fixes, copiedRanges(pieces), a.strengths.map((s) => s.quote)),
     durationMs: context.durationMs,
     retry: context.previous
       ? { previousBand: context.previous.scoring.band, band: s.band, goal: goalOutcome(result), goalText: context.previous.retry_focus[0]?.objective ?? null }

@@ -44,7 +44,7 @@ export interface LessonViewProps {
 
 export function LessonView({ lesson, from, listHref, practiseHref, demo }: LessonViewProps) {
   return (
-    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="lesson">
+    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4 lg:mx-0" data-testid="lesson">
       <Link href={from ? from.resultHref : listHref} className={cx("inline-flex min-h-11 items-center gap-1 justify-self-start text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
         <Icon name="chevronDown" size={14} className="rotate-90" />
         {from ? "Your result" : NO_RESULT_TEXT.back}
@@ -153,7 +153,7 @@ function LessonBody({ lesson }: { lesson: Lesson }) {
  */
 export function TeacherLessonView({ lesson, backHref, demo }: { lesson: Lesson; backHref: string; demo: boolean }) {
   return (
-    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4" data-testid="lesson">
+    <div className="mx-auto grid max-w-2xl grid-cols-1 gap-4 lg:mx-0" data-testid="lesson">
       <Link href={backHref} className={cx("inline-flex min-h-11 items-center gap-1 justify-self-start text-label text-fg-muted hover:text-fg", styles.FOCUS_RING)}>
         <Icon name="chevronDown" size={14} className="rotate-90" />
         Class

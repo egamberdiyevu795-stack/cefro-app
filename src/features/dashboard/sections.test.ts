@@ -6,7 +6,7 @@ import type { ExamDateState } from "@/domain/exam-date";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
 
 const { ExamDate } = await import("./ExamDate");
-const { ExamPartsCard, FindYourLevelCard, PractiseNextCard } = await import("./sections");
+const { BiggestFixPreviewCard, ExamPartsCard, FindYourLevelCard, PractiseNextCard, ProgressPreviewCard, PREVIEW_PLACEHOLDER, PREVIEW_UNLOCK } = await import("./sections");
 
 const BLACK = /class="[^"]*\bbg-primary text-on-primary\b/g;
 const blacks = (markup: string) => (markup.match(BLACK) ?? []).length;
@@ -112,5 +112,44 @@ describe("exam part tiles", () => {
     expect(tiles[1]).toContain(">Start<");
     expect(markup).not.toMatch(TOO_SMALL);
     expect(blacks(markup)).toBe(0);
+  });
+});
+
+describe("empty Speaking progress (no scored answer yet)", () => {
+  const stats = [
+    { label: "Attempts this month", value: "0" },
+    { label: "Parts practised", value: "0 of 4" },
+    { label: "Practice time this month", value: "0 min" },
+  ];
+  const markup = html(createElement(ProgressPreviewCard, { preview: { targetLabel: "B2", stats } }));
+
+  it("shows the card and the radar's skill names, with no level, no shape and nothing that reads as a result", () => {
+    expect(markup).toContain("Speaking progress");
+    expect(markup).toContain("· target B2");
+    expect(markup).toContain(PREVIEW_UNLOCK);
+    expect(markup).toContain(PREVIEW_PLACEHOLDER);
+    for (const skill of ["Grammar", "Vocabulary", "Fluency", "Cohesion"]) expect(markup).toContain(skill);
+    expect(markup).not.toContain("Pronunciation"); // not scored yet, so the empty radar does not promise it
+    for (const s of stats) expect(markup).toContain(s.value);
+    expect(markup).not.toContain('data-testid="current-level"');
+    expect(markup).not.toContain("<polygon points=\"\" ");
+    expect(markup).not.toMatch(/url\(#[^)]*\)"[^>]*stroke="var\(--color-accent\)"/); // no filled skill shape
+    expect(markup).not.toContain(">Not assessed<");
+  });
+
+  it("has no black button (the page's one black button stays 'Start your first practice') and no text under 11 px", () => {
+    expect(blacks(markup)).toBe(0);
+    expect(markup).not.toMatch(TOO_SMALL);
+  });
+});
+
+describe("empty Biggest fix (no scored answer yet)", () => {
+  const markup = html(createElement(BiggestFixPreviewCard, {}));
+  it("says what will appear, with no quote from an answer, no black button and no text under 11 px", () => {
+    expect(markup).toContain("Biggest fix");
+    expect(markup).toContain("After your first answer");
+    expect(markup).not.toContain("Start retry");
+    expect(blacks(markup)).toBe(0);
+    expect(markup).not.toMatch(TOO_SMALL);
   });
 });

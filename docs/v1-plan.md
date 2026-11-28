@@ -9,6 +9,39 @@ pilot route built), `docs/feedback-review.md` (open evaluator issues), `docs/des
 
 ---
 
+## 0. Version 1 goal, restated (Asadbek, 2026-11-24)
+
+CEFRO comes in three versions, each built on the one before:
+
+| Version | What it is | Depends on |
+| --- | --- | --- |
+| **V1: a score you can trust** | Full mock or part by part; the student gets the level they are likely to get in the real exam; the teacher sees every student's performance **without having to listen** | — |
+| **V2: a teacher, not a text corrector** | The app teaches the 1–2 things that move a B1 student to B2 (or B2 to C1) fast: answer in a structure, use connectors, a few higher-level structures and words. Not "here are your mistakes" | V1's scoring being right: you can only teach the right thing if you diagnose the right thing |
+| **V3: premium** | Each job goes to the AI that does it best (e.g. one model for transcription, another for reasoning about the answer) | V2 |
+
+**What changes for V1:** the build steps in section 8 (1–7) are built and in `main`. The teacher's main job is no longer
+"listen to every recording and mark it" (section 5's listening flow) but **read the app's evaluation**: the class
+overview (T3) and class mock results (T8) show each student's level, part bands and biggest weakness. Listening becomes an
+optional spot check. Agree / Choose level stays, because **every teacher rating is the evidence that V1's scoring is
+right** (or shows where it is wrong).
+
+**Done means:** on real students' answers, the app and the teacher (Azamat, or an examiner) agree **within one band on
+almost every part attempt and exactly on most**, and the whole-mock level matches on most mocks. Until then the anchors
+(written by us, synthetic) are the only proof, and they do not prove the scoring of real speech.
+
+**How it is measured:** GitHub → Actions → **Deploy production** → Run workflow, stage **check** (the default, which never
+writes); the report is the last step of the "Check production database" job (`npm run stats:scoring` locally). Read-only, counts only. Part 1 says whether AI scoring works in production (scored by a
+real model / no AI score / failed with the reason); part 2 is the teacher-vs-app agreement, per part and per mock.
+
+**Order:**
+
+1. AI scoring on in production. Already configured: the production health check (which includes the scoring provider
+   and its key) passed on the 2026-11-24 deploy. Whether the key has credit only shows on a real answer (step 2).
+2. The owner tests it: one Part 2 answer, then a full mock, on a laptop and on an iPhone. Run the Scoring report after.
+3. 20–30 real mocks, each with the teacher's level (switch on `TEACHER_LIVE`, `FULL_MOCK_LIVE`, consent; `docs/pilot-runbook.md`).
+4. Scoring report → where the app is too high or too low, per part → fix the rubric or prompt → re-score → report again.
+5. When "done" above holds: V1 is finished, and V2 starts on the diagnosis it produced.
+
 ## 1. What Version 1 is
 
 **One sentence:** a student sits a full speaking mock (or one part) on their own phone, gets a transcript with their

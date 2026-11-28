@@ -12,8 +12,8 @@ const TASK = "/practice/speaking/b2-part2-happy-day";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-async function audit(page: Page) {
-  await expect(page.locator(BLACK)).toHaveCount(1);
+async function audit(page: Page, blacks = 1) {
+  await expect(page.locator(BLACK)).toHaveCount(blacks);
   const report = await page.evaluate(() => {
     const rgb = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number);
     const lum = ([r, g, b]: number[]) => {
@@ -66,7 +66,7 @@ for (const [lock, black, text] of [
     await expect(locked).toContainText(text);
     await expect(page.getByRole("button", { name: "Start preparation" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Check microphone" })).toHaveCount(0);
-    await expect(page.getByText("Answer all 3 questions")).toBeVisible();
+    await expect(page.getByTestId("questions-hidden")).toBeVisible();
     await expect(page.locator(BLACK)).toHaveText(black);
     await audit(page);
     expect(apiCalls).toEqual([]);
@@ -87,12 +87,12 @@ test("Part 1 practice brief is locked too (?consent=waiting): no Start, one blac
 });
 
 for (const status of ["waiting", "granted", "withdrawn"] as const) {
-  test(`Account page, Recording consent (?consent=${status}): read-only, the 30-day rule, one black button, AA at 390 px`, async ({ page }) => {
+  test(`Account page, Recording consent (?consent=${status}): read-only, the 30-day rule, no black button, AA at 390 px`, async ({ page }) => {
     await page.goto(`/profile?mock=1&consent=${status}`);
     const section = page.getByTestId("consent-status");
     await expect(section).toHaveAttribute("data-status", status);
     await expect(section).toContainText("Recordings are deleted 30 days after scoring.");
     await expect(section.locator("a, button")).toHaveCount(0);
-    await audit(page);
+    await audit(page, 0); // Account is settings: no black button at all
   });
 }

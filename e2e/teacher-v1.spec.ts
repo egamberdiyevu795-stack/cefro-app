@@ -70,8 +70,14 @@ test("T6: estimated level, date and status; four part cards; grey Agree / Choose
   }
   expect(new Set(boxes.map((b) => b.bg)).size).toBe(1);
 
+  const progress = page.getByTestId("review-progress");
+  const before = await progress.textContent();
   await part2.getByRole("button", { name: "Agree" }).click();
   await expect(part2.getByTestId("your-rating")).toHaveText("You: Agree");
+  // The summary counts the rating at once, without a reload (unless Part 2 was already rated in the demo).
+  await expect(progress).toHaveText(/^(\d of \d parts rated|All \d parts rated)$/);
+  const was = before?.match(/^(\d) of (\d) parts rated$/);
+  if (was && was[1] === "0") await expect(progress).toHaveText(`1 of ${was[2]} parts rated`);
   await part2.getByRole("button", { name: "Change" }).click();
   await part2.getByRole("button", { name: /^Band 4 · Higher B2$/ }).click();
   await expect(part2.getByTestId("your-rating")).toHaveText("You: Higher B2 (Band 4)");
@@ -197,7 +203,7 @@ test("an old membership gets one 'Share recordings too?' card with two grey butt
   const card = page.getByTestId("share-more");
   await expect(card).toContainText("Share recordings too?");
   await expect(card).toContainText("Nothing from before that is shared.");
-  await audit(page, 1); // the Account page keeps its own black button
+  await audit(page, 0); // Account is settings: no black button at all
   await card.getByRole("button", { name: "Not now" }).click();
   await expect(page.getByTestId("share-more-done")).toContainText("Nothing changed");
   await expect(card).toHaveCount(0);

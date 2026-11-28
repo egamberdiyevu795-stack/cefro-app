@@ -11,6 +11,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Parts 1.1 and 3 are live by default since 2026-11-15. These suites test them closed (Part 3 opens by its test switch
 // where a suite needs it); set here too so the specs, which read PART_LIVE themselves, agree with the server.
 process.env.PART_1_1_LIVE = "false";
+process.env.PART_1_2_LIVE = "false";
 process.env.PART_3_LIVE = "false";
 const PORT = Number(process.env.E2E_PREVIEW_PORT ?? 3150);
 process.env.E2E_PREVIEW = "1"; // read by the spec (the workers re-read this file)
@@ -36,8 +37,8 @@ export default defineConfig({
   },
   webServer: {
     // `env -i`: only these variables reach the server, like a Preview with none set in the Vercel project.
-    // PART_1_1_LIVE / PART_3_LIVE=false: those parts are live by default since 2026-11-15; the specs test them closed.
-    command: `env -i PATH="$PATH" HOME="$HOME" PART_1_1_LIVE=false PART_3_LIVE=false NODE_ENV=production VERCEL=1 VERCEL_ENV=preview DATABASE_PATH=${NO_DISK}/cefro.db AUDIO_STORAGE_DIR=${NO_DISK}/audio npx next start -p ${PORT}`,
+    // PART_1_1_LIVE / PART_1_2_LIVE / PART_3_LIVE=false: those parts are live by default (2026-11-15, 1.2 since 2026-11-24); the specs test them closed.
+    command: `env -i PATH="$PATH" HOME="$HOME" PART_1_1_LIVE=false PART_1_2_LIVE=false PART_3_LIVE=false NODE_ENV=production VERCEL=1 VERCEL_ENV=preview DATABASE_PATH=${NO_DISK}/cefro.db AUDIO_STORAGE_DIR=${NO_DISK}/audio npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/?mock=1`,
     reuseExistingServer: false,
     timeout: 120_000,

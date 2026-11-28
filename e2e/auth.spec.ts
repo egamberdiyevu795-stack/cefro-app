@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { openTopics } from "./practice-page";
 import { shortPartIntros } from "./short-intro";
 
 const TASK = "b2-part2-advice-from-someone";
@@ -59,6 +60,7 @@ test("Journey A: an anonymous visitor practises and gets feedback without any ac
   await expect(page.getByRole("main").getByRole("link", { name: "Sign in" })).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "Create account" })).toBeVisible();
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" }).click();
+  await openTopics(page, "2");
   await page.getByRole("link", { name: /Advice from someone/ }).click();
   await recordAndSubmit(page);
   await expect(page.getByRole("button", { name: "Retry with this goal" })).toBeVisible();

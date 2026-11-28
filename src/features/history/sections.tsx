@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card, CardHeader, Icon, PillButton, ScoringLabel, Thumb, cx, styles } from "@/components/ds";
 import { FIRST_VISIT } from "@/features/dashboard/mock-data";
 import { mockLink } from "@/features/demo/demo-mode";
-import type { BandChart, FilterOption, HistoryRow, HistoryView } from "./view-model";
+import { levelOfBand, type BandChart, type FilterOption, type HistoryRow, type HistoryView } from "./view-model";
 
 /*
  * The History page (`/history`), on the design system. Server-rendered: the filter and "Show more" are links, so the
@@ -17,7 +17,7 @@ export function HistoryContent({ view, mock = false }: { view: HistoryView; mock
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.44fr)] lg:items-start">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:col-span-2">
         <h1 className="text-title font-medium tracking-[-0.01em] text-fg">History</h1>
-        <PartFilter options={view.filters} />
+        {view.filters.length > 0 && <PartFilter options={view.filters} />}
       </div>
       {view.chart && <BandChartCard chart={view.chart} className="lg:col-start-2 lg:row-start-2" />}
       <AttemptsCard view={view} className={cx("lg:col-start-1 lg:row-start-2", !view.chart && "lg:col-span-2")} />
@@ -25,7 +25,10 @@ export function HistoryContent({ view, mock = false }: { view: HistoryView; mock
   );
 }
 
-/** "All" and each part the student has tried. Links, so each filtered view has its own address. */
+/**
+ * "All" and each part the student has tried, each with its own count. Links, so each filtered view has its own address.
+ * Not rendered at all when there is nothing to filter (the view-model returns no options then).
+ */
 export function PartFilter({ options }: { options: readonly FilterOption[] }) {
   return (
     <nav aria-label="Filter by part">
@@ -44,6 +47,8 @@ export function PartFilter({ options }: { options: readonly FilterOption[] }) {
             >
               {o.active && <Icon name="check" size={14} />}
               {o.label}
+              {/* Inherits the chip's own colour: a lighter grey at this size fails the contrast floor. */}
+              <span className="tabular-nums opacity-70">{o.count}</span>
             </Link>
           </li>
         ))}
@@ -107,6 +112,8 @@ export function AttemptRow({ row, tone, menu }: { row: HistoryRow; tone: 1 | 2 |
           <Outcome row={row} />
           <span className="hidden text-label text-fg-muted sm:block sm:text-right">{row.date}</span>
         </span>
+        {/* Every row opens its result: the same arrow as a mock exam row, so they all look clickable. */}
+        <Icon name="chevronDown" size={16} className="-rotate-90 shrink-0 text-fg-subtle" />
       </Link>
       {menu}
     </li>
@@ -185,7 +192,7 @@ export function BandChartCard({ chart, className }: { chart: BandChart; classNam
       <CardHeader id="chart-title" title="Band over time" action={<span className="text-label text-fg-muted">{chart.partLabel}</span>} />
       <p className="text-caption text-fg-muted">Latest</p>
       <p className="mt-0.5 text-body text-fg">
-        <span className="font-semibold">Band {latest.band}</span> · {latest.label}
+        <span className="font-semibold">{levelOfBand(latest.label)}</span> · Band {latest.band} · {latest.label}
         <span className="text-fg-muted"> · target Band {targetBand}</span>
       </p>
 

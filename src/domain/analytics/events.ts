@@ -14,6 +14,8 @@ export const CLIENT_EVENT_NAMES = [
   "recording_discarded",
   "microphone_permission_denied",
   "upload_failed",
+  /** The recording reached the server (retries included): how long the student's upload took. */
+  "upload_completed",
   "feedback_viewed",
   "retry_started",
   "comparison_viewed",

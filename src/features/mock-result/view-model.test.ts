@@ -220,14 +220,16 @@ describe("the demo mock (mock mode) goes through the real evaluator types", () =
     expect(without).not.toContain("Your teacher");
   });
 
-  it("while scoring: 'Estimate not ready yet', 'Scoring Part 2…' and no fix yet; with 'Back to Practice' as the black button", async () => {
+  it("while scoring: 'Mock submitted', how many parts are in, no fix yet; 'Back to Practice' is quiet", async () => {
     const html = render(await demoMockResult({ state: "scoring" }));
-    expect(html).toContain("Estimate not ready yet");
+    expect(html).toContain("Mock submitted");
+    expect(html).toMatch(/2 of 4 parts scored|2<!-- --> of <!-- -->4<!-- --> parts scored/);
+    expect(html).not.toContain("Estimate not ready yet");
     expect(html).toContain("Scoring Part 2…");
     expect(html).toContain("Scoring Part 3…");
     expect(html).toContain("appears when every part is scored");
     expect(html).not.toContain("Retry with this goal");
-    expect(html).toMatch(/bg-primary text-on-primary[^>]*>Back to Practice/);
+    expect(html).not.toMatch(/bg-primary text-on-primary[^>]*>Back to Practice/);
   });
 
   it("with a retry the black button is 'Retry with this goal' and 'Back to Practice' is quiet", async () => {

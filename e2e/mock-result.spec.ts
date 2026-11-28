@@ -66,16 +66,19 @@ test("two levels side by side: 'CEFRO: B1' and 'Your teacher: B2' with their /75
   await noForbiddenWords(page);
 });
 
-test("while parts are still scoring: 'Scoring Part 2…', 'Estimate not ready yet', no guessed level", async ({ page }) => {
+test("while parts are still scoring: 'Mock submitted', '2 of 4 parts scored', no guessed level, no black button", async ({ page }) => {
   await page.goto(`${RESULT}&state=scoring`);
-  await expect(page.getByTestId("level-cefro")).toHaveText("CEFRO: Estimate not ready yet");
+  await expect(page.getByTestId("mock-waiting")).toContainText("Mock submitted");
+  await expect(page.getByTestId("mock-progress-text")).toHaveText("2 of 4 parts scored");
   await expect(page.getByTestId("mock-not-ready")).toContainText("Part 2 is still being scored");
+  await expect(page.getByTestId("level-cefro")).toHaveCount(0); // no estimate card, no guessed level
   const statuses = page.getByTestId("part-status");
   await expect(statuses).toHaveText(["Scoring Part 2…", "Scoring Part 3…"]);
   await expect(page.getByTestId("part-level")).toHaveCount(2); // Parts 1.1 and 1.2 already filled in
+  await expect(page.getByTestId("mock-read-now")).toContainText("read your Part 1.2 feedback");
   await expect(page.getByTestId("mock-fix")).toContainText("appears when every part is scored");
   await expect(page.getByTestId("mock-line")).toHaveText(LINE);
-  await audit(page, 1); // "Back to Practice" is the one black button until there is a retry
+  await audit(page, 0); // nothing to do yet: "Back to Practice" is quiet until the result is in
   await noForbiddenWords(page);
 });
 

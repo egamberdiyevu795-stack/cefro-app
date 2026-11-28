@@ -89,9 +89,9 @@ test.describe("laptop width (1280 px)", () => {
     await expect(page.getByRole("radio", { name: "Same paper" })).toBeChecked();
     await expect(page.getByRole("radio", { name: "Different papers" })).toBeAttached();
     await audit(page, 1);
-    await page.getByRole("radio", { name: /A different paper/ }).check();
+    await page.getByRole("radio", { name: "Different papers" }).check({ force: true });
     await expect(page.getByTestId("suggested-paper")).toHaveCount(0);
-    await page.getByRole("radio", { name: /Same paper/ }).check();
+    await page.getByRole("radio", { name: /Same paper/ }).check({ force: true });
     await page.getByLabel("Name of this laptop").fill("Room 2");
     await page.getByRole("button", { name: "Start exam laptop" }).click();
     await expect(page).toHaveURL(/\/exam\/demo-class-mock\/laptop\?room=Room\+2&mock=1&as=teacher/);

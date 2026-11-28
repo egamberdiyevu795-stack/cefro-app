@@ -138,6 +138,19 @@ describe("retry goals", () => {
     expect(goal({ kind: "feature", feature: "grammar" }).objective).toBe("Use one structure.");
   });
 
+  it("a grammar fix shown with a mistake gets a goal about that mistake, not the model's general advice", () => {
+    const base = assessment("Work on word order in complex clauses.") as unknown as Record<string, unknown>;
+    const withError = {
+      ...base,
+      errors: [{ quote: "is very hot topic", correction: "is a very hot topic", type: "grammar", pattern: "Missing article" }],
+      error_patterns: [{ name: "Missing article", rule: "Use 'a' before a singular noun." }],
+    } as never;
+    const [first] = deriveQ8RetryFocus(withError, { biggest_fix: { kind: "feature", feature: "grammar" } }, task);
+    expect(first.objective).toBe("Stop this kind of mistake: Missing article. Use 'a' before a singular noun.");
+    expect(first.objective).not.toContain("word order");
+    expect(first.target).toEqual({ kind: "feature", feature: "grammar" });
+  });
+
   it("at most two goals, the second a language feature", () => {
     const focus = deriveQ8RetryFocus(assessment("Use one structure."), { biggest_fix: { kind: "point_development", side: "for", reason: "restated", point_id: "F2" } }, task);
     expect(focus).toHaveLength(2);

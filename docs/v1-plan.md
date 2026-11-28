@@ -199,8 +199,9 @@ parent consent with teacher sharing first (section 7).
 
 ### 4.2 Roles (exists)
 
-- `student` (default) and `teacher`, set only by the owner's script (`scripts/set-role.mjs`). No public teacher sign-up
-  in V1: Asadbek approves each teacher by hand.
+- `student` (default) and `teacher`, chosen by the person for their own account at sign-up or on the Account page (`PUT /api/account/role`, with
+  the teacher terms stored). The owner's script (`scripts/set-role.mjs`) can still set or take it away. The role alone
+  opens no student's work: a student must join the class and share.
 - A teacher can also practise as a student on the same account (their own attempts are never in their class).
 
 ### 4.3 What the teacher can see (V1 changes in bold)

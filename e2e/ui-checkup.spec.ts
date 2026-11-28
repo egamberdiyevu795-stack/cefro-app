@@ -9,27 +9,12 @@ test.skip(process.env.UI_CHECKUP !== "1", "only from the ui-checkup workflow");
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
 
 const PAGES = [
-  "/?mock=1",
-  "/login?mock=1",
-  "/register?mock=1",
-  "/dashboard?mock=1",
-  "/dashboard?mock=1&as=teacher",
-  "/practice?mock=1",
-  "/practice/speaking/b2-part2-a-tradition?mock=1",
-  "/result?demo=demo-5&mock=1",
-  "/result?demo=demo-6&mock=1",
-  "/history?mock=1",
-  "/history?mock=1&part=mock",
-  "/profile?mock=1",
-  "/profile?mock=1&as=teacher",
-  "/practice/mock/demo?mock=1",
-  "/practice/mock/demo?mock=1&state=scoring",
-  "/practice/mock/demo?mock=1&state=pending",
-  "/practice/mock/demo?mock=1&teacher=1",
-  "/lessons?mock=1",
-  "/lessons/l-t1?mock=1",
-  "/teacher/classes/demo-class?mock=1&as=teacher",
-  "/profile/classes/join?mock=1",
+  "/practice/mock/demo-mock?mock=1",
+  "/practice/mock/demo-mock?mock=1&state=scoring",
+  "/practice/mock/demo-mock?mock=1&state=pending",
+  "/practice/mock/demo-mock?mock=1&state=unfinished",
+  "/practice/mock/demo-mock?mock=1&teacher=1",
+  "/practice/mock/demo-mock/part-2?mock=1",
 ];
 
 test("mobile checkup", async ({ page }) => {

@@ -344,6 +344,15 @@ describe("feedback helpful migration (0011)", () => {
   });
 });
 
+describe("teacher sign-up migration (0012)", () => {
+  it("is additive: two nullable columns on users, nothing else", () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, "0012_teacher_signup.sql"), "utf8");
+    expect(sql).toContain("ALTER TABLE `users` ADD `teacher_terms_version` text;");
+    expect(sql).toContain("ALTER TABLE `users` ADD `teacher_terms_at` text;");
+    expect(sql.replace(/^--.*$/gm, "")).not.toMatch(/DROP |DELETE FROM|UPDATE `|__new_|RENAME|NOT NULL|CREATE TABLE/i);
+  });
+});
+
 describe("upgrading a database created by an earlier release", () => {
   /** Rows as the pre-Stage-3 application wrote them (migrations 0000 and 0001 only). */
   async function seedOldDatabase(file: string) {

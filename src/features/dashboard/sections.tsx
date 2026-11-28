@@ -314,7 +314,7 @@ export function RecentAttemptsCard({
         title="Recent attempts"
         action={
           flags.history ? (
-            <Link href={mockLink("/history", mock)} aria-label="See all attempts" className={styles.SMALL_ACTION}>
+            <Link href={mockLink("/history", mock)} aria-label="See all attempts" className={cx(styles.SMALL_ACTION, "min-h-11 min-w-11 justify-end px-1")}>
               See all
             </Link>
           ) : undefined

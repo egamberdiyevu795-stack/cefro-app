@@ -50,7 +50,7 @@ export function Notice({ tone = "status", className, children, ...rest }: React.
 /** The CEFRO wordmark as a link (dashboard, task pages, the signed-out pages). */
 export function WordmarkLink({ href, className = "flex" }: { href: string; className?: string }) {
   return (
-    <Link href={href} className={cx("items-center text-body font-semibold tracking-[0.08em] text-fg", FOCUS_RING, className)}>
+    <Link href={href} className={cx("min-h-11 items-center text-body font-semibold tracking-[0.08em] text-fg", FOCUS_RING, className)}>
       CEFRO
     </Link>
   );

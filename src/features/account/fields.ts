@@ -11,7 +11,7 @@ export const QUIET_BUTTON = cx(styles.PILL_QUIET, "disabled:cursor-not-allowed d
 /** The danger pill as a submit / plain button (Delete my account), dimmed while disabled. */
 export const DANGER_BUTTON = cx(styles.PILL_DANGER, "disabled:cursor-not-allowed disabled:opacity-60");
 /** A small text action with a 36 px tap area (Edit, Cancel), as on the exam date. */
-export const TEXT_BUTTON = cx(styles.SMALL_ACTION, "min-h-9 px-1 disabled:cursor-wait");
+export const TEXT_BUTTON = cx(styles.SMALL_ACTION, "min-h-9 min-w-11 justify-end px-1 disabled:cursor-wait");
 
 /** The `{ error: { message } }` body of a failed API call, or a fallback. */
 export async function errorMessage(response: Response, fallback = "That didn't work. Please try again."): Promise<string> {

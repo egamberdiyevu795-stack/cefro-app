@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardHeader, DemoLabel, Icon, PillButton, cx, styles } from "@/components/ds";
 import { fetchMockResult } from "@/features/speaking-practice/lib/api-client";
 import type { MockResultSource } from "./part-source";
@@ -43,23 +43,98 @@ export function MockResult({ initial, demo = false, practiceHref }: { initial: M
     };
   }, [waiting, source.id]);
 
+  // When the last part lands, say so for screen readers: the waiting card is replaced by the estimate.
+  const wasScoring = useRef(view.scoring);
+  const [announce, setAnnounce] = useState("");
+  useEffect(() => {
+    if (wasScoring.current && !view.scoring) setAnnounce("Your estimate is ready.");
+    wasScoring.current = view.scoring;
+  }, [view.scoring]);
+
   const hasRetry = Boolean(view.fix?.retryHref);
   return (
     <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start" data-testid="mock-result" data-status={view.status}>
       {demo && <DemoLabel variant="result" className="w-fit bg-card lg:col-span-2" />}
+      <p role="status" className="sr-only">
+        {announce}
+      </p>
       <div className="grid gap-4">
-        <LevelCard view={view} />
+        {view.scoring ? <WaitingCard view={view} /> : <LevelCard view={view} />}
         <PartsCard rows={view.rows} />
       </div>
       <div className="grid gap-4">
         <FixCard view={view} />
         <div className="flex">
-          <PillButton href={practiceHref} variant={hasRetry ? "quiet" : "primary"} size="lg" className="w-full sm:w-auto">
+          <PillButton href={practiceHref} variant={hasRetry || view.scoring ? "quiet" : "primary"} size="lg" className="w-full sm:w-auto">
             Back to Practice
           </PillButton>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * While any part is still being scored: the confirmation that the mock was handed in, how many parts are in, an honest
+ * word about the wait, and something useful to do meanwhile (read a finished part's feedback). No black button, no
+ * "estimate not ready" twice: the estimate card takes this place when the last part lands.
+ */
+function WaitingCard({ view }: { view: MockResultView }) {
+  const total = view.rows.length;
+  const done = view.rows.filter((r) => r.state !== "scoring").length;
+  const readNow = [...view.rows].reverse().find((r) => r.state === "scored" && r.detailHref);
+  return (
+    <Card aria-labelledby="mock-result-title" data-testid="mock-waiting">
+      <p className="text-label font-medium text-fg-muted">
+        {view.title}
+        {view.placeText && <span data-testid="mock-place">{" · "}{view.placeText}</span>}
+      </p>
+      <h1 id="mock-result-title" className="mt-1 flex items-center gap-2 text-title font-medium tracking-[-0.01em] text-fg">
+        <Icon name="check" size={20} className="text-fg-subtle" />
+        Mock submitted
+      </h1>
+      <div
+        role="progressbar"
+        aria-label="Parts scored"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={done}
+        className="mt-4 flex gap-1.5"
+        data-testid="mock-progress"
+      >
+        {view.rows.map((row) => (
+          <span key={row.part} className={cx("h-1.5 flex-1 rounded-full", row.state === "scoring" ? "bg-well" : "bg-primary")} />
+        ))}
+      </div>
+      <p className="mt-2 text-body font-medium text-fg" data-testid="mock-progress-text">
+        {done} of {total} parts scored
+      </p>
+      {view.headline.kind === "not_ready" && (
+        <p className="mt-1 text-body text-fg-muted" data-testid="mock-not-ready">
+          {view.headline.reason}
+        </p>
+      )}
+      <p className="mt-3 text-body text-fg-muted">
+        Long answers take a few minutes to score carefully. You don&rsquo;t have to wait here: your estimate will be in History when it&rsquo;s ready.
+      </p>
+      {readNow && (
+        <Link
+          href={readNow.detailHref!}
+          data-testid="mock-read-now"
+          className={cx("mt-1 inline-flex min-h-11 items-center gap-1 text-label font-medium text-fg underline underline-offset-2", styles.FOCUS_RING)}
+        >
+          While you wait: read your {readNow.partLabel} feedback
+          <Icon name="chevronDown" size={14} className="-rotate-90 text-fg-subtle" />
+        </Link>
+      )}
+      <div className="mt-4 flex items-end gap-3" aria-hidden="true">
+        <span className="text-label font-medium text-fg-muted">CEFRO:</span>
+        <span className="h-10 w-24 rounded-tile bg-well motion-safe:animate-pulse" />
+      </div>
+      <p className="mt-4 text-body text-fg" data-testid="mock-line">
+        {view.line}
+      </p>
+    </Card>
   );
 }
 
@@ -194,7 +269,20 @@ function FixCard({ view }: { view: MockResultView }) {
   return (
     <Card aria-labelledby="mock-fix-title" data-testid="mock-fix">
       <CardHeader id="mock-fix-title" title="Biggest fix across the mock" />
-      {fix ? <Fix fix={fix} /> : <p className="text-body text-fg-muted">{view.fixWaiting ? "Your biggest fix appears when every part is scored." : "No part was scored, so there is no fix to show yet."}</p>}
+      {fix ? (
+        <Fix fix={fix} />
+      ) : view.fixWaiting ? (
+        <div>
+          <p className="text-body text-fg-muted">Your biggest fix appears when every part is scored.</p>
+          <div className="mt-4 grid gap-2" aria-hidden="true">
+            <span className="h-3 w-1/3 rounded-full bg-well motion-safe:animate-pulse" />
+            <span className="h-3 w-full rounded-full bg-well motion-safe:animate-pulse" />
+            <span className="h-3 w-4/5 rounded-full bg-well motion-safe:animate-pulse" />
+          </div>
+        </div>
+      ) : (
+        <p className="text-body text-fg-muted">No part was scored, so there is no fix to show yet.</p>
+      )}
     </Card>
   );
 }

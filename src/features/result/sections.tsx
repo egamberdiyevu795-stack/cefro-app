@@ -496,7 +496,25 @@ export function ScoringResult({
         <h1 id="result-title" className="mt-2 text-stat font-light tracking-[-0.03em] text-fg">
           Scoring…
         </h1>
-        <p className="mt-3 text-body text-fg-muted">This usually takes under a minute. You can leave this page; the result will wait for you.</p>
+        <p className="mt-3 text-body text-fg-muted">
+          We score carefully, so this can take a few minutes. You don&rsquo;t have to wait here: your result is saved and will be in History when it&rsquo;s ready.
+        </p>
+        <p className="mt-1 flex flex-wrap gap-x-4">
+          <Link
+            href={mockLink("/dashboard", demo)}
+            data-testid="scoring-home"
+            className={cx("inline-flex min-h-11 items-center text-label text-fg-muted underline underline-offset-2 hover:text-fg", styles.FOCUS_RING)}
+          >
+            Back to Home
+          </Link>
+          <Link
+            href={mockLink("/history", demo)}
+            data-testid="scoring-history"
+            className={cx("inline-flex min-h-11 items-center text-label text-fg-muted underline underline-offset-2 hover:text-fg", styles.FOCUS_RING)}
+          >
+            Open History
+          </Link>
+        </p>
         {notice && (
           <p role="status" className="mt-2 text-body text-fg">
             {notice}

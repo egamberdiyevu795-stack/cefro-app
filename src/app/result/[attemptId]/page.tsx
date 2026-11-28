@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { connection } from "next/server";
 import { FEATURE_FLAGS } from "@/config/features";
 import { getSpeakingTask } from "@/content/speaking";
@@ -9,7 +10,9 @@ import type { AttemptView } from "@/domain/speaking/attempt";
 import { toPublicTask } from "@/domain/speaking/task";
 import { Part3AttemptResult } from "@/features/part3/Part3AttemptResult";
 import { AttemptResult } from "@/features/result/AttemptResult";
+import { resultBack } from "@/features/result/back-link";
 import { AppShell } from "@/features/shell/AppShell";
+import { fullMockSessionIdOfAttempt } from "@/server/attempts/attempt-repository";
 import { getAttemptViewForUser } from "@/server/attempts/attempt-service";
 import { assertServerConfigured } from "@/server/config/boot-check";
 import { HttpError } from "@/server/errors";
@@ -44,6 +47,8 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
   const attempt = userId ? await ownAttempt(userId, attemptId) : null;
   if (!userId || !attempt) notFound();
   const previous = attempt.previousAttemptId ? await ownAttempt(userId, attempt.previousAttemptId) : null;
+  // The header's back link: History if that is where the student came from, else the mock this part belongs to.
+  const back = resultBack({ referer: (await headers()).get("referer"), mockId: await fullMockSessionIdOfAttempt(userId, attempt.id) });
 
   // Part 3 (balanced argument) has its own result page; the attempt, owner check and polling are the same.
   const argumentTask = getArgumentTask(attempt.taskId);
@@ -52,7 +57,7 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
     const labels = bandLabelsOf(getArgumentRubric(argumentTask).config.bands);
     const teacher = await teacherLevelOfOwnAttempt(attempt.id, labels);
     return (
-      <AppShell flags={FEATURE_FLAGS} account="real">
+      <AppShell flags={FEATURE_FLAGS} account="real" back={back}>
         <Part3AttemptResult
           initial={attempt}
           previous={previous}
@@ -70,7 +75,7 @@ export default async function AttemptResultPage(props: PageProps<"/result/[attem
   const teacher = await teacherLevelOfOwnAttempt(attempt.id, labels);
 
   return (
-    <AppShell flags={FEATURE_FLAGS} account="real">
+    <AppShell flags={FEATURE_FLAGS} account="real" back={back}>
       <AttemptResult
         initial={attempt}
         previous={previous}

@@ -66,16 +66,19 @@ test("two levels side by side: 'CEFRO: B1' and 'Your teacher: B2' with their /75
   await noForbiddenWords(page);
 });
 
-test("while parts are still scoring: 'Scoring Part 2…', 'Estimate not ready yet', no guessed level", async ({ page }) => {
+test("while parts are still scoring: 'Mock submitted', '2 of 4 parts scored', no guessed level, no black button", async ({ page }) => {
   await page.goto(`${RESULT}&state=scoring`);
-  await expect(page.getByTestId("level-cefro")).toHaveText("CEFRO: Estimate not ready yet");
+  await expect(page.getByTestId("mock-waiting")).toContainText("Mock submitted");
+  await expect(page.getByTestId("mock-progress-text")).toHaveText("2 of 4 parts scored");
   await expect(page.getByTestId("mock-not-ready")).toContainText("Part 2 is still being scored");
+  await expect(page.getByTestId("level-cefro")).toHaveCount(0); // no estimate card, no guessed level
   const statuses = page.getByTestId("part-status");
   await expect(statuses).toHaveText(["Scoring Part 2…", "Scoring Part 3…"]);
   await expect(page.getByTestId("part-level")).toHaveCount(2); // Parts 1.1 and 1.2 already filled in
+  await expect(page.getByTestId("mock-read-now")).toContainText("read your Part 1.2 feedback");
   await expect(page.getByTestId("mock-fix")).toContainText("appears when every part is scored");
   await expect(page.getByTestId("mock-line")).toHaveText(LINE);
-  await audit(page, 1); // "Back to Practice" is the one black button until there is a retry
+  await audit(page, 0); // nothing to do yet: "Back to Practice" is quiet until the result is in
   await noForbiddenWords(page);
 });
 
@@ -102,7 +105,9 @@ test("History: a mock is one row opening the mock result; the pills include Mock
   await page.goto("/history?mock=1");
   const mockRow = page.getByTestId("history-mock");
   await expect(mockRow).toHaveCount(1);
-  await expect(mockRow).toContainText(/^Mock exam · (B1|B2|C1|Below B1) · \d\d\.\d\d\.\d\d/);
+  await expect(mockRow).toContainText("Mock exam");
+  await expect(mockRow.getByTestId("history-mock-level")).toHaveText(/^(B1|B2|C1|Below B1)$/); // the result column, as on an attempt
+  await expect(mockRow).toContainText(/\d\d\.\d\d\.\d\d/); // the date
   const pills = page.getByRole("navigation", { name: "Filter by part" }).getByRole("link");
   // Every chip carries its count, so the row reads as a filter and not as a label.
   await expect(pills).toHaveText([/^All ?\d+$/, /^Mock exams ?\d+$/, /^Part 1\.1 ?\d+$/, /^Part 1\.2 ?\d+$/, /^Part 2 ?\d+$/, /^Part 3 ?\d+$/]);
@@ -140,7 +145,8 @@ test.describe("at laptop width", () => {
     await audit(page, 1);
     await noForbiddenWords(page);
     await page.goto(`${RESULT}&state=scoring`);
-    await audit(page, 1);
+    await expect(page.getByTestId("mock-waiting")).toBeVisible();
+    await audit(page, 0); // still waiting: nothing is black
   });
 
   test("History shows the mock row and the pills without horizontal scroll", async ({ page }) => {
@@ -154,7 +160,7 @@ test.describe("at laptop width", () => {
 test("the dashboard's Recent attempts shows the mock as one row opening the mock result", async ({ page }) => {
   await page.goto("/dashboard?mock=1");
   const recent = page.getByRole("region", { name: "Recent attempts" });
-  const row = recent.getByRole("link", { name: /^Mock exam · (B1|B2|C1|Below B1) · \d\d\.\d\d\.\d\d/ });
+  const row = recent.getByRole("link", { name: /^Mock exam(?=.*(B1|B2|C1|Below B1))(?=.*\d\d\.\d\d\.\d\d)/ });
   await expect(row).toHaveCount(1);
   await expect(recent.getByRole("link", { name: /Part 3/ })).toHaveCount(0); // its parts are not listed loose
   await row.click();

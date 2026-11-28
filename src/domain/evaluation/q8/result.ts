@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { errorExampleGoal } from "@/domain/evaluation/error-goal";
 import { FEATURES, FEATURE_LABELS, type Feature } from "@/domain/evaluation/multilevel/levels";
 import { PROMPT_DEPENDENCE_LEVELS } from "@/domain/evaluation/multilevel/prompt-overlap";
 import { FEATURE_SOURCES } from "@/domain/evaluation/multilevel/result";
@@ -170,12 +171,15 @@ export function q8FocusFor(fix: Q8BiggestFix, assessment: Q8ModelOutput, task: T
             target: { kind: "point", point_id: fix.point_id },
           };
     case "feature":
-      return featureFocus(assessment, fix.feature);
+      // The goal follows the mistake the card shows (grammar/vocabulary), not the model's separate general advice.
+      return featureFocus(assessment, fix.feature, true);
   }
 }
 
-function featureFocus(assessment: Q8ModelOutput, feature: Feature): Q8RetryFocus {
+function featureFocus(assessment: Q8ModelOutput, feature: Feature, fromShownError = false): Q8RetryFocus {
   const f = assessment.features[feature];
+  const fromError = fromShownError ? errorExampleGoal(assessment, feature) : null;
+  if (fromError) return { ...fromError, target: { kind: "feature", feature } };
   return {
     objective: f.how_to_improve.trim() || `Work on ${FEATURE_LABELS[feature].toLowerCase()}: ${f.note}`,
     success_check: f.how_to_check.trim() || "Listen back to your answer and check this point.",

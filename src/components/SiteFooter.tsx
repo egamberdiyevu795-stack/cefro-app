@@ -6,7 +6,7 @@ import { Suspense } from "react";
 
 /** The exam laptop (T7) has no link out at all: a student at the shared laptop must have nothing to follow (docs/teacher-plan.md, section 11). */
 const EXAM_LAPTOP_PAGE = /^\/teacher\/classes\/[^/]+\/exam\/[^/]+\/laptop\/?$/;
-const CLASSES = "underline underline-offset-2 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2";
+const CLASSES = "inline-flex min-h-11 items-center px-3 underline underline-offset-2 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2";
 
 /** Mock mode (`?mock=1`): every link keeps it, like every other link of the app (docs/design-system.md), so a demo never leaves demo mode. */
 function CreditsLink() {

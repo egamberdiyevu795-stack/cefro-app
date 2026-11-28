@@ -34,13 +34,13 @@ export function PartFilter({ options }: { options: readonly FilterOption[] }) {
     <nav aria-label="Filter by part">
       <ul className="flex flex-wrap gap-1.5">
         {options.map((o) => (
-          <li key={o.id}>
+          <li key={o.id} className="min-w-[30%] flex-1 sm:min-w-0 sm:flex-none">
             <Link
               href={o.href}
               aria-current={o.active ? "true" : undefined}
               scroll={false}
               className={cx(
-                "inline-flex h-8 items-center gap-1 rounded-full px-3 text-label transition-colors",
+                "inline-flex h-9 w-full items-center justify-center gap-1 rounded-full px-3 text-label transition-colors sm:w-auto",
                 styles.FOCUS_RING,
                 o.active ? "bg-card font-semibold text-fg shadow-card" : "text-fg-muted hover:bg-well hover:text-fg",
               )}

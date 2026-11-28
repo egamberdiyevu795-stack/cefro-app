@@ -7,7 +7,7 @@ import { useHydrated } from "@/components/ds/useHydrated";
 import { examDateProblem, examDateState, formatDay, type ExamDateState } from "@/domain/exam-date";
 
 /** The small text actions here (Edit, Add exam date, Skip, Cancel, Remove date): a 36 px tap area, like Save. */
-export const EXAM_TEXT_ACTION = cx(styles.SMALL_ACTION, "min-h-9 px-1");
+export const EXAM_TEXT_ACTION = cx(styles.SMALL_ACTION, "min-h-11 min-w-11 justify-end px-1");
 
 /**
  * The exam date on the dashboard (flag `examCountdown`).

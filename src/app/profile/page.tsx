@@ -112,11 +112,12 @@ export default async function AccountPage(props: PageProps<"/profile">) {
         {consent && <ConsentCard record={consent} />}
         <ExamDate state={accountExamState(examDateState(stored, now))} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant="card" demo={mock} />
         {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} mock={mock} />}
-        {/* A student with an account can become a teacher here: nobody approves it (the role opens no student's work). */}
-        {classes?.role === "student" && signedIn && <BecomeTeacherCard mock={mock} />}
         {classes?.role === "student" && (
           <MyClassesCard memberships={classes.memberships} joinHref={mockLink(studentLinks.join, mock)} accountHref={mockLink(studentLinks.account, mock)} demo={mock} />
         )}
+        {/* A student with an account can become a teacher here: nobody approves it (the role opens no student's work). It
+            comes after the student's own classes: most people here are students. */}
+        {classes?.role === "student" && signedIn && <BecomeTeacherCard mock={mock} />}
         <SignInCard signedIn={signedIn} mock={mock} />
         {signedIn && <DeleteCard mock={mock} items={deletedItems(teacherLive())} />}
       </div>

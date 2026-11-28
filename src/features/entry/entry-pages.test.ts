@@ -226,11 +226,11 @@ describe("sign in and Create account", () => {
     expect(page).toContain("Have an account? Sign in");
     for (const field of ["email", "password"]) expect(markup).toContain(`name="${field}"`);
     expect(markup).not.toContain('name="name"');
-    // Email and password, plus the two role choices ("A student" is picked; the teacher terms appear only for "A teacher").
+    // Email and password, plus the two role choices ("Student" is picked; the teacher terms appear only for "Teacher").
     expect(markup.match(/<input\b/g)).toHaveLength(4);
     expect(markup.match(/<input\b[^>]*type="radio"/g)).toHaveLength(2);
-    expect(page).toContain("A student");
-    expect(page).toContain("A teacher");
+    expect(page).toContain("Student");
+    expect(page).toContain("Teacher");
     expect(markup).not.toContain('name="terms"');
     expect(markup).toMatch(/<form\b[^>]*method="post"/);
     expect(markup).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/); // until the scripts load

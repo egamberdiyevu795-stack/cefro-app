@@ -1,5 +1,6 @@
 import type { AttemptSummary, AttemptView } from "@/domain/speaking/attempt";
 import type { MockResultSource } from "@/features/mock-result/part-source";
+import { track } from "./analytics";
 
 /**
  * Typed browser-side client for the speaking API. Every failure becomes an
@@ -159,7 +160,16 @@ export function submitRecording(input: {
   if (input.questionOffsetsMs?.length) form.append("questionOffsetsMs", JSON.stringify(input.questionOffsetsMs));
   if (input.chosenPoints?.length) form.append("chosenPoints", JSON.stringify(input.chosenPoints));
   // Safe to resend thanks to clientAttemptId; slow mobile uploads get a generous timeout per try.
-  return request("/api/speaking/attempts", { method: "POST", body: form, timeoutMs: 180_000, retries: 4 });
+  const startedAt = performance.now();
+  return request<{ attempt: AttemptView }>("/api/speaking/attempts", { method: "POST", body: form, timeoutMs: 180_000, retries: 4 }).then((result) => {
+    // How long the student waited for the upload (retries included). Best effort, never affects the upload.
+    track("upload_completed", {
+      taskId: input.taskId,
+      attemptId: result.attempt.id,
+      properties: { uploadMs: Math.round(performance.now() - startedAt), bytes: input.audio.size },
+    });
+    return result;
+  });
 }
 
 export function fetchAttempt(attemptId: string): Promise<{ attempt: AttemptView }> {

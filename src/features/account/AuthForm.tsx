@@ -110,19 +110,18 @@ export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "logi
         hint={isRegister ? "At least 8 characters." : undefined}
       />
       {isRegister && (
-        <fieldset className="space-y-2">
+        <fieldset className="space-y-3">
           <legend className="text-caption font-semibold text-fg">I will use CEFRO as…</legend>
-          <RoleChoice value="student" current={role} onPick={setRole} ready={ready} title="A student" line="Practise, get my level and see what to fix first." />
-          <RoleChoice value="teacher" current={role} onPick={setRole} ready={ready} title="A teacher" line="Create a class and follow my students' speaking." />
+          <RoleSegment current={role} onPick={setRole} ready={ready} />
           {role === "teacher" && (
-            <label className="flex cursor-pointer items-start gap-3 pt-1 text-body text-fg-muted">
+            <label className="flex cursor-pointer items-start gap-3 text-body text-fg-muted">
               <input
                 type="checkbox"
                 name="terms"
                 checked={terms}
                 onChange={(event) => setTerms(event.currentTarget.checked)}
                 disabled={!ready}
-                className="mt-0.5 size-4 shrink-0 accent-accent"
+                className="mt-0.5 size-4 shrink-0 accent-primary"
               />
               <span>{TEACHER_TERMS_TEXT}</span>
             </label>
@@ -145,39 +144,39 @@ export function AuthForm({ mode, next, mock = false, forgotHref }: { mode: "logi
   );
 }
 
-/** One role, as a tappable card: the same shape as the exam laptop's "Which paper?" choice. */
-function RoleChoice({
-  value,
-  current,
-  onPick,
-  ready,
-  title,
-  line,
-}: {
-  value: "student" | "teacher";
-  current: "student" | "teacher";
-  onPick: (role: "student" | "teacher") => void;
-  ready: boolean;
-  title: string;
-  line: string;
-}) {
-  const picked = current === value;
+const ROLE_LINES = {
+  student: "Practise, get my level and see what to fix first.",
+  teacher: "Create a class and follow my students' speaking.",
+} as const;
+
+/**
+ * Who the account is for, as a two-part switch (grey track, the chosen side a white pill) with one line under it for the
+ * chosen role. Real radio buttons underneath, so the keyboard and screen readers work as they would for any radio group.
+ */
+function RoleSegment({ current, onPick, ready }: { current: "student" | "teacher"; onPick: (role: "student" | "teacher") => void; ready: boolean }) {
   return (
-    <label className={cx("flex cursor-pointer items-start gap-3 rounded-tile border p-3", picked ? "border-fg bg-well" : "border-line bg-card")}>
-      <input
-        type="radio"
-        name="role"
-        value={value}
-        checked={picked}
-        onChange={() => onPick(value)}
-        disabled={!ready}
-        className="mt-1 size-4 shrink-0 accent-accent"
-      />
-      <span>
-        <span className="block text-body font-semibold text-fg">{title}</span>
-        <span className="block text-label text-fg-muted">{line}</span>
-      </span>
-    </label>
+    <>
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-well p-1">
+        {(["student", "teacher"] as const).map((value) => {
+          const picked = current === value;
+          return (
+            <label
+              key={value}
+              className={cx(
+                "flex h-11 cursor-pointer items-center justify-center rounded-full text-body font-medium transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-fg",
+                picked ? "bg-card text-fg shadow-card" : "text-fg-muted hover:text-fg",
+              )}
+            >
+              <input type="radio" name="role" value={value} checked={picked} onChange={() => onPick(value)} disabled={!ready} className="sr-only" />
+              {value === "student" ? "Student" : "Teacher"}
+            </label>
+          );
+        })}
+      </div>
+      <p className="text-label text-fg-muted" aria-live="polite">
+        {ROLE_LINES[current]}
+      </p>
+    </>
   );
 }
 

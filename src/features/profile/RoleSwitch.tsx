@@ -95,7 +95,7 @@ export function RoleSwitch({ role, mock }: { role: "student" | "teacher"; mock: 
           checked={terms}
           onChange={(event) => setTerms(event.currentTarget.checked)}
           disabled={!ready}
-          className="mt-0.5 size-4 shrink-0 accent-accent"
+          className="mt-0.5 size-4 shrink-0 accent-primary"
         />
         <span>{TEACHER_TERMS_TEXT}</span>
       </label>

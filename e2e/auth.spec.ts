@@ -140,8 +140,8 @@ test("sign up as a teacher: the terms are needed, the account can run a class, a
   const email = uniqueEmail("teacher");
   await page.goto("/register");
   const create = page.getByRole("button", { name: "Create account" });
-  await expect(page.getByLabel("A student")).toBeChecked();
-  await page.getByLabel("A teacher").check();
+  await expect(page.getByLabel("Student", { exact: true })).toBeChecked();
+  await page.getByLabel("Teacher", { exact: true }).check({ force: true });
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await expect(create).toBeDisabled(); // the one promise is not ticked yet

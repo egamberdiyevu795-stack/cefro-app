@@ -1,0 +1,25 @@
+name: UI checkup (one-off)
+on:
+  push:
+    branches: [ui-checkup]
+jobs:
+  checkup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: npm ci (retried on a failed download)
+        run: |
+          for attempt in 1 2 3 4; do
+            npm ci && exit 0
+            sleep $((attempt * 20))
+          done
+          exit 1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Mobile checkup
+        run: UI_CHECKUP=1 npx playwright test e2e/ui-checkup.spec.ts

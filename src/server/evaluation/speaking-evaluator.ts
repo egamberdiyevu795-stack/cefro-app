@@ -56,14 +56,20 @@ export interface EvaluateOptions {
  */
 export async function evaluateSpeaking(input: EvaluationInput, model: EvaluationModel, options: EvaluateOptions = {}): Promise<SpeakingEvaluation> {
   const startedAt = Date.now();
+  let audioMs = 0;
+  const audioStartedAt = Date.now();
   const audioPromise = runAudioAssessment({
     assessor: options.audioAssessor ?? null,
     audio: options.audio ?? null,
     mimeType: input.audio.mimeType,
     transcript: input.transcript,
     config: input.rubric.config,
+  }).then((outcome) => {
+    audioMs = Date.now() - audioStartedAt;
+    return outcome;
   });
   const text = await evaluateTranscript(input, model, options.deadlineAt);
+  const textMs = Date.now() - startedAt;
   const audio = await audioPromise;
 
   const assessment = mergeAudio(text.output, audio);
@@ -111,6 +117,9 @@ export async function evaluateSpeaking(input: EvaluationInput, model: Evaluation
     modelConfig: {
       ...model.config,
       audioAssessment: audio.status === "assessed" ? `${audio.provider}:${audio.model}` : `off:${audio.reason}`,
+      // Where the evaluation's time went (the two run side by side): the transcript evaluator and the audio step.
+      textMs,
+      audioMs,
     },
     isDevelopmentProvider: model.isDevelopmentProvider,
     latencyMs: Date.now() - startedAt,

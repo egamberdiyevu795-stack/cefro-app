@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Card, CardHeader, PillAction, cx, styles } from "@/components/ds";
+import { Card, CardHeader, PillAction, Segmented, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { DEFAULT_ROOM_LABEL, ROOM_LABEL_MAX_LENGTH, normaliseRoomLabel, type PaperMode } from "@/domain/teacher/exam-laptop";
 import { examPartLabel, type ExamPartId } from "@/domain/speaking/exam-part";
@@ -86,21 +86,20 @@ export function StartExam({ classId, className, open, suggestion, demo, demoClas
         {!open && (
           <fieldset>
             <legend className="text-caption font-semibold text-fg">Which paper?</legend>
-            <div className="mt-2 flex flex-col gap-2">
-              <label className={cx("flex cursor-pointer items-start gap-3 rounded-tile border p-3", mode === "same" ? "border-fg bg-well" : "border-line bg-card")}>
-                <input type="radio" name="mode" value="same" checked={mode === "same"} onChange={() => setMode("same")} className="mt-1 size-4 accent-accent" disabled={!ready} />
-                <span>
-                  <span className="block text-body font-semibold text-fg">Same paper for everyone</span>
-                  <span className="block text-label text-fg-muted">Four tasks nobody in the class has done.</span>
-                </span>
-              </label>
-              <label className={cx("flex cursor-pointer items-start gap-3 rounded-tile border p-3", mode === "different" ? "border-fg bg-well" : "border-line bg-card")}>
-                <input type="radio" name="mode" value="different" checked={mode === "different"} onChange={() => setMode("different")} className="mt-1 size-4 accent-accent" disabled={!ready} />
-                <span>
-                  <span className="block text-body font-semibold text-fg">A different paper for each student</span>
-                  <span className="block text-label text-fg-muted">Each student gets tasks they haven&rsquo;t done recently.</span>
-                </span>
-              </label>
+            <div className="mt-2 space-y-2">
+              <Segmented
+                name="mode"
+                options={[
+                  { value: "same", label: "Same paper" },
+                  { value: "different", label: "Different papers" },
+                ]}
+                value={mode}
+                onChange={setMode}
+                disabled={!ready}
+              />
+              <p className="text-label text-fg-muted" aria-live="polite">
+                {mode === "same" ? "Everyone sits the same four tasks, none of which anyone in the class has done." : "Each student gets tasks they haven\u2019t done recently."}
+              </p>
             </div>
             {mode === "same" && (
               <ol className="mt-3 divide-y divide-line rounded-tile bg-well px-3" data-testid="suggested-paper" aria-label="The suggested paper">

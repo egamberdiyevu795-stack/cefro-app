@@ -6,6 +6,7 @@ export { StatRow, ProgressBar, GoalBar } from "./Stats";
 export { RadarChart, type RadarAxis } from "./RadarChart";
 export { ListRow, Thumb } from "./ListRow";
 export { Sidebar, SidebarItem, TopBar, TopBarLink, type NavItem } from "./Navigation";
+export { Segmented } from "./Segmented";
 export { Menu, type MenuItem } from "./Menu";
 export { Icon, type IconName } from "./Icon";
 export { cx } from "./cx";

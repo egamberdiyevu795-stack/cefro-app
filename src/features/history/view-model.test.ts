@@ -325,8 +325,12 @@ describe("mock exams in History", () => {
 
   it("renders a mock row with one black button at most (none), no text under 11 px, and no score or Passed / Failed", () => {
     const html = render(withMocks([...finished("m1"), attempt({ day: 1 })], [mock("m1"), mock("m2", { status: "not_finished", createdAt: new Date(Date.UTC(2026, 10, 2)).toISOString() })]));
-    expect(html).toContain("Mock exam · B2 · 11.11.26");
-    expect(html).toContain("Mock exam · Not finished · 02.11.26");
+    // The same columns as an attempt: "Mock exam", the result ("B2" / "Not finished") and the date each have their own place.
+    expect(html).toContain(">Mock exam</span>");
+    expect(html).toContain(">B2</span>");
+    expect(html).toContain(">Not finished</span>");
+    expect(html).toContain("11.11.26");
+    expect(html).toContain("02.11.26");
     expect(html).toContain("Mock exams");
     expect((html.match(BLACK) ?? []).length).toBe(0);
     expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);

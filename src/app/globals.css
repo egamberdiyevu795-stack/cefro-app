@@ -88,3 +88,16 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* The top bar that shows a tapped link is loading (components/NavProgress.tsx): grows fast, then slows near the end. */
+@keyframes nav-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 92%;
+  }
+}
+.nav-progress-bar {
+  animation: nav-progress 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}

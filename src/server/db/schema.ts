@@ -59,10 +59,16 @@ export const users = sqliteTable("users", {
   /** When the student answered "When is your exam?" with Skip (ISO time). Cleared when they save a date. */
   examDateSkippedAt: text("exam_date_skipped_at"),
   /**
-   * "student" (everyone) or "teacher" (docs/teacher-plan.md). Set only by the owner's script (scripts/set-role.mjs),
-   * never by any API or by the auth library.
+   * "student" (everyone) or "teacher" (docs/teacher-plan.md). A person chooses it for their own account, at sign-up or
+   * on the Account page (`PUT /api/account/role`), and the owner's script (scripts/set-role.mjs) can still set or take
+   * it back. The role alone opens no student's work: a teacher sees an answer only after that student joins their
+   * class with its code and shares it. Never set by the auth library, and never for anyone but the caller themselves.
    */
   role: text("role", { enum: ["student", "teacher"] }).notNull().default("student"),
+  /** Which teacher terms they agreed to when they became a teacher (e.g. "teacher-terms-v1"); null for a student. */
+  teacherTermsVersion: text("teacher_terms_version"),
+  /** When they agreed to those terms (ISO time). */
+  teacherTermsAt: text("teacher_terms_at"),
   /**
    * Pilot consent (docs/consent-design.md, "Pilot route"; migration 0007_pilot_consent). Null = none recorded,
    * "granted" = recording unlocked (a parent or guardian, or an adult tester, confirmed by hand), "withdrawn" = locked

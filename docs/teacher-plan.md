@@ -5,11 +5,12 @@ sections 1 to 9 below say "Part 2 only", "never recordings", "No player" or "stu
 docs/v1-plan.md (Decisions log) win. Built (mock mode only, release switch off) on
 `claude/teacher-view-kd6wdk`; see docs/merge-order.md for what was not followed exactly. Built on `claude/profile-settings` (the Account page
 at `/profile`, Delete my account). All decisions are in this plan; section 9 lists them.
-**Not in v1:** ~~audio playback~~ (now in: section 10), messages, editing scores, deadlines (v2), public teacher sign-up (teachers are
-approved by the owner by hand). Teachers see the name the student chose for them, never emails.
+**Not in v1:** ~~audio playback~~ (now in: section 10), ~~public teacher sign-up~~ (now in: a teacher chooses the role
+when creating an account, or on the Account page), messages, editing scores, deadlines (v2). Teachers see the name the
+student chose for them, never emails.
 
-**Mock mode only until launch.** Real teacher pages and APIs stay off (a release switch, 404) until parent consent for
-under-18s is built (section 7). Until then only `?mock=1` works.
+**Live.** The release switch `TEACHER_LIVE` is on by default; `TEACHER_LIVE=false` in Vercel turns every real teacher
+page and API, and the student's Join / Share / Leave, back to 404. `?mock=1` works either way.
 
 ## 1. User flows
 
@@ -37,7 +38,11 @@ confirm. Students never see the teacher's rating in v1.
 
 ## 3. Data model (one additive migration, `0006_teachers`)
 
-- `users.role`: `student` (default) or `teacher`. Set only by an owner script, never by any API.
+- `users.role`: `student` (default) or `teacher`. A person sets it for their own account — at sign-up or on the Account
+  page (`PUT /api/account/role`, `teacher_terms_version` and `teacher_terms_at` recorded with it) — and the owner's
+  script can still set it or take it back. Never set for anyone but the caller, and never by the auth library. The role
+  alone opens no student's work: a teacher sees an answer only after that student joins their class with its code and
+  shares it, so it needs no approval.
 - `classes`: `id`, `teacher_user_id`, `name`, `join_code` (unique; 6 characters from
   `23456789ABCDEFGHJKMNPQRSTUVWXYZ`), `created_at`, `closed_at`.
 - `class_members`: `id`, `class_id`, `student_user_id`, `shown_name`, `shared_at`, `share_text_version`, `ended_at`,

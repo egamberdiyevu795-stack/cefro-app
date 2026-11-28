@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// The ONLY way to make a teacher (docs/teacher-plan.md, section 3): the owner runs this by hand. No API sets a role.
+// The owner's way to set a role by hand (docs/teacher-plan.md, section 3). People take the teacher role themselves,
+// at sign-up or on their Account page; this is for putting it right, or taking it back from someone who misused it.
 //
-//   node scripts/set-role.mjs <email> teacher     approve a teacher
-//   node scripts/set-role.mjs <email> student     take it back
+//   node scripts/set-role.mjs <email> teacher     make this account a teacher
+//   node scripts/set-role.mjs <email> student     take the role back
 //
 // The hosted database when TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are set, else the local file (DATABASE_PATH,
 // default ./data/cefro.db). Only a registered account can change role. Refuses to run in a Vercel build. Needs

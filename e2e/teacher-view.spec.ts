@@ -4,8 +4,9 @@ import { expect, test, type Page } from "@playwright/test";
  * The Teacher view in mock mode (docs/teacher-plan.md, sections 6 and 8), at 390 px: the demo teacher creates a class,
  * the demo student joins with DEMO42 and shares, the teacher opens an attempt and agrees, the student leaves. Nothing
  * is sent (no API call), every page is a ?mock=1 address, one black button per screen (none on the attempt), no text
- * under 11 px, every text at WCAG AA contrast, no horizontal scroll. Real teacher and join pages are a 404 (the
- * Teacher view is off until parent consent exists). Also runs on a Preview-like production build
+ * under 11 px, every text at WCAG AA contrast, no horizontal scroll. The Teacher view is on by default
+ * (TEACHER_LIVE=false closes it: every real teacher page and API is a 404, which the unit tests
+ * teacher-pages.test.ts and teacher-routes.test.ts check against the real handlers). Also runs on a Preview-like production build
  * (playwright.preview.config.ts).
  */
 
@@ -151,14 +152,4 @@ test("create → join → share → attempt → Agree → Leave, all in mock mod
   expect(studentSeen.apiCalls).toEqual([]);
   expect(seen.realPages).toEqual([]);
   expect(studentSeen.realPages).toEqual([]);
-});
-
-test("real teacher and join pages are a 404 while the Teacher view is off", async ({ page }) => {
-  for (const path of ["/teacher/classes/new", "/teacher/classes/demo-class", "/teacher/classes/demo-class/attempts/aziza-2", "/teacher/classes/demo-class/mocks/aziza-mock", "/profile/classes/join", "/join/DEMO42"]) {
-    const response = await page.goto(path);
-    expect(response?.status(), path).toBe(404);
-  }
-  for (const path of ["/api/teacher/classes", "/api/classes", "/api/teacher/classes/x/mocks/y", "/api/teacher/classes/x/attempts/y/audio"]) {
-    expect((await page.request.get(path)).status(), path).toBe(404);
-  }
 });

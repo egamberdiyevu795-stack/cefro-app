@@ -11,7 +11,7 @@ import { AccountCard, ConsentCard, DeleteCard, SignInCard } from "@/features/pro
 import { parseConsentPreview, type ConsentRecord } from "@/domain/consent";
 import { readOwnConsent } from "@/server/consent/consent";
 import { asDemoTeacher, isDemoTeacherQuery, studentLinks } from "@/features/teacher/links";
-import { MyClassesCard, TeacherLinkCard, type MembershipView } from "@/features/teacher/sections";
+import { BecomeTeacherCard, MyClassesCard, TeacherLinkCard, type MembershipView } from "@/features/teacher/sections";
 import { mockLink } from "@/features/demo/demo-mode";
 import { DEMO_CLASS, DEMO_TEACHER } from "@/server/demo/demo-teacher";
 import { teacherLive } from "@/server/teacher/release";
@@ -60,7 +60,7 @@ export default async function AccountPage(props: PageProps<"/profile">) {
   let account: AccountInfo;
   let attempts;
   let stored;
-  // Teacher view: null = not shown (the Teacher view is off for real accounts until parent consent exists).
+  // Teacher view: null = not shown (the owner turned the Teacher view off with TEACHER_LIVE=false).
   let classes: { role: "teacher" } | { role: "student"; memberships: MembershipView[] } | null = null;
   let consent: ConsentRecord | null = null;
   const demoTeacher = mock && isDemoTeacherQuery(query);
@@ -111,7 +111,9 @@ export default async function AccountPage(props: PageProps<"/profile">) {
         />
         {consent && <ConsentCard record={consent} />}
         <ExamDate state={accountExamState(examDateState(stored, now))} today={today} max={addDays(today, MAX_DAYS_AHEAD)} variant="card" demo={mock} />
-        {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} />}
+        {classes?.role === "teacher" && <TeacherLinkCard href={demoTeacher ? asDemoTeacher("/dashboard") : "/dashboard"} mock={mock} />}
+        {/* A student with an account can become a teacher here: nobody approves it (the role opens no student's work). */}
+        {classes?.role === "student" && signedIn && <BecomeTeacherCard mock={mock} />}
         {classes?.role === "student" && (
           <MyClassesCard memberships={classes.memberships} joinHref={mockLink(studentLinks.join, mock)} accountHref={mockLink(studentLinks.account, mock)} demo={mock} />
         )}

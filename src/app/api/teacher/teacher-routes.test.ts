@@ -30,6 +30,7 @@ import { fakeWebm } from "../../../../test/fixtures";
 import { jar } from "../../../../test/next-headers-mock";
 import { PUT as putExamDate } from "../account/exam-date/route";
 import { PUT as putName } from "../account/name/route";
+import { PUT as putRole } from "../account/role/route";
 import { GET as getMe } from "../account/me/route";
 import { POST as postSession } from "../sessions/route";
 import { GET as getAudio } from "../speaking/attempts/[attemptId]/audio/route";
@@ -78,7 +79,7 @@ async function register(email: string, name: string, role: "student" | "teacher"
   jar.clear();
   expect((await signUp(email, PASSWORD, { ip: `10.20.0.${++ipCounter}` })).status).toBe(200);
   expect((await putName(req("/api/account/name", "PUT", { name }))).status).toBe(200);
-  // The owner's script is the only way to make a teacher (scripts/set-role.mjs); here, the same UPDATE.
+  // Teachers sign themselves up (PUT /api/account/role) or the owner's script sets it; here, the same UPDATE.
   if (role === "teacher") await db.update(users).set({ role: "teacher" }).where(eq(users.email, email)).run();
   return snapshot();
 }
@@ -463,7 +464,7 @@ describe("joining", () => {
   });
 });
 
-describe("roles: set only by the owner's script", () => {
+describe("roles: only the caller's own role endpoint (and the owner's script) set one", () => {
   it("sign-up, the name endpoint and the class endpoints never set a role", async () => {
     jar.clear();
     const response = await signUp("sneaky@example.com", PASSWORD, { ip: "10.30.0.1" });
@@ -473,6 +474,49 @@ describe("roles: set only by the owner's script", () => {
     await postShare(req("/x", "POST", { code: "ABCDEF", shownName: "S", role: "teacher" }), ctx({}));
     expect((await db.select({ role: users.role }).from(users).where(eq(users.email, "sneaky@example.com")).get())!.role).toBe("student");
     expect(JSON.stringify(await (await getMe()).json())).not.toContain("role");
+  });
+
+  it("a person takes the teacher role for their own account, with the terms stored; a student role closes their classes", async () => {
+    actAs(await register("tina@example.com", "Tina"));
+    const roleOf = async () => db.select({ role: users.role, v: users.teacherTermsVersion, at: users.teacherTermsAt }).from(users).where(eq(users.email, "tina@example.com")).get();
+    // Not without the terms, and only the two known roles.
+    expect((await putRole(req("/x", "PUT", { role: "teacher" }))).status).toBe(400);
+    expect((await putRole(req("/x", "PUT", { role: "teacher", acceptedTerms: "yes" }))).status).toBe(400);
+    expect((await putRole(req("/x", "PUT", { role: "admin", acceptedTerms: true }))).status).toBe(400);
+    expect((await roleOf())!.role).toBe("student");
+    expect((await putRole(req("/x", "PUT", { role: "teacher", acceptedTerms: true }))).status).toBe(204);
+    const taken = (await roleOf())!;
+    expect(taken.role).toBe("teacher");
+    expect(taken.v).toBe("teacher-terms-v1");
+    expect(taken.at).toBeTruthy();
+    // She can now run a class; giving the role back closes it.
+    const made = await postClass(req("/x", "POST", { name: "Evening group" }), ctx({}));
+    expect(made.status).toBe(201);
+    const classId = ((await made.json()) as { class: { id: string } }).class.id;
+    expect((await putRole(req("/x", "PUT", { role: "student" }))).status).toBe(204);
+    const back = (await roleOf())!;
+    expect(back.role).toBe("student");
+    expect(back.v).toBeNull();
+    expect(back.at).toBeNull();
+    expect((await db.select({ closedAt: classes.closedAt }).from(classes).where(eq(classes.id, classId)).get())!.closedAt).toBeTruthy();
+    expect((await postClass(req("/x", "POST", { name: "Again" }), ctx({}))).status).toBe(404);
+  });
+
+  it("an anonymous browser cannot take the role, and the role never changes someone else's account", async () => {
+    jar.clear();
+    expect((await putRole(req("/x", "PUT", { role: "teacher", acceptedTerms: true }))).status).toBe(403);
+    actAs(await register("uma@example.com", "Uma"));
+    // The id is never read from the request.
+    expect((await putRole(req("/x", "PUT", { role: "teacher", acceptedTerms: true, userId: "someone-else" }))).status).toBe(204);
+    const roles = await db.select({ email: users.email, role: users.role }).from(users).all();
+    expect(roles.filter((r) => r.role === "teacher").map((r) => r.email)).toEqual(["uma@example.com"]);
+  });
+
+  it("the release switch closes the role endpoint's effect too: a teacher page stays a 404 when it is off", async () => {
+    actAs(await register("vera@example.com", "Vera"));
+    expect((await putRole(req("/x", "PUT", { role: "teacher", acceptedTerms: true }))).status).toBe(204);
+    setTeacherLiveForTesting(false);
+    expect((await getClasses(req("/x"), ctx({}))).status).toBe(404);
   });
 
   it("no route file under src/app/api writes users.role", () => {
@@ -507,9 +551,9 @@ describe("the release switch (no parent consent yet): every endpoint is a 404 fo
     expect((await db.select().from(classes).get())!.closedAt).toBeNull();
   });
 
-  it("is off in the code: TEACHER_LIVE is false", async () => {
+  it("is on in the code by default: teachers sign themselves up (the owner can still turn it off with TEACHER_LIVE=false)", async () => {
     setTeacherLiveForTesting(undefined);
     const { TEACHER_LIVE } = await import("@/config/features");
-    expect(TEACHER_LIVE).toBe(false);
+    expect(TEACHER_LIVE).toBe(true);
   });
 });

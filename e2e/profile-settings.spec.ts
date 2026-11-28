@@ -170,6 +170,7 @@ test.describe("mock mode (?mock=1)", () => {
       "Your practice attempts and their results",
       "Your recordings and transcripts",
       "Your exam date",
+      "Your classes and teacher ratings",
       "Your account: name, email and password",
     ]);
     const confirm = page.getByRole("button", { name: "Delete everything" });

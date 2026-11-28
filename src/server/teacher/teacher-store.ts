@@ -42,11 +42,33 @@ type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 export const notFound = () => new HttpError(404, "not_found", "Not found.");
 
-/** The caller's role. Null for an unknown id. Set only by the owner's script, never here. */
+/** The caller's role. Null for an unknown id. */
 export async function userRole(userId: string): Promise<"student" | "teacher" | null> {
   const row = await (await getDb()).select({ role: users.role, kind: users.kind }).from(users).where(eq(users.id, userId)).get();
   if (!row) return null;
   return row.kind === "registered" ? row.role : "student";
+}
+
+/**
+ * The caller takes or gives back the teacher role, for their own account only (`PUT /api/account/role`): at sign-up or
+ * on the Account page. The role alone opens no student's work — a teacher sees an answer only after that student joins
+ * their class with its code and shares it — so it needs no approval from the owner.
+ *
+ * Only a registered account: an anonymous browser identity is always a student. Giving the role back closes every
+ * class the person still has open, so their students stop sharing with them at the same moment.
+ */
+export async function setOwnRole(userId: string, role: "student" | "teacher", termsVersion: string | null): Promise<void> {
+  const db = await getDb();
+  const row = await db.select({ kind: users.kind, role: users.role }).from(users).where(eq(users.id, userId)).get();
+  if (!row) throw notFound();
+  if (row.kind !== "registered") throw new HttpError(403, "account_required", "Create an account first.");
+  if (row.role === role) return;
+  if (role === "student") for (const open of await listOwnClasses(userId)) await closeClass(userId, open.id);
+  await db
+    .update(users)
+    .set({ role, teacherTermsVersion: termsVersion, teacherTermsAt: termsVersion ? nowIso() : null })
+    .where(eq(users.id, userId))
+    .run();
 }
 
 /** 404 unless the caller is a teacher. */

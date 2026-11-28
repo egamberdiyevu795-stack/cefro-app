@@ -136,6 +136,29 @@ test.describe.serial("Journeys B and C: converting anonymous practice into an ac
   });
 });
 
+test("sign up as a teacher: the terms are needed, the account can run a class, and Stop teaching gives the role back", async ({ page }) => {
+  const email = uniqueEmail("teacher");
+  await page.goto("/register");
+  const create = page.getByRole("button", { name: "Create account" });
+  await expect(page.getByLabel("A student")).toBeChecked();
+  await page.getByLabel("A teacher").check();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await expect(create).toBeDisabled(); // the one promise is not ticked yet
+  await page.getByLabel(/use my students' work for teaching only/).check();
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(header(page)).toHaveAttribute("data-state", "authenticated");
+
+  // The account is a teacher account: the teacher's own pages open (a student gets a 404 there).
+  expect((await page.request.get("/teacher/classes/new")).status()).toBe(200);
+
+  await page.goto("/profile");
+  await page.getByTestId("stop-teaching").click();
+  await page.getByTestId("stop-teaching-confirm").click();
+  await expect.poll(async () => (await page.request.get("/teacher/classes/new")).status()).toBe(404);
+});
+
 test("registration rejects a too-short password and a duplicate email without signing anyone in", async ({ page }) => {
   const email = uniqueEmail("dupe");
   await register(page, email);

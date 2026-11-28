@@ -45,11 +45,11 @@ const loadAll = async (env: Record<string, string | undefined>) => {
 };
 
 describe("owner switches in Production", () => {
-  it("nothing set: every part is live, so the full mock is open; the Teacher view is off", async () => {
+  it("nothing set: every part is live, so the full mock is open, and so is the Teacher view", async () => {
     const { parts, mock, teacher } = await loadAll(PRODUCTION);
     expect(parts).toEqual({ "1.1": true, "1.2": true, "2": true, "3": true });
     expect(mock).toBe(true);
-    expect(teacher).toBe(false);
+    expect(teacher).toBe(true);
   });
 
   it.each([
@@ -76,10 +76,10 @@ describe("owner switches in Production", () => {
     expect((await loadAll(PRODUCTION)).parts["2"]).toBe(true);
   });
 
-  it("TEACHER_LIVE=true turns the Teacher view on; false or unset leaves it off", async () => {
-    expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: "true" })).teacher).toBe(true);
+  it("TEACHER_LIVE=false turns the Teacher view off; true or unset keeps it on", async () => {
     expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: "false" })).teacher).toBe(false);
-    expect((await loadAll(PRODUCTION)).teacher).toBe(false);
+    expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: "true" })).teacher).toBe(true);
+    expect((await loadAll(PRODUCTION)).teacher).toBe(true);
   });
 
   it("FULL_MOCK_LIVE=true opens the full mock while the single parts stay off; false or unset does not", async () => {
@@ -102,9 +102,9 @@ describe("owner switches in Production", () => {
   });
 
   it("only true / 1 / false / 0 count, in any letter case; a typo or empty value keeps the default", async () => {
-    for (const on of ["true", "TRUE", " True ", "1"]) expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: on })).teacher).toBe(true);
-    for (const off of ["false", "FALSE", "0", "", "yes", "on", "tru", "enabled", "2"]) {
-      expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: off })).teacher).toBe(false);
+    for (const off of ["false", "FALSE", " False ", "0"]) expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: off })).teacher).toBe(false);
+    for (const on of ["true", "TRUE", " True ", "1", "", "yes", "on", "tru", "enabled", "2"]) {
+      expect((await loadAll({ ...PRODUCTION, TEACHER_LIVE: on })).teacher).toBe(true); // a typo keeps the default, which is on
     }
     for (const off of ["false", "FALSE", " False ", "0"]) expect((await loadAll({ ...PRODUCTION, PART_3_LIVE: off })).parts["3"]).toBe(false);
     for (const typo of ["", "yes", "off", "tru"]) expect((await loadAll({ ...PRODUCTION, PART_3_LIVE: typo })).parts["3"]).toBe(true);
@@ -116,6 +116,7 @@ describe("owner switches in Production", () => {
     const { parts, mock, teacher } = await loadAll({
       ...PRODUCTION,
       PART_3_LIVE: "false",
+      TEACHER_LIVE: "false",
       CEFRO_TEST_PART3_LIVE: "1",
       CEFRO_TEST_FULL_MOCK_LIVE: "1",
       CEFRO_TEST_TEACHER_LIVE: "1",

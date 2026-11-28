@@ -111,10 +111,10 @@ describe("evaluateSpeaking", () => {
       label: "Higher B1",
       meets_target: false,
       provisional: true,
-      biggest_fix: { kind: "feature", feature: "grammar" },
+      biggest_fix: { kind: "feature", feature: "vocabulary" },
     });
     expect(result.retry_focus.map((f) => f.target)).toEqual([
-      { kind: "feature", feature: "grammar" },
+      { kind: "feature", feature: "vocabulary" },
       { kind: "question", question_id: 3 },
     ]);
   });

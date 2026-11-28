@@ -77,7 +77,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
  * Which feature is named as "the thing to fix" when several share the lowest level: the ones a student can change
  * most directly in the next attempt come first.
  */
-export const FIX_PRIORITY: readonly Feature[] = ["grammar", "vocabulary", "cohesion", "fluency", "pronunciation"];
+export const FIX_PRIORITY: readonly Feature[] = ["vocabulary", "grammar", "cohesion", "fluency", "pronunciation"];
 
 /**
  * How a question of the task was answered. "partial" counts as on topic (with a warning in the UI); "minimal" (a bare

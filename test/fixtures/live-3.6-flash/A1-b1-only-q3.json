@@ -190,11 +190,11 @@
               }
             },
             {
-              "objective": "Try using a second conditional sentence, such as 'If young people always followed advice, they might not learn from experience'.",
-              "success_check": "Check that your text contains at least one sentence starting with 'If' followed by a past simple verb and 'would' or 'might'.",
+              "objective": "Use topic phrases like 'gain experience', 'valuable guidance', or 'make independent decisions'.",
+              "success_check": "Check your answer to see if you used natural word pairs like 'gain experience' instead of plain words like 'have experience'.",
               "target": {
                 "kind": "feature",
-                "feature": "grammar"
+                "feature": "vocabulary"
               }
             }
           ]
@@ -372,11 +372,11 @@
               }
             },
             {
-              "objective": "Use a relative clause with 'who' to connect your sentences together.",
-              "success_check": "Check your attempt to see if you used a phrase like 'older people who have experience'.",
+              "objective": "Use topic-specific phrases such as 'make a decision' or 'valuable guidance' instead of repeating basic words.",
+              "success_check": "Make sure you used specific phrases instead of repeating words like 'advice' many times.",
               "target": {
                 "kind": "feature",
-                "feature": "grammar"
+                "feature": "vocabulary"
               }
             }
           ]
@@ -554,11 +554,11 @@
               }
             },
             {
-              "objective": "Try adding a conditional sentence using 'if', such as 'If young people listen to older people, they can avoid mistakes.'",
-              "success_check": "Listen to your recording and verify you included at least one 'if' sentence.",
+              "objective": "Use topic phrases like 'gain experience' or 'make independent decisions' instead of simple words.",
+              "success_check": "Check your recording to confirm you used fixed topic phrases instead of single basic words.",
               "target": {
                 "kind": "feature",
-                "feature": "grammar"
+                "feature": "vocabulary"
               }
             }
           ]

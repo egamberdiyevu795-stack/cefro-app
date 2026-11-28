@@ -44,13 +44,13 @@ describe("result page view model (saved live fixtures, no provider)", () => {
     }
   });
 
-  it("A2: Part 2 · Band 2 · Higher B1, one band to the target, three questions answered, grammar fix with its correction", () => {
+  it("A2: Part 2 · Band 2 · Higher B1, one band to the target, three questions answered, vocabulary fix with its correction", () => {
     const view = scored({ anchor: "A2-b1-all-three", run: "1" });
     expect(view.headline).toBe("Part 2 · Band 2 · Higher B1");
     expect(view.target.text).toBe("1 band to your target, Band 3 · Lower B2");
     expect(view.questions.map((q) => q.verdict)).toEqual(["answered", "answered", "answered"]);
-    expect(view.fix).toMatchObject({ label: "Grammar · B1", quoteKind: "student", quote: "decide themselves", tryInstead: "decide for themselves" });
-    expect(view.fix.goal).toMatch(/conditional/);
+    expect(view.fix).toMatchObject({ label: "Vocabulary · B1", quoteKind: "student", quote: "my speaking became better", tryInstead: "my speaking improved" });
+    expect(view.fix.goal).toMatch(/collocations/);
   });
 
   it("A1: missed questions are 'not counted' and the fix shows the question and its model answer", () => {
@@ -111,14 +111,14 @@ describe("result page view model (saved live fixtures, no provider)", () => {
 describe("quote labels come only from the evaluator's lists", () => {
   it("biggest fix: an error keeps 'You said / Try instead'; a listed strength is 'Your best sentence / Next step'", () => {
     expect(scored({ anchor: "A2-b1-all-three", run: "1" }).fix).toMatchObject({ quoteLabel: "You said", adviceLabel: "Try instead" });
-    const a4 = scored({ anchor: "A4-b2-all-three", run: "1" }).fix;
+    const a4 = scored({ anchor: "A4-b2-all-three", run: "3" }).fix;
     expect(a4).toMatchObject({ quoteLabel: "Your best sentence", adviceLabel: "Next step" });
-    expect(a4.quote).toBe(LIVE_36_FLASH_FIXTURES["A4-b2-all-three"].runs[0].evaluation.result.assessment.strengths.find((x) => x.feature === "grammar")!.quote);
+    expect(a4.quote).toBe(LIVE_36_FLASH_FIXTURES["A4-b2-all-three"].runs[2].evaluation.result.assessment.strengths.find((x) => x.feature === "vocabulary")!.quote);
   });
 
   it("biggest fix: not an error and no listed strength → their words as 'You said', never 'best'", () => {
-    // A2 run 3: grammar is the fix but its errors are typed vocabulary and it has no strengths.
-    expect(scored({ anchor: "A2-b1-all-three", run: "3" }).fix).toMatchObject({ quoteLabel: "You said", adviceLabel: "Next step" });
+    // A2 run 2: vocabulary is the fix but its only error is typed grammar and it has no strengths.
+    expect(scored({ anchor: "A2-b1-all-three", run: "2" }).fix).toMatchObject({ quoteLabel: "You said", adviceLabel: "Next step" });
   });
 
   it("skills: every label matches a listed strength or error of that skill; unlisted quotes stay unlabelled", () => {

@@ -135,7 +135,7 @@ describe("biggest_fix", () => {
 
   it("is a feature when the caps are equal", () => {
     // B1 language (cap 2) with 2 on topic (cap 3): language limits.
-    expect(scoreBand(input("B1", 2), config).biggest_fix).toEqual({ kind: "feature", feature: "grammar" });
+    expect(scoreBand(input("B1", 2), config).biggest_fix).toEqual({ kind: "feature", feature: "vocabulary" });
   });
 
   it("never names an unassessed pronunciation", () => {
@@ -147,7 +147,7 @@ describe("biggest_fix", () => {
       },
       config,
     );
-    expect(score.biggest_fix).toEqual({ kind: "feature", feature: "grammar" });
+    expect(score.biggest_fix).toEqual({ kind: "feature", feature: "vocabulary" });
   });
 });
 
@@ -202,8 +202,8 @@ describe("decision rules (band 5 gate, minimal, too short, fluency fix)", () => 
     expect(scoreBand(hesitant, config)).toMatchObject({ band: 2, biggest_fix: { kind: "feature", feature: "fluency" } });
     const coverageToo = { ...hesitant, questions: [...hesitant.questions.slice(0, 2), { id: 3, status: "missing" as const }] };
     expect(scoreBand(coverageToo, config).biggest_fix).toEqual({ kind: "feature", feature: "fluency" });
-    // Tied lowest: the normal rules apply (fix priority puts grammar first).
+    // Tied lowest: the normal rules apply (fix priority puts vocabulary first).
     const tied = { ...hesitant, features: features({ grammar: "B1", vocabulary: "B1", cohesion: "B1", fluency: "B1" }) };
-    expect(scoreBand(tied, config).biggest_fix).toEqual({ kind: "feature", feature: "grammar" });
+    expect(scoreBand(tied, config).biggest_fix).toEqual({ kind: "feature", feature: "vocabulary" });
   });
 });

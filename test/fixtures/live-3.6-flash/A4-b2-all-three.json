@@ -173,24 +173,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "To reach above B2, try using structures like inversion or participle clauses, for example: 'Not only did I follow his advice, but I also created a study schedule.'",
-              "success_check": "Check your next attempt to ensure you include a structure starting with 'Not only...' followed by an inverted auxiliary verb.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "To move towards above B2, introduce more nuanced idiomatic phrases such as 'a double-edged sword' or 'with hindsight'.",
               "success_check": "Listen to your recording to verify that you used an advanced phrase like 'with hindsight' correctly when reflecting.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "To reach above B2, try using structures like inversion or participle clauses, for example: 'Not only did I follow his advice, but I also created a study schedule.'",
+              "success_check": "Check your next attempt to ensure you include a structure starting with 'Not only...' followed by an inverted auxiliary verb.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]
@@ -355,24 +355,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Try adding a third conditional sentence to reflect on past choices, such as 'If I hadn't listened to him, I would have given up'.",
-              "success_check": "Look at your written script to ensure you used an 'If + past perfect, would have + past participle' structure.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Include nuanced opinion phrases such as 'take it with a grain of salt' or 'weigh up the options'.",
               "success_check": "Check if your text contains precise expressions when presenting your viewpoint.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Try adding a third conditional sentence to reflect on past choices, such as 'If I hadn't listened to him, I would have given up'.",
+              "success_check": "Look at your written script to ensure you used an 'If + past perfect, would have + past participle' structure.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]
@@ -536,24 +536,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Try adding a third conditional sentence (for example, 'If I hadn't listened to him, I would have given up') to show even greater grammatical range.",
-              "success_check": "Check your recorded response to see if you included an 'if' clause with 'had' and 'would have'.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Incorporate more formal or precise vocabulary such as 'valuable insights' or 'hindsight' when discussing advice.",
               "success_check": "Review your answer to see if you replaced common words with more advanced vocabulary.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Try adding a third conditional sentence (for example, 'If I hadn't listened to him, I would have given up') to show even greater grammatical range.",
+              "success_check": "Check your recorded response to see if you included an 'if' clause with 'had' and 'would have'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]

@@ -719,24 +719,24 @@
             "zero_reason": "below_B1",
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Use past tense verbs like 'gave', 'was', and 'wanted' when telling a past story.",
-              "success_check": "Read your written sentences and check that every verb referring to the past ends in -ed or uses a past form.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Learn basic phrases about advice, such as 'follow advice' and 'gain experience'.",
               "success_check": "Check your answer to see if you used fixed phrases like 'follow advice' instead of 'listen him'.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Use past tense verbs like 'gave', 'was', and 'wanted' when telling a past story.",
+              "success_check": "Read your written sentences and check that every verb referring to the past ends in -ed or uses a past form.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]

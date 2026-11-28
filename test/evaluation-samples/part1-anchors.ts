@@ -67,7 +67,7 @@ export const PART1_ANCHORS: readonly Part1Anchor[] = [
     levels: { grammar: "above_A2", vocabulary: "above_A2", fluency: "above_A2" },
     band: 5,
     label: "Above A2",
-    fix: { kind: "feature", feature: "grammar" },
+    fix: { kind: "feature", feature: "vocabulary" },
     meetsTarget: true,
   },
   {
@@ -97,7 +97,7 @@ export const PART1_ANCHORS: readonly Part1Anchor[] = [
     levels: { grammar: "A2", vocabulary: "A2", fluency: "B1", cohesion: "B1" },
     band: 2,
     label: "Higher A2",
-    fix: { kind: "feature", feature: "grammar" },
+    fix: { kind: "feature", feature: "vocabulary" },
     meetsTarget: false,
   },
   {
@@ -112,7 +112,7 @@ export const PART1_ANCHORS: readonly Part1Anchor[] = [
     levels: { grammar: "above_B1", vocabulary: "above_B1", fluency: "above_B1", cohesion: "above_B1" },
     band: 5,
     label: "Above B1",
-    fix: { kind: "feature", feature: "grammar" },
+    fix: { kind: "feature", feature: "vocabulary" },
     meetsTarget: true,
   },
 ];

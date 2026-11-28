@@ -173,7 +173,7 @@ describe("Part 1 edge cases (docs/part1-plan.md §4)", () => {
     expect(evaluation.result.scoring.biggest_fix).toEqual({ kind: "question_coverage", question_id: 2 });
     const focus = evaluation.result.retry_focus.map((f) => f.objective).join(" ");
     expect(focus).toMatch(/^Answer question 5: /);
-    // A partial Question 4 gets its hint in the goal word for word (here as the second focus, after grammar).
+    // A partial Question 4 gets its hint in the goal word for word (here as the second focus, after vocabulary).
     const all = await evaluateSpeaking(inputFor(part12, anchor.answers.join(" ")), returning(modelOutput({ ...anchor, statuses: ["partial", "on_topic", "on_topic"] })));
     const q4 = all.result.retry_focus.find((f) => f.target.kind === "question")!;
     expect(q4.objective).toMatch(/^Answer question 4 fully: /);
@@ -185,7 +185,7 @@ describe("Part 1 edge cases (docs/part1-plan.md §4)", () => {
     const score = scoreBand({ questions: q("on_topic", "partial", "on_topic"), features: { grammar: "B1", vocabulary: "B1", fluency: "B1", cohesion: "B1", pronunciation: "not_assessed" }, memorizedOrIrrelevant: false, relevantWordCount: 40 }, c12);
     expect(score.on_topic_count).toBe(3);
     expect(score.band).toBe(4);
-    expect(score.biggest_fix).toEqual({ kind: "feature", feature: "grammar" });
+    expect(score.biggest_fix).toEqual({ kind: "feature", feature: "vocabulary" });
   });
 
   it("Part 1.1 output with 'partial' or 'minimal', or with cohesion, is rejected by the quality gate", async () => {

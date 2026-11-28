@@ -176,24 +176,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Try using a conditional sentence such as 'If I had not followed her advice, I would not have passed the exam'.",
-              "success_check": "Review your response and confirm it contains at least one sentence with 'if' or 'which'.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Replace simple phrases like 'became better' with topic-specific collocations like 'improved significantly'.",
               "success_check": "Check your answer to ensure you used phrases with strong verbs and nouns instead of basic adjectives.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Try using a conditional sentence such as 'If I had not followed her advice, I would not have passed the exam'.",
+              "success_check": "Review your response and confirm it contains at least one sentence with 'if' or 'which'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]
@@ -354,24 +354,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Use complex structures such as conditionals with 'if' or relative clauses with 'who' or 'which'.",
-              "success_check": "Check your next response to ensure it contains at least one sentence using 'if' or 'which'.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Learn and use topic-specific collocations such as 'make their own decisions' or 'gain experience'.",
               "success_check": "Review your text to see if you replaced basic words like 'became better' with phrases like 'improved significantly'.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Use complex structures such as conditionals with 'if' or relative clauses with 'who' or 'which'.",
+              "success_check": "Check your next response to ensure it contains at least one sentence using 'if' or 'which'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]
@@ -538,24 +538,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Add relative clauses with 'who' or 'which', for example: 'My English teacher, who had a lot of experience, gave me great advice.'",
-              "success_check": "Check your recorded speech to see if you used relative clauses with 'who' or 'which'.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Use more natural verb-noun combinations, such as 'improved significantly' instead of 'became better', or 'gain experience' instead of 'have experience'.",
               "success_check": "Look at your transcript and count how many specific verbs or collocations you used instead of basic words.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Add relative clauses with 'who' or 'which', for example: 'My English teacher, who had a lot of experience, gave me great advice.'",
+              "success_check": "Check your recorded speech to see if you used relative clauses with 'who' or 'which'.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]

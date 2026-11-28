@@ -175,24 +175,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Keep practicing advanced structures such as inversions and participle clauses so they remain effortless in spontaneous speech.",
-              "success_check": "Re-record your speech and check that complex grammar structures sound natural and contain no errors.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Continue to expand your active vocabulary with precise idiomatic expressions suited to formal and semi-formal speaking topics.",
               "success_check": "Review your recordings to ensure you choose specific, sophisticated words instead of repeating common terms.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Keep practicing advanced structures such as inversions and participle clauses so they remain effortless in spontaneous speech.",
+              "success_check": "Re-record your speech and check that complex grammar structures sound natural and contain no errors.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]
@@ -355,24 +355,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Keep maintaining your high standard by experimenting with advanced participle phrases like 'Having considered all options, I decided to...'.",
-              "success_check": "Make sure your participle clauses have a clear subject and accurate tense control.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Continue integrating nuanced idiomatic vocabulary naturally when expanding on abstract topics.",
               "success_check": "Ensure idiomatic phrases sound natural and fit the context perfectly without feeling forced.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Keep maintaining your high standard by experimenting with advanced participle phrases like 'Having considered all options, I decided to...'.",
+              "success_check": "Make sure your participle clauses have a clear subject and accurate tense control.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]
@@ -536,24 +536,24 @@
             "zero_reason": null,
             "biggest_fix": {
               "kind": "feature",
-              "feature": "grammar"
+              "feature": "vocabulary"
             }
           },
           "retry_focus": [
-            {
-              "objective": "Keep using advanced structures such as inversion and complex relative clauses in natural spoken contexts.",
-              "success_check": "Check after speaking that your complex sentences remain accurate and easy to follow.",
-              "target": {
-                "kind": "feature",
-                "feature": "grammar"
-              }
-            },
             {
               "objective": "Maintain this rich variety of precise topic vocabulary and natural collocations across all topics.",
               "success_check": "Check that your word choices continue to convey subtle meanings accurately in spontaneous speech.",
               "target": {
                 "kind": "feature",
                 "feature": "vocabulary"
+              }
+            },
+            {
+              "objective": "Keep using advanced structures such as inversion and complex relative clauses in natural spoken contexts.",
+              "success_check": "Check after speaking that your complex sentences remain accurate and easy to follow.",
+              "target": {
+                "kind": "feature",
+                "feature": "grammar"
               }
             }
           ]

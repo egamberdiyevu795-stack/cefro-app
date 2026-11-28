@@ -183,11 +183,11 @@
               }
             },
             {
-              "objective": "To reach above B2, try incorporating complex structures such as inversion (e.g., 'Not only did he offer advice...').",
-              "success_check": "Check your next answer to see if you included an inverted structure like 'Not only... but also' correctly.",
+              "objective": "To reach above B2, use more sophisticated idiomatic expressions such as 'with hindsight' or 'a double-edged sword'.",
+              "success_check": "Check your next recording to see if you used natural advanced idioms instead of standard phrases.",
               "target": {
                 "kind": "feature",
-                "feature": "grammar"
+                "feature": "vocabulary"
               }
             }
           ]
@@ -365,11 +365,11 @@
               }
             },
             {
-              "objective": "To reach above B2, practice inverted structures for emphasis, such as 'Not only did he give me advice, but he also...'.",
-              "success_check": "Check your next recording to see if you included an inverted structure like 'Not only did...'.",
+              "objective": "Include more advanced idiomatic phrases such as 'in hindsight' or 'weigh up my options'.",
+              "success_check": "Listen to your recording to see if you used topic-specific idiomatic expressions.",
               "target": {
                 "kind": "feature",
-                "feature": "grammar"
+                "feature": "vocabulary"
               }
             }
           ]

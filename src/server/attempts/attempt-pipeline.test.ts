@@ -130,9 +130,9 @@ describe("speaking attempt pipeline", () => {
     expect(second.attemptNumber).toBe(2);
     expect(second.previousAttemptId).toBe(first.id);
     // Language caps the band (B1 → 2) below coverage (2 on topic → 3), so the first focus is the lowest feature
-    // (grammar), the second the unanswered question 3, numbered as the student sees it.
+    // (vocabulary), the second the unanswered question 3, numbered as the student sees it.
     expect(second.retryFocus?.map((f) => f.objective)).toEqual([
-      makeModelOutput().features.grammar.how_to_improve,
+      makeModelOutput().features.vocabulary.how_to_improve,
       'Answer question 3: "Do you think young people should always follow advice from older people? Why or why not?"',
     ]);
 

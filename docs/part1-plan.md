@@ -426,7 +426,7 @@ Mean 1 → **A2** → language cap 2; one on topic → topic cap 1 → **band 1*
 | Cohesion | B1 (2) | "only simple cohesive devices" (because, but, before, now) |
 
 Mean (1+1+2+2)/4 = 1.5 → **exact .5 rounds down → A2** → language cap 2; three on topic → topic cap 4 →
-**band 2**. Does not meet target. Biggest fix: grammar (tied lowest with vocabulary; grammar comes first in
+**band 2**. Does not meet target. Biggest fix: vocabulary (tied lowest with grammar; vocabulary comes first in
 `FIX_PRIORITY`).
 
 **High — expected band 5 (Above B1)**

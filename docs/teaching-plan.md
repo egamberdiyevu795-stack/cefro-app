@@ -252,7 +252,7 @@ model. The second retry focus item stays as text on the result screen ("Also try
 **Feature lessons in v1 (decision 1): feature + level only.** The lesson is the one for that feature whose target
 is one step above the student's level on it (decision 4). If the student is already above the part's target on that
 feature, the lesson aims at the band-5 condition (Part 3: band 6): grammar and vocabulary each above target, so the
-lesson is the grammar or vocabulary one, whichever is not yet above target (grammar first, as in `FIX_PRIORITY`).
+lesson is the grammar or vocabulary one, whichever is not yet above target (vocabulary first, as in `FIX_PRIORITY`).
 The evaluator's free-text `error_patterns` and errors are still shown inside the lesson as "from your answer"
 examples, but they do not choose the lesson.
 

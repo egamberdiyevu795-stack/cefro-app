@@ -15,7 +15,8 @@ export function NavProgress() {
 
   // The new page arrived.
   useEffect(() => {
-    setPending(false);
+    const timer = window.setTimeout(() => setPending(false), 0);
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   useEffect(() => {

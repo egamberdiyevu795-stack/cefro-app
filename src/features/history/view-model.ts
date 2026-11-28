@@ -43,7 +43,11 @@ export interface HistoryRow {
   /** A retry of an earlier attempt: whether it met the goal it was given ("Goal met" / "Not yet"), once scored. */
   retry: { goal: "Goal met" | "Not yet" | null } | null;
   /** A full mock exam is one row ("Mock exam · B2 · 11.11.26", its `title`), opening the mock result. Null for an attempt. */
-  mock: { status: MockStatus; caption: string } | null;
+  /**
+   * `level` is the estimate ("B2") when there is one, else null; `pending` is what stands in its place ("Scoring…", "Not
+   * finished", "In progress", "Estimate not ready yet"). Exactly one of the two is set. They fill the result column.
+   */
+  mock: { status: MockStatus; caption: string; level: string | null; pending: string | null } | null;
 }
 
 export interface FilterOption {
@@ -204,16 +208,13 @@ export function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): Hi
   const estimate = estimateMockSpeaking(mockBands(parts));
   const scoring = parts.some((a) => outcomeOf(a).kind === "scoring");
   const done = EXAM_PART_IDS.filter((p) => parts.some((a) => a.part === p));
+  const level = mock.status === "finished" && estimate.kind === "ready" ? estimate.level : null;
   const state =
     mock.status === "not_finished"
       ? "Not finished"
       : mock.status === "in_progress"
         ? "In progress"
-        : estimate.kind === "ready"
-          ? estimate.level
-          : scoring
-            ? "Scoring…"
-            : "Estimate not ready yet";
+        : level ?? (scoring ? "Scoring…" : "Estimate not ready yet");
   const base =
     mock.status === "finished"
       ? "Speaking only · 4 parts"
@@ -232,7 +233,7 @@ export function mockRow(mock: HistoryMock, parts: readonly HistoryAttempt[]): Hi
     durationMs: 0,
     outcome: { kind: "not_scored" },
     retry: null,
-    mock: { status: mock.status, caption },
+    mock: { status: mock.status, caption, level, pending: level ? null : state },
   };
 }
 

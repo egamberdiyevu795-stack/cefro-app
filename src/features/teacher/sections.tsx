@@ -354,7 +354,7 @@ export function MyClassesCard({ memberships, joinHref, accountHref, demo }: { me
                   </p>
                   <ClassPinControl memberId={m.id} hasPin={Boolean(m.hasPin)} demo={demo} />
                   {m.needsUpgrade && <ShareMoreCard memberId={m.id} teacherName={m.teacherName} className="min-h-9" demo={demo} />}
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <ConfirmAction
                       testId="leave-class"
                       label="Leave class"

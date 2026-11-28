@@ -587,11 +587,14 @@ export function ClassPinControl({ memberId, hasPin, demo }: { memberId: string; 
   };
 
   return (
-    <div className="mt-2" data-testid="class-pin-control">
-      <p className="text-label text-fg-muted">
-        Class PIN: <span className="text-fg">{saved ? "set" : "not set yet"}</span>
+    <div className="mt-1" data-testid="class-pin-control">
+      <p className="flex flex-wrap items-center gap-x-3 text-label text-fg-muted">
+        <span>
+          Class PIN: <span className="text-fg">{saved ? "set" : "not set yet"}</span>
+        </span>
         {!open && (
-          <button type="button" onClick={() => setOpen(true)} disabled={!ready} className={cx(styles.SMALL_ACTION, "ml-2 min-h-9 px-2 disabled:opacity-60")} data-testid="class-pin-open">
+          /* The padding gives a 36 px tap target without making the line tall (-my-2 takes it back). */
+          <button type="button" onClick={() => setOpen(true)} disabled={!ready} className={cx(styles.SMALL_ACTION, "-my-2 py-2 underline underline-offset-4 disabled:opacity-60")} data-testid="class-pin-open">
             {saved ? "Change PIN" : "Set PIN"}
           </button>
         )}
@@ -627,7 +630,8 @@ export function ClassPinControl({ memberId, hasPin, demo }: { memberId: string; 
           <Problem text={message} />
         </form>
       )}
-      <p role="status" className="min-h-4 text-label text-fg">
+      {/* Always in the page so a screen reader hears the message, but it takes no room until there is one. */}
+      <p role="status" className={status ? "mt-1 text-label text-fg" : "sr-only"}>
         {status}
       </p>
     </div>

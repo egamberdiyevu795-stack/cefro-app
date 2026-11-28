@@ -143,7 +143,8 @@ test.describe("at laptop width", () => {
     await audit(page, 1);
     await noForbiddenWords(page);
     await page.goto(`${RESULT}&state=scoring`);
-    await audit(page, 1);
+    await expect(page.getByTestId("mock-waiting")).toBeVisible();
+    await audit(page, 0); // still waiting: nothing is black
   });
 
   test("History shows the mock row and the pills without horizontal scroll", async ({ page }) => {

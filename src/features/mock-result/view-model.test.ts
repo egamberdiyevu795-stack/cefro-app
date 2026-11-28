@@ -198,7 +198,8 @@ describe("the demo mock (mock mode) goes through the real evaluator types", () =
   it.each(variants)("%s: one black button, no text under 11 px, no Passed / Failed, no certificate level, no 0-30 or 0-120 score", async (_name, options) => {
     const s = await demoMockResult(options);
     const html = render(s);
-    expect((html.match(BLACK) ?? []).length).toBe(1);
+    // While parts are still being scored there is nothing to do yet, so no button is black (Back to Practice is quiet).
+    expect((html.match(BLACK) ?? []).length).toBe(_name === "scoring" ? 0 : 1);
     expect(html).not.toMatch(/text-\[(\d|10)(\.\d+)?px\]|text-xs\b/);
     expect(html).not.toMatch(/\bpassed\b|\bfailed\b|certificate/i);
     expect(html).not.toMatch(/\b\d{1,3}\s?\/\s?(30|120)\b/);

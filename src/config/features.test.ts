@@ -116,6 +116,7 @@ describe("owner switches in Production", () => {
     const { parts, mock, teacher } = await loadAll({
       ...PRODUCTION,
       PART_3_LIVE: "false",
+      TEACHER_LIVE: "false",
       CEFRO_TEST_PART3_LIVE: "1",
       CEFRO_TEST_FULL_MOCK_LIVE: "1",
       CEFRO_TEST_TEACHER_LIVE: "1",

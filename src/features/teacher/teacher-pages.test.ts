@@ -32,6 +32,7 @@ vi.mock("@/server/account/account-store", () => ({ readAccount: forbidden("db"),
 
 import DashboardPage from "@/app/dashboard/page";
 import ProfilePage from "@/app/profile/page";
+import { setTeacherLiveForTesting } from "@/server/teacher/release";
 import JoinPage from "@/app/profile/classes/join/page";
 import NewClassPage from "@/app/teacher/classes/new/page";
 import ClassPage from "@/app/teacher/classes/[classId]/page";
@@ -339,7 +340,9 @@ describe("the demo student: Join, Share, My classes", () => {
   });
 });
 
-describe("real pages while the Teacher view is off (no parent consent yet): 404, nothing read", () => {
+describe("real pages while the Teacher view is off (TEACHER_LIVE=false): 404, nothing read", () => {
+  beforeEach(() => setTeacherLiveForTesting(false));
+  afterEach(() => setTeacherLiveForTesting(undefined));
   it.each([
     ["Create class", () => NewClassPage(props({}))],
     ["Class", () => ClassPage(props({}, { classId: "x" }))],

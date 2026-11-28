@@ -23,6 +23,10 @@ export function RoleSwitch({ role, mock }: { role: "student" | "teacher"; mock: 
 
   async function save() {
     setError(null);
+    if (toTeacher && !terms) {
+      setError("Tick the box above to agree first.");
+      return;
+    }
     if (mock) {
       setDemoDone(toTeacher ? "Demo mode: this account would now be a teacher account. Nothing was changed." : "Demo mode: teaching would now be off and the classes closed. Nothing was changed.");
       return;
@@ -95,7 +99,7 @@ export function RoleSwitch({ role, mock }: { role: "student" | "teacher"; mock: 
         />
         <span>{TEACHER_TERMS_TEXT}</span>
       </label>
-      <PillAction type="button" variant="quiet" onClick={() => void save()} disabled={busy || !ready || !terms} testId="become-teacher">
+      <PillAction type="button" variant="quiet" onClick={() => void save()} disabled={busy || !ready} testId="become-teacher">
         {busy ? "One moment…" : "Teach with CEFRO"}
       </PillAction>
       {error && <Notice tone="alert">{error}</Notice>}

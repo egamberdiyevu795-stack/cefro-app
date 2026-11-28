@@ -551,9 +551,9 @@ describe("the release switch (no parent consent yet): every endpoint is a 404 fo
     expect((await db.select().from(classes).get())!.closedAt).toBeNull();
   });
 
-  it("is off in the code: TEACHER_LIVE is false", async () => {
+  it("is on in the code by default: teachers sign themselves up (the owner can still turn it off with TEACHER_LIVE=false)", async () => {
     setTeacherLiveForTesting(undefined);
     const { TEACHER_LIVE } = await import("@/config/features");
-    expect(TEACHER_LIVE).toBe(false);
+    expect(TEACHER_LIVE).toBe(true);
   });
 });

@@ -6,7 +6,7 @@ import type { AnySpeakingTask } from "@/domain/speaking/any-task";
 import type { PointId } from "@/domain/speaking/argument-task";
 import type { SpeechMetrics } from "@/domain/speaking/metrics";
 import { getDb } from "@/server/db/client";
-import { analyticsEvents, evaluations, recordings, speakingAttempts, speakingTasks, transcripts } from "@/server/db/schema";
+import { analyticsEvents, evaluations, practiceSessions, recordings, speakingAttempts, speakingTasks, transcripts } from "@/server/db/schema";
 import { newId, nowIso } from "@/server/ids";
 
 /**
@@ -356,4 +356,19 @@ export async function listUploadTimingsFor(userId: string, attemptIds: string[])
     .all();
   for (const row of rows) if (row.attemptId && !map.has(row.attemptId)) map.set(row.attemptId, row.properties);
   return map;
+}
+
+/**
+ * The full mock exam this caller's own attempt was recorded in, or null (single practice, someone else's attempt, no
+ * session). It lets the part's result page lead back to the mock's overview.
+ */
+export async function fullMockSessionIdOfAttempt(userId: string, attemptId: string): Promise<string | null> {
+  const db = await getDb();
+  const row = await db
+    .select({ id: practiceSessions.id })
+    .from(speakingAttempts)
+    .innerJoin(practiceSessions, eq(practiceSessions.id, speakingAttempts.sessionId))
+    .where(and(eq(speakingAttempts.id, attemptId), eq(speakingAttempts.userId, userId), eq(practiceSessions.kind, "full_mock")))
+    .get();
+  return row?.id ?? null;
 }

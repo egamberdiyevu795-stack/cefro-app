@@ -42,6 +42,12 @@ on:
         description: "Evaluate every sample this many times and report any band that changes between runs."
         required: false
         default: "3"
+      suite:
+        description: "evaluation-set (Part 1/2 anchors and samples, the default) or part3-anchors (the Part 3 anchors: bands, model calls, time and cost; 'samples' then lists anchor ids such as cars-A2,tax-A3)."
+        type: choice
+        options: [evaluation-set, part3-anchors]
+        required: false
+        default: evaluation-set
 
 # Starting a new run of this workflow on the same ref cancels the older one.
 concurrency:
@@ -89,7 +95,14 @@ jobs:
           GEMINI_THINKING_LEVEL: ${{ inputs.thinking_level }}
           GEMINI_EVALUATION_MAX_TOKENS: ${{ inputs.max_tokens }}
           EVAL_REPEAT: ${{ inputs.repeat }}
-        run: npm run eval:live
+          SUITE: ${{ inputs.suite }}
+          EVAL_P3_ONLY: ${{ inputs.samples }}
+        run: |
+          if [ "$SUITE" = "part3-anchors" ]; then
+            EVAL_P3_ANCHORS=1 EVAL_STREAM=1 npx vitest run --config vitest.live.config.mts test/live/part3-anchors.live.test.ts
+          else
+            npm run eval:live
+          fi
 
       # The artifact host may be unreachable from some environments, so also print the report in
       # the log. Output is wrapped in stop-commands so model-generated text can never be

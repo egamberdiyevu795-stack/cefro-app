@@ -86,8 +86,8 @@ test.describe("laptop width (1280 px)", () => {
     await page.getByRole("link", { name: "Start exam laptop" }).click();
     await expect(page.getByRole("heading", { name: "Start exam laptop" })).toBeVisible();
     await expect(page.getByTestId("suggested-paper").getByRole("listitem")).toHaveCount(4);
-    await expect(page.getByRole("radio", { name: /Same paper for everyone/ })).toBeChecked();
-    await expect(page.getByRole("radio", { name: /A different paper for each student/ })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Same paper" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "Different papers" })).toBeAttached();
     await audit(page, 1);
     await page.getByRole("radio", { name: /A different paper/ }).check();
     await expect(page.getByTestId("suggested-paper")).toHaveCount(0);

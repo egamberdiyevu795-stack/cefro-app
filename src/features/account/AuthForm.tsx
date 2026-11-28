@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Notice, PillAction, TextField, cx, styles } from "@/components/ds";
+import { Notice, PillAction, Segmented, TextField, cx, styles } from "@/components/ds";
 import { useHydrated } from "@/components/ds/useHydrated";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/domain/account";
 import { TEACHER_TERMS_TEXT } from "@/domain/teacher/rules";
@@ -156,23 +156,16 @@ const ROLE_LINES = {
 function RoleSegment({ current, onPick, ready }: { current: "student" | "teacher"; onPick: (role: "student" | "teacher") => void; ready: boolean }) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-1 rounded-full bg-well p-1">
-        {(["student", "teacher"] as const).map((value) => {
-          const picked = current === value;
-          return (
-            <label
-              key={value}
-              className={cx(
-                "flex h-11 cursor-pointer items-center justify-center rounded-full text-body font-medium transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-fg",
-                picked ? "bg-card text-fg shadow-card" : "text-fg-muted hover:text-fg",
-              )}
-            >
-              <input type="radio" name="role" value={value} checked={picked} onChange={() => onPick(value)} disabled={!ready} className="sr-only" />
-              {value === "student" ? "Student" : "Teacher"}
-            </label>
-          );
-        })}
-      </div>
+      <Segmented
+        name="role"
+        options={[
+          { value: "student", label: "Student" },
+          { value: "teacher", label: "Teacher" },
+        ]}
+        value={current}
+        onChange={onPick}
+        disabled={!ready}
+      />
       <p className="text-label text-fg-muted" aria-live="polite">
         {ROLE_LINES[current]}
       </p>

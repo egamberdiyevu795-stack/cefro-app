@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { errorExampleGoal } from "@/domain/evaluation/error-goal";
 import { firstUncoveredQuestion, lowestFeature, ZERO_REASONS, type BandFeatures, type BandScore, type BiggestFix } from "./band-scoring";
 import { ALL_FEATURE_LEVELS, FEATURES, FEATURE_LABELS, type Feature } from "./levels";
 import { multilevelModelOutputSchema, type MultilevelModelOutput } from "./model-output";
@@ -103,9 +104,12 @@ const OWN_WORDS_FOCUS: MultilevelRetryFocus = {
   target: { kind: "own_words" },
 };
 
-function featureFocus(assessment: MultilevelModelOutput, feature: Feature): MultilevelRetryFocus {
+function featureFocus(assessment: MultilevelModelOutput, feature: Feature, fromShownError = false): MultilevelRetryFocus {
   const f = assessment.features[feature];
   if (!f) throw new Error(`No judgement for ${feature}`);
+  // The goal follows the mistake the card shows (grammar/vocabulary), not the model's separate general advice.
+  const fromError = fromShownError ? errorExampleGoal(assessment, feature) : null;
+  if (fromError) return { ...fromError, target: { kind: "feature", feature } };
   return {
     objective: f.how_to_improve.trim() || `Work on ${FEATURE_LABELS[feature].toLowerCase()}: ${f.note}`,
     success_check: f.how_to_check.trim() || "Listen back to your answer and check this point.",
@@ -135,7 +139,7 @@ export function deriveRetryFocus(
   const fix: BiggestFix = score.biggest_fix;
   if (fix.kind === "question_coverage") focus.push(forQuestion(fix.question_id));
   else if (fix.kind === "own_words") focus.push(OWN_WORDS_FOCUS);
-  else focus.push(featureFocus(assessment, fix.feature));
+  else focus.push(featureFocus(assessment, fix.feature, true));
 
   if (fix.kind === "feature") {
     const question = firstUncoveredQuestion(assessment.questions, true);

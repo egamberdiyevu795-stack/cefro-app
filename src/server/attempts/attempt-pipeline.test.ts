@@ -130,9 +130,10 @@ describe("speaking attempt pipeline", () => {
     expect(second.attemptNumber).toBe(2);
     expect(second.previousAttemptId).toBe(first.id);
     // Language caps the band (B1 → 2) below coverage (2 on topic → 3), so the first focus is the lowest feature
-    // (grammar), the second the unanswered question 3, numbered as the student sees it.
+    // (grammar), the second the unanswered question 3, numbered as the student sees it. The grammar goal follows the
+    // mistake the card shows (its named pattern and rule), not the model's separate general advice.
     expect(second.retryFocus?.map((f) => f.objective)).toEqual([
-      makeModelOutput().features.grammar.how_to_improve,
+      "Stop this kind of mistake: Present perfect with a finished time. With 'last year' or 'yesterday' use the past simple: 'Last year I went'.",
       'Answer question 3: "Do you think young people should always follow advice from older people? Why or why not?"',
     ]);
 
